@@ -29,9 +29,9 @@ Ceruneでは、書いた計算の意味と、それが実行される表現へ�
 | 束縛と変換 | 既定で不変、`mut`、明示的な`infer`、`T(value)`と`convert<T>(value)` | `infer`は実行時型ではない。変換は切り捨てや飽和の指定ではない | [integer_conversions](../../examples/integer_conversions.ceru) |
 | 直和型 | `enum`の値付き選択肢、網羅的な`match` | ガード・match式・汎用Option/Resultは未実装 | [sum_lookup](../../examples/sum_lookup.ceru) |
 | コンパイル時定数 | 型付き`const`、依存式の評価、`pub const` | 関数呼び出し・ブロック内宣言・配列型の長さへの使用なし | [constants](../../examples/constants.ceru) |
-| モジュール | 明示的なimport・名前空間・関数と型のpub指定 | 循環・非公開参照を診断。再export・モジュール変数・パッケージ配布なし | [modules](../../examples/modules/README.md) |
+| モジュール | 明示的なimport・名前空間・関数/型/定数のpub指定 | 循環・非公開参照を診断。再export・モジュール変数・パッケージ配布なし | [modules](../../examples/modules/README.md) |
 
-型の数値範囲と用途別サンプルは[examplesの型別表](../../examples/README.md#型から探す)にまとめています。配列・product全体の表示や等値比較は未実装です。
+型の数値範囲と用途別サンプルは[examplesの型別表](../../examples/README.md#型から探す)にまとめています。配列・構造体・直和型全体の表示や等値比較は未実装です。
 
 ## 言語機能と出力経路を分ける
 

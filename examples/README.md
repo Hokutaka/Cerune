@@ -31,7 +31,9 @@ bash scripts/run-examples.sh --pattern 'matrix*.ceru' --skip-build
 
 ## 型から探す
 
-8種類の整数型、`f32`・`f64`、`bool`、`string`、固定長配列、構造体を使えます。既存7経路（VM・C・LLVM・QBE・WAT・Windows x64直接アセンブリ・Linux x86-64直接アセンブリ）に`u64`まで実装しています。`u64_values.ceru`は全7経路で既知の期待出力と比較しています。[native_values.ceru](native_values.ceru)はWindows/Linuxの混在引数と値の受け渡しを確認する例です。機械語を含むオブジェクトと実行ファイルの生成・実行・観測には、[明示した外部ツールを使う手順](../docs/design/native-code.ja.md)を用意しています。[自前エンコーダ](../docs/design/native-encoder.ja.md)でも同じ言語機能を実行できます。
+8種類の整数型、`f32`・`f64`、`bool`、`string`、固定長配列、構造体、直和型を使えます。VM・C・LLVM・QBE・WAT・Windows/Linux ASM・自前オブジェクトで同じ言語機能を扱います。
+
+`u64_values.ceru`は全経路で既知の期待出力と比較し、[native_values.ceru](native_values.ceru)ではWindows/Linuxの混在引数と値渡しを確認します。機械語の生成・実行・観測は、[外部ツールを明示する手順](../docs/design/native-code.ja.md)と[自前エンコーダの設計](../docs/design/native-encoder.ja.md)を参照してください。
 
 ### 符号付き整数：負数と正数
 

@@ -31,7 +31,9 @@ The runner checks each example's exit status. Use `cargo test --test examples` t
 
 ## Find examples by type
 
-Cerune supports eight integer kinds, `f32`/`f64`, `bool`, `string`, fixed arrays, and products. All seven existing routes (VM, C, LLVM, QBE, WAT, direct Windows x64 assembly, and direct Linux x86-64 assembly) implement `u64`. The `u64_values.ceru` example is compared against known output across all seven. [native_values.ceru](native_values.ceru) exercises mixed arguments and value passing on Windows/Linux. Use [explicit external tools](../docs/design/native-code.en.md) to generate, execute, and inspect machine-code objects and executables. The [Cerune encoder](../docs/design/native-encoder.en.md) also executes the same language features.
+Cerune supports eight integer kinds, `f32`/`f64`, `bool`, `string`, fixed arrays, products, and sums. The VM, C, LLVM, QBE, WAT, Windows/Linux ASM, and native objects support the same language features.
+
+`u64_values.ceru` is compared against known output across the routes; [native_values.ceru](native_values.ceru) checks mixed arguments and value passing on Windows/Linux. For machine-code generation, execution, and observation, see the [explicit external-tool procedure](../docs/design/native-code.en.md) and [internal encoder design](../docs/design/native-encoder.en.md).
 
 ### Signed integers: negative and positive values
 

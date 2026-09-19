@@ -64,4 +64,4 @@ The [module examples](../../examples/modules/README.en.md) contain modular and s
 
 [Compile-time constants](constants.en.md) are implemented. Public constants cannot expose private types, and unused constants are evaluated before execution. Constants introduce no shared mutable globals.
 
-Package distribution, version resolution, re-exports, separate compilation, dynamic loading, and mutable module globals are outside this increment. Further function-parameter and value-operation improvements should follow concrete executable examples.
+Package distribution, version resolution, re-exports, separate compilation, dynamic loading, and mutable module globals are outside this increment. The parameter-count limit has been lifted, and product updates and sum types are available. Next, evaluate reusable processing through examples of array-length queries and iteration.
