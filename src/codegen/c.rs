@@ -11,9 +11,9 @@ mod unsigned;
 pub use emit::emit;
 use lower::lower;
 
-use crate::{diagnostic::Diagnostic, ir as primer_ir};
+use crate::{diagnostic::Diagnostic, ir as cerune_ir};
 
-pub fn emit_c(program: &primer_ir::Program) -> Result<String, Diagnostic> {
+pub fn emit_c(program: &cerune_ir::Program) -> Result<String, Diagnostic> {
     let module = lower(program);
 
     Ok(emit(&module))
@@ -53,7 +53,7 @@ mod tests {
 
         let c = emit_c(&program).unwrap();
 
-        assert!(c.contains("float primer_binding_0_x = (0.1f + 0.2f);"));
+        assert!(c.contains("float cerune_binding_0_x = (0.1f + 0.2f);"));
     }
 
     #[test]
@@ -66,7 +66,7 @@ mod tests {
 
         let c = emit_c(&program).unwrap();
 
-        assert!(c.contains("double primer_binding_0_x = (0.1 + 0.2);"));
+        assert!(c.contains("double cerune_binding_0_x = (0.1 + 0.2);"));
     }
 
     #[test]
@@ -79,7 +79,7 @@ mod tests {
 
         let c = emit_c(&program).unwrap();
 
-        assert!(c.contains("double primer_binding_0_x = (0.1 + 0.2);"));
+        assert!(c.contains("double cerune_binding_0_x = (0.1 + 0.2);"));
     }
 
     #[test]
@@ -106,11 +106,11 @@ mod tests {
         .unwrap();
         let c = emit_c(&program).unwrap();
 
-        assert!(c.contains("int64_t primer_fn_add_0(int64_t primer_binding_0_left, int64_t primer_binding_1_right);"));
+        assert!(c.contains("int64_t cerune_fn_add_0(int64_t cerune_binding_0_left, int64_t cerune_binding_1_right);"));
         assert!(c.contains(
-            "return primer_i64_add(primer_binding_0_left, primer_binding_1_right, \" node="
+            "return cerune_i64_add(cerune_binding_0_left, cerune_binding_1_right, \" node="
         ));
-        assert!(c.contains("primer_fn_add_0(20, 22)"));
+        assert!(c.contains("cerune_fn_add_0(20, 22)"));
     }
 
     #[test]
@@ -119,7 +119,7 @@ mod tests {
 
         let c = emit_c(&program).unwrap();
 
-        assert!(c.contains("int64_t primer_binding_0_x = INT64_MIN;"));
+        assert!(c.contains("int64_t cerune_binding_0_x = INT64_MIN;"));
     }
 
     #[test]
@@ -156,11 +156,11 @@ mod tests {
         let c = emit_c(&program).unwrap();
 
         for helper in [
-            "primer_i64_add",
-            "primer_i64_sub",
-            "primer_i64_mul",
-            "primer_i64_div",
-            "primer_i64_neg",
+            "cerune_i64_add",
+            "cerune_i64_sub",
+            "cerune_i64_mul",
+            "cerune_i64_div",
+            "cerune_i64_neg",
         ] {
             assert!(c.contains(helper));
         }

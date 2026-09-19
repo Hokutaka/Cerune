@@ -1,10 +1,10 @@
 #[path = "support/llvm.rs"]
 mod llvm;
-use primer_lang::{
+use cerune_lang::{
     compile_to_c, compile_to_qbe, compile_to_wat, compile_to_x86_64_win_asm, run_vm,
 };
 
-const SOURCE: &str = include_str!("fixtures/observation/float-output/source.prim");
+const SOURCE: &str = include_str!("fixtures/observation/float-output/source.ceru");
 
 #[test]
 fn tiny_and_large_values_remain_observable_through_the_vm() {

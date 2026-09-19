@@ -122,7 +122,7 @@ pub(super) fn emit_conversion(c: NumericConversion, output: &mut String) {
 fn guard(condition: &str, reason: &str, output: &mut String) {
     writeln!(
         output,
-        "    if ({condition}) primer_runtime_fail(\"{reason}\", origin);"
+        "    if ({condition}) cerune_runtime_fail(\"{reason}\", origin);"
     )
     .unwrap();
 }

@@ -1,10 +1,10 @@
 (module
-  (import "primer" "write_error_byte" (func $write_error_byte (param i32)))
-  (import "primer" "print_i64" (func $print_i64 (param i64)))
-  (import "primer" "print_f32" (func $print_f32 (param f32)))
-  (import "primer" "print_f64" (func $print_f64 (param f64)))
+  (import "cerune" "write_error_byte" (func $write_error_byte (param i32)))
+  (import "cerune" "print_i64" (func $print_i64 (param i64)))
+  (import "cerune" "print_f32" (func $print_f32 (param f32)))
+  (import "cerune" "print_f64" (func $print_f64 (param f64)))
 
-  (func $primer_i64_add_n2_b118_134 (param $left i64) (param $right i64) (result i64)
+  (func $cerune_i64_add_n2_b118_134 (param $left i64) (param $right i64) (result i64)
     (local $result i64)
     local.get $left
     local.get $right
@@ -20,18 +20,18 @@
     i64.const 0
     i64.lt_s
     if
-      ;; primer: runtime-v1 code=integer-overflow node=2 bytes=118..134
-      i32.const 112
-      call $write_error_byte
-      i32.const 114
-      call $write_error_byte
-      i32.const 105
-      call $write_error_byte
-      i32.const 109
+      ;; cerune: runtime-v1 code=integer-overflow node=2 bytes=118..134
+      i32.const 99
       call $write_error_byte
       i32.const 101
       call $write_error_byte
       i32.const 114
+      call $write_error_byte
+      i32.const 117
+      call $write_error_byte
+      i32.const 110
+      call $write_error_byte
+      i32.const 101
       call $write_error_byte
       i32.const 58
       call $write_error_byte
@@ -154,12 +154,12 @@
 
   (memory 1)
 
-  (func $primer_fn_move_x_0 (param $primer_abi.result i32) (param $primer_point i32) (param $primer_amount i64)
+  (func $cerune_fn_move_x_0 (param $cerune_abi.result i32) (param $cerune_point i32) (param $cerune_amount i64)
     i32.const 0
-    local.get $primer_abi.result
+    local.get $cerune_abi.result
     i32.store
     i32.const 4
-    local.get $primer_point
+    local.get $cerune_point
     i32.store
     i32.const 8
     i32.const 4
@@ -180,8 +180,8 @@
     i32.const 28
     i32.const 8
     i64.load
-    local.get $primer_amount
-    call $primer_i64_add_n2_b118_134
+    local.get $cerune_amount
+    call $cerune_i64_add_n2_b118_134
     i64.store
     i32.const 36
     i32.const 16
@@ -205,12 +205,12 @@
     i64.store
     return
   )
-  (func $primer_fn_move_twice_1 (param $primer_abi.result i32) (param $primer_point i32) (param $primer_amount i64)
+  (func $cerune_fn_move_twice_1 (param $cerune_abi.result i32) (param $cerune_point i32) (param $cerune_amount i64)
     i32.const 48
-    local.get $primer_abi.result
+    local.get $cerune_abi.result
     i32.store
     i32.const 52
-    local.get $primer_point
+    local.get $cerune_point
     i32.store
     i32.const 56
     i32.const 52
@@ -231,11 +231,11 @@
     i32.const 76
     i32.const 92
     i32.const 56
-    local.get $primer_amount
-    call $primer_fn_move_x_0
+    local.get $cerune_amount
+    call $cerune_fn_move_x_0
     i32.const 92
-    local.get $primer_amount
-    call $primer_fn_move_x_0
+    local.get $cerune_amount
+    call $cerune_fn_move_x_0
     i32.const 48
     i32.load
     i32.const 76
@@ -254,12 +254,12 @@
     i64.store
     return
   )
-  (func $primer_fn_first_row_2 (param $primer_abi.result i32) (param $primer_matrix i32)
+  (func $cerune_fn_first_row_2 (param $cerune_abi.result i32) (param $cerune_matrix i32)
     i32.const 112
-    local.get $primer_abi.result
+    local.get $cerune_abi.result
     i32.store
     i32.const 116
-    local.get $primer_matrix
+    local.get $cerune_matrix
     i32.store
     i32.const 120
     i32.const 116
@@ -307,18 +307,18 @@
     i64.const 0
     i64.lt_s
     if
-      ;; primer: runtime-v1 code=array-index-out-of-bounds node=15 bytes=332..341
-      i32.const 112
-      call $write_error_byte
-      i32.const 114
-      call $write_error_byte
-      i32.const 105
-      call $write_error_byte
-      i32.const 109
+      ;; cerune: runtime-v1 code=array-index-out-of-bounds node=15 bytes=332..341
+      i32.const 99
       call $write_error_byte
       i32.const 101
       call $write_error_byte
       i32.const 114
+      call $write_error_byte
+      i32.const 117
+      call $write_error_byte
+      i32.const 110
+      call $write_error_byte
+      i32.const 101
       call $write_error_byte
       i32.const 58
       call $write_error_byte
@@ -461,18 +461,18 @@
     i64.const 2
     i64.ge_s
     if
-      ;; primer: runtime-v1 code=array-index-out-of-bounds node=15 bytes=332..341
-      i32.const 112
-      call $write_error_byte
-      i32.const 114
-      call $write_error_byte
-      i32.const 105
-      call $write_error_byte
-      i32.const 109
+      ;; cerune: runtime-v1 code=array-index-out-of-bounds node=15 bytes=332..341
+      i32.const 99
       call $write_error_byte
       i32.const 101
       call $write_error_byte
       i32.const 114
+      call $write_error_byte
+      i32.const 117
+      call $write_error_byte
+      i32.const 110
+      call $write_error_byte
+      i32.const 101
       call $write_error_byte
       i32.const 58
       call $write_error_byte
@@ -645,12 +645,12 @@
     i64.store
     return
   )
-  (func $primer_fn_duplicate_3 (param $primer_abi.result i32) (param $primer_row i32)
+  (func $cerune_fn_duplicate_3 (param $cerune_abi.result i32) (param $cerune_row i32)
     i32.const 184
-    local.get $primer_abi.result
+    local.get $cerune_abi.result
     i32.store
     i32.const 188
-    local.get $primer_row
+    local.get $cerune_row
     i32.store
     i32.const 192
     i32.const 188
@@ -724,12 +724,12 @@
     i64.store
     return
   )
-  (func $primer_fn_duplicate_first_row_4 (param $primer_abi.result i32) (param $primer_matrix i32)
+  (func $cerune_fn_duplicate_first_row_4 (param $cerune_abi.result i32) (param $cerune_matrix i32)
     i32.const 256
-    local.get $primer_abi.result
+    local.get $cerune_abi.result
     i32.store
     i32.const 260
-    local.get $primer_matrix
+    local.get $cerune_matrix
     i32.store
     i32.const 264
     i32.const 260
@@ -772,9 +772,9 @@
     i32.const 308
     i32.const 340
     i32.const 264
-    call $primer_fn_first_row_2
+    call $cerune_fn_first_row_2
     i32.const 340
-    call $primer_fn_duplicate_3
+    call $cerune_fn_duplicate_3
     i32.const 256
     i32.load
     i32.const 308
@@ -833,7 +833,7 @@
     i32.const 480
     i32.const 368
     i64.const 5
-    call $primer_fn_move_twice_1
+    call $cerune_fn_move_twice_1
     i32.const 384
     i32.const 480
     i64.load
@@ -888,7 +888,7 @@
     i64.store
     i32.const 560
     i32.const 400
-    call $primer_fn_duplicate_first_row_4
+    call $cerune_fn_duplicate_first_row_4
     i32.const 432
     i32.const 560
     i64.load
@@ -922,18 +922,18 @@
     i64.const 0
     i64.lt_s
     if
-      ;; primer: runtime-v1 code=array-index-out-of-bounds node=56 bytes=760..769
-      i32.const 112
-      call $write_error_byte
-      i32.const 114
-      call $write_error_byte
-      i32.const 105
-      call $write_error_byte
-      i32.const 109
+      ;; cerune: runtime-v1 code=array-index-out-of-bounds node=56 bytes=760..769
+      i32.const 99
       call $write_error_byte
       i32.const 101
       call $write_error_byte
       i32.const 114
+      call $write_error_byte
+      i32.const 117
+      call $write_error_byte
+      i32.const 110
+      call $write_error_byte
+      i32.const 101
       call $write_error_byte
       i32.const 58
       call $write_error_byte
@@ -1076,18 +1076,18 @@
     i64.const 2
     i64.ge_s
     if
-      ;; primer: runtime-v1 code=array-index-out-of-bounds node=56 bytes=760..769
-      i32.const 112
-      call $write_error_byte
-      i32.const 114
-      call $write_error_byte
-      i32.const 105
-      call $write_error_byte
-      i32.const 109
+      ;; cerune: runtime-v1 code=array-index-out-of-bounds node=56 bytes=760..769
+      i32.const 99
       call $write_error_byte
       i32.const 101
       call $write_error_byte
       i32.const 114
+      call $write_error_byte
+      i32.const 117
+      call $write_error_byte
+      i32.const 110
+      call $write_error_byte
+      i32.const 101
       call $write_error_byte
       i32.const 58
       call $write_error_byte
@@ -1242,18 +1242,18 @@
     i64.const 0
     i64.lt_s
     if
-      ;; primer: runtime-v1 code=array-index-out-of-bounds node=55 bytes=760..772
-      i32.const 112
-      call $write_error_byte
-      i32.const 114
-      call $write_error_byte
-      i32.const 105
-      call $write_error_byte
-      i32.const 109
+      ;; cerune: runtime-v1 code=array-index-out-of-bounds node=55 bytes=760..772
+      i32.const 99
       call $write_error_byte
       i32.const 101
       call $write_error_byte
       i32.const 114
+      call $write_error_byte
+      i32.const 117
+      call $write_error_byte
+      i32.const 110
+      call $write_error_byte
+      i32.const 101
       call $write_error_byte
       i32.const 58
       call $write_error_byte
@@ -1396,18 +1396,18 @@
     i64.const 2
     i64.ge_s
     if
-      ;; primer: runtime-v1 code=array-index-out-of-bounds node=55 bytes=760..772
-      i32.const 112
-      call $write_error_byte
-      i32.const 114
-      call $write_error_byte
-      i32.const 105
-      call $write_error_byte
-      i32.const 109
+      ;; cerune: runtime-v1 code=array-index-out-of-bounds node=55 bytes=760..772
+      i32.const 99
       call $write_error_byte
       i32.const 101
       call $write_error_byte
       i32.const 114
+      call $write_error_byte
+      i32.const 117
+      call $write_error_byte
+      i32.const 110
+      call $write_error_byte
+      i32.const 101
       call $write_error_byte
       i32.const 58
       call $write_error_byte
@@ -1563,18 +1563,18 @@
     i64.const 0
     i64.lt_s
     if
-      ;; primer: runtime-v1 code=array-index-out-of-bounds node=62 bytes=781..788
-      i32.const 112
-      call $write_error_byte
-      i32.const 114
-      call $write_error_byte
-      i32.const 105
-      call $write_error_byte
-      i32.const 109
+      ;; cerune: runtime-v1 code=array-index-out-of-bounds node=62 bytes=781..788
+      i32.const 99
       call $write_error_byte
       i32.const 101
       call $write_error_byte
       i32.const 114
+      call $write_error_byte
+      i32.const 117
+      call $write_error_byte
+      i32.const 110
+      call $write_error_byte
+      i32.const 101
       call $write_error_byte
       i32.const 58
       call $write_error_byte
@@ -1717,18 +1717,18 @@
     i64.const 2
     i64.ge_s
     if
-      ;; primer: runtime-v1 code=array-index-out-of-bounds node=62 bytes=781..788
-      i32.const 112
-      call $write_error_byte
-      i32.const 114
-      call $write_error_byte
-      i32.const 105
-      call $write_error_byte
-      i32.const 109
+      ;; cerune: runtime-v1 code=array-index-out-of-bounds node=62 bytes=781..788
+      i32.const 99
       call $write_error_byte
       i32.const 101
       call $write_error_byte
       i32.const 114
+      call $write_error_byte
+      i32.const 117
+      call $write_error_byte
+      i32.const 110
+      call $write_error_byte
+      i32.const 101
       call $write_error_byte
       i32.const 58
       call $write_error_byte
@@ -1883,18 +1883,18 @@
     i64.const 0
     i64.lt_s
     if
-      ;; primer: runtime-v1 code=array-index-out-of-bounds node=61 bytes=781..791
-      i32.const 112
-      call $write_error_byte
-      i32.const 114
-      call $write_error_byte
-      i32.const 105
-      call $write_error_byte
-      i32.const 109
+      ;; cerune: runtime-v1 code=array-index-out-of-bounds node=61 bytes=781..791
+      i32.const 99
       call $write_error_byte
       i32.const 101
       call $write_error_byte
       i32.const 114
+      call $write_error_byte
+      i32.const 117
+      call $write_error_byte
+      i32.const 110
+      call $write_error_byte
+      i32.const 101
       call $write_error_byte
       i32.const 58
       call $write_error_byte
@@ -2037,18 +2037,18 @@
     i64.const 2
     i64.ge_s
     if
-      ;; primer: runtime-v1 code=array-index-out-of-bounds node=61 bytes=781..791
-      i32.const 112
-      call $write_error_byte
-      i32.const 114
-      call $write_error_byte
-      i32.const 105
-      call $write_error_byte
-      i32.const 109
+      ;; cerune: runtime-v1 code=array-index-out-of-bounds node=61 bytes=781..791
+      i32.const 99
       call $write_error_byte
       i32.const 101
       call $write_error_byte
       i32.const 114
+      call $write_error_byte
+      i32.const 117
+      call $write_error_byte
+      i32.const 110
+      call $write_error_byte
+      i32.const 101
       call $write_error_byte
       i32.const 58
       call $write_error_byte
@@ -2204,18 +2204,18 @@
     i64.const 0
     i64.lt_s
     if
-      ;; primer: runtime-v1 code=array-index-out-of-bounds node=68 bytes=800..807
-      i32.const 112
-      call $write_error_byte
-      i32.const 114
-      call $write_error_byte
-      i32.const 105
-      call $write_error_byte
-      i32.const 109
+      ;; cerune: runtime-v1 code=array-index-out-of-bounds node=68 bytes=800..807
+      i32.const 99
       call $write_error_byte
       i32.const 101
       call $write_error_byte
       i32.const 114
+      call $write_error_byte
+      i32.const 117
+      call $write_error_byte
+      i32.const 110
+      call $write_error_byte
+      i32.const 101
       call $write_error_byte
       i32.const 58
       call $write_error_byte
@@ -2358,18 +2358,18 @@
     i64.const 2
     i64.ge_s
     if
-      ;; primer: runtime-v1 code=array-index-out-of-bounds node=68 bytes=800..807
-      i32.const 112
-      call $write_error_byte
-      i32.const 114
-      call $write_error_byte
-      i32.const 105
-      call $write_error_byte
-      i32.const 109
+      ;; cerune: runtime-v1 code=array-index-out-of-bounds node=68 bytes=800..807
+      i32.const 99
       call $write_error_byte
       i32.const 101
       call $write_error_byte
       i32.const 114
+      call $write_error_byte
+      i32.const 117
+      call $write_error_byte
+      i32.const 110
+      call $write_error_byte
+      i32.const 101
       call $write_error_byte
       i32.const 58
       call $write_error_byte
@@ -2524,18 +2524,18 @@
     i64.const 0
     i64.lt_s
     if
-      ;; primer: runtime-v1 code=array-index-out-of-bounds node=67 bytes=800..810
-      i32.const 112
-      call $write_error_byte
-      i32.const 114
-      call $write_error_byte
-      i32.const 105
-      call $write_error_byte
-      i32.const 109
+      ;; cerune: runtime-v1 code=array-index-out-of-bounds node=67 bytes=800..810
+      i32.const 99
       call $write_error_byte
       i32.const 101
       call $write_error_byte
       i32.const 114
+      call $write_error_byte
+      i32.const 117
+      call $write_error_byte
+      i32.const 110
+      call $write_error_byte
+      i32.const 101
       call $write_error_byte
       i32.const 58
       call $write_error_byte
@@ -2678,18 +2678,18 @@
     i64.const 2
     i64.ge_s
     if
-      ;; primer: runtime-v1 code=array-index-out-of-bounds node=67 bytes=800..810
-      i32.const 112
-      call $write_error_byte
-      i32.const 114
-      call $write_error_byte
-      i32.const 105
-      call $write_error_byte
-      i32.const 109
+      ;; cerune: runtime-v1 code=array-index-out-of-bounds node=67 bytes=800..810
+      i32.const 99
       call $write_error_byte
       i32.const 101
       call $write_error_byte
       i32.const 114
+      call $write_error_byte
+      i32.const 117
+      call $write_error_byte
+      i32.const 110
+      call $write_error_byte
+      i32.const 101
       call $write_error_byte
       i32.const 58
       call $write_error_byte

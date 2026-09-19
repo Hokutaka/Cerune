@@ -8,25 +8,25 @@ Direct Linux x86-64 assembly supports all eight integer kinds including u64, f32
 
 `emit-asm` accepts `--target x86_64-unknown-linux-gnu` and `--target x86_64-pc-windows-msvc`. Omission retains the fixed Windows default. The host OS never selects the output target.
 
-SysV allocates integer and floating-point argument registers separately and passes the XMM argument count in AL for variadic printf calls. Windows uses positional registers, shadow space, and `__chkstk` when needed. Linux also touches each page during large stack allocations. Products and arrays retain independent value copies. Aggregate result storage is passed in RAX under Primer's internal convention; external C ABI compatibility is not guaranteed.
+SysV allocates integer and floating-point argument registers separately and passes the XMM argument count in AL for variadic printf calls. Windows uses positional registers, shadow space, and `__chkstk` when needed. Linux also touches each page during large stack allocations. Products and arrays retain independent value copies. Aggregate result storage is passed in RAX under Cerune's internal convention; external C ABI compatibility is not guaranteed.
 
 Strings remain immutable static length-prefixed data. Linux passes byte values to putchar; Windows enables binary stdout first. Japanese, NUL, CR, and LF survive without normalization.
 
 ## Observation stages
 
 ```text
-Primer source → Primer IR → shared x86-64 instructions
+Cerune source → Cerune IR → shared x86-64 instructions
                                        ↓
                            assembly with source origins
-                                       ↓ Primer encoder or explicit external assembler
+                                       ↓ Cerune encoder or explicit external assembler
                            ELF/COFF object, bytes, relocations
                                        ↓ explicit external linker
                            executable machine code → comparison
 ```
 
-Machine artifacts reuse the same assembly rather than reimplementing language semantics. Select the [Primer encoder](native-encoder.en.md) for encoding and object generation with `--encoder primer`, or keep the default `--encoder external`. Linking uses an explicitly selected external tool. The `emit-*` commands still return artifacts; only the explicitly invoked script starts external tools.
+Machine artifacts reuse the same assembly rather than reimplementing language semantics. Select the [Cerune encoder](native-encoder.en.md) for encoding and object generation with `--encoder cerune`, or keep the default `--encoder external`. Linking uses an explicitly selected external tool. The `emit-*` commands still return artifacts; only the explicitly invoked script starts external tools.
 
-`--annotate-origins` adds `# primer-asm-origins v1`, `# primer-origin: #N bytes start..end`, and `primer_origin_nN_...` labels. Lowering retains NodeId and UTF-8 byte ranges. Constants, helpers, and startup are synthetic. Object symbols connect disassembly offsets to IR expressions. Removing annotations and origin labels restores ordinary assembly text. Observation exposes no memory mutation interface.
+`--annotate-origins` adds `# cerune-asm-origins v1`, `# cerune-origin: #N bytes start..end`, and `cerune_origin_nN_...` labels. Lowering retains NodeId and UTF-8 byte ranges. Constants, helpers, and startup are synthetic. Object symbols connect disassembly offsets to IR expressions. Removing annotations and origin labels restores ordinary assembly text. Observation exposes no memory mutation interface.
 
 ## Commands
 
@@ -34,21 +34,21 @@ On Linux with Rust, Node, cc, and objdump:
 
 ```sh
 cargo build
-node scripts/observe-native.cjs --source examples/native_values.prim --target x86_64-unknown-linux-gnu --primer target/debug/primer --cc cc --objdump objdump --output-dir target/native-demo-linux --run
+node scripts/observe-native.cjs --source examples/native_values.ceru --target x86_64-unknown-linux-gnu --cerune target/debug/cerune --cc cc --objdump objdump --output-dir target/native-demo-linux --run
 ```
 
 On Windows with Rust, Node, Clang, MSVC CRT/linker, and llvm-objdump:
 
 ```powershell
 cargo build
-node scripts/observe-native.cjs --source examples/native_values.prim --target x86_64-pc-windows-msvc --primer target/debug/primer.exe --cc clang --objdump llvm-objdump --output-dir target/native-demo-windows --run
+node scripts/observe-native.cjs --source examples/native_values.ceru --target x86_64-pc-windows-msvc --cerune target/debug/cerune.exe --cc clang --objdump llvm-objdump --output-dir target/native-demo-windows --run
 ```
 
-WSL users setting `CARGO_TARGET_DIR=target/unix` should select `--primer target/unix/debug/primer`. The output directory must be new and its parent must exist. Existing artifacts are never overwritten. Omit `--run` to generate and inspect without execution. Execution requires a matching host and explicit target. The script checks the assembler's object format too.
+WSL users setting `CARGO_TARGET_DIR=target/unix` should select `--cerune target/unix/debug/cerune`. The output directory must be new and its parent must exist. Existing artifacts are never overwritten. Omit `--run` to generate and inspect without execution. Execution requires a matching host and explicit target. The script checks the assembler's object format too.
 
 | Artifact | Contents |
 | --- | --- |
-| `source.prim` / `program.pir` | input, types, expressions, NodeIds |
+| `source.ceru` / `program.ceir` | input, types, expressions, NodeIds |
 | `program.s` | target-specific assembly with origins |
 | `program.o` / `program.obj` | instruction bytes and unresolved relocations |
 | `object.txt` / `text.txt` | sections, symbols, relocations, disassembly, and .text bytes |
@@ -66,4 +66,4 @@ Ordinary execution requires successful VM/native exits, empty stderr, and matchi
 
 C checks emit `runtime-v1` to stderr; tests compare reasons, source locations, and prior output with the VM. Windows abort and unrelated fast-fail conditions can share an exit code, so the code alone is insufficient. See Microsoft's [abort](https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/abort) and [fast-fail](https://learn.microsoft.com/en-us/cpp/intrinsics/fastfail) specifications. QBE requires SIGABRT, LLVM illegal-instruction termination, and WAT unreachable, alongside the same common records.
 
-`cargo test --test native_assembly` checks every example, string/u64 boundaries, mixed arguments exceeding the register banks, large frames, copies, origins, and expected termination. Machine artifact tests require Node, a C driver, and objdump. Configure `PRIMER_TEST_NODE`, `PRIMER_TEST_CC` on Linux, `PRIMER_TEST_ASM_CLANG` on Windows, and `PRIMER_TEST_OBJDUMP`. CI requires execution on both operating systems.
+`cargo test --test native_assembly` checks every example, string/u64 boundaries, mixed arguments exceeding the register banks, large frames, copies, origins, and expected termination. Machine artifact tests require Node, a C driver, and objdump. Configure `CERUNE_TEST_NODE`, `CERUNE_TEST_CC` on Linux, `CERUNE_TEST_ASM_CLANG` on Windows, and `CERUNE_TEST_OBJDUMP`. CI requires execution on both operating systems.

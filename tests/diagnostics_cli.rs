@@ -2,7 +2,7 @@ use std::{fs, path::PathBuf, process::Command};
 
 #[test]
 fn runtime_records_preserve_prints_and_identify_the_failing_expression() {
-    use primer_lang::RunError;
+    use cerune_lang::RunError;
     for (name, expression, expected_output, code) in [
         (
             "overflow",
@@ -19,9 +19,9 @@ fn runtime_records_preserve_prints_and_identify_the_failing_expression() {
         ),
     ] {
         let path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-            .join(format!("examples/runtime_failures/{name}.prim"));
+            .join(format!("examples/runtime_failures/{name}.ceru"));
         let source = fs::read_to_string(&path).unwrap();
-        let RunError::Execution(error) = primer_lang::run_vm(&source).unwrap_err() else {
+        let RunError::Execution(error) = cerune_lang::run_vm(&source).unwrap_err() else {
             panic!()
         };
         let failure = error.runtime_failure().unwrap();
@@ -32,7 +32,7 @@ fn runtime_records_preserve_prints_and_identify_the_failing_expression() {
         );
         assert_eq!(error.vm_error().output(), expected_output);
         for structured in [false, true] {
-            let mut command = Command::new(env!("CARGO_BIN_EXE_primer"));
+            let mut command = Command::new(env!("CARGO_BIN_EXE_cerune"));
             command.arg("run").arg(&path);
             if structured {
                 command.args(["--diagnostic-format", "runtime-v1"]);
@@ -45,7 +45,7 @@ fn runtime_records_preserve_prints_and_identify_the_failing_expression() {
                     String::from_utf8(result.stderr)
                         .unwrap()
                         .replace("\r\n", "\n"),
-                    format!("primer: {}\n", failure.record())
+                    format!("cerune: {}\n", failure.record())
                 );
             } else {
                 assert!(!result.stderr.windows(10).any(|s| s == b"runtime-v1"));
@@ -57,8 +57,8 @@ fn runtime_records_preserve_prints_and_identify_the_failing_expression() {
         vec!["--diagnostic-format", "json"],
         vec!["--diagnostic-format", "runtime-v1", "extra"],
     ] {
-        let result = Command::new(env!("CARGO_BIN_EXE_primer"))
-            .args(["run", "unused.prim"])
+        let result = Command::new(env!("CARGO_BIN_EXE_cerune"))
+            .args(["run", "unused.ceru"])
             .args(args)
             .output()
             .unwrap();
@@ -87,26 +87,26 @@ fn normalize_line_endings(text: &str) -> String {
 }
 
 fn assert_diagnostic(case_name: &str, command: &str, expected_file: &str) {
-    let output = Command::new(env!("CARGO_BIN_EXE_primer"))
+    let output = Command::new(env!("CARGO_BIN_EXE_cerune"))
         .arg(command)
-        .arg(fixture_path(case_name).join("source.prim"))
+        .arg(fixture_path(case_name).join("source.ceru"))
         .output()
-        .unwrap_or_else(|error| panic!("failed to run primer {command}: {error}"));
+        .unwrap_or_else(|error| panic!("failed to run cerune {command}: {error}"));
 
     assert_eq!(
         output.status.code(),
         Some(1),
-        "primer {command} returned an unexpected status for case `{case_name}`"
+        "cerune {command} returned an unexpected status for case `{case_name}`"
     );
 
     assert!(
         output.stdout.is_empty(),
-        "primer {command} wrote to stdout for case `{case_name}`:\n{}",
+        "cerune {command} wrote to stdout for case `{case_name}`:\n{}",
         String::from_utf8_lossy(&output.stdout)
     );
 
     let actual = String::from_utf8(output.stderr)
-        .unwrap_or_else(|error| panic!("primer {command} emitted non-UTF-8 stderr: {error}"));
+        .unwrap_or_else(|error| panic!("cerune {command} emitted non-UTF-8 stderr: {error}"));
 
     let expected = expected_output(case_name, expected_file);
 
@@ -114,7 +114,7 @@ fn assert_diagnostic(case_name: &str, command: &str, expected_file: &str) {
     assert_eq!(
         normalize_line_endings(&actual),
         normalize_line_endings(&expected),
-        "unexpected stderr from primer {command} for case `{case_name}`"
+        "unexpected stderr from cerune {command} for case `{case_name}`"
     );
 }
 

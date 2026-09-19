@@ -15,9 +15,9 @@ pub(super) fn argument(origin: Origin, output: &mut String) {
 }
 
 // C標準ライブラリのstderrを使うため、生成時にOSのFILE構造やABIを推測しません。
-pub(super) const SUPPORT: &str = r#"static void primer_runtime_fail(const char *code, const char *origin) {
+pub(super) const SUPPORT: &str = r#"static void cerune_runtime_fail(const char *code, const char *origin) {
     fflush(stdout);
-    fputs("primer: runtime-v1 code=", stderr);
+    fputs("cerune: runtime-v1 code=", stderr);
     fputs(code, stderr);
     fputs(origin, stderr);
     fflush(stderr);

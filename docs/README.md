@@ -1,13 +1,14 @@
-# Primer documentation
+# Cerune documentation
 
-Primerの文書は、設計上の判断を記録する`design`と、現在の仕様を記録する`reference`に分かれています。
+Ceruneの文書は、設計上の判断を記録する`design`と、現在の仕様を記録する`reference`に分かれています。
 
-Primer documentation is divided into `design`, which records design decisions, and `reference`, which describes the current specification.
+Cerune documentation is divided into `design`, which records design decisions, and `reference`, which describes the current specification.
 
 ## Design / 設計
 
 | Document | 日本語 | English |
 | --- | --- | --- |
+| Naming and migration / 命名と移行 | [日本語](design/naming.ja.md) | [English](design/naming.en.md) |
 | Compiler architecture / コンパイラ構成 | [日本語](design/architecture.ja.md) | [English](design/architecture.en.md) |
 | Observability contract / 可観測性の契約 | [日本語](design/observability.ja.md) | [English](design/observability.en.md) |
 | Runtime diagnostics / 実行時停止の共通記録 | [日本語](design/runtime-diagnostics.ja.md) | [English](design/runtime-diagnostics.en.md) |

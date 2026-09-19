@@ -1,24 +1,24 @@
 .section .rdata,"dr"
-.Lprimer_fmt_i64:
+.Lcerune_fmt_i64:
   .asciz "%lld\n"
-.Lprimer_fmt_f32:
+.Lcerune_fmt_f32:
   .asciz "%.9g\n"
-.Lprimer_fmt_f64:
+.Lcerune_fmt_f64:
   .asciz "%.17g\n"
 .p2align 4
-.Lprimer_sign_f32:
+.Lcerune_sign_f32:
   .long 0x80000000
   .long 0
   .long 0
   .long 0
 .p2align 4
-.Lprimer_sign_f64:
+.Lcerune_sign_f64:
   .quad 0x8000000000000000
   .quad 0
 
 .text
 .p2align 4
-primer_fn_move_x_0:
+cerune_fn_move_x_0:
   pushq %rbp
   movq %rsp, %rbp
   subq $144, %rsp
@@ -34,15 +34,15 @@ primer_fn_move_x_0:
   movq %rax, %rcx
   movq -32(%rbp), %rax
   addq %rcx, %rax
-  jno .Lprimer_fn_0_integer_ok_0
+  jno .Lcerune_fn_0_integer_ok_0
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
-  leaq .Lprimer_failure_0(%rip), %rdx
+  leaq .Lcerune_failure_0(%rip), %rdx
   movl $63, %r8d
   callq _write
   ud2
-.Lprimer_fn_0_integer_ok_0:
+.Lcerune_fn_0_integer_ok_0:
   movq %rax, -96(%rbp)
   movq -16(%rbp), %rax
   movq %rax, -104(%rbp)
@@ -56,7 +56,7 @@ primer_fn_move_x_0:
   retq
 
 .p2align 4
-primer_fn_move_twice_1:
+cerune_fn_move_twice_1:
   pushq %rbp
   movq %rsp, %rbp
   subq $144, %rsp
@@ -71,13 +71,13 @@ primer_fn_move_twice_1:
   leaq -8(%rbp), %rcx
   movq -72(%rbp), %rdx
   leaq -88(%rbp), %rax
-  callq primer_fn_move_x_0
+  callq cerune_fn_move_x_0
   movq -24(%rbp), %rax
   movq %rax, -40(%rbp)
   leaq -88(%rbp), %rcx
   movq -40(%rbp), %rdx
   leaq -104(%rbp), %rax
-  callq primer_fn_move_x_0
+  callq cerune_fn_move_x_0
   movq -80(%rbp), %r11
   movq -104(%rbp), %r10
   movq %r10, 0(%r11)
@@ -88,7 +88,7 @@ primer_fn_move_twice_1:
   retq
 
 .p2align 4
-primer_fn_first_row_2:
+cerune_fn_first_row_2:
   pushq %rbp
   movq %rsp, %rbp
   subq $112, %rsp
@@ -103,24 +103,24 @@ primer_fn_first_row_2:
   movq %rax, -64(%rbp)
   movabsq $0, %rax
   testq %rax, %rax
-  js .Lprimer_fn_2_array_oob_0
+  js .Lcerune_fn_2_array_oob_0
   cmpq $2, %rax
-  jge .Lprimer_fn_2_array_oob_0
+  jge .Lcerune_fn_2_array_oob_0
   imulq $-2, %rax
   movq -8(%rbp,%rax,8), %rcx
   movq %rcx, -72(%rbp)
   movq -16(%rbp,%rax,8), %rcx
   movq %rcx, -80(%rbp)
-  jmp .Lprimer_fn_2_array_done_0
-.Lprimer_fn_2_array_oob_0:
+  jmp .Lcerune_fn_2_array_done_0
+.Lcerune_fn_2_array_oob_0:
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
-  leaq .Lprimer_failure_1(%rip), %rdx
+  leaq .Lcerune_failure_1(%rip), %rdx
   movl $73, %r8d
   callq _write
   ud2
-.Lprimer_fn_2_array_done_0:
+.Lcerune_fn_2_array_done_0:
   movq -64(%rbp), %r11
   movq -72(%rbp), %r10
   movq %r10, 0(%r11)
@@ -131,7 +131,7 @@ primer_fn_first_row_2:
   retq
 
 .p2align 4
-primer_fn_duplicate_3:
+cerune_fn_duplicate_3:
   pushq %rbp
   movq %rsp, %rbp
   subq $112, %rsp
@@ -162,7 +162,7 @@ primer_fn_duplicate_3:
   retq
 
 .p2align 4
-primer_fn_duplicate_first_row_4:
+cerune_fn_duplicate_first_row_4:
   pushq %rbp
   movq %rsp, %rbp
   subq $160, %rsp
@@ -177,10 +177,10 @@ primer_fn_duplicate_first_row_4:
   movq %rax, -80(%rbp)
   leaq -8(%rbp), %rcx
   leaq -88(%rbp), %rax
-  callq primer_fn_first_row_2
+  callq cerune_fn_first_row_2
   leaq -88(%rbp), %rcx
   leaq -104(%rbp), %rax
-  callq primer_fn_duplicate_3
+  callq cerune_fn_duplicate_3
   movq -80(%rbp), %r11
   movq -104(%rbp), %r10
   movq %r10, 0(%r11)
@@ -213,7 +213,7 @@ main:
   leaq -8(%rbp), %rcx
   movq -112(%rbp), %rdx
   leaq -408(%rbp), %rax
-  callq primer_fn_move_twice_1
+  callq cerune_fn_move_twice_1
   movq -408(%rbp), %rax
   movq %rax, -24(%rbp)
   movq -416(%rbp), %rax
@@ -244,7 +244,7 @@ main:
   movq %rax, -64(%rbp)
   leaq -40(%rbp), %rcx
   leaq -488(%rbp), %rax
-  callq primer_fn_duplicate_first_row_4
+  callq cerune_fn_duplicate_first_row_4
   movq -488(%rbp), %rax
   movq %rax, -72(%rbp)
   movq -496(%rbp), %rax
@@ -255,135 +255,135 @@ main:
   movq %rax, -96(%rbp)
   movq -8(%rbp), %rax
   movq %rax, %rdx
-  leaq .Lprimer_fmt_i64(%rip), %rcx
+  leaq .Lcerune_fmt_i64(%rip), %rcx
   callq printf
   movq -24(%rbp), %rax
   movq %rax, %rdx
-  leaq .Lprimer_fmt_i64(%rip), %rcx
+  leaq .Lcerune_fmt_i64(%rip), %rcx
   callq printf
   movq -32(%rbp), %rax
   movq %rax, %rdx
-  leaq .Lprimer_fmt_i64(%rip), %rcx
+  leaq .Lcerune_fmt_i64(%rip), %rcx
   callq printf
   movabsq $1, %rax
   testq %rax, %rax
-  js .Lprimer_main_array_oob_0
+  js .Lcerune_main_array_oob_0
   cmpq $2, %rax
-  jge .Lprimer_main_array_oob_0
+  jge .Lcerune_main_array_oob_0
   imulq $-2, %rax
   movq -40(%rbp,%rax,8), %rcx
   movq %rcx, -520(%rbp)
   movq -48(%rbp,%rax,8), %rcx
   movq %rcx, -528(%rbp)
-  jmp .Lprimer_main_array_done_0
-.Lprimer_main_array_oob_0:
+  jmp .Lcerune_main_array_done_0
+.Lcerune_main_array_oob_0:
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
-  leaq .Lprimer_failure_2(%rip), %rdx
+  leaq .Lcerune_failure_2(%rip), %rdx
   movl $73, %r8d
   callq _write
   ud2
-.Lprimer_main_array_done_0:
+.Lcerune_main_array_done_0:
   movabsq $0, %rax
   testq %rax, %rax
-  js .Lprimer_main_array_oob_1
+  js .Lcerune_main_array_oob_1
   cmpq $2, %rax
-  jge .Lprimer_main_array_oob_1
+  jge .Lcerune_main_array_oob_1
   negq %rax
   movq -520(%rbp,%rax,8), %rax
-  jmp .Lprimer_main_array_done_1
-.Lprimer_main_array_oob_1:
+  jmp .Lcerune_main_array_done_1
+.Lcerune_main_array_oob_1:
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
-  leaq .Lprimer_failure_3(%rip), %rdx
+  leaq .Lcerune_failure_3(%rip), %rdx
   movl $73, %r8d
   callq _write
   ud2
-.Lprimer_main_array_done_1:
+.Lcerune_main_array_done_1:
   movq %rax, %rdx
-  leaq .Lprimer_fmt_i64(%rip), %rcx
+  leaq .Lcerune_fmt_i64(%rip), %rcx
   callq printf
   movabsq $0, %rax
   testq %rax, %rax
-  js .Lprimer_main_array_oob_2
+  js .Lcerune_main_array_oob_2
   cmpq $2, %rax
-  jge .Lprimer_main_array_oob_2
+  jge .Lcerune_main_array_oob_2
   imulq $-2, %rax
   movq -72(%rbp,%rax,8), %rcx
   movq %rcx, -536(%rbp)
   movq -80(%rbp,%rax,8), %rcx
   movq %rcx, -544(%rbp)
-  jmp .Lprimer_main_array_done_2
-.Lprimer_main_array_oob_2:
+  jmp .Lcerune_main_array_done_2
+.Lcerune_main_array_oob_2:
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
-  leaq .Lprimer_failure_4(%rip), %rdx
+  leaq .Lcerune_failure_4(%rip), %rdx
   movl $73, %r8d
   callq _write
   ud2
-.Lprimer_main_array_done_2:
+.Lcerune_main_array_done_2:
   movabsq $1, %rax
   testq %rax, %rax
-  js .Lprimer_main_array_oob_3
+  js .Lcerune_main_array_oob_3
   cmpq $2, %rax
-  jge .Lprimer_main_array_oob_3
+  jge .Lcerune_main_array_oob_3
   negq %rax
   movq -536(%rbp,%rax,8), %rax
-  jmp .Lprimer_main_array_done_3
-.Lprimer_main_array_oob_3:
+  jmp .Lcerune_main_array_done_3
+.Lcerune_main_array_oob_3:
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
-  leaq .Lprimer_failure_5(%rip), %rdx
+  leaq .Lcerune_failure_5(%rip), %rdx
   movl $73, %r8d
   callq _write
   ud2
-.Lprimer_main_array_done_3:
+.Lcerune_main_array_done_3:
   movq %rax, %rdx
-  leaq .Lprimer_fmt_i64(%rip), %rcx
+  leaq .Lcerune_fmt_i64(%rip), %rcx
   callq printf
   movabsq $1, %rax
   testq %rax, %rax
-  js .Lprimer_main_array_oob_4
+  js .Lcerune_main_array_oob_4
   cmpq $2, %rax
-  jge .Lprimer_main_array_oob_4
+  jge .Lcerune_main_array_oob_4
   imulq $-2, %rax
   movq -72(%rbp,%rax,8), %rcx
   movq %rcx, -552(%rbp)
   movq -80(%rbp,%rax,8), %rcx
   movq %rcx, -560(%rbp)
-  jmp .Lprimer_main_array_done_4
-.Lprimer_main_array_oob_4:
+  jmp .Lcerune_main_array_done_4
+.Lcerune_main_array_oob_4:
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
-  leaq .Lprimer_failure_6(%rip), %rdx
+  leaq .Lcerune_failure_6(%rip), %rdx
   movl $73, %r8d
   callq _write
   ud2
-.Lprimer_main_array_done_4:
+.Lcerune_main_array_done_4:
   movabsq $0, %rax
   testq %rax, %rax
-  js .Lprimer_main_array_oob_5
+  js .Lcerune_main_array_oob_5
   cmpq $2, %rax
-  jge .Lprimer_main_array_oob_5
+  jge .Lcerune_main_array_oob_5
   negq %rax
   movq -552(%rbp,%rax,8), %rax
-  jmp .Lprimer_main_array_done_5
-.Lprimer_main_array_oob_5:
+  jmp .Lcerune_main_array_done_5
+.Lcerune_main_array_oob_5:
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
-  leaq .Lprimer_failure_7(%rip), %rdx
+  leaq .Lcerune_failure_7(%rip), %rdx
   movl $73, %r8d
   callq _write
   ud2
-.Lprimer_main_array_done_5:
+.Lcerune_main_array_done_5:
   movq %rax, %rdx
-  leaq .Lprimer_fmt_i64(%rip), %rcx
+  leaq .Lcerune_fmt_i64(%rip), %rcx
   callq printf
   xorl %eax, %eax
   addq $592, %rsp
@@ -391,19 +391,19 @@ main:
   retq
 
 .section .rdata,"dr"
-.Lprimer_failure_0:
-  .asciz "primer: runtime-v1 code=integer-overflow node=2 bytes=118..134\n"
-.Lprimer_failure_1:
-  .asciz "primer: runtime-v1 code=array-index-out-of-bounds node=15 bytes=332..341\n"
-.Lprimer_failure_2:
-  .asciz "primer: runtime-v1 code=array-index-out-of-bounds node=56 bytes=760..769\n"
-.Lprimer_failure_3:
-  .asciz "primer: runtime-v1 code=array-index-out-of-bounds node=55 bytes=760..772\n"
-.Lprimer_failure_4:
-  .asciz "primer: runtime-v1 code=array-index-out-of-bounds node=62 bytes=781..788\n"
-.Lprimer_failure_5:
-  .asciz "primer: runtime-v1 code=array-index-out-of-bounds node=61 bytes=781..791\n"
-.Lprimer_failure_6:
-  .asciz "primer: runtime-v1 code=array-index-out-of-bounds node=68 bytes=800..807\n"
-.Lprimer_failure_7:
-  .asciz "primer: runtime-v1 code=array-index-out-of-bounds node=67 bytes=800..810\n"
+.Lcerune_failure_0:
+  .asciz "cerune: runtime-v1 code=integer-overflow node=2 bytes=118..134\n"
+.Lcerune_failure_1:
+  .asciz "cerune: runtime-v1 code=array-index-out-of-bounds node=15 bytes=332..341\n"
+.Lcerune_failure_2:
+  .asciz "cerune: runtime-v1 code=array-index-out-of-bounds node=56 bytes=760..769\n"
+.Lcerune_failure_3:
+  .asciz "cerune: runtime-v1 code=array-index-out-of-bounds node=55 bytes=760..772\n"
+.Lcerune_failure_4:
+  .asciz "cerune: runtime-v1 code=array-index-out-of-bounds node=62 bytes=781..788\n"
+.Lcerune_failure_5:
+  .asciz "cerune: runtime-v1 code=array-index-out-of-bounds node=61 bytes=781..791\n"
+.Lcerune_failure_6:
+  .asciz "cerune: runtime-v1 code=array-index-out-of-bounds node=68 bytes=800..807\n"
+.Lcerune_failure_7:
+  .asciz "cerune: runtime-v1 code=array-index-out-of-bounds node=67 bytes=800..810\n"

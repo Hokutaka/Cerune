@@ -1,4 +1,4 @@
-use primer_lang::{
+use cerune_lang::{
     RunError, bytecode, compile, compile_to_bytecode_text, compile_to_ir, ir, run_vm,
     types::IntegerType,
     vm::{IntegerOperation, VmErrorKind},

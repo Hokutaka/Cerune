@@ -1,26 +1,28 @@
-[![CI](https://github.com/Hokutaka/Primer/actions/workflows/ci.yml/badge.svg)](https://github.com/Hokutaka/Primer/actions/workflows/ci.yml)
+[![CI](https://github.com/Hokutaka/Cerune/actions/workflows/ci.yml/badge.svg)](https://github.com/Hokutaka/Cerune/actions/workflows/ci.yml)
 
-# Primer
+# Cerune
 
 [日本語](README.md) | English
 
-Primer is an experimental programming language designed to make compiler transformations observable.
+Cerune is an experimental programming language designed to make compiler transformations observable.
 
-Beyond the result, Primer makes it possible to inspect which types a computation uses and how it becomes generated code. A shared Primer IR (intermediate representation) holds the resolved meaning and types before lowering to each output target. Primer aims to combine sophisticated implementation with observability, while keeping inspection separate from mutation of compiler internals.
+The [naming and migration guide](docs/design/naming.en.md) describes the rename from Primer, the `.ceru` and `.ceir` extensions, and updates for existing tools.
+
+Beyond the result, Cerune makes it possible to inspect which types a computation uses and how it becomes generated code. A shared Cerune IR (intermediate representation) holds the resolved meaning and types before lowering to each output target. Cerune aims to combine sophisticated implementation with observability, while keeping inspection separate from mutation of compiler internals.
 
 ## Run Your First Example
 
 You need a Rust development environment with rustup and Cargo. Clone the repository and install the CLI from its root:
 
 ```sh
-git clone https://github.com/Hokutaka/Primer.git
-cd Primer
+git clone https://github.com/Hokutaka/Cerune.git
+cd Cerune
 cargo install --path .
 ```
 
-[examples/floating_point.prim](examples/floating_point.prim) performs the same addition with different types:
+[examples/floating_point.ceru](examples/floating_point.ceru) performs the same addition with different types:
 
-```primer
+```cerune
 a: f32 = 0.1 + 0.2;
 b: f64 = 0.1 + 0.2;
 c: infer = 0.1 + 0.2;
@@ -31,10 +33,10 @@ print(c);
 ```
 
 ```sh
-primer run examples/floating_point.prim
+cerune run examples/floating_point.ceru
 ```
 
-Primer VM output:
+Cerune VM output:
 
 ```text
 0.300000012
@@ -44,26 +46,26 @@ Primer VM output:
 
 `f32` and `f64` represent numbers with different precision. `infer` explicitly requests type inference; `c` resolves to `f64` in this example.
 
-During development, replace `primer` with `cargo run --quiet --` to run the updated code without reinstalling the CLI.
+During development, replace `cerune` with `cargo run --quiet --` to run the updated code without reinstalling the CLI.
 
 ## Observe Computation and Transformation
 
 [Modules](docs/design/modules.en.md) split types and functions across files with explicit imports, namespaces, and visibility. Compare the [modular and single-file examples](examples/modules/README.en.md).
 
-Language check failures expose comparable reasons, source locations, and prior output across every route. See [runtime diagnostics](docs/design/runtime-diagnostics.en.md) and the [four expected-failure examples](examples/runtime_failures/README.en.md). Checked numeric LLVM programs require an explicit target, and WAT hosts must implement `primer.write_error_byte` for diagnostic output.
+Language check failures expose comparable reasons, source locations, and prior output across every route. See [runtime diagnostics](docs/design/runtime-diagnostics.en.md) and the [four expected-failure examples](examples/runtime_failures/README.en.md). Checked numeric LLVM programs require an explicit target, and WAT hosts must implement `cerune.write_error_byte` for diagnostic output.
 
 The same source can be inspected as an intermediate representation or generated code, not just executed:
 
 ```sh
-primer emit-ir examples/floating_point.prim
-primer emit-c examples/floating_point.prim
+cerune emit-ir examples/floating_point.ceru
+cerune emit-c examples/floating_point.ceru
 ```
 
-`emit-ir` shows resolved types and operations; `emit-c` shows how they are represented in C. Backends consume the shared Primer IR instead of interpreting the source semantics again.
+`emit-ir` shows resolved types and operations; `emit-c` shows how they are represented in C. Backends consume the shared Cerune IR instead of interpreting the source semantics again.
 
-Text-producing `emit-*` commands write to standard output. To keep an artifact, use, for example, `primer emit-c examples/floating_point.prim -o floating_point.c`. Binary `emit-obj` requires both `--target` and `-o`. To check syntax and types without running, use `primer check examples/floating_point.prim`.
+Text-producing `emit-*` commands write to standard output. To keep an artifact, use, for example, `cerune emit-c examples/floating_point.ceru -o floating_point.c`. Binary `emit-obj` requires both `--target` and `-o`. To check syntax and types without running, use `cerune check examples/floating_point.ceru`.
 
-The public observation points are Primer IR and emitted artifacts. Backend-specific Rust IR remains an internal lowering boundary. See the [compiler design](docs/design/architecture.en.md) and [observability contract](docs/design/observability.en.md) for details.
+The public observation points are Cerune IR and emitted artifacts. Backend-specific Rust IR remains an internal lowering boundary. See the [compiler design](docs/design/architecture.en.md) and [observability contract](docs/design/observability.en.md) for details.
 
 ## Current Capabilities
 
@@ -72,7 +74,7 @@ The public observation points are Primer IR and emitted artifacts. Backend-speci
 - **Functions and control flow:** typed functions, `void`, and explicit `return`. Top-level executable statements or `fn main() -> void`. `if` / `else`, `while`, `for`, and `break` / `continue`.
 - **Operators:** arithmetic, integer remainder and bit operations, comparisons, `!`, and short-circuiting `&&` and `||`.
 - **Explicit conversion:** equivalent spellings such as `f64(value)` and `convert<f64>(value)`. Conversion between implemented numeric types succeeds only when it preserves the value.
-- **Output and execution:** `print(expr);`, Primer IR and backend artifact emission, and Primer VM execution.
+- **Output and execution:** `print(expr);`, Cerune IR and backend artifact emission, and Cerune VM execution.
 
 Integer overflow, invalid integer division, out-of-bounds array access, and conversions that cannot preserve the value stop execution. There are no implicit numeric conversions. Ordinary floating-point arithmetic still rounds.
 
@@ -80,7 +82,7 @@ Strings are immutable UTF-8 values, supporting printing, equality, UTF-8 byte-le
 
 Dynamically sized arrays, recursion, failure recovery, and explicit rounding/truncation operations are not implemented. Current generated targets store even small integer types in 64-bit storage and check their value ranges.
 
-`u64` covers 0 through 18446744073709551615. See the [design and target representations](docs/design/u64.en.md) and [example](examples/u64_values.prim).
+`u64` covers 0 through 18446744073709551615. See the [design and target representations](docs/design/u64.en.md) and [example](examples/u64_values.ceru).
 
 ### Output Targets
 
@@ -91,10 +93,10 @@ Dynamically sized arrays, recursion, failure recovery, and explicit rounding/tru
 | `emit-qbe` | QBE IR (`.ssa`) | Process with QBE |
 | `emit-wat` | WebAssembly Text (`.wat`) | Run using WebAssembly tools and a host |
 | `emit-asm` | Windows/Linux x86-64 assembly (`.s`) | Assemble and link |
-| `emit-obj` | Primer-encoded ELF/COFF (`.o` / `.obj`) | Link externally; `--target` and `-o` are required |
-| `emit-bytecode` | Primer bytecode (`.pbc`) | Inspect instructions; use `run` on source for VM execution |
+| `emit-obj` | Cerune-encoded ELF/COFF (`.o` / `.obj`) | Link externally; `--target` and `-o` are required |
+| `emit-bytecode` | Cerune bytecode (`.cebc`) | Inspect instructions; use `run` on source for VM execution |
 
-Primer handles artifact generation. External tool selection, CPU targets, optimization settings, and measurement policy belong to the caller. See [output routes and targets](docs/design/targets.en.md) for details.
+Cerune handles artifact generation. External tool selection, CPU targets, optimization settings, and measurement policy belong to the caller. See [output routes and targets](docs/design/targets.en.md) for details.
 
 Linux ASM and machine-code observation are described in [native-code design and execution](docs/design/native-code.en.md).
 
@@ -102,10 +104,10 @@ Linux ASM and machine-code observation are described in [native-code design and 
 
 | Category | Examples |
 | --- | --- |
-| Basics | [Small-value output](examples/small_values.prim), [short-circuit evaluation](examples/short_circuit.prim) |
-| Data structures | [Ring buffer](examples/ring_buffer.prim), [passing structs and arrays](examples/function_values.prim) |
-| Numerical computation | [Sample mean and variance](examples/measurement_statistics.prim), [learning a line](examples/linear_regression.prim) |
-| Algorithms | [Shortest paths](examples/shortest_paths.prim), [bitset subset sum](examples/subset_sum_bits.prim) |
+| Basics | [Small-value output](examples/small_values.ceru), [short-circuit evaluation](examples/short_circuit.ceru) |
+| Data structures | [Ring buffer](examples/ring_buffer.ceru), [passing structs and arrays](examples/function_values.ceru) |
+| Numerical computation | [Sample mean and variance](examples/measurement_statistics.ceru), [learning a line](examples/linear_regression.ceru) |
+| Algorithms | [Shortest paths](examples/shortest_paths.ceru), [bitset subset sum](examples/subset_sum_bits.ceru) |
 
 Find more in the [examples index](examples/README.en.md). Run all examples from the repository root.
 
@@ -122,7 +124,7 @@ bash scripts/run-examples.sh
 bash scripts/test.sh
 ```
 
-`run-examples` displays sample output. Select examples with `-Pattern "matrix*.prim"` in PowerShell or `--pattern 'matrix*.prim'` in Bash. `test.sh` runs fmt, Clippy, and all test targets, including expected-output checks. Use `cargo test --test examples` for sample tests alone.
+`run-examples` displays sample output. Select examples with `-Pattern "matrix*.ceru"` in PowerShell or `--pattern 'matrix*.ceru'` in Bash. `test.sh` runs fmt, Clippy, and all test targets, including expected-output checks. Use `cargo test --test examples` for sample tests alone.
 
 The `.sh` scripts default to `target/unix`, keeping Linux build output separate from Windows artifacts. They respect an existing `CARGO_TARGET_DIR` setting.
 
@@ -134,9 +136,9 @@ The `.sh` scripts default to `target/unix`, keeping Linux build output separate 
 ## Related Tools
 
 - [Tint\*](https://github.com/Hokutaka/Tint-St.): a development and inspection environment that presents source and generated representations side by side.
-- [Whitebase](https://github.com/Hokutaka/Whitebase): an experiment environment that runs, measures, and compares built-in Rust, C++, and Assembly operations. Integration with Primer artifacts is not implemented yet.
+- [Whitebase](https://github.com/Hokutaka/Whitebase): an experiment environment that runs, measures, and compares built-in Rust, C++, and Assembly operations. Integration with Cerune artifacts is not implemented yet.
 
-Primer owns language semantics and compilation. The intended Whitebase integration keeps experiments using emitted artifacts on the consumer side. See [Tool responsibilities](docs/design/architecture.en.md#tool-responsibilities) for the current implementation and integration boundary.
+Cerune owns language semantics and compilation. The intended Whitebase integration keeps experiments using emitted artifacts on the consumer side. See [Tool responsibilities](docs/design/architecture.en.md#tool-responsibilities) for the current implementation and integration boundary.
 
 ## License
 

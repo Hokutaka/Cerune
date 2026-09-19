@@ -1,6 +1,6 @@
 #[path = "support/llvm.rs"]
 mod llvm;
-use primer_lang::{
+use cerune_lang::{
     RunError, bytecode, compile, compile_to_bytecode, compile_to_bytecode_text, compile_to_c,
     compile_to_ir, compile_to_ir_text, compile_to_qbe, compile_to_wat, compile_to_x86_64_win_asm,
     ir, run_vm,
@@ -191,7 +191,7 @@ fn destination_does_not_change_input_arithmetic_or_evaluate_it_twice() {
         assert_eq!(
             compile_to_x86_64_win_asm(source)
                 .unwrap()
-                .matches("  callq primer_fn_next_0\n")
+                .matches("  callq cerune_fn_next_0\n")
                 .count(),
             1
         );

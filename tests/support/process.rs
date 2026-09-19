@@ -26,7 +26,7 @@ pub fn bounded_output(
         use std::os::unix::process::CommandExt;
         command.process_group(0);
     }
-    let trace = std::env::var_os("PRIMER_TEST_TRACE").is_some();
+    let trace = std::env::var_os("CERUNE_TEST_TRACE").is_some();
     if trace {
         use std::io::Write;
         let _ = writeln!(std::io::stderr().lock(), "[test-process] start {label}");

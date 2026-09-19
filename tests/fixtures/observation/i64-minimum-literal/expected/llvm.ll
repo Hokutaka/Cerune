@@ -8,9 +8,9 @@ declare i32 @printf(ptr, ...)
 
 define i32 @main() {
 entry:
-  %primer_value = alloca i64
-  store i64 -9223372036854775808, ptr %primer_value
-  %tmp0 = load i64, ptr %primer_value
+  %cerune_value = alloca i64
+  store i64 -9223372036854775808, ptr %cerune_value
+  %tmp0 = load i64, ptr %cerune_value
   call i32 (ptr, ...) @printf(ptr @.fmt_i64, i64 %tmp0)
   ret i32 0
 }

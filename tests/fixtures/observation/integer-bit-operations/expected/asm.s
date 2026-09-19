@@ -1,35 +1,35 @@
 .section .rdata,"dr"
-.Lprimer_fmt_i64:
+.Lcerune_fmt_i64:
   .asciz "%lld\n"
-.Lprimer_fmt_f32:
+.Lcerune_fmt_f32:
   .asciz "%.9g\n"
-.Lprimer_fmt_f64:
+.Lcerune_fmt_f64:
   .asciz "%.17g\n"
-.Lprimer_bool_false:
+.Lcerune_bool_false:
   .asciz "false"
-.Lprimer_bool_true:
+.Lcerune_bool_true:
   .asciz "true"
 .p2align 4
-.Lprimer_sign_f32:
+.Lcerune_sign_f32:
   .long 0x80000000
   .long 0
   .long 0
   .long 0
 .p2align 4
-.Lprimer_sign_f64:
+.Lcerune_sign_f64:
   .quad 0x8000000000000000
   .quad 0
 
 .text
 .p2align 4
-primer_fn_mark_0:
+cerune_fn_mark_0:
   pushq %rbp
   movq %rsp, %rbp
   subq $64, %rsp
   movq %rcx, -8(%rbp)
   movq -8(%rbp), %rax
   movq %rax, %rdx
-  leaq .Lprimer_fmt_i64(%rip), %rcx
+  leaq .Lcerune_fmt_i64(%rip), %rcx
   callq printf
   movq -8(%rbp), %rax
   addq $64, %rsp
@@ -48,57 +48,57 @@ main:
   movq %rax, %rcx
   movq -16(%rbp), %rax
   testq %rcx, %rcx
-  js .Lprimer_main_integer_bad_0
+  js .Lcerune_main_integer_bad_0
   cmpq $8, %rcx
-  jge .Lprimer_main_integer_bad_0
+  jge .Lcerune_main_integer_bad_0
   movabsq $0, %r11
   sarq %cl, %r11
   cmpq %r11, %rax
-  jl .Lprimer_main_integer_bad_0_overflow
+  jl .Lcerune_main_integer_bad_0_overflow
   movabsq $255, %r11
   shrq %cl, %r11
   cmpq %r11, %rax
-  jg .Lprimer_main_integer_bad_0_overflow
+  jg .Lcerune_main_integer_bad_0_overflow
   shlq %cl, %rax
-  jmp .Lprimer_main_integer_done_0
-.Lprimer_main_integer_bad_0_overflow:
+  jmp .Lcerune_main_integer_done_0
+.Lcerune_main_integer_bad_0_overflow:
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
-  leaq .Lprimer_failure_0(%rip), %rdx
+  leaq .Lcerune_failure_0(%rip), %rdx
   movl $61, %r8d
   callq _write
   ud2
-  jmp .Lprimer_main_integer_done_0
-.Lprimer_main_integer_bad_0:
+  jmp .Lcerune_main_integer_done_0
+.Lcerune_main_integer_bad_0:
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
-  leaq .Lprimer_failure_1(%rip), %rdx
+  leaq .Lcerune_failure_1(%rip), %rdx
   movl $64, %r8d
   callq _write
   ud2
-.Lprimer_main_integer_done_0:
+.Lcerune_main_integer_done_0:
   # semantic u8, storage i64
   movabsq $0, %r11
   cmpq %r11, %rax
-  jl .Lprimer_main_range_bad_1
+  jl .Lcerune_main_range_bad_1
   movabsq $255, %r11
   cmpq %r11, %rax
-  jle .Lprimer_main_range_ok_1
-.Lprimer_main_range_bad_1:
+  jle .Lcerune_main_range_ok_1
+.Lcerune_main_range_bad_1:
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
-  leaq .Lprimer_failure_2(%rip), %rdx
+  leaq .Lcerune_failure_2(%rip), %rdx
   movl $61, %r8d
   callq _write
   ud2
-.Lprimer_main_range_ok_1:
+.Lcerune_main_range_ok_1:
   movq %rax, -8(%rbp)
   movq -8(%rbp), %rax
   movq %rax, %rdx
-  leaq .Lprimer_fmt_i64(%rip), %rcx
+  leaq .Lcerune_fmt_i64(%rip), %rcx
   callq printf
   movq -8(%rbp), %rax
   movq %rax, -16(%rbp)
@@ -106,38 +106,38 @@ main:
   movq %rax, %rcx
   movq -16(%rbp), %rax
   testq %rcx, %rcx
-  js .Lprimer_main_integer_bad_2
+  js .Lcerune_main_integer_bad_2
   cmpq $8, %rcx
-  jge .Lprimer_main_integer_bad_2
+  jge .Lcerune_main_integer_bad_2
   sarq %cl, %rax
-  jmp .Lprimer_main_integer_done_2
-.Lprimer_main_integer_bad_2:
+  jmp .Lcerune_main_integer_done_2
+.Lcerune_main_integer_bad_2:
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
-  leaq .Lprimer_failure_3(%rip), %rdx
+  leaq .Lcerune_failure_3(%rip), %rdx
   movl $66, %r8d
   callq _write
   ud2
-.Lprimer_main_integer_done_2:
+.Lcerune_main_integer_done_2:
   # semantic u8, storage i64
   movabsq $0, %r11
   cmpq %r11, %rax
-  jl .Lprimer_main_range_bad_3
+  jl .Lcerune_main_range_bad_3
   movabsq $255, %r11
   cmpq %r11, %rax
-  jle .Lprimer_main_range_ok_3
-.Lprimer_main_range_bad_3:
+  jle .Lcerune_main_range_ok_3
+.Lcerune_main_range_bad_3:
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
-  leaq .Lprimer_failure_4(%rip), %rdx
+  leaq .Lcerune_failure_4(%rip), %rdx
   movl $63, %r8d
   callq _write
   ud2
-.Lprimer_main_range_ok_3:
+.Lcerune_main_range_ok_3:
   movq %rax, %rdx
-  leaq .Lprimer_fmt_i64(%rip), %rcx
+  leaq .Lcerune_fmt_i64(%rip), %rcx
   callq printf
   movabsq $0, %rax
   movabsq $255, %r11
@@ -145,76 +145,76 @@ main:
   # semantic u8, storage i64
   movabsq $0, %r11
   cmpq %r11, %rax
-  jl .Lprimer_main_range_bad_4
+  jl .Lcerune_main_range_bad_4
   movabsq $255, %r11
   cmpq %r11, %rax
-  jle .Lprimer_main_range_ok_4
-.Lprimer_main_range_bad_4:
+  jle .Lcerune_main_range_ok_4
+.Lcerune_main_range_bad_4:
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
-  leaq .Lprimer_failure_5(%rip), %rdx
+  leaq .Lcerune_failure_5(%rip), %rdx
   movl $64, %r8d
   callq _write
   ud2
-.Lprimer_main_range_ok_4:
+.Lcerune_main_range_ok_4:
   movq %rax, %rdx
-  leaq .Lprimer_fmt_i64(%rip), %rcx
+  leaq .Lcerune_fmt_i64(%rip), %rcx
   callq printf
   movabsq $1, %rax
   movq %rax, -24(%rbp)
   movq -24(%rbp), %rcx
-  callq primer_fn_mark_0
+  callq cerune_fn_mark_0
   movq %rax, -16(%rbp)
   movabsq $2, %rax
   movq %rax, -32(%rbp)
   movq -32(%rbp), %rcx
-  callq primer_fn_mark_0
+  callq cerune_fn_mark_0
   movq %rax, -24(%rbp)
   movabsq $3, %rax
   movq %rax, -32(%rbp)
   movq -32(%rbp), %rcx
-  callq primer_fn_mark_0
+  callq cerune_fn_mark_0
   movq %rax, %rcx
   movq -24(%rbp), %rax
   xorq %rcx, %rax
   # semantic u8, storage i64
   movabsq $0, %r11
   cmpq %r11, %rax
-  jl .Lprimer_main_range_bad_6
+  jl .Lcerune_main_range_bad_6
   movabsq $255, %r11
   cmpq %r11, %rax
-  jle .Lprimer_main_range_ok_6
-.Lprimer_main_range_bad_6:
+  jle .Lcerune_main_range_ok_6
+.Lcerune_main_range_bad_6:
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
-  leaq .Lprimer_failure_6(%rip), %rdx
+  leaq .Lcerune_failure_6(%rip), %rdx
   movl $64, %r8d
   callq _write
   ud2
-.Lprimer_main_range_ok_6:
+.Lcerune_main_range_ok_6:
   movq %rax, %rcx
   movq -16(%rbp), %rax
   orq %rcx, %rax
   # semantic u8, storage i64
   movabsq $0, %r11
   cmpq %r11, %rax
-  jl .Lprimer_main_range_bad_8
+  jl .Lcerune_main_range_bad_8
   movabsq $255, %r11
   cmpq %r11, %rax
-  jle .Lprimer_main_range_ok_8
-.Lprimer_main_range_bad_8:
+  jle .Lcerune_main_range_ok_8
+.Lcerune_main_range_bad_8:
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
-  leaq .Lprimer_failure_7(%rip), %rdx
+  leaq .Lcerune_failure_7(%rip), %rdx
   movl $64, %r8d
   callq _write
   ud2
-.Lprimer_main_range_ok_8:
+.Lcerune_main_range_ok_8:
   movq %rax, %rdx
-  leaq .Lprimer_fmt_i64(%rip), %rcx
+  leaq .Lcerune_fmt_i64(%rip), %rcx
   callq printf
   movq -8(%rbp), %rax
   movq %rax, -16(%rbp)
@@ -225,219 +225,219 @@ main:
   # semantic u8, storage i64
   movabsq $0, %r11
   cmpq %r11, %rax
-  jl .Lprimer_main_range_bad_10
+  jl .Lcerune_main_range_bad_10
   movabsq $255, %r11
   cmpq %r11, %rax
-  jle .Lprimer_main_range_ok_10
-.Lprimer_main_range_bad_10:
+  jle .Lcerune_main_range_ok_10
+.Lcerune_main_range_bad_10:
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
-  leaq .Lprimer_failure_8(%rip), %rdx
+  leaq .Lcerune_failure_8(%rip), %rdx
   movl $64, %r8d
   callq _write
   ud2
-.Lprimer_main_range_ok_10:
+.Lcerune_main_range_ok_10:
   movq %rax, %rdx
-  leaq .Lprimer_fmt_i64(%rip), %rcx
+  leaq .Lcerune_fmt_i64(%rip), %rcx
   callq printf
   movabsq $7, %rax
   negq %rax
-  jno .Lprimer_main_integer_ok_11
+  jno .Lcerune_main_integer_ok_11
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
-  leaq .Lprimer_failure_9(%rip), %rdx
+  leaq .Lcerune_failure_9(%rip), %rdx
   movl $64, %r8d
   callq _write
   ud2
-.Lprimer_main_integer_ok_11:
+.Lcerune_main_integer_ok_11:
   movq %rax, -16(%rbp)
   movabsq $3, %rax
   movq %rax, %rcx
   movq -16(%rbp), %rax
   testq %rcx, %rcx
-  je .Lprimer_main_integer_bad_12
+  je .Lcerune_main_integer_bad_12
   cmpq $-1, %rcx
-  jne .Lprimer_main_integer_rem_12
+  jne .Lcerune_main_integer_rem_12
   xorq %rax, %rax
-  jmp .Lprimer_main_integer_done_12
-.Lprimer_main_integer_rem_12:
+  jmp .Lcerune_main_integer_done_12
+.Lcerune_main_integer_rem_12:
   cqto
   idivq %rcx
   movq %rdx, %rax
-  jmp .Lprimer_main_integer_done_12
-.Lprimer_main_integer_bad_12:
+  jmp .Lcerune_main_integer_done_12
+.Lcerune_main_integer_bad_12:
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
-  leaq .Lprimer_failure_10(%rip), %rdx
+  leaq .Lcerune_failure_10(%rip), %rdx
   movl $65, %r8d
   callq _write
   ud2
-.Lprimer_main_integer_done_12:
+.Lcerune_main_integer_done_12:
   movq %rax, %rdx
-  leaq .Lprimer_fmt_i64(%rip), %rcx
+  leaq .Lcerune_fmt_i64(%rip), %rcx
   callq printf
   movabsq $-9223372036854775808, %rax
   movq %rax, -16(%rbp)
   movabsq $1, %rax
   negq %rax
-  jno .Lprimer_main_integer_ok_13
+  jno .Lcerune_main_integer_ok_13
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
-  leaq .Lprimer_failure_11(%rip), %rdx
+  leaq .Lcerune_failure_11(%rip), %rdx
   movl $64, %r8d
   callq _write
   ud2
-.Lprimer_main_integer_ok_13:
+.Lcerune_main_integer_ok_13:
   movq %rax, %rcx
   movq -16(%rbp), %rax
   testq %rcx, %rcx
-  je .Lprimer_main_integer_bad_14
+  je .Lcerune_main_integer_bad_14
   cmpq $-1, %rcx
-  jne .Lprimer_main_integer_rem_14
+  jne .Lcerune_main_integer_rem_14
   xorq %rax, %rax
-  jmp .Lprimer_main_integer_done_14
-.Lprimer_main_integer_rem_14:
+  jmp .Lcerune_main_integer_done_14
+.Lcerune_main_integer_rem_14:
   cqto
   idivq %rcx
   movq %rdx, %rax
-  jmp .Lprimer_main_integer_done_14
-.Lprimer_main_integer_bad_14:
+  jmp .Lcerune_main_integer_done_14
+.Lcerune_main_integer_bad_14:
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
-  leaq .Lprimer_failure_12(%rip), %rdx
+  leaq .Lcerune_failure_12(%rip), %rdx
   movl $65, %r8d
   callq _write
   ud2
-.Lprimer_main_integer_done_14:
+.Lcerune_main_integer_done_14:
   movq %rax, %rdx
-  leaq .Lprimer_fmt_i64(%rip), %rcx
+  leaq .Lcerune_fmt_i64(%rip), %rcx
   callq printf
   movabsq $3, %rax
   negq %rax
-  jno .Lprimer_main_integer_ok_15
+  jno .Lcerune_main_integer_ok_15
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
-  leaq .Lprimer_failure_13(%rip), %rdx
+  leaq .Lcerune_failure_13(%rip), %rdx
   movl $64, %r8d
   callq _write
   ud2
-.Lprimer_main_integer_ok_15:
+.Lcerune_main_integer_ok_15:
   # semantic i8, storage i64
   movabsq $-128, %r11
   cmpq %r11, %rax
-  jl .Lprimer_main_range_bad_16
+  jl .Lcerune_main_range_bad_16
   movabsq $127, %r11
   cmpq %r11, %rax
-  jle .Lprimer_main_range_ok_16
-.Lprimer_main_range_bad_16:
+  jle .Lcerune_main_range_ok_16
+.Lcerune_main_range_bad_16:
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
-  leaq .Lprimer_failure_14(%rip), %rdx
+  leaq .Lcerune_failure_14(%rip), %rdx
   movl $64, %r8d
   callq _write
   ud2
-.Lprimer_main_range_ok_16:
+.Lcerune_main_range_ok_16:
   movq %rax, -16(%rbp)
   movabsq $1, %rax
   movq %rax, %rcx
   movq -16(%rbp), %rax
   testq %rcx, %rcx
-  js .Lprimer_main_integer_bad_17
+  js .Lcerune_main_integer_bad_17
   cmpq $8, %rcx
-  jge .Lprimer_main_integer_bad_17
+  jge .Lcerune_main_integer_bad_17
   sarq %cl, %rax
-  jmp .Lprimer_main_integer_done_17
-.Lprimer_main_integer_bad_17:
+  jmp .Lcerune_main_integer_done_17
+.Lcerune_main_integer_bad_17:
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
-  leaq .Lprimer_failure_15(%rip), %rdx
+  leaq .Lcerune_failure_15(%rip), %rdx
   movl $67, %r8d
   callq _write
   ud2
-.Lprimer_main_integer_done_17:
+.Lcerune_main_integer_done_17:
   # semantic i8, storage i64
   movabsq $-128, %r11
   cmpq %r11, %rax
-  jl .Lprimer_main_range_bad_18
+  jl .Lcerune_main_range_bad_18
   movabsq $127, %r11
   cmpq %r11, %rax
-  jle .Lprimer_main_range_ok_18
-.Lprimer_main_range_bad_18:
+  jle .Lcerune_main_range_ok_18
+.Lcerune_main_range_bad_18:
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
-  leaq .Lprimer_failure_16(%rip), %rdx
+  leaq .Lcerune_failure_16(%rip), %rdx
   movl $64, %r8d
   callq _write
   ud2
-.Lprimer_main_range_ok_18:
+.Lcerune_main_range_ok_18:
   movq %rax, %rdx
-  leaq .Lprimer_fmt_i64(%rip), %rcx
+  leaq .Lcerune_fmt_i64(%rip), %rcx
   callq printf
   movabsq $0, %rax
   testq %rax, %rax
-  je .Lprimer_block_19
+  je .Lcerune_block_19
   movq -8(%rbp), %rax
   movq %rax, -24(%rbp)
   movabsq $1, %rax
   movq %rax, %rcx
   movq -24(%rbp), %rax
   testq %rcx, %rcx
-  js .Lprimer_main_integer_bad_21
+  js .Lcerune_main_integer_bad_21
   cmpq $8, %rcx
-  jge .Lprimer_main_integer_bad_21
+  jge .Lcerune_main_integer_bad_21
   movabsq $0, %r11
   sarq %cl, %r11
   cmpq %r11, %rax
-  jl .Lprimer_main_integer_bad_21_overflow
+  jl .Lcerune_main_integer_bad_21_overflow
   movabsq $255, %r11
   shrq %cl, %r11
   cmpq %r11, %rax
-  jg .Lprimer_main_integer_bad_21_overflow
+  jg .Lcerune_main_integer_bad_21_overflow
   shlq %cl, %rax
-  jmp .Lprimer_main_integer_done_21
-.Lprimer_main_integer_bad_21_overflow:
+  jmp .Lcerune_main_integer_done_21
+.Lcerune_main_integer_bad_21_overflow:
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
-  leaq .Lprimer_failure_17(%rip), %rdx
+  leaq .Lcerune_failure_17(%rip), %rdx
   movl $64, %r8d
   callq _write
   ud2
-  jmp .Lprimer_main_integer_done_21
-.Lprimer_main_integer_bad_21:
+  jmp .Lcerune_main_integer_done_21
+.Lcerune_main_integer_bad_21:
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
-  leaq .Lprimer_failure_18(%rip), %rdx
+  leaq .Lcerune_failure_18(%rip), %rdx
   movl $67, %r8d
   callq _write
   ud2
-.Lprimer_main_integer_done_21:
+.Lcerune_main_integer_done_21:
   # semantic u8, storage i64
   movabsq $0, %r11
   cmpq %r11, %rax
-  jl .Lprimer_main_range_bad_22
+  jl .Lcerune_main_range_bad_22
   movabsq $255, %r11
   cmpq %r11, %rax
-  jle .Lprimer_main_range_ok_22
-.Lprimer_main_range_bad_22:
+  jle .Lcerune_main_range_ok_22
+.Lcerune_main_range_bad_22:
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
-  leaq .Lprimer_failure_19(%rip), %rdx
+  leaq .Lcerune_failure_19(%rip), %rdx
   movl $64, %r8d
   callq _write
   ud2
-.Lprimer_main_range_ok_22:
+.Lcerune_main_range_ok_22:
   movq %rax, -16(%rbp)
   movabsq $0, %rax
   movq %rax, %rcx
@@ -445,12 +445,12 @@ main:
   cmpq %rcx, %rax
   sete %al
   movzbq %al, %rax
-  jmp .Lprimer_block_20
-.Lprimer_block_19: # logical_false
-.Lprimer_block_20: # logical_end
+  jmp .Lcerune_block_20
+.Lcerune_block_19: # logical_false
+.Lcerune_block_20: # logical_end
   testq %rax, %rax
-  leaq .Lprimer_bool_false(%rip), %rcx
-  leaq .Lprimer_bool_true(%rip), %rdx
+  leaq .Lcerune_bool_false(%rip), %rcx
+  leaq .Lcerune_bool_true(%rip), %rdx
   cmovne %rdx, %rcx
   callq puts
   xorl %eax, %eax
@@ -459,43 +459,43 @@ main:
   retq
 
 .section .rdata,"dr"
-.Lprimer_failure_0:
-  .asciz "primer: runtime-v1 code=integer-overflow node=5 bytes=68..74\n"
-.Lprimer_failure_1:
-  .asciz "primer: runtime-v1 code=invalid-shift-count node=5 bytes=68..74\n"
-.Lprimer_failure_2:
-  .asciz "primer: runtime-v1 code=integer-overflow node=5 bytes=68..74\n"
-.Lprimer_failure_3:
-  .asciz "primer: runtime-v1 code=invalid-shift-count node=11 bytes=95..104\n"
-.Lprimer_failure_4:
-  .asciz "primer: runtime-v1 code=integer-overflow node=11 bytes=95..104\n"
-.Lprimer_failure_5:
-  .asciz "primer: runtime-v1 code=integer-overflow node=15 bytes=113..117\n"
-.Lprimer_failure_6:
-  .asciz "primer: runtime-v1 code=integer-overflow node=21 bytes=136..155\n"
-.Lprimer_failure_7:
-  .asciz "primer: runtime-v1 code=integer-overflow node=18 bytes=126..155\n"
-.Lprimer_failure_8:
-  .asciz "primer: runtime-v1 code=integer-overflow node=27 bytes=164..174\n"
-.Lprimer_failure_9:
-  .asciz "primer: runtime-v1 code=integer-overflow node=32 bytes=183..185\n"
-.Lprimer_failure_10:
-  .asciz "primer: runtime-v1 code=remainder-by-zero node=31 bytes=183..189\n"
-.Lprimer_failure_11:
-  .asciz "primer: runtime-v1 code=integer-overflow node=38 bytes=221..223\n"
-.Lprimer_failure_12:
-  .asciz "primer: runtime-v1 code=remainder-by-zero node=36 bytes=198..223\n"
-.Lprimer_failure_13:
-  .asciz "primer: runtime-v1 code=integer-overflow node=42 bytes=232..236\n"
-.Lprimer_failure_14:
-  .asciz "primer: runtime-v1 code=integer-overflow node=42 bytes=232..236\n"
-.Lprimer_failure_15:
-  .asciz "primer: runtime-v1 code=invalid-shift-count node=41 bytes=232..241\n"
-.Lprimer_failure_16:
-  .asciz "primer: runtime-v1 code=integer-overflow node=41 bytes=232..241\n"
-.Lprimer_failure_17:
-  .asciz "primer: runtime-v1 code=integer-overflow node=49 bytes=259..270\n"
-.Lprimer_failure_18:
-  .asciz "primer: runtime-v1 code=invalid-shift-count node=49 bytes=259..270\n"
-.Lprimer_failure_19:
-  .asciz "primer: runtime-v1 code=integer-overflow node=49 bytes=259..270\n"
+.Lcerune_failure_0:
+  .asciz "cerune: runtime-v1 code=integer-overflow node=5 bytes=68..74\n"
+.Lcerune_failure_1:
+  .asciz "cerune: runtime-v1 code=invalid-shift-count node=5 bytes=68..74\n"
+.Lcerune_failure_2:
+  .asciz "cerune: runtime-v1 code=integer-overflow node=5 bytes=68..74\n"
+.Lcerune_failure_3:
+  .asciz "cerune: runtime-v1 code=invalid-shift-count node=11 bytes=95..104\n"
+.Lcerune_failure_4:
+  .asciz "cerune: runtime-v1 code=integer-overflow node=11 bytes=95..104\n"
+.Lcerune_failure_5:
+  .asciz "cerune: runtime-v1 code=integer-overflow node=15 bytes=113..117\n"
+.Lcerune_failure_6:
+  .asciz "cerune: runtime-v1 code=integer-overflow node=21 bytes=136..155\n"
+.Lcerune_failure_7:
+  .asciz "cerune: runtime-v1 code=integer-overflow node=18 bytes=126..155\n"
+.Lcerune_failure_8:
+  .asciz "cerune: runtime-v1 code=integer-overflow node=27 bytes=164..174\n"
+.Lcerune_failure_9:
+  .asciz "cerune: runtime-v1 code=integer-overflow node=32 bytes=183..185\n"
+.Lcerune_failure_10:
+  .asciz "cerune: runtime-v1 code=remainder-by-zero node=31 bytes=183..189\n"
+.Lcerune_failure_11:
+  .asciz "cerune: runtime-v1 code=integer-overflow node=38 bytes=221..223\n"
+.Lcerune_failure_12:
+  .asciz "cerune: runtime-v1 code=remainder-by-zero node=36 bytes=198..223\n"
+.Lcerune_failure_13:
+  .asciz "cerune: runtime-v1 code=integer-overflow node=42 bytes=232..236\n"
+.Lcerune_failure_14:
+  .asciz "cerune: runtime-v1 code=integer-overflow node=42 bytes=232..236\n"
+.Lcerune_failure_15:
+  .asciz "cerune: runtime-v1 code=invalid-shift-count node=41 bytes=232..241\n"
+.Lcerune_failure_16:
+  .asciz "cerune: runtime-v1 code=integer-overflow node=41 bytes=232..241\n"
+.Lcerune_failure_17:
+  .asciz "cerune: runtime-v1 code=integer-overflow node=49 bytes=259..270\n"
+.Lcerune_failure_18:
+  .asciz "cerune: runtime-v1 code=invalid-shift-count node=49 bytes=259..270\n"
+.Lcerune_failure_19:
+  .asciz "cerune: runtime-v1 code=integer-overflow node=49 bytes=259..270\n"

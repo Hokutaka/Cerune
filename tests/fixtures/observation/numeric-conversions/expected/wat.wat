@@ -1,28 +1,28 @@
 (module
-  (import "primer" "write_error_byte" (func $write_error_byte (param i32)))
-  (import "primer" "print_i64" (func $print_i64 (param i64)))
-  (import "primer" "print_f32" (func $print_f32 (param f32)))
-  (import "primer" "print_f64" (func $print_f64 (param f64)))
+  (import "cerune" "write_error_byte" (func $write_error_byte (param i32)))
+  (import "cerune" "print_i64" (func $print_i64 (param i64)))
+  (import "cerune" "print_f32" (func $print_f32 (param f32)))
+  (import "cerune" "print_f64" (func $print_f64 (param f64)))
 
-  (func $primer_convert_f32_f64_n21_b185_196 (param $value f32) (result f64)
+  (func $cerune_convert_f32_f64_n21_b185_196 (param $value f32) (result f64)
     (local $result f64)
     (local $number f64)
     local.get $value
     local.get $value
     f32.ne
     if
-      ;; primer: runtime-v1 code=conversion-nan node=21 bytes=185..196
-      i32.const 112
-      call $write_error_byte
-      i32.const 114
-      call $write_error_byte
-      i32.const 105
-      call $write_error_byte
-      i32.const 109
+      ;; cerune: runtime-v1 code=conversion-nan node=21 bytes=185..196
+      i32.const 99
       call $write_error_byte
       i32.const 101
       call $write_error_byte
       i32.const 114
+      call $write_error_byte
+      i32.const 117
+      call $write_error_byte
+      i32.const 110
+      call $write_error_byte
+      i32.const 101
       call $write_error_byte
       i32.const 58
       call $write_error_byte
@@ -143,7 +143,7 @@
     local.set $result
     local.get $result
   )
-  (func $primer_convert_f32_i16_n15_b147_158 (param $value f32) (result i64)
+  (func $cerune_convert_f32_i16_n15_b147_158 (param $value f32) (result i64)
     (local $result i64)
     (local $number f64)
     local.get $value
@@ -158,18 +158,18 @@
     f64.eq
     i32.or
     if
-      ;; primer: runtime-v1 code=conversion-not-finite node=15 bytes=147..158
-      i32.const 112
-      call $write_error_byte
-      i32.const 114
-      call $write_error_byte
-      i32.const 105
-      call $write_error_byte
-      i32.const 109
+      ;; cerune: runtime-v1 code=conversion-not-finite node=15 bytes=147..158
+      i32.const 99
       call $write_error_byte
       i32.const 101
       call $write_error_byte
       i32.const 114
+      call $write_error_byte
+      i32.const 117
+      call $write_error_byte
+      i32.const 110
+      call $write_error_byte
+      i32.const 101
       call $write_error_byte
       i32.const 58
       call $write_error_byte
@@ -304,18 +304,18 @@
     i64.const -9223372036854775808
     i64.eq
     if
-      ;; primer: runtime-v1 code=conversion-negative-zero node=15 bytes=147..158
-      i32.const 112
-      call $write_error_byte
-      i32.const 114
-      call $write_error_byte
-      i32.const 105
-      call $write_error_byte
-      i32.const 109
+      ;; cerune: runtime-v1 code=conversion-negative-zero node=15 bytes=147..158
+      i32.const 99
       call $write_error_byte
       i32.const 101
       call $write_error_byte
       i32.const 114
+      call $write_error_byte
+      i32.const 117
+      call $write_error_byte
+      i32.const 110
+      call $write_error_byte
+      i32.const 101
       call $write_error_byte
       i32.const 58
       call $write_error_byte
@@ -459,18 +459,18 @@
     f64.ge
     i32.or
     if
-      ;; primer: runtime-v1 code=conversion-out-of-range node=15 bytes=147..158
-      i32.const 112
-      call $write_error_byte
-      i32.const 114
-      call $write_error_byte
-      i32.const 105
-      call $write_error_byte
-      i32.const 109
+      ;; cerune: runtime-v1 code=conversion-out-of-range node=15 bytes=147..158
+      i32.const 99
       call $write_error_byte
       i32.const 101
       call $write_error_byte
       i32.const 114
+      call $write_error_byte
+      i32.const 117
+      call $write_error_byte
+      i32.const 110
+      call $write_error_byte
+      i32.const 101
       call $write_error_byte
       i32.const 58
       call $write_error_byte
@@ -612,18 +612,18 @@
     local.get $number
     f64.ne
     if
-      ;; primer: runtime-v1 code=conversion-inexact node=15 bytes=147..158
-      i32.const 112
-      call $write_error_byte
-      i32.const 114
-      call $write_error_byte
-      i32.const 105
-      call $write_error_byte
-      i32.const 109
+      ;; cerune: runtime-v1 code=conversion-inexact node=15 bytes=147..158
+      i32.const 99
       call $write_error_byte
       i32.const 101
       call $write_error_byte
       i32.const 114
+      call $write_error_byte
+      i32.const 117
+      call $write_error_byte
+      i32.const 110
+      call $write_error_byte
+      i32.const 101
       call $write_error_byte
       i32.const 58
       call $write_error_byte
@@ -749,25 +749,25 @@
     end
     local.get $result
   )
-  (func $primer_convert_f64_f32_n12_b130_139 (param $value f64) (result f32)
+  (func $cerune_convert_f64_f32_n12_b130_139 (param $value f64) (result f32)
     (local $result f32)
     (local $number f64)
     local.get $value
     local.get $value
     f64.ne
     if
-      ;; primer: runtime-v1 code=conversion-nan node=12 bytes=130..139
-      i32.const 112
-      call $write_error_byte
-      i32.const 114
-      call $write_error_byte
-      i32.const 105
-      call $write_error_byte
-      i32.const 109
+      ;; cerune: runtime-v1 code=conversion-nan node=12 bytes=130..139
+      i32.const 99
       call $write_error_byte
       i32.const 101
       call $write_error_byte
       i32.const 114
+      call $write_error_byte
+      i32.const 117
+      call $write_error_byte
+      i32.const 110
+      call $write_error_byte
+      i32.const 101
       call $write_error_byte
       i32.const 58
       call $write_error_byte
@@ -893,18 +893,18 @@
     f64.gt
     i32.and
     if
-      ;; primer: runtime-v1 code=conversion-out-of-range node=12 bytes=130..139
-      i32.const 112
-      call $write_error_byte
-      i32.const 114
-      call $write_error_byte
-      i32.const 105
-      call $write_error_byte
-      i32.const 109
+      ;; cerune: runtime-v1 code=conversion-out-of-range node=12 bytes=130..139
+      i32.const 99
       call $write_error_byte
       i32.const 101
       call $write_error_byte
       i32.const 114
+      call $write_error_byte
+      i32.const 117
+      call $write_error_byte
+      i32.const 110
+      call $write_error_byte
+      i32.const 101
       call $write_error_byte
       i32.const 58
       call $write_error_byte
@@ -1046,18 +1046,18 @@
     local.get $value
     f64.ne
     if
-      ;; primer: runtime-v1 code=conversion-inexact node=12 bytes=130..139
-      i32.const 112
-      call $write_error_byte
-      i32.const 114
-      call $write_error_byte
-      i32.const 105
-      call $write_error_byte
-      i32.const 109
+      ;; cerune: runtime-v1 code=conversion-inexact node=12 bytes=130..139
+      i32.const 99
       call $write_error_byte
       i32.const 101
       call $write_error_byte
       i32.const 114
+      call $write_error_byte
+      i32.const 117
+      call $write_error_byte
+      i32.const 110
+      call $write_error_byte
+      i32.const 101
       call $write_error_byte
       i32.const 58
       call $write_error_byte
@@ -1183,25 +1183,25 @@
     end
     local.get $result
   )
-  (func $primer_convert_f64_f32_n30_b243_252 (param $value f64) (result f32)
+  (func $cerune_convert_f64_f32_n30_b243_252 (param $value f64) (result f32)
     (local $result f32)
     (local $number f64)
     local.get $value
     local.get $value
     f64.ne
     if
-      ;; primer: runtime-v1 code=conversion-nan node=30 bytes=243..252
-      i32.const 112
-      call $write_error_byte
-      i32.const 114
-      call $write_error_byte
-      i32.const 105
-      call $write_error_byte
-      i32.const 109
+      ;; cerune: runtime-v1 code=conversion-nan node=30 bytes=243..252
+      i32.const 99
       call $write_error_byte
       i32.const 101
       call $write_error_byte
       i32.const 114
+      call $write_error_byte
+      i32.const 117
+      call $write_error_byte
+      i32.const 110
+      call $write_error_byte
+      i32.const 101
       call $write_error_byte
       i32.const 58
       call $write_error_byte
@@ -1327,18 +1327,18 @@
     f64.gt
     i32.and
     if
-      ;; primer: runtime-v1 code=conversion-out-of-range node=30 bytes=243..252
-      i32.const 112
-      call $write_error_byte
-      i32.const 114
-      call $write_error_byte
-      i32.const 105
-      call $write_error_byte
-      i32.const 109
+      ;; cerune: runtime-v1 code=conversion-out-of-range node=30 bytes=243..252
+      i32.const 99
       call $write_error_byte
       i32.const 101
       call $write_error_byte
       i32.const 114
+      call $write_error_byte
+      i32.const 117
+      call $write_error_byte
+      i32.const 110
+      call $write_error_byte
+      i32.const 101
       call $write_error_byte
       i32.const 58
       call $write_error_byte
@@ -1480,18 +1480,18 @@
     local.get $value
     f64.ne
     if
-      ;; primer: runtime-v1 code=conversion-inexact node=30 bytes=243..252
-      i32.const 112
-      call $write_error_byte
-      i32.const 114
-      call $write_error_byte
-      i32.const 105
-      call $write_error_byte
-      i32.const 109
+      ;; cerune: runtime-v1 code=conversion-inexact node=30 bytes=243..252
+      i32.const 99
       call $write_error_byte
       i32.const 101
       call $write_error_byte
       i32.const 114
+      call $write_error_byte
+      i32.const 117
+      call $write_error_byte
+      i32.const 110
+      call $write_error_byte
+      i32.const 101
       call $write_error_byte
       i32.const 58
       call $write_error_byte
@@ -1617,7 +1617,7 @@
     end
     local.get $result
   )
-  (func $primer_convert_f64_i64_n18_b167_176 (param $value f64) (result i64)
+  (func $cerune_convert_f64_i64_n18_b167_176 (param $value f64) (result i64)
     (local $result i64)
     (local $number f64)
     local.get $value
@@ -1631,18 +1631,18 @@
     f64.eq
     i32.or
     if
-      ;; primer: runtime-v1 code=conversion-not-finite node=18 bytes=167..176
-      i32.const 112
-      call $write_error_byte
-      i32.const 114
-      call $write_error_byte
-      i32.const 105
-      call $write_error_byte
-      i32.const 109
+      ;; cerune: runtime-v1 code=conversion-not-finite node=18 bytes=167..176
+      i32.const 99
       call $write_error_byte
       i32.const 101
       call $write_error_byte
       i32.const 114
+      call $write_error_byte
+      i32.const 117
+      call $write_error_byte
+      i32.const 110
+      call $write_error_byte
+      i32.const 101
       call $write_error_byte
       i32.const 58
       call $write_error_byte
@@ -1777,18 +1777,18 @@
     i64.const -9223372036854775808
     i64.eq
     if
-      ;; primer: runtime-v1 code=conversion-negative-zero node=18 bytes=167..176
-      i32.const 112
-      call $write_error_byte
-      i32.const 114
-      call $write_error_byte
-      i32.const 105
-      call $write_error_byte
-      i32.const 109
+      ;; cerune: runtime-v1 code=conversion-negative-zero node=18 bytes=167..176
+      i32.const 99
       call $write_error_byte
       i32.const 101
       call $write_error_byte
       i32.const 114
+      call $write_error_byte
+      i32.const 117
+      call $write_error_byte
+      i32.const 110
+      call $write_error_byte
+      i32.const 101
       call $write_error_byte
       i32.const 58
       call $write_error_byte
@@ -1932,18 +1932,18 @@
     f64.ge
     i32.or
     if
-      ;; primer: runtime-v1 code=conversion-out-of-range node=18 bytes=167..176
-      i32.const 112
-      call $write_error_byte
-      i32.const 114
-      call $write_error_byte
-      i32.const 105
-      call $write_error_byte
-      i32.const 109
+      ;; cerune: runtime-v1 code=conversion-out-of-range node=18 bytes=167..176
+      i32.const 99
       call $write_error_byte
       i32.const 101
       call $write_error_byte
       i32.const 114
+      call $write_error_byte
+      i32.const 117
+      call $write_error_byte
+      i32.const 110
+      call $write_error_byte
+      i32.const 101
       call $write_error_byte
       i32.const 58
       call $write_error_byte
@@ -2085,18 +2085,18 @@
     local.get $number
     f64.ne
     if
-      ;; primer: runtime-v1 code=conversion-inexact node=18 bytes=167..176
-      i32.const 112
-      call $write_error_byte
-      i32.const 114
-      call $write_error_byte
-      i32.const 105
-      call $write_error_byte
-      i32.const 109
+      ;; cerune: runtime-v1 code=conversion-inexact node=18 bytes=167..176
+      i32.const 99
       call $write_error_byte
       i32.const 101
       call $write_error_byte
       i32.const 114
+      call $write_error_byte
+      i32.const 117
+      call $write_error_byte
+      i32.const 110
+      call $write_error_byte
+      i32.const 101
       call $write_error_byte
       i32.const 58
       call $write_error_byte
@@ -2222,7 +2222,7 @@
     end
     local.get $result
   )
-  (func $primer_convert_i16_f64_n2_b43_53 (param $value i64) (result f64)
+  (func $cerune_convert_i16_f64_n2_b43_53 (param $value i64) (result f64)
     (local $result f64)
     (local $number f64)
     local.get $value
@@ -2238,18 +2238,18 @@
     f64.ge
     i32.or
     if
-      ;; primer: runtime-v1 code=conversion-inexact node=2 bytes=43..53
-      i32.const 112
-      call $write_error_byte
-      i32.const 114
-      call $write_error_byte
-      i32.const 105
-      call $write_error_byte
-      i32.const 109
+      ;; cerune: runtime-v1 code=conversion-inexact node=2 bytes=43..53
+      i32.const 99
       call $write_error_byte
       i32.const 101
       call $write_error_byte
       i32.const 114
+      call $write_error_byte
+      i32.const 117
+      call $write_error_byte
+      i32.const 110
+      call $write_error_byte
+      i32.const 101
       call $write_error_byte
       i32.const 58
       call $write_error_byte
@@ -2372,18 +2372,18 @@
     local.get $value
     i64.ne
     if
-      ;; primer: runtime-v1 code=conversion-inexact node=2 bytes=43..53
-      i32.const 112
-      call $write_error_byte
-      i32.const 114
-      call $write_error_byte
-      i32.const 105
-      call $write_error_byte
-      i32.const 109
+      ;; cerune: runtime-v1 code=conversion-inexact node=2 bytes=43..53
+      i32.const 99
       call $write_error_byte
       i32.const 101
       call $write_error_byte
       i32.const 114
+      call $write_error_byte
+      i32.const 117
+      call $write_error_byte
+      i32.const 110
+      call $write_error_byte
+      i32.const 101
       call $write_error_byte
       i32.const 58
       call $write_error_byte
@@ -2503,7 +2503,7 @@
     end
     local.get $result
   )
-  (func $primer_convert_i64_f64_n4_b56_62 (param $value i64) (result f64)
+  (func $cerune_convert_i64_f64_n4_b56_62 (param $value i64) (result f64)
     (local $result f64)
     (local $number f64)
     local.get $value
@@ -2519,18 +2519,18 @@
     f64.ge
     i32.or
     if
-      ;; primer: runtime-v1 code=conversion-inexact node=4 bytes=56..62
-      i32.const 112
-      call $write_error_byte
-      i32.const 114
-      call $write_error_byte
-      i32.const 105
-      call $write_error_byte
-      i32.const 109
+      ;; cerune: runtime-v1 code=conversion-inexact node=4 bytes=56..62
+      i32.const 99
       call $write_error_byte
       i32.const 101
       call $write_error_byte
       i32.const 114
+      call $write_error_byte
+      i32.const 117
+      call $write_error_byte
+      i32.const 110
+      call $write_error_byte
+      i32.const 101
       call $write_error_byte
       i32.const 58
       call $write_error_byte
@@ -2653,18 +2653,18 @@
     local.get $value
     i64.ne
     if
-      ;; primer: runtime-v1 code=conversion-inexact node=4 bytes=56..62
-      i32.const 112
-      call $write_error_byte
-      i32.const 114
-      call $write_error_byte
-      i32.const 105
-      call $write_error_byte
-      i32.const 109
+      ;; cerune: runtime-v1 code=conversion-inexact node=4 bytes=56..62
+      i32.const 99
       call $write_error_byte
       i32.const 101
       call $write_error_byte
       i32.const 114
+      call $write_error_byte
+      i32.const 117
+      call $write_error_byte
+      i32.const 110
+      call $write_error_byte
+      i32.const 101
       call $write_error_byte
       i32.const 58
       call $write_error_byte
@@ -2784,7 +2784,7 @@
     end
     local.get $result
   )
-  (func $primer_convert_u32_f32_n24_b205_215 (param $value i64) (result f32)
+  (func $cerune_convert_u32_f32_n24_b205_215 (param $value i64) (result f32)
     (local $result f32)
     (local $number f64)
     local.get $value
@@ -2801,18 +2801,18 @@
     f64.ge
     i32.or
     if
-      ;; primer: runtime-v1 code=conversion-inexact node=24 bytes=205..215
-      i32.const 112
-      call $write_error_byte
-      i32.const 114
-      call $write_error_byte
-      i32.const 105
-      call $write_error_byte
-      i32.const 109
+      ;; cerune: runtime-v1 code=conversion-inexact node=24 bytes=205..215
+      i32.const 99
       call $write_error_byte
       i32.const 101
       call $write_error_byte
       i32.const 114
+      call $write_error_byte
+      i32.const 117
+      call $write_error_byte
+      i32.const 110
+      call $write_error_byte
+      i32.const 101
       call $write_error_byte
       i32.const 58
       call $write_error_byte
@@ -2941,18 +2941,18 @@
     local.get $value
     i64.ne
     if
-      ;; primer: runtime-v1 code=conversion-inexact node=24 bytes=205..215
-      i32.const 112
-      call $write_error_byte
-      i32.const 114
-      call $write_error_byte
-      i32.const 105
-      call $write_error_byte
-      i32.const 109
+      ;; cerune: runtime-v1 code=conversion-inexact node=24 bytes=205..215
+      i32.const 99
       call $write_error_byte
       i32.const 101
       call $write_error_byte
       i32.const 114
+      call $write_error_byte
+      i32.const 117
+      call $write_error_byte
+      i32.const 110
+      call $write_error_byte
+      i32.const 101
       call $write_error_byte
       i32.const 58
       call $write_error_byte
@@ -3078,7 +3078,7 @@
     end
     local.get $result
   )
-  (func $primer_convert_u32_f64_n9_b95_114 (param $value i64) (result f64)
+  (func $cerune_convert_u32_f64_n9_b95_114 (param $value i64) (result f64)
     (local $result f64)
     (local $number f64)
     local.get $value
@@ -3094,18 +3094,18 @@
     f64.ge
     i32.or
     if
-      ;; primer: runtime-v1 code=conversion-inexact node=9 bytes=95..114
-      i32.const 112
-      call $write_error_byte
-      i32.const 114
-      call $write_error_byte
-      i32.const 105
-      call $write_error_byte
-      i32.const 109
+      ;; cerune: runtime-v1 code=conversion-inexact node=9 bytes=95..114
+      i32.const 99
       call $write_error_byte
       i32.const 101
       call $write_error_byte
       i32.const 114
+      call $write_error_byte
+      i32.const 117
+      call $write_error_byte
+      i32.const 110
+      call $write_error_byte
+      i32.const 101
       call $write_error_byte
       i32.const 58
       call $write_error_byte
@@ -3230,18 +3230,18 @@
     local.get $value
     i64.ne
     if
-      ;; primer: runtime-v1 code=conversion-inexact node=9 bytes=95..114
-      i32.const 112
-      call $write_error_byte
-      i32.const 114
-      call $write_error_byte
-      i32.const 105
-      call $write_error_byte
-      i32.const 109
+      ;; cerune: runtime-v1 code=conversion-inexact node=9 bytes=95..114
+      i32.const 99
       call $write_error_byte
       i32.const 101
       call $write_error_byte
       i32.const 114
+      call $write_error_byte
+      i32.const 117
+      call $write_error_byte
+      i32.const 110
+      call $write_error_byte
+      i32.const 101
       call $write_error_byte
       i32.const 58
       call $write_error_byte
@@ -3363,45 +3363,45 @@
     end
     local.get $result
   )
-  (func $primer_fn_measure_0 (param $primer_value i64) (result f64)
-    local.get $primer_value
-    call $primer_convert_i16_f64_n2_b43_53
+  (func $cerune_fn_measure_0 (param $cerune_value i64) (result f64)
+    local.get $cerune_value
+    call $cerune_convert_i16_f64_n2_b43_53
     i64.const 2
-    call $primer_convert_i64_f64_n4_b56_62
+    call $cerune_convert_i64_f64_n4_b56_62
     f64.div
     return
   )
   (func $main
-    (local $primer_count i64)
-    (local $primer_wide f64)
-    (local $primer_narrow f32)
+    (local $cerune_count i64)
+    (local $cerune_wide f64)
+    (local $cerune_narrow f32)
 
     i64.const 42
-    local.set $primer_count
-    local.get $primer_count
-    call $primer_convert_u32_f64_n9_b95_114
-    local.set $primer_wide
-    local.get $primer_wide
-    call $primer_convert_f64_f32_n12_b130_139
-    local.set $primer_narrow
-    local.get $primer_narrow
-    call $primer_convert_f32_i16_n15_b147_158
+    local.set $cerune_count
+    local.get $cerune_count
+    call $cerune_convert_u32_f64_n9_b95_114
+    local.set $cerune_wide
+    local.get $cerune_wide
+    call $cerune_convert_f64_f32_n12_b130_139
+    local.set $cerune_narrow
+    local.get $cerune_narrow
+    call $cerune_convert_f32_i16_n15_b147_158
     call $print_i64
-    local.get $primer_wide
-    call $primer_convert_f64_i64_n18_b167_176
+    local.get $cerune_wide
+    call $cerune_convert_f64_i64_n18_b167_176
     call $print_i64
-    local.get $primer_narrow
-    call $primer_convert_f32_f64_n21_b185_196
+    local.get $cerune_narrow
+    call $cerune_convert_f32_f64_n21_b185_196
     call $print_f64
-    local.get $primer_count
-    call $primer_convert_u32_f32_n24_b205_215
+    local.get $cerune_count
+    call $cerune_convert_u32_f32_n24_b205_215
     call $print_f32
     i64.const 3
-    call $primer_fn_measure_0
+    call $cerune_fn_measure_0
     call $print_f64
     f64.const 0.0
     f64.neg
-    call $primer_convert_f64_f32_n30_b243_252
+    call $cerune_convert_f64_f32_n30_b243_252
     call $print_f32
   )
   (export "main" (func $main))

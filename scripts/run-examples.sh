@@ -5,7 +5,7 @@ usage() {
     printf '%s\n' 'Usage: bash scripts/run-examples.sh [--pattern GLOB] [--skip-build]'
 }
 
-pattern='*.prim'
+pattern='*.ceru'
 skip_build=false
 while (($# > 0)); do
     case "$1" in
@@ -38,7 +38,7 @@ cd -- "$repository_root"
 
 # WSLとWindowsで同じ作業ツリーを使っても、生成物は別の場所へ置きます。
 export CARGO_TARGET_DIR=${CARGO_TARGET_DIR:-"$repository_root/target/unix"}
-primer="$CARGO_TARGET_DIR/debug/primer"
+cerune="$CARGO_TARGET_DIR/debug/cerune"
 examples=()
 for example in "$repository_root"/examples/*; do
     # 右辺は引用せず、ファイル名に対するBashのパターンとして比較します。
@@ -53,15 +53,15 @@ if ((${#examples[@]} == 0)); then
 fi
 
 if [[ "$skip_build" == false ]]; then
-    printf '%s\n' 'Building Primer...'
+    printf '%s\n' 'Building Cerune...'
     if ! cargo build --quiet; then
         printf '%s\n' '[ERROR] cargo build failed.' >&2
         exit 1
     fi
 fi
 
-if [[ ! -f "$primer" || ! -x "$primer" ]]; then
-    printf '%s\n' '[ERROR] Primer executable not found. Run without --skip-build.' >&2
+if [[ ! -f "$cerune" || ! -x "$cerune" ]]; then
+    printf '%s\n' '[ERROR] Cerune executable not found. Run without --skip-build.' >&2
     exit 1
 fi
 
@@ -70,7 +70,7 @@ failed=()
 for example in "${examples[@]}"; do
     name=${example##*/}
     printf '\n=== %s ===\n' "$name"
-    if "$primer" run "$example"; then
+    if "$cerune" run "$example"; then
         passed=$((passed + 1))
         printf '[PASS] %s\n' "$name"
     else

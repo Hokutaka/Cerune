@@ -33,7 +33,7 @@ pub struct FieldId(pub usize);
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct FunctionId(pub usize);
 
-/// 一回のコンパイル中で、Primer IRの文と式を一意に識別します。
+/// 一回のコンパイル中で、Cerune IRの文と式を一意に識別します。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct NodeId(pub usize);
 
@@ -82,7 +82,7 @@ pub struct FieldDefinition {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct BindingId(pub usize);
 
-/// Primer IRの文と、その文が由来するソース範囲を表します。
+/// Cerune IRの文と、その文が由来するソース範囲を表します。
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Statement {
     pub id: NodeId,
@@ -90,7 +90,7 @@ pub struct Statement {
     pub span: Span,
 }
 
-/// Primer IRの文の種類を表します。
+/// Cerune IRの文の種類を表します。
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum StatementKind {
     Binding {

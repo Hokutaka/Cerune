@@ -1,10 +1,10 @@
 (module
-  (import "primer" "write_error_byte" (func $write_error_byte (param i32)))
-  (import "primer" "print_i64" (func $print_i64 (param i64)))
-  (import "primer" "print_f32" (func $print_f32 (param f32)))
-  (import "primer" "print_f64" (func $print_f64 (param f64)))
+  (import "cerune" "write_error_byte" (func $write_error_byte (param i32)))
+  (import "cerune" "print_i64" (func $print_i64 (param i64)))
+  (import "cerune" "print_f32" (func $print_f32 (param f32)))
+  (import "cerune" "print_f64" (func $print_f64 (param f64)))
 
-  (func $primer_i64_add_n3_b29_38 (param $left i64) (param $right i64) (result i64)
+  (func $cerune_i64_add_n3_b29_38 (param $left i64) (param $right i64) (result i64)
     (local $result i64)
     local.get $left
     local.get $right
@@ -20,18 +20,18 @@
     i64.const 0
     i64.lt_s
     if
-      ;; primer: runtime-v1 code=integer-overflow node=3 bytes=29..38
-      i32.const 112
-      call $write_error_byte
-      i32.const 114
-      call $write_error_byte
-      i32.const 105
-      call $write_error_byte
-      i32.const 109
+      ;; cerune: runtime-v1 code=integer-overflow node=3 bytes=29..38
+      i32.const 99
       call $write_error_byte
       i32.const 101
       call $write_error_byte
       i32.const 114
+      call $write_error_byte
+      i32.const 117
+      call $write_error_byte
+      i32.const 110
+      call $write_error_byte
+      i32.const 101
       call $write_error_byte
       i32.const 58
       call $write_error_byte
@@ -149,24 +149,24 @@
   )
 
   (func $main
-    (local $primer_count i64)
-    (local $primer_ratio f32)
+    (local $cerune_count i64)
+    (local $cerune_ratio f32)
 
     i64.const 40
-    local.set $primer_count
-    local.get $primer_count
+    local.set $cerune_count
+    local.get $cerune_count
     i64.const 2
-    call $primer_i64_add_n3_b29_38
-    local.set $primer_count
+    call $cerune_i64_add_n3_b29_38
+    local.set $cerune_count
     f32.const 0.25
-    local.set $primer_ratio
-    local.get $primer_ratio
+    local.set $cerune_ratio
+    local.get $cerune_ratio
     f32.const 2.0
     f32.mul
-    local.set $primer_ratio
-    local.get $primer_count
+    local.set $cerune_ratio
+    local.get $cerune_count
     call $print_i64
-    local.get $primer_ratio
+    local.get $cerune_ratio
     call $print_f32
   )
   (export "main" (func $main))

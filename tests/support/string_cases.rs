@@ -67,7 +67,7 @@ pub const UNUSED_DEFAULT: &str =
     r#"type Unused { flag: bool = "a" == "a", } print(1); print(true);"#;
 
 pub const BYTE_LENGTH: (&str, &str) = (
-    include_str!("../../examples/string_byte_length.prim"),
+    include_str!("../../examples/string_byte_length.ceru"),
     "0\n9\n3\n2\n3\n4\n7\n3\n9\nleft\nright\n9\nfalse\nfalse\n6\n10\n",
 );
 

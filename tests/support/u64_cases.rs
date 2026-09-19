@@ -1,5 +1,5 @@
 pub const EXAMPLE: (&str, &str) = (
-    include_str!("../../examples/u64_values.prim"),
+    include_str!("../../examples/u64_values.ceru"),
     "u64\n18446744073709551615\n9223372036854775808\n0\ntrue\n1\n9223372036854775807\n1\n9223372036854775807\n9223372036854775810\n9223372036854775808\n9223372036854775807\n18446744073709551615\ntrue\n4294967295\n9223372036854775807\nfalse\n",
 );
 
@@ -27,6 +27,6 @@ pub const FAILURES: &[&str] = &[
 ];
 
 pub const BOUNDARIES: (&str, &str) = (
-    include_str!("../fixtures/u64/boundaries.prim"),
+    include_str!("../fixtures/u64/boundaries.ceru"),
     include_str!("../fixtures/u64/boundaries.stdout"),
 );

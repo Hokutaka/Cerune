@@ -16,7 +16,7 @@ use std::{
     sync::atomic::{AtomicUsize, Ordering},
 };
 
-use primer_lang::{
+use cerune_lang::{
     codegen::llvm::Target, compile_to_c, compile_to_llvm, compile_to_llvm_with_target, run_vm,
 };
 
@@ -32,7 +32,7 @@ fn target_is_explicit_and_emission_is_deterministic() {
     for target in [LINUX, WINDOWS] {
         let llvm = compile_to_llvm_with_target(source, Some(target)).unwrap();
         assert!(llvm.starts_with(&format!("target triple = \"{}\"", target.triple())));
-        assert!(llvm.contains("%primer.string = type { ptr, i64 }"));
+        assert!(llvm.contains("%cerune.string = type { ptr, i64 }"));
         assert!(llvm.contains("[6 x i8] c\"\\E6\\97\\A5\\00\\0D\\0A\""));
         assert_eq!(llvm.contains("@_setmode"), target == WINDOWS);
         assert!(llvm.contains("zext i8 %byte to i32"));
@@ -46,7 +46,7 @@ fn target_is_explicit_and_emission_is_deterministic() {
     }
     for target in [None, Some(LINUX), Some(WINDOWS)] {
         let llvm = compile_to_llvm_with_target("print(1);", target).unwrap();
-        assert!(!llvm.contains("@_setmode") && !llvm.contains("%primer.string"));
+        assert!(!llvm.contains("@_setmode") && !llvm.contains("%cerune.string"));
         assert_eq!(llvm.contains("target triple"), target.is_some());
     }
 }
@@ -68,7 +68,7 @@ fn unused_string_types_and_functions_require_a_target() {
         );
         for target in [LINUX, WINDOWS] {
             let llvm = compile_to_llvm_with_target(source, Some(target)).unwrap();
-            assert!(llvm.contains("%primer.string = type"), "{source}");
+            assert!(llvm.contains("%cerune.string = type"), "{source}");
         }
     }
 }
@@ -76,7 +76,7 @@ fn unused_string_types_and_functions_require_a_target() {
 #[test]
 fn cli_validates_targets_before_overwriting_output() {
     let directory = test_directory();
-    let source = directory.join("source.prim");
+    let source = directory.join("source.ceru");
     let artifact = directory.join("output.ll");
     fs::write(&source, "print(\"test\");").unwrap();
     for flags in [
@@ -86,7 +86,7 @@ fn cli_validates_targets_before_overwriting_output() {
         vec!["--target", LINUX.triple(), "--target", WINDOWS.triple()],
     ] {
         fs::write(&artifact, b"existing artifact").unwrap();
-        let output = Command::new(env!("CARGO_BIN_EXE_primer"))
+        let output = Command::new(env!("CARGO_BIN_EXE_cerune"))
             .arg("emit-llvm")
             .arg(&source)
             .arg("-o")
@@ -100,7 +100,7 @@ fn cli_validates_targets_before_overwriting_output() {
         assert_eq!(fs::read(&artifact).unwrap(), b"existing artifact");
     }
     for target_first in [false, true] {
-        let mut command = Command::new(env!("CARGO_BIN_EXE_primer"));
+        let mut command = Command::new(env!("CARGO_BIN_EXE_cerune"));
         command.arg("emit-llvm").arg(&source);
         if target_first {
             command.args(["--target", LINUX.triple()]);
@@ -127,7 +127,7 @@ fn test_directory() -> PathBuf {
         .unwrap()
         .as_nanos();
     let directory = std::env::temp_dir().join(format!(
-        "primer-llvm-strings-{}-{stamp}-{}",
+        "cerune-llvm-strings-{}-{stamp}-{}",
         std::process::id(),
         NEXT.fetch_add(1, Ordering::Relaxed)
     ));
@@ -160,7 +160,7 @@ impl Native {
             LINUX
         } else {
             assert!(
-                std::env::var_os("PRIMER_TEST_LLVM_CLANG").is_none(),
+                std::env::var_os("CERUNE_TEST_LLVM_CLANG").is_none(),
                 "native LLVM test target unavailable"
             );
             eprintln!("native LLVM execution skipped: unsupported test host");
@@ -186,8 +186,8 @@ impl Native {
                 None
             }
         }
-        let clang = compiler("PRIMER_TEST_LLVM_CLANG", "clang")?;
-        let cc = compiler("PRIMER_TEST_CC", if cfg!(windows) { "clang" } else { "cc" })?;
+        let clang = compiler("CERUNE_TEST_LLVM_CLANG", "clang")?;
+        let cc = compiler("CERUNE_TEST_CC", if cfg!(windows) { "clang" } else { "cc" })?;
         Some(Self {
             directory: test_directory(),
             clang,
@@ -218,9 +218,9 @@ impl Native {
         fs::write(
             &input,
             if llvm {
-                primer_lang::compile_to_llvm_with_options(
+                cerune_lang::compile_to_llvm_with_options(
                     source,
-                    primer_lang::codegen::llvm::Options {
+                    cerune_lang::codegen::llvm::Options {
                         target: Some(self.target),
                         annotate_origins,
                     },
@@ -290,10 +290,10 @@ fn bytes_equality_and_mixed_output_match_vm_and_c() {
     native.matches(string_cases::UNUSED_DEFAULT, "1\ntrue\n");
     native.matches(string_cases::BYTE_LENGTH.0, string_cases::BYTE_LENGTH.1);
     for source in [
-        include_str!("../examples/string_values.prim"),
-        include_str!("../examples/string_lookup.prim"),
-        include_str!("../examples/native_values.prim"),
-        include_str!("../examples/packet_counter.prim"),
+        include_str!("../examples/string_values.ceru"),
+        include_str!("../examples/string_lookup.ceru"),
+        include_str!("../examples/native_values.ceru"),
+        include_str!("../examples/packet_counter.ceru"),
     ] {
         native.matches(source, &run_vm(source).unwrap());
     }
@@ -314,7 +314,7 @@ fn effects_and_short_circuiting_keep_source_order() {
 #[test]
 fn origin_example_executes_identically_with_and_without_annotations() {
     let Some(native) = Native::new() else { return };
-    let source = include_str!("../examples/string_origins.prim");
+    let source = include_str!("../examples/string_origins.ceru");
     let expected = "日本語\0\ntrue\nfalse\n";
     native.matches(source, expected);
     for optimization in ["-O0", "-O2"] {

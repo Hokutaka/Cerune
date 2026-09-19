@@ -1,16 +1,16 @@
 ﻿<#
 .SYNOPSIS
-Primerのexampleをまとめて実行します。
+Ceruneのexampleをまとめて実行します。
 
 .PARAMETER Pattern
-実行するファイル名のpatternです。既定値は*.primです。
+実行するファイル名のpatternです。既定値は*.ceruです。
 
 .PARAMETER SkipBuild
 実行前のcargo buildを省略します。
 #>
 [CmdletBinding()]
 param(
-    [string]$Pattern = "*.prim",
+    [string]$Pattern = "*.ceru",
     [switch]$SkipBuild
 )
 
@@ -23,7 +23,7 @@ $OutputEncoding = $utf8
 
 $repositoryRoot = (Resolve-Path (Join-Path $PSScriptRoot "..")).Path
 $examplesDirectory = Join-Path $repositoryRoot "examples"
-$primer = Join-Path $repositoryRoot "target\debug\primer.exe"
+$cerune = Join-Path $repositoryRoot "target\debug\cerune.exe"
 $examples = @(
     Get-ChildItem -LiteralPath $examplesDirectory -Filter $Pattern -File |
         Sort-Object Name
@@ -37,7 +37,7 @@ if ($examples.Count -eq 0) {
 Push-Location $repositoryRoot
 try {
     if (-not $SkipBuild) {
-        Write-Host "Primerをbuildしています..."
+        Write-Host "Ceruneをbuildしています..."
         & cargo build --quiet
         if ($LASTEXITCODE -ne 0) {
             Write-Host "[ERROR] cargo buildに失敗しました。" -ForegroundColor Red
@@ -45,8 +45,8 @@ try {
         }
     }
 
-    if (-not (Test-Path -LiteralPath $primer -PathType Leaf)) {
-        Write-Host "[ERROR] Primer実行ファイルがありません。-SkipBuildを外して再実行してください。" -ForegroundColor Red
+    if (-not (Test-Path -LiteralPath $cerune -PathType Leaf)) {
+        Write-Host "[ERROR] Cerune実行ファイルがありません。-SkipBuildを外して再実行してください。" -ForegroundColor Red
         exit 1
     }
 
@@ -56,7 +56,7 @@ try {
     foreach ($example in $examples) {
         Write-Host ""
         Write-Host "=== $($example.Name) ==="
-        & $primer run $example.FullName
+        & $cerune run $example.FullName
 
         if ($LASTEXITCODE -eq 0) {
             $passed += 1

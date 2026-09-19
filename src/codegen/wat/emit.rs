@@ -18,40 +18,40 @@ pub fn emit(module: &Module) -> String {
     writeln!(output, "(module").unwrap();
     if uses_failures {
         output.push_str(
-            "  (import \"primer\" \"write_error_byte\" (func $write_error_byte (param i32)))\n",
+            "  (import \"cerune\" \"write_error_byte\" (func $write_error_byte (param i32)))\n",
         );
     }
     if module.uses_strings {
-        output.push_str("  (import \"primer\" \"write_byte\" (func $write_byte (param i32)))\n");
+        output.push_str("  (import \"cerune\" \"write_byte\" (func $write_byte (param i32)))\n");
     }
 
     if module_uses_u64_print(module) {
-        output.push_str("  (import \"primer\" \"print_u64\" (func $print_u64 (param i64)))\n");
+        output.push_str("  (import \"cerune\" \"print_u64\" (func $print_u64 (param i64)))\n");
     }
     // print() is provided by the host.
     if module_uses_bool_print(module) {
         writeln!(
             output,
-            "  (import \"primer\" \"print_bool\" (func $print_bool (param i32)))"
+            "  (import \"cerune\" \"print_bool\" (func $print_bool (param i32)))"
         )
         .unwrap();
     }
 
     writeln!(
         output,
-        "  (import \"primer\" \"print_i64\" (func $print_i64 (param i64)))"
+        "  (import \"cerune\" \"print_i64\" (func $print_i64 (param i64)))"
     )
     .unwrap();
 
     writeln!(
         output,
-        "  (import \"primer\" \"print_f32\" (func $print_f32 (param f32)))"
+        "  (import \"cerune\" \"print_f32\" (func $print_f32 (param f32)))"
     )
     .unwrap();
 
     writeln!(
         output,
-        "  (import \"primer\" \"print_f64\" (func $print_f64 (param f64)))"
+        "  (import \"cerune\" \"print_f64\" (func $print_f64 (param f64)))"
     )
     .unwrap();
 
@@ -80,7 +80,7 @@ pub fn emit(module: &Module) -> String {
     for local in &module.locals {
         writeln!(
             output,
-            "    (local $primer_{} {})",
+            "    (local $cerune_{} {})",
             local.name,
             wat_type(local.ty),
         )
@@ -197,7 +197,7 @@ fn emit_function(function: &Function, module: &Module, output: &mut String) {
     for parameter in &function.parameters {
         write!(
             output,
-            " (param $primer_{} {})",
+            " (param $cerune_{} {})",
             parameter.name,
             wat_type(parameter.ty)
         )
@@ -211,7 +211,7 @@ fn emit_function(function: &Function, module: &Module, output: &mut String) {
     for local in &function.locals {
         writeln!(
             output,
-            "    (local $primer_{} {})",
+            "    (local $cerune_{} {})",
             local.name,
             wat_type(local.ty)
         )
@@ -227,7 +227,7 @@ fn emit_function(function: &Function, module: &Module, output: &mut String) {
 }
 
 fn function_name(function: &Function) -> String {
-    format!("primer_fn_{}_{}", function.name, function.id)
+    format!("cerune_fn_{}_{}", function.name, function.id)
 }
 
 fn emit_instruction(
@@ -254,9 +254,9 @@ fn emit_instruction(
         Instruction::I64LeU => writeln!(output, "{prefix}i64.le_u").unwrap(),
         Instruction::I64GtU => writeln!(output, "{prefix}i64.gt_u").unwrap(),
         Instruction::I64GeU => writeln!(output, "{prefix}i64.ge_u").unwrap(),
-        Instruction::StringEqual => writeln!(output, "{prefix}call $primer_string_equal").unwrap(),
+        Instruction::StringEqual => writeln!(output, "{prefix}call $cerune_string_equal").unwrap(),
         Instruction::StringNotEqual => {
-            writeln!(output, "{prefix}call $primer_string_equal\n{prefix}i32.eqz").unwrap()
+            writeln!(output, "{prefix}call $cerune_string_equal\n{prefix}i32.eqz").unwrap()
         }
         Instruction::ConvertNumeric { conversion } => {
             writeln!(output, "{prefix}call ${}", conversion.helper()).unwrap();
@@ -265,7 +265,7 @@ fn emit_instruction(
             writeln!(output, "{prefix}call ${}", op.helper(*ty)).unwrap();
         }
         Instruction::CheckIntegerRange { ty, .. } => {
-            writeln!(output, "{prefix}call $primer_check_{}", ty.name()).unwrap();
+            writeln!(output, "{prefix}call $cerune_check_{}", ty.name()).unwrap();
         }
         Instruction::I32Const(value) => {
             writeln!(output, "{prefix}i32.const {value}").unwrap();
@@ -284,11 +284,11 @@ fn emit_instruction(
         }
 
         Instruction::LocalGet(name) => {
-            writeln!(output, "{prefix}local.get $primer_{name}").unwrap();
+            writeln!(output, "{prefix}local.get $cerune_{name}").unwrap();
         }
 
         Instruction::LocalSet(name) => {
-            writeln!(output, "{prefix}local.set $primer_{name}").unwrap();
+            writeln!(output, "{prefix}local.set $cerune_{name}").unwrap();
         }
 
         Instruction::I32Load { offset } => emit_memory("i32.load", *offset, &prefix, output),
@@ -378,9 +378,9 @@ fn emit_instruction(
 
         Instruction::Return => emit_simple("return", &prefix, output),
 
-        Instruction::CheckedI64Add => emit_simple("call $primer_i64_add", &prefix, output),
-        Instruction::CheckedI64Sub => emit_simple("call $primer_i64_sub", &prefix, output),
-        Instruction::CheckedI64Mul => emit_simple("call $primer_i64_mul", &prefix, output),
+        Instruction::CheckedI64Add => emit_simple("call $cerune_i64_add", &prefix, output),
+        Instruction::CheckedI64Sub => emit_simple("call $cerune_i64_sub", &prefix, output),
+        Instruction::CheckedI64Mul => emit_simple("call $cerune_i64_mul", &prefix, output),
         Instruction::CheckedI64DivS => emit_simple("i64.div_s", &prefix, output),
         Instruction::I64Eq => emit_simple("i64.eq", &prefix, output),
         Instruction::I64Ne => emit_simple("i64.ne", &prefix, output),
@@ -419,12 +419,12 @@ fn emit_instruction(
 
         Instruction::CallPrint(ty) => {
             let function = match ty {
-                Type::String => "$primer_print_string",
+                Type::String => "$cerune_print_string",
                 Type::Bool => "$print_bool",
                 Type::I64 => "$print_i64",
                 Type::F32 => "$print_f32",
                 Type::F64 => "$print_f64",
-                Type::Pointer => unreachable!("pointers are not printable Primer values"),
+                Type::Pointer => unreachable!("pointers are not printable Cerune values"),
             };
 
             writeln!(output, "{prefix}call {function}").unwrap();

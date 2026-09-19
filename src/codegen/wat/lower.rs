@@ -1,11 +1,11 @@
 use std::collections::HashMap;
 
-use crate::ir as primer_ir;
+use crate::ir as cerune_ir;
 use crate::runtime::{FailureCode, RuntimeFailure};
 
 use super::ir::{Function, Instruction, Local, LoopKind, Module, Origin, Type};
 
-pub fn lower(program: &primer_ir::Program) -> Module {
+pub fn lower(program: &cerune_ir::Program) -> Module {
     let mut strings = Vec::new();
     let mut next_address = 0;
     let mut functions = Vec::new();
@@ -64,8 +64,8 @@ pub fn lower(program: &primer_ir::Program) -> Module {
 }
 
 fn lower_function(
-    program: &primer_ir::Program,
-    function: &primer_ir::FunctionDefinition,
+    program: &cerune_ir::Program,
+    function: &cerune_ir::FunctionDefinition,
     next_address: &mut usize,
     strings: &mut Vec<(usize, String)>,
 ) -> Function {
@@ -74,16 +74,16 @@ fn lower_function(
     let mut name_counts = HashMap::new();
     let mut parameters = Vec::new();
     let aggregate_return_type = match &function.return_type {
-        primer_ir::ReturnType::Value(
-            ty @ (primer_ir::Type::Named(_) | primer_ir::Type::Array { .. }),
+        cerune_ir::ReturnType::Value(
+            ty @ (cerune_ir::Type::Named(_) | cerune_ir::Type::Array { .. }),
         ) => Some(ty),
-        primer_ir::ReturnType::Void
-        | primer_ir::ReturnType::Value(
-            primer_ir::Type::String
-            | primer_ir::Type::Bool
-            | primer_ir::Type::Integer(_)
-            | primer_ir::Type::F32
-            | primer_ir::Type::F64,
+        cerune_ir::ReturnType::Void
+        | cerune_ir::ReturnType::Value(
+            cerune_ir::Type::String
+            | cerune_ir::Type::Bool
+            | cerune_ir::Type::Integer(_)
+            | cerune_ir::Type::F32
+            | cerune_ir::Type::F64,
         ) => None,
     };
     let aggregate_return_pointer = aggregate_return_type.map(|_| {
@@ -99,18 +99,18 @@ fn lower_function(
     for parameter in &function.parameters {
         name_counts.insert(parameter.name.clone(), 1);
         match &parameter.ty {
-            primer_ir::Type::String
-            | primer_ir::Type::Bool
-            | primer_ir::Type::Integer(_)
-            | primer_ir::Type::F32
-            | primer_ir::Type::F64 => {
+            cerune_ir::Type::String
+            | cerune_ir::Type::Bool
+            | cerune_ir::Type::Integer(_)
+            | cerune_ir::Type::F32
+            | cerune_ir::Type::F64 => {
                 locations.insert(parameter.id, Location::Scalar(parameter.name.clone()));
                 parameters.push(Local {
                     name: parameter.name.clone(),
                     ty: scalar_type(&parameter.ty),
                 });
             }
-            primer_ir::Type::Named(type_id) => {
+            cerune_ir::Type::Named(type_id) => {
                 parameters.push(Local {
                     name: parameter.name.clone(),
                     ty: Type::Pointer,
@@ -133,7 +133,7 @@ fn lower_function(
                     parameter.ty.clone(),
                 ));
             }
-            primer_ir::Type::Array { element, length } => {
+            cerune_ir::Type::Array { element, length } => {
                 parameters.push(Local {
                     name: parameter.name.clone(),
                     ty: Type::Pointer,
@@ -197,7 +197,7 @@ fn lower_function(
         );
     }
     context.lower_statements(&function.body, &mut instructions);
-    if matches!(function.return_type, primer_ir::ReturnType::Void)
+    if matches!(function.return_type, cerune_ir::ReturnType::Void)
         && !matches!(instructions.last(), Some(Instruction::Return))
     {
         instructions.push(Instruction::Return);
@@ -209,16 +209,16 @@ fn lower_function(
         name: function.name.clone(),
         parameters,
         return_type: match &function.return_type {
-            primer_ir::ReturnType::Void => None,
-            primer_ir::ReturnType::Value(
-                ty @ (primer_ir::Type::String
-                | primer_ir::Type::Bool
-                | primer_ir::Type::Integer(_)
-                | primer_ir::Type::F32
-                | primer_ir::Type::F64),
+            cerune_ir::ReturnType::Void => None,
+            cerune_ir::ReturnType::Value(
+                ty @ (cerune_ir::Type::String
+                | cerune_ir::Type::Bool
+                | cerune_ir::Type::Integer(_)
+                | cerune_ir::Type::F32
+                | cerune_ir::Type::F64),
             ) => Some(scalar_type(ty)),
-            primer_ir::ReturnType::Value(
-                primer_ir::Type::Named(_) | primer_ir::Type::Array { .. },
+            cerune_ir::ReturnType::Value(
+                cerune_ir::Type::Named(_) | cerune_ir::Type::Array { .. },
             ) => None,
         },
         locals,
@@ -274,8 +274,8 @@ enum Address {
 
 struct LoweringContext<'a> {
     strings: &'a mut Vec<(usize, String)>,
-    program: &'a primer_ir::Program,
-    locations: HashMap<primer_ir::BindingId, Location>,
+    program: &'a cerune_ir::Program,
+    locations: HashMap<cerune_ir::BindingId, Location>,
     next_address: usize,
     aggregate_return_address: Option<Address>,
     control: ControlContext,
@@ -295,7 +295,7 @@ struct LoopTarget {
 impl LoweringContext<'_> {
     fn lower_statements(
         &mut self,
-        statements: &[primer_ir::Statement],
+        statements: &[cerune_ir::Statement],
         instructions: &mut Vec<Instruction>,
     ) {
         for statement in statements {
@@ -305,15 +305,15 @@ impl LoweringContext<'_> {
 
     fn lower_statement(
         &mut self,
-        statement: &primer_ir::Statement,
+        statement: &cerune_ir::Statement,
         instructions: &mut Vec<Instruction>,
     ) {
         match &statement.kind {
-            primer_ir::StatementKind::Binding { id, value, .. } => {
+            cerune_ir::StatementKind::Binding { id, value, .. } => {
                 self.assign_location(self.locations[id].clone(), value, instructions);
             }
 
-            primer_ir::StatementKind::Assignment { target, value } => {
+            cerune_ir::StatementKind::Assignment { target, value } => {
                 if target.projections.is_empty() {
                     self.assign_location(self.locations[&target.id].clone(), value, instructions);
                 } else {
@@ -322,7 +322,7 @@ impl LoweringContext<'_> {
                     };
                     let mut destination = Address::Static(address);
                     for projection in &target.projections {
-                        let primer_ir::AssignmentProjection::Index {
+                        let cerune_ir::AssignmentProjection::Index {
                             index,
                             element,
                             length,
@@ -344,7 +344,7 @@ impl LoweringContext<'_> {
                 }
             }
 
-            primer_ir::StatementKind::Print { value } => {
+            cerune_ir::StatementKind::Print { value } => {
                 let Value::Scalar(ty) = self.lower_expr(value, instructions) else {
                     unreachable!("semantic analysis rejects aggregate printing")
                 };
@@ -355,7 +355,7 @@ impl LoweringContext<'_> {
                 });
             }
 
-            primer_ir::StatementKind::If {
+            cerune_ir::StatementKind::If {
                 condition,
                 then_body,
                 else_body,
@@ -373,7 +373,7 @@ impl LoweringContext<'_> {
                 });
             }
 
-            primer_ir::StatementKind::While { condition, body } => {
+            cerune_ir::StatementKind::While { condition, body } => {
                 let id = self.control.next_loop_id;
                 self.control.next_loop_id += 1;
                 let mut condition_instructions = Vec::new();
@@ -401,7 +401,7 @@ impl LoweringContext<'_> {
                 });
             }
 
-            primer_ir::StatementKind::For {
+            cerune_ir::StatementKind::For {
                 initializer,
                 condition,
                 update,
@@ -437,7 +437,7 @@ impl LoweringContext<'_> {
                 });
             }
 
-            primer_ir::StatementKind::Break => {
+            cerune_ir::StatementKind::Break => {
                 let target = *self
                     .control
                     .loops
@@ -449,7 +449,7 @@ impl LoweringContext<'_> {
                 });
             }
 
-            primer_ir::StatementKind::Continue => {
+            cerune_ir::StatementKind::Continue => {
                 let target = *self
                     .control
                     .loops
@@ -460,14 +460,14 @@ impl LoweringContext<'_> {
                     id: target.id,
                 });
             }
-            primer_ir::StatementKind::Call {
+            cerune_ir::StatementKind::Call {
                 function_id,
                 arguments,
                 ..
             } => {
                 self.lower_call(function_id.0, arguments, None, instructions);
             }
-            primer_ir::StatementKind::Return { value } => {
+            cerune_ir::StatementKind::Return { value } => {
                 if let Some(value) = value {
                     match self.lower_expr(value, instructions) {
                         Value::Scalar(_) => {}
@@ -487,7 +487,7 @@ impl LoweringContext<'_> {
     fn assign_location(
         &mut self,
         destination: Location,
-        value: &primer_ir::Expr,
+        value: &cerune_ir::Expr,
         instructions: &mut Vec<Instruction>,
     ) {
         match destination {
@@ -499,7 +499,7 @@ impl LoweringContext<'_> {
             }
             Location::Aggregate { type_id, address } => {
                 self.assign_address(
-                    &primer_ir::Type::Named(primer_ir::TypeId(type_id)),
+                    &cerune_ir::Type::Named(cerune_ir::TypeId(type_id)),
                     Address::Static(address),
                     value,
                     instructions,
@@ -533,24 +533,24 @@ impl LoweringContext<'_> {
 
     fn assign_address(
         &mut self,
-        ty: &primer_ir::Type,
+        ty: &cerune_ir::Type,
         destination: Address,
-        value: &primer_ir::Expr,
+        value: &cerune_ir::Expr,
         instructions: &mut Vec<Instruction>,
     ) {
         match ty {
-            primer_ir::Type::String
-            | primer_ir::Type::Bool
-            | primer_ir::Type::Integer(_)
-            | primer_ir::Type::F32
-            | primer_ir::Type::F64 => {
+            cerune_ir::Type::String
+            | cerune_ir::Type::Bool
+            | cerune_ir::Type::Integer(_)
+            | cerune_ir::Type::F32
+            | cerune_ir::Type::F64 => {
                 self.emit_address(destination, instructions);
                 let Value::Scalar(actual) = self.lower_expr(value, instructions) else {
                     unreachable!("semantic analysis keeps assignment types equal")
                 };
                 instructions.push(store_instruction(actual, 0));
             }
-            primer_ir::Type::Named(type_id) => {
+            cerune_ir::Type::Named(type_id) => {
                 let Value::Aggregate {
                     type_id: source_type,
                     address: source,
@@ -561,7 +561,7 @@ impl LoweringContext<'_> {
                 debug_assert_eq!(type_id.0, source_type);
                 self.copy_aggregate(type_id.0, source, destination, instructions);
             }
-            primer_ir::Type::Array { element, length } => {
+            cerune_ir::Type::Array { element, length } => {
                 let Value::Array {
                     element: source_element,
                     length: source_length,
@@ -583,7 +583,7 @@ impl LoweringContext<'_> {
         base: Address,
         element: &ArrayElement,
         length: usize,
-        index: &primer_ir::Expr,
+        index: &cerune_ir::Expr,
         origin: Origin,
         instructions: &mut Vec<Instruction>,
     ) -> Address {
@@ -623,15 +623,15 @@ impl LoweringContext<'_> {
         Address::Indirect(result_address)
     }
 
-    fn lower_expr(&mut self, expr: &primer_ir::Expr, instructions: &mut Vec<Instruction>) -> Value {
+    fn lower_expr(&mut self, expr: &cerune_ir::Expr, instructions: &mut Vec<Instruction>) -> Value {
         let value = self.lower_expr_unchecked(expr, instructions);
         if let Some(ty) = super::super::integer_range_check(expr) {
             let failure = match expr.kind {
-                primer_ir::ExprKind::ConvertInteger { .. } => {
+                cerune_ir::ExprKind::ConvertInteger { .. } => {
                     FailureCode::IntegerConversionOutOfRange
                 }
-                primer_ir::ExprKind::Binary {
-                    op: primer_ir::BinaryOp::Divide,
+                cerune_ir::ExprKind::Binary {
+                    op: cerune_ir::BinaryOp::Divide,
                     ..
                 } => FailureCode::DivisionOverflow,
                 _ => FailureCode::IntegerOverflow,
@@ -643,7 +643,7 @@ impl LoweringContext<'_> {
 
     fn lower_expr_unchecked(
         &mut self,
-        expr: &primer_ir::Expr,
+        expr: &cerune_ir::Expr,
         instructions: &mut Vec<Instruction>,
     ) -> Value {
         if let Some((value, conversion)) = crate::codegen::u64_integer_conversion(expr) {
@@ -652,18 +652,18 @@ impl LoweringContext<'_> {
             return Value::Scalar(Type::I64);
         }
         match &expr.kind {
-            primer_ir::ExprKind::StringByteLength { value } => {
+            cerune_ir::ExprKind::StringByteLength { value } => {
                 self.lower_expr(value, instructions);
                 instructions.push(Instruction::I64Load { offset: 0 });
                 Value::Scalar(Type::I64)
             }
-            primer_ir::ExprKind::String(value) => {
+            cerune_ir::ExprKind::String(value) => {
                 let address = self.allocate(8 + value.len());
                 self.strings.push((address, value.clone()));
                 instructions.push(Instruction::I32Const(address as i32));
                 Value::Scalar(Type::String)
             }
-            primer_ir::ExprKind::ConvertNumeric {
+            cerune_ir::ExprKind::ConvertNumeric {
                 value, from, to, ..
             } => {
                 self.lower_expr(value, instructions);
@@ -680,18 +680,18 @@ impl LoweringContext<'_> {
                 }
                 Value::Scalar(scalar_type(&expr.ty))
             }
-            primer_ir::ExprKind::ConvertInteger { value, .. } => {
+            cerune_ir::ExprKind::ConvertInteger { value, .. } => {
                 self.lower_expr(value, instructions)
             }
-            primer_ir::ExprKind::Boolean(value) => {
+            cerune_ir::ExprKind::Boolean(value) => {
                 instructions.push(Instruction::I32Const(i32::from(*value)));
                 Value::Scalar(Type::Bool)
             }
-            primer_ir::ExprKind::Integer(value) => {
+            cerune_ir::ExprKind::Integer(value) => {
                 instructions.push(Instruction::I64Const(*value as i64));
                 Value::Scalar(Type::I64)
             }
-            primer_ir::ExprKind::Float { text } => {
+            cerune_ir::ExprKind::Float { text } => {
                 let ty = scalar_type(&expr.ty);
                 match ty {
                     Type::F32 => instructions.push(Instruction::F32Const(text.clone())),
@@ -702,7 +702,7 @@ impl LoweringContext<'_> {
                 }
                 Value::Scalar(ty)
             }
-            primer_ir::ExprKind::Variable { id, .. } => match &self.locations[id] {
+            cerune_ir::ExprKind::Variable { id, .. } => match &self.locations[id] {
                 Location::Scalar(name) => {
                     instructions.push(Instruction::LocalGet(name.clone()));
                     Value::Scalar(scalar_type(&expr.ty))
@@ -721,7 +721,7 @@ impl LoweringContext<'_> {
                     address: Address::Static(*address),
                 },
             },
-            primer_ir::ExprKind::Construct {
+            cerune_ir::ExprKind::Construct {
                 type_id, fields, ..
             } => {
                 let address = self.allocate(type_size(self.program, &expr.ty));
@@ -730,7 +730,7 @@ impl LoweringContext<'_> {
                         &self.program.type_definitions[type_id.0].fields[field.id.0];
                     let destination = address + field_offset(self.program, type_id.0, field.id.0);
                     match &field_definition.ty {
-                        primer_ir::Type::Named(nested) => {
+                        cerune_ir::Type::Named(nested) => {
                             let Value::Aggregate {
                                 type_id: source_type,
                                 address: source,
@@ -746,7 +746,7 @@ impl LoweringContext<'_> {
                                 instructions,
                             );
                         }
-                        primer_ir::Type::Array { element, length } => {
+                        cerune_ir::Type::Array { element, length } => {
                             let Value::Array {
                                 element: actual_element,
                                 length: actual_length,
@@ -782,7 +782,7 @@ impl LoweringContext<'_> {
                     address: Address::Static(address),
                 }
             }
-            primer_ir::ExprKind::FieldAccess {
+            cerune_ir::ExprKind::FieldAccess {
                 type_id,
                 field_id,
                 base,
@@ -797,11 +797,11 @@ impl LoweringContext<'_> {
                     instructions,
                 );
                 match &expr.ty {
-                    primer_ir::Type::Named(nested) => Value::Aggregate {
+                    cerune_ir::Type::Named(nested) => Value::Aggregate {
                         type_id: nested.0,
                         address,
                     },
-                    primer_ir::Type::Array { element, length } => Value::Array {
+                    cerune_ir::Type::Array { element, length } => Value::Array {
                         element: array_element_type(element),
                         length: *length,
                         address,
@@ -814,8 +814,8 @@ impl LoweringContext<'_> {
                     }
                 }
             }
-            primer_ir::ExprKind::Array(values) => {
-                let primer_ir::Type::Array { element, length } = &expr.ty else {
+            cerune_ir::ExprKind::Array(values) => {
+                let cerune_ir::Type::Array { element, length } = &expr.ty else {
                     unreachable!("array expression must have an array type")
                 };
                 let address = self.allocate(type_size(self.program, &expr.ty));
@@ -873,7 +873,7 @@ impl LoweringContext<'_> {
                     address: Address::Static(address),
                 }
             }
-            primer_ir::ExprKind::Index { base, index } => {
+            cerune_ir::ExprKind::Index { base, index } => {
                 let Value::Array {
                     element,
                     length,
@@ -962,10 +962,10 @@ impl LoweringContext<'_> {
                     }
                 }
             }
-            primer_ir::ExprKind::Unary { op, value } => {
+            cerune_ir::ExprKind::Unary { op, value } => {
                 let ty = scalar_type(&expr.ty);
                 match (*op, ty) {
-                    (primer_ir::UnaryOp::BitNot, Type::I64) => {
+                    (cerune_ir::UnaryOp::BitNot, Type::I64) => {
                         self.lower_expr(value, instructions);
                         instructions.push(Instruction::I64Const(crate::codegen::complement_mask(
                             &expr.ty,
@@ -978,20 +978,20 @@ impl LoweringContext<'_> {
                             .at(expr),
                         );
                     }
-                    (primer_ir::UnaryOp::Negate, Type::I64) => {
+                    (cerune_ir::UnaryOp::Negate, Type::I64) => {
                         instructions.push(Instruction::I64Const(0));
                         self.lower_expr(value, instructions);
                         instructions.push(Instruction::CheckedI64Sub.at(expr));
                     }
-                    (primer_ir::UnaryOp::Negate, Type::F32) => {
+                    (cerune_ir::UnaryOp::Negate, Type::F32) => {
                         self.lower_expr(value, instructions);
                         instructions.push(Instruction::F32Neg)
                     }
-                    (primer_ir::UnaryOp::Negate, Type::F64) => {
+                    (cerune_ir::UnaryOp::Negate, Type::F64) => {
                         self.lower_expr(value, instructions);
                         instructions.push(Instruction::F64Neg)
                     }
-                    (primer_ir::UnaryOp::Not, Type::Bool) => {
+                    (cerune_ir::UnaryOp::Not, Type::Bool) => {
                         self.lower_expr(value, instructions);
                         instructions.push(Instruction::I32Eqz)
                     }
@@ -999,13 +999,13 @@ impl LoweringContext<'_> {
                 }
                 Value::Scalar(ty)
             }
-            primer_ir::ExprKind::Logical { op, left, right } => {
+            cerune_ir::ExprKind::Logical { op, left, right } => {
                 self.lower_expr(left, instructions);
                 let mut rhs = Vec::new();
                 self.lower_expr(right, &mut rhs);
                 let (then_instructions, else_instructions) = match op {
-                    primer_ir::LogicalOp::And => (rhs, vec![Instruction::I32Const(0)]),
-                    primer_ir::LogicalOp::Or => (vec![Instruction::I32Const(1)], rhs),
+                    cerune_ir::LogicalOp::And => (rhs, vec![Instruction::I32Const(0)]),
+                    cerune_ir::LogicalOp::Or => (vec![Instruction::I32Const(1)], rhs),
                 };
                 instructions.push(Instruction::IfBool {
                     then_instructions,
@@ -1013,7 +1013,7 @@ impl LoweringContext<'_> {
                 });
                 Value::Scalar(Type::Bool)
             }
-            primer_ir::ExprKind::Binary { op, left, right } => {
+            cerune_ir::ExprKind::Binary { op, left, right } => {
                 let Value::Scalar(left_ty) = self.lower_expr(left, instructions) else {
                     unreachable!("semantic analysis rejects aggregate binary operands")
                 };
@@ -1047,7 +1047,7 @@ impl LoweringContext<'_> {
                 }
                 Value::Scalar(scalar_type(&expr.ty))
             }
-            primer_ir::ExprKind::Call {
+            cerune_ir::ExprKind::Call {
                 function_id,
                 arguments,
                 ..
@@ -1060,21 +1060,21 @@ impl LoweringContext<'_> {
     fn lower_call(
         &mut self,
         function_id: usize,
-        arguments: &[primer_ir::Expr],
-        result_type: Option<&primer_ir::Type>,
+        arguments: &[cerune_ir::Expr],
+        result_type: Option<&cerune_ir::Type>,
         instructions: &mut Vec<Instruction>,
     ) -> Option<Value> {
         let aggregate_result = result_type.and_then(|ty| match ty {
-            primer_ir::Type::Named(_) | primer_ir::Type::Array { .. } => {
+            cerune_ir::Type::Named(_) | cerune_ir::Type::Array { .. } => {
                 let address = self.allocate(type_size(self.program, ty));
                 instructions.push(Instruction::I32Const(address as i32));
                 Some((ty, address))
             }
-            primer_ir::Type::String
-            | primer_ir::Type::Bool
-            | primer_ir::Type::Integer(_)
-            | primer_ir::Type::F32
-            | primer_ir::Type::F64 => None,
+            cerune_ir::Type::String
+            | cerune_ir::Type::Bool
+            | cerune_ir::Type::Integer(_)
+            | cerune_ir::Type::F32
+            | cerune_ir::Type::F64 => None,
         });
 
         for argument in arguments {
@@ -1089,20 +1089,20 @@ impl LoweringContext<'_> {
 
         if let Some((ty, address)) = aggregate_result {
             return Some(match ty {
-                primer_ir::Type::Named(type_id) => Value::Aggregate {
+                cerune_ir::Type::Named(type_id) => Value::Aggregate {
                     type_id: type_id.0,
                     address: Address::Static(address),
                 },
-                primer_ir::Type::Array { element, length } => Value::Array {
+                cerune_ir::Type::Array { element, length } => Value::Array {
                     element: array_element_type(element),
                     length: *length,
                     address: Address::Static(address),
                 },
-                primer_ir::Type::String
-                | primer_ir::Type::Bool
-                | primer_ir::Type::Integer(_)
-                | primer_ir::Type::F32
-                | primer_ir::Type::F64 => unreachable!("aggregate result type is checked above"),
+                cerune_ir::Type::String
+                | cerune_ir::Type::Bool
+                | cerune_ir::Type::Integer(_)
+                | cerune_ir::Type::F32
+                | cerune_ir::Type::F64 => unreachable!("aggregate result type is checked above"),
             });
         }
 
@@ -1111,16 +1111,16 @@ impl LoweringContext<'_> {
 
     fn copy_value(
         &mut self,
-        ty: &primer_ir::Type,
+        ty: &cerune_ir::Type,
         source: Address,
         destination: Address,
         instructions: &mut Vec<Instruction>,
     ) {
         match ty {
-            primer_ir::Type::Named(type_id) => {
+            cerune_ir::Type::Named(type_id) => {
                 self.copy_aggregate(type_id.0, source, destination, instructions)
             }
-            primer_ir::Type::Array { element, length } => self.copy_array(
+            cerune_ir::Type::Array { element, length } => self.copy_array(
                 &array_element_type(element),
                 *length,
                 source,
@@ -1153,10 +1153,10 @@ impl LoweringContext<'_> {
             let source = self.offset_address(source, offset, instructions);
             let destination = self.offset_address(destination, offset, instructions);
             match &field.ty {
-                primer_ir::Type::Named(nested) => {
+                cerune_ir::Type::Named(nested) => {
                     self.copy_aggregate(nested.0, source, destination, instructions)
                 }
-                primer_ir::Type::Array { element, length } => self.copy_array(
+                cerune_ir::Type::Array { element, length } => self.copy_array(
                     &array_element_type(element),
                     *length,
                     source,
@@ -1269,17 +1269,17 @@ fn array_failure(origin: Origin) -> Instruction {
 }
 
 fn collect_locations(
-    statements: &[primer_ir::Statement],
-    program: &primer_ir::Program,
+    statements: &[cerune_ir::Statement],
+    program: &cerune_ir::Program,
     locals: &mut Vec<Local>,
-    locations: &mut HashMap<primer_ir::BindingId, Location>,
+    locations: &mut HashMap<cerune_ir::BindingId, Location>,
     name_counts: &mut HashMap<String, usize>,
     next_address: &mut usize,
 ) {
     for statement in statements {
         match &statement.kind {
-            primer_ir::StatementKind::Binding { id, name, ty, .. } => match ty {
-                primer_ir::Type::Named(type_id) => {
+            cerune_ir::StatementKind::Binding { id, name, ty, .. } => match ty {
+                cerune_ir::Type::Named(type_id) => {
                     let address = *next_address;
                     *next_address += type_size(program, ty);
                     locations.insert(
@@ -1290,7 +1290,7 @@ fn collect_locations(
                         },
                     );
                 }
-                primer_ir::Type::Array { element, length } => {
+                cerune_ir::Type::Array { element, length } => {
                     let address = *next_address;
                     *next_address += type_size(program, ty);
                     locations.insert(
@@ -1317,7 +1317,7 @@ fn collect_locations(
                     locations.insert(*id, Location::Scalar(lowered_name));
                 }
             },
-            primer_ir::StatementKind::If {
+            cerune_ir::StatementKind::If {
                 then_body,
                 else_body,
                 ..
@@ -1339,10 +1339,10 @@ fn collect_locations(
                     next_address,
                 );
             }
-            primer_ir::StatementKind::While { body, .. } => {
+            cerune_ir::StatementKind::While { body, .. } => {
                 collect_locations(body, program, locals, locations, name_counts, next_address)
             }
-            primer_ir::StatementKind::For {
+            cerune_ir::StatementKind::For {
                 initializer,
                 update,
                 body,
@@ -1366,72 +1366,72 @@ fn collect_locations(
                 );
                 collect_locations(body, program, locals, locations, name_counts, next_address);
             }
-            primer_ir::StatementKind::Assignment { .. }
-            | primer_ir::StatementKind::Print { .. }
-            | primer_ir::StatementKind::Call { .. }
-            | primer_ir::StatementKind::Return { .. }
-            | primer_ir::StatementKind::Break
-            | primer_ir::StatementKind::Continue => {}
+            cerune_ir::StatementKind::Assignment { .. }
+            | cerune_ir::StatementKind::Print { .. }
+            | cerune_ir::StatementKind::Call { .. }
+            | cerune_ir::StatementKind::Return { .. }
+            | cerune_ir::StatementKind::Break
+            | cerune_ir::StatementKind::Continue => {}
         }
     }
 }
 
-fn type_size(program: &primer_ir::Program, ty: &primer_ir::Type) -> usize {
+fn type_size(program: &cerune_ir::Program, ty: &cerune_ir::Type) -> usize {
     match ty {
-        primer_ir::Type::String
-        | primer_ir::Type::Bool
-        | primer_ir::Type::Integer(_)
-        | primer_ir::Type::F32
-        | primer_ir::Type::F64 => 8,
-        primer_ir::Type::Named(id) => program.type_definitions[id.0]
+        cerune_ir::Type::String
+        | cerune_ir::Type::Bool
+        | cerune_ir::Type::Integer(_)
+        | cerune_ir::Type::F32
+        | cerune_ir::Type::F64 => 8,
+        cerune_ir::Type::Named(id) => program.type_definitions[id.0]
             .fields
             .iter()
             .map(|field| type_size(program, &field.ty))
             .sum(),
-        primer_ir::Type::Array { element, length } => type_size(program, element) * length,
+        cerune_ir::Type::Array { element, length } => type_size(program, element) * length,
     }
 }
 
-fn field_offset(program: &primer_ir::Program, type_id: usize, field_id: usize) -> usize {
+fn field_offset(program: &cerune_ir::Program, type_id: usize, field_id: usize) -> usize {
     program.type_definitions[type_id].fields[..field_id]
         .iter()
         .map(|field| type_size(program, &field.ty))
         .sum()
 }
 
-fn scalar_type(ty: &primer_ir::Type) -> Type {
+fn scalar_type(ty: &cerune_ir::Type) -> Type {
     match ty {
-        primer_ir::Type::String => Type::String,
-        primer_ir::Type::Bool => Type::Bool,
-        primer_ir::Type::Integer(_) => Type::I64,
-        primer_ir::Type::F32 => Type::F32,
-        primer_ir::Type::F64 => Type::F64,
-        primer_ir::Type::Named(_) | primer_ir::Type::Array { .. } => {
+        cerune_ir::Type::String => Type::String,
+        cerune_ir::Type::Bool => Type::Bool,
+        cerune_ir::Type::Integer(_) => Type::I64,
+        cerune_ir::Type::F32 => Type::F32,
+        cerune_ir::Type::F64 => Type::F64,
+        cerune_ir::Type::Named(_) | cerune_ir::Type::Array { .. } => {
             unreachable!("expected a scalar type")
         }
     }
 }
 
-fn array_element_type(element: &primer_ir::Type) -> ArrayElement {
+fn array_element_type(element: &cerune_ir::Type) -> ArrayElement {
     match element {
-        primer_ir::Type::String => ArrayElement::Scalar(Type::String),
-        primer_ir::Type::Bool => ArrayElement::Scalar(Type::Bool),
-        primer_ir::Type::Integer(_) => ArrayElement::Scalar(Type::I64),
-        primer_ir::Type::F32 => ArrayElement::Scalar(Type::F32),
-        primer_ir::Type::F64 => ArrayElement::Scalar(Type::F64),
-        primer_ir::Type::Named(id) => ArrayElement::Named(id.0),
-        primer_ir::Type::Array { element, length } => ArrayElement::Array {
+        cerune_ir::Type::String => ArrayElement::Scalar(Type::String),
+        cerune_ir::Type::Bool => ArrayElement::Scalar(Type::Bool),
+        cerune_ir::Type::Integer(_) => ArrayElement::Scalar(Type::I64),
+        cerune_ir::Type::F32 => ArrayElement::Scalar(Type::F32),
+        cerune_ir::Type::F64 => ArrayElement::Scalar(Type::F64),
+        cerune_ir::Type::Named(id) => ArrayElement::Named(id.0),
+        cerune_ir::Type::Array { element, length } => ArrayElement::Array {
             element: Box::new(array_element_type(element)),
             length: *length,
         },
     }
 }
 
-fn array_element_size(program: &primer_ir::Program, element: &ArrayElement) -> usize {
+fn array_element_size(program: &cerune_ir::Program, element: &ArrayElement) -> usize {
     match element {
         ArrayElement::Scalar(_) => 8,
         ArrayElement::Named(id) => {
-            type_size(program, &primer_ir::Type::Named(primer_ir::TypeId(*id)))
+            type_size(program, &cerune_ir::Type::Named(cerune_ir::TypeId(*id)))
         }
         ArrayElement::Array { element, length } => array_element_size(program, element) * length,
     }
@@ -1443,7 +1443,7 @@ fn load_instruction(ty: Type, offset: u32) -> Instruction {
         Type::I64 => Instruction::I64Load { offset },
         Type::F32 => Instruction::F32Load { offset },
         Type::F64 => Instruction::F64Load { offset },
-        Type::Pointer => unreachable!("pointers are not loaded as Primer scalar values"),
+        Type::Pointer => unreachable!("pointers are not loaded as Cerune scalar values"),
     }
 }
 
@@ -1453,61 +1453,61 @@ fn store_instruction(ty: Type, offset: u32) -> Instruction {
         Type::I64 => Instruction::I64Store { offset },
         Type::F32 => Instruction::F32Store { offset },
         Type::F64 => Instruction::F64Store { offset },
-        Type::Pointer => unreachable!("pointers are not stored as Primer scalar values"),
+        Type::Pointer => unreachable!("pointers are not stored as Cerune scalar values"),
     }
 }
 
-fn lower_binary(op: primer_ir::BinaryOp, ty: primer_ir::Type) -> Instruction {
+fn lower_binary(op: cerune_ir::BinaryOp, ty: cerune_ir::Type) -> Instruction {
     match (op, ty) {
-        (primer_ir::BinaryOp::Less, primer_ir::Type::Integer(crate::types::IntegerType::U64)) => {
+        (cerune_ir::BinaryOp::Less, cerune_ir::Type::Integer(crate::types::IntegerType::U64)) => {
             Instruction::I64LtU
         }
         (
-            primer_ir::BinaryOp::LessEqual,
-            primer_ir::Type::Integer(crate::types::IntegerType::U64),
+            cerune_ir::BinaryOp::LessEqual,
+            cerune_ir::Type::Integer(crate::types::IntegerType::U64),
         ) => Instruction::I64LeU,
         (
-            primer_ir::BinaryOp::Greater,
-            primer_ir::Type::Integer(crate::types::IntegerType::U64),
+            cerune_ir::BinaryOp::Greater,
+            cerune_ir::Type::Integer(crate::types::IntegerType::U64),
         ) => Instruction::I64GtU,
         (
-            primer_ir::BinaryOp::GreaterEqual,
-            primer_ir::Type::Integer(crate::types::IntegerType::U64),
+            cerune_ir::BinaryOp::GreaterEqual,
+            cerune_ir::Type::Integer(crate::types::IntegerType::U64),
         ) => Instruction::I64GeU,
-        (primer_ir::BinaryOp::Equal, primer_ir::Type::String) => Instruction::StringEqual,
-        (primer_ir::BinaryOp::NotEqual, primer_ir::Type::String) => Instruction::StringNotEqual,
-        (primer_ir::BinaryOp::Add, primer_ir::Type::Integer(_)) => Instruction::CheckedI64Add,
-        (primer_ir::BinaryOp::Subtract, primer_ir::Type::Integer(_)) => Instruction::CheckedI64Sub,
-        (primer_ir::BinaryOp::Multiply, primer_ir::Type::Integer(_)) => Instruction::CheckedI64Mul,
-        (primer_ir::BinaryOp::Divide, primer_ir::Type::Integer(_)) => Instruction::CheckedI64DivS,
-        (primer_ir::BinaryOp::Add, primer_ir::Type::F32) => Instruction::F32Add,
-        (primer_ir::BinaryOp::Subtract, primer_ir::Type::F32) => Instruction::F32Sub,
-        (primer_ir::BinaryOp::Multiply, primer_ir::Type::F32) => Instruction::F32Mul,
-        (primer_ir::BinaryOp::Divide, primer_ir::Type::F32) => Instruction::F32Div,
-        (primer_ir::BinaryOp::Add, primer_ir::Type::F64) => Instruction::F64Add,
-        (primer_ir::BinaryOp::Subtract, primer_ir::Type::F64) => Instruction::F64Sub,
-        (primer_ir::BinaryOp::Multiply, primer_ir::Type::F64) => Instruction::F64Mul,
-        (primer_ir::BinaryOp::Divide, primer_ir::Type::F64) => Instruction::F64Div,
-        (primer_ir::BinaryOp::Equal, primer_ir::Type::Bool) => Instruction::I32Eq,
-        (primer_ir::BinaryOp::NotEqual, primer_ir::Type::Bool) => Instruction::I32Ne,
-        (primer_ir::BinaryOp::Equal, primer_ir::Type::Integer(_)) => Instruction::I64Eq,
-        (primer_ir::BinaryOp::NotEqual, primer_ir::Type::Integer(_)) => Instruction::I64Ne,
-        (primer_ir::BinaryOp::Less, primer_ir::Type::Integer(_)) => Instruction::I64LtS,
-        (primer_ir::BinaryOp::LessEqual, primer_ir::Type::Integer(_)) => Instruction::I64LeS,
-        (primer_ir::BinaryOp::Greater, primer_ir::Type::Integer(_)) => Instruction::I64GtS,
-        (primer_ir::BinaryOp::GreaterEqual, primer_ir::Type::Integer(_)) => Instruction::I64GeS,
-        (primer_ir::BinaryOp::Equal, primer_ir::Type::F32) => Instruction::F32Eq,
-        (primer_ir::BinaryOp::NotEqual, primer_ir::Type::F32) => Instruction::F32Ne,
-        (primer_ir::BinaryOp::Less, primer_ir::Type::F32) => Instruction::F32Lt,
-        (primer_ir::BinaryOp::LessEqual, primer_ir::Type::F32) => Instruction::F32Le,
-        (primer_ir::BinaryOp::Greater, primer_ir::Type::F32) => Instruction::F32Gt,
-        (primer_ir::BinaryOp::GreaterEqual, primer_ir::Type::F32) => Instruction::F32Ge,
-        (primer_ir::BinaryOp::Equal, primer_ir::Type::F64) => Instruction::F64Eq,
-        (primer_ir::BinaryOp::NotEqual, primer_ir::Type::F64) => Instruction::F64Ne,
-        (primer_ir::BinaryOp::Less, primer_ir::Type::F64) => Instruction::F64Lt,
-        (primer_ir::BinaryOp::LessEqual, primer_ir::Type::F64) => Instruction::F64Le,
-        (primer_ir::BinaryOp::Greater, primer_ir::Type::F64) => Instruction::F64Gt,
-        (primer_ir::BinaryOp::GreaterEqual, primer_ir::Type::F64) => Instruction::F64Ge,
+        (cerune_ir::BinaryOp::Equal, cerune_ir::Type::String) => Instruction::StringEqual,
+        (cerune_ir::BinaryOp::NotEqual, cerune_ir::Type::String) => Instruction::StringNotEqual,
+        (cerune_ir::BinaryOp::Add, cerune_ir::Type::Integer(_)) => Instruction::CheckedI64Add,
+        (cerune_ir::BinaryOp::Subtract, cerune_ir::Type::Integer(_)) => Instruction::CheckedI64Sub,
+        (cerune_ir::BinaryOp::Multiply, cerune_ir::Type::Integer(_)) => Instruction::CheckedI64Mul,
+        (cerune_ir::BinaryOp::Divide, cerune_ir::Type::Integer(_)) => Instruction::CheckedI64DivS,
+        (cerune_ir::BinaryOp::Add, cerune_ir::Type::F32) => Instruction::F32Add,
+        (cerune_ir::BinaryOp::Subtract, cerune_ir::Type::F32) => Instruction::F32Sub,
+        (cerune_ir::BinaryOp::Multiply, cerune_ir::Type::F32) => Instruction::F32Mul,
+        (cerune_ir::BinaryOp::Divide, cerune_ir::Type::F32) => Instruction::F32Div,
+        (cerune_ir::BinaryOp::Add, cerune_ir::Type::F64) => Instruction::F64Add,
+        (cerune_ir::BinaryOp::Subtract, cerune_ir::Type::F64) => Instruction::F64Sub,
+        (cerune_ir::BinaryOp::Multiply, cerune_ir::Type::F64) => Instruction::F64Mul,
+        (cerune_ir::BinaryOp::Divide, cerune_ir::Type::F64) => Instruction::F64Div,
+        (cerune_ir::BinaryOp::Equal, cerune_ir::Type::Bool) => Instruction::I32Eq,
+        (cerune_ir::BinaryOp::NotEqual, cerune_ir::Type::Bool) => Instruction::I32Ne,
+        (cerune_ir::BinaryOp::Equal, cerune_ir::Type::Integer(_)) => Instruction::I64Eq,
+        (cerune_ir::BinaryOp::NotEqual, cerune_ir::Type::Integer(_)) => Instruction::I64Ne,
+        (cerune_ir::BinaryOp::Less, cerune_ir::Type::Integer(_)) => Instruction::I64LtS,
+        (cerune_ir::BinaryOp::LessEqual, cerune_ir::Type::Integer(_)) => Instruction::I64LeS,
+        (cerune_ir::BinaryOp::Greater, cerune_ir::Type::Integer(_)) => Instruction::I64GtS,
+        (cerune_ir::BinaryOp::GreaterEqual, cerune_ir::Type::Integer(_)) => Instruction::I64GeS,
+        (cerune_ir::BinaryOp::Equal, cerune_ir::Type::F32) => Instruction::F32Eq,
+        (cerune_ir::BinaryOp::NotEqual, cerune_ir::Type::F32) => Instruction::F32Ne,
+        (cerune_ir::BinaryOp::Less, cerune_ir::Type::F32) => Instruction::F32Lt,
+        (cerune_ir::BinaryOp::LessEqual, cerune_ir::Type::F32) => Instruction::F32Le,
+        (cerune_ir::BinaryOp::Greater, cerune_ir::Type::F32) => Instruction::F32Gt,
+        (cerune_ir::BinaryOp::GreaterEqual, cerune_ir::Type::F32) => Instruction::F32Ge,
+        (cerune_ir::BinaryOp::Equal, cerune_ir::Type::F64) => Instruction::F64Eq,
+        (cerune_ir::BinaryOp::NotEqual, cerune_ir::Type::F64) => Instruction::F64Ne,
+        (cerune_ir::BinaryOp::Less, cerune_ir::Type::F64) => Instruction::F64Lt,
+        (cerune_ir::BinaryOp::LessEqual, cerune_ir::Type::F64) => Instruction::F64Le,
+        (cerune_ir::BinaryOp::Greater, cerune_ir::Type::F64) => Instruction::F64Gt,
+        (cerune_ir::BinaryOp::GreaterEqual, cerune_ir::Type::F64) => Instruction::F64Ge,
         _ => unreachable!("semantic analysis rejects invalid binary operands"),
     }
 }

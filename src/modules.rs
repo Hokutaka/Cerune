@@ -68,7 +68,7 @@ impl Compilation {
             })
             .collect::<Vec<_>>()
             .join(",");
-        format!("{{\"schema\":\"primer-sources-v1\",\"files\":[{files}]}}\n")
+        format!("{{\"schema\":\"cerune-sources-v1\",\"files\":[{files}]}}\n")
     }
 }
 
@@ -193,10 +193,10 @@ fn visit(
             || import.path.starts_with('/')
             || import.path.contains(['\\', ':'])
             || import.path.chars().any(char::is_control)
-            || !import.path.ends_with(".prim")
+            || !import.path.ends_with(".ceru")
         {
             return Err(Diagnostic::new(
-                "import path must be a relative .prim path using forward slashes",
+                "import path must be a relative .ceru path using forward slashes",
                 import.span,
             ));
         }

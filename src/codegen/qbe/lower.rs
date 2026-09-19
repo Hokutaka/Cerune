@@ -1,13 +1,13 @@
 use std::collections::HashMap;
 
-use crate::ir as primer_ir;
+use crate::ir as cerune_ir;
 
 use super::ir::{
     BinaryOp, CompareOp, FailureOrigin, Function, Instruction, Module, Operand, Parameter,
     ParameterPassing, PrintFormat, Slot, Temp, Type,
 };
 
-pub fn lower(program: &primer_ir::Program) -> Module {
+pub fn lower(program: &cerune_ir::Program) -> Module {
     let mut strings = Vec::new();
     let functions = program
         .function_definitions
@@ -55,8 +55,8 @@ pub fn lower(program: &primer_ir::Program) -> Module {
 }
 
 fn lower_function(
-    program: &primer_ir::Program,
-    function: &primer_ir::FunctionDefinition,
+    program: &cerune_ir::Program,
+    function: &cerune_ir::FunctionDefinition,
     strings: &mut Vec<String>,
 ) -> Function {
     let mut slots = Vec::new();
@@ -76,12 +76,12 @@ fn lower_function(
             Parameter {
                 name: parameter.name.clone(),
                 passing: match &parameter.ty {
-                    primer_ir::Type::String
-                    | primer_ir::Type::Bool
-                    | primer_ir::Type::Integer(_)
-                    | primer_ir::Type::F32
-                    | primer_ir::Type::F64 => ParameterPassing::Scalar(scalar_type(&parameter.ty)),
-                    primer_ir::Type::Named(_) | primer_ir::Type::Array { .. } => {
+                    cerune_ir::Type::String
+                    | cerune_ir::Type::Bool
+                    | cerune_ir::Type::Integer(_)
+                    | cerune_ir::Type::F32
+                    | cerune_ir::Type::F64 => ParameterPassing::Scalar(scalar_type(&parameter.ty)),
+                    cerune_ir::Type::Named(_) | cerune_ir::Type::Array { .. } => {
                         ParameterPassing::Aggregate {
                             size: type_size(program, &parameter.ty),
                         }
@@ -122,29 +122,29 @@ fn lower_function(
         name: function.name.clone(),
         parameters,
         return_type: match &function.return_type {
-            primer_ir::ReturnType::Void => None,
-            primer_ir::ReturnType::Value(
-                ty @ (primer_ir::Type::String
-                | primer_ir::Type::Bool
-                | primer_ir::Type::Integer(_)
-                | primer_ir::Type::F32
-                | primer_ir::Type::F64),
+            cerune_ir::ReturnType::Void => None,
+            cerune_ir::ReturnType::Value(
+                ty @ (cerune_ir::Type::String
+                | cerune_ir::Type::Bool
+                | cerune_ir::Type::Integer(_)
+                | cerune_ir::Type::F32
+                | cerune_ir::Type::F64),
             ) => Some(scalar_type(ty)),
-            primer_ir::ReturnType::Value(
-                primer_ir::Type::Named(_) | primer_ir::Type::Array { .. },
+            cerune_ir::ReturnType::Value(
+                cerune_ir::Type::Named(_) | cerune_ir::Type::Array { .. },
             ) => None,
         },
         aggregate_return_size: match &function.return_type {
-            primer_ir::ReturnType::Value(
-                ty @ (primer_ir::Type::Named(_) | primer_ir::Type::Array { .. }),
+            cerune_ir::ReturnType::Value(
+                ty @ (cerune_ir::Type::Named(_) | cerune_ir::Type::Array { .. }),
             ) => Some(type_size(program, ty)),
-            primer_ir::ReturnType::Void
-            | primer_ir::ReturnType::Value(
-                primer_ir::Type::String
-                | primer_ir::Type::Bool
-                | primer_ir::Type::Integer(_)
-                | primer_ir::Type::F32
-                | primer_ir::Type::F64,
+            cerune_ir::ReturnType::Void
+            | cerune_ir::ReturnType::Value(
+                cerune_ir::Type::String
+                | cerune_ir::Type::Bool
+                | cerune_ir::Type::Integer(_)
+                | cerune_ir::Type::F32
+                | cerune_ir::Type::F64,
             ) => None,
         },
         slots: lowerer.slots,
@@ -154,13 +154,13 @@ fn lower_function(
 
 struct Lowerer<'a> {
     strings: &'a mut Vec<String>,
-    program: &'a primer_ir::Program,
+    program: &'a cerune_ir::Program,
     slots: Vec<Slot>,
     instructions: Vec<Instruction>,
     temp: usize,
     label: usize,
     aggregate_temp: usize,
-    slot_map: HashMap<primer_ir::BindingId, usize>,
+    slot_map: HashMap<cerune_ir::BindingId, usize>,
     loops: Vec<LoopContext>,
 }
 
@@ -198,7 +198,7 @@ enum ArrayElement {
 }
 
 impl Lowerer<'_> {
-    fn lower_statements(&mut self, statements: &[primer_ir::Statement]) -> bool {
+    fn lower_statements(&mut self, statements: &[cerune_ir::Statement]) -> bool {
         for statement in statements {
             if self.lower_statement(statement) {
                 return true;
@@ -208,19 +208,19 @@ impl Lowerer<'_> {
         false
     }
 
-    fn lower_statement(&mut self, statement: &primer_ir::Statement) -> bool {
+    fn lower_statement(&mut self, statement: &cerune_ir::Statement) -> bool {
         match &statement.kind {
-            primer_ir::StatementKind::Binding { id, ty, value, .. } => {
+            cerune_ir::StatementKind::Binding { id, ty, value, .. } => {
                 let value = self.lower_expr(value);
                 let destination = Operand::Slot(self.slot(*id));
                 self.store_value(ty, value, destination);
                 false
             }
 
-            primer_ir::StatementKind::Assignment { target, value } => {
+            cerune_ir::StatementKind::Assignment { target, value } => {
                 let mut destination = Operand::Slot(self.slot(target.id));
                 for projection in &target.projections {
-                    let primer_ir::AssignmentProjection::Index {
+                    let cerune_ir::AssignmentProjection::Index {
                         index,
                         element,
                         length,
@@ -242,7 +242,7 @@ impl Lowerer<'_> {
                 false
             }
 
-            primer_ir::StatementKind::Print { value } => {
+            cerune_ir::StatementKind::Print { value } => {
                 let Value::Scalar { ty, operand } = self.lower_expr(value) else {
                     unreachable!("semantic analysis rejects aggregate printing")
                 };
@@ -260,7 +260,7 @@ impl Lowerer<'_> {
                 false
             }
 
-            primer_ir::StatementKind::If {
+            cerune_ir::StatementKind::If {
                 condition,
                 then_body,
                 else_body,
@@ -302,7 +302,7 @@ impl Lowerer<'_> {
                 }
             }
 
-            primer_ir::StatementKind::While { condition, body } => {
+            cerune_ir::StatementKind::While { condition, body } => {
                 let condition_label = self.next_label();
                 let body_label = self.next_label();
                 let end_label = self.next_label();
@@ -340,7 +340,7 @@ impl Lowerer<'_> {
                 false
             }
 
-            primer_ir::StatementKind::For {
+            cerune_ir::StatementKind::For {
                 initializer,
                 condition,
                 update,
@@ -392,7 +392,7 @@ impl Lowerer<'_> {
                 false
             }
 
-            primer_ir::StatementKind::Break => {
+            cerune_ir::StatementKind::Break => {
                 let target = self
                     .loops
                     .last()
@@ -402,7 +402,7 @@ impl Lowerer<'_> {
                 true
             }
 
-            primer_ir::StatementKind::Continue => {
+            cerune_ir::StatementKind::Continue => {
                 let target = self
                     .loops
                     .last()
@@ -411,7 +411,7 @@ impl Lowerer<'_> {
                 self.instructions.push(Instruction::Jump(target));
                 true
             }
-            primer_ir::StatementKind::Call {
+            cerune_ir::StatementKind::Call {
                 function_id,
                 arguments,
                 ..
@@ -419,7 +419,7 @@ impl Lowerer<'_> {
                 self.lower_call(function_id.0, arguments, None);
                 false
             }
-            primer_ir::StatementKind::Return { value } => {
+            cerune_ir::StatementKind::Return { value } => {
                 match value.as_ref().map(|value| (value, self.lower_expr(value))) {
                     Some((_, Value::Scalar { ty, operand })) => {
                         self.instructions.push(Instruction::Return {
@@ -444,7 +444,7 @@ impl Lowerer<'_> {
         }
     }
 
-    fn lower_expr(&mut self, expr: &primer_ir::Expr) -> Value {
+    fn lower_expr(&mut self, expr: &cerune_ir::Expr) -> Value {
         let value = self.lower_expr_unchecked(expr);
         if let Some(ty) = super::super::integer_range_check(expr) {
             let Value::Scalar { operand, .. } = value else {
@@ -454,11 +454,11 @@ impl Lowerer<'_> {
             self.instructions.push(Instruction::CheckIntegerRange {
                 origin: expr.into(),
                 failure: match expr.kind {
-                    primer_ir::ExprKind::ConvertInteger { .. } => {
+                    cerune_ir::ExprKind::ConvertInteger { .. } => {
                         crate::runtime::FailureCode::IntegerConversionOutOfRange
                     }
-                    primer_ir::ExprKind::Binary {
-                        op: primer_ir::BinaryOp::Divide,
+                    cerune_ir::ExprKind::Binary {
+                        op: cerune_ir::BinaryOp::Divide,
                         ..
                     } => crate::runtime::FailureCode::DivisionOverflow,
                     _ => crate::runtime::FailureCode::IntegerOverflow,
@@ -475,7 +475,7 @@ impl Lowerer<'_> {
         value
     }
 
-    fn lower_expr_unchecked(&mut self, expr: &primer_ir::Expr) -> Value {
+    fn lower_expr_unchecked(&mut self, expr: &cerune_ir::Expr) -> Value {
         if let Some((value, conversion)) = crate::codegen::u64_integer_conversion(expr) {
             let (_, value) = self.lower_scalar_expr(value);
             let dest = self.next_temp();
@@ -492,7 +492,7 @@ impl Lowerer<'_> {
         }
 
         match &expr.kind {
-            primer_ir::ExprKind::StringByteLength { value } => {
+            cerune_ir::ExprKind::StringByteLength { value } => {
                 let value = self.lower_expr(value);
                 let Value::Scalar {
                     ty,
@@ -513,7 +513,7 @@ impl Lowerer<'_> {
                     operand: Operand::Temp(dest),
                 }
             }
-            primer_ir::ExprKind::String(value) => {
+            cerune_ir::ExprKind::String(value) => {
                 let id = self.strings.len();
                 self.strings.push(value.clone());
                 Value::Scalar {
@@ -521,7 +521,7 @@ impl Lowerer<'_> {
                     operand: Operand::String(id),
                 }
             }
-            primer_ir::ExprKind::ConvertNumeric {
+            cerune_ir::ExprKind::ConvertNumeric {
                 value, from, to, ..
             } => {
                 let (ty, value) = self.lower_scalar_expr(value);
@@ -543,29 +543,29 @@ impl Lowerer<'_> {
                     operand: Operand::Temp(dest),
                 }
             }
-            primer_ir::ExprKind::ConvertInteger { value, .. } => self.lower_expr(value),
-            primer_ir::ExprKind::Boolean(value) => Value::Scalar {
+            cerune_ir::ExprKind::ConvertInteger { value, .. } => self.lower_expr(value),
+            cerune_ir::ExprKind::Boolean(value) => Value::Scalar {
                 ty: Type::Bool,
                 operand: Operand::Boolean(*value),
             },
-            primer_ir::ExprKind::Integer(value) => Value::Scalar {
+            cerune_ir::ExprKind::Integer(value) => Value::Scalar {
                 ty: Type::I64,
                 operand: Operand::Integer(*value as i64),
             },
-            primer_ir::ExprKind::Float { text } => Value::Scalar {
+            cerune_ir::ExprKind::Float { text } => Value::Scalar {
                 ty: scalar_type(&expr.ty),
                 operand: match &expr.ty {
-                    primer_ir::Type::F32 => Operand::Float32(text.clone()),
-                    primer_ir::Type::F64 => Operand::Float64(text.clone()),
+                    cerune_ir::Type::F32 => Operand::Float32(text.clone()),
+                    cerune_ir::Type::F64 => Operand::Float64(text.clone()),
                     _ => unreachable!("a float literal has a float type"),
                 },
             },
-            primer_ir::ExprKind::Variable { id, .. } => match &expr.ty {
-                primer_ir::Type::Named(type_id) => Value::Aggregate {
+            cerune_ir::ExprKind::Variable { id, .. } => match &expr.ty {
+                cerune_ir::Type::Named(type_id) => Value::Aggregate {
                     type_id: type_id.0,
                     address: Operand::Slot(self.slot(*id)),
                 },
-                primer_ir::Type::Array { element, length } => Value::Array {
+                cerune_ir::Type::Array { element, length } => Value::Array {
                     element: array_element_type(element),
                     length: *length,
                     address: Operand::Slot(self.slot(*id)),
@@ -584,11 +584,11 @@ impl Lowerer<'_> {
                     }
                 }
             },
-            primer_ir::ExprKind::Unary { op, value } => {
+            cerune_ir::ExprKind::Unary { op, value } => {
                 let (ty, operand) = self.lower_scalar_expr(value);
                 let dest = self.next_temp();
                 match (op, ty) {
-                    (primer_ir::UnaryOp::BitNot, _) => {
+                    (cerune_ir::UnaryOp::BitNot, _) => {
                         self.instructions.push(Instruction::IntegerBinary {
                             origin: expr.into(),
                             dest,
@@ -598,21 +598,21 @@ impl Lowerer<'_> {
                             right: Operand::Integer(crate::codegen::complement_mask(&expr.ty)),
                         })
                     }
-                    (primer_ir::UnaryOp::Negate, Type::I64) => {
+                    (cerune_ir::UnaryOp::Negate, Type::I64) => {
                         self.instructions.push(Instruction::CheckedI64Negate {
                             origin: expr.into(),
                             dest,
                             value: operand,
                         })
                     }
-                    (primer_ir::UnaryOp::Negate, _) => {
+                    (cerune_ir::UnaryOp::Negate, _) => {
                         self.instructions.push(Instruction::Negate {
                             dest,
                             ty,
                             value: operand,
                         })
                     }
-                    (primer_ir::UnaryOp::Not, _) => self.instructions.push(Instruction::Not {
+                    (cerune_ir::UnaryOp::Not, _) => self.instructions.push(Instruction::Not {
                         dest,
                         value: operand,
                     }),
@@ -622,7 +622,7 @@ impl Lowerer<'_> {
                     operand: Operand::Temp(dest),
                 }
             }
-            primer_ir::ExprKind::Logical { op, left, right } => {
+            cerune_ir::ExprKind::Logical { op, left, right } => {
                 let (_, left) = self.lower_scalar_expr(left);
                 let rhs_label = self.next_label();
                 let end_label = self.next_label();
@@ -638,8 +638,8 @@ impl Lowerer<'_> {
                     address: Operand::Slot(slot),
                 });
                 let (then_label, else_label) = match op {
-                    primer_ir::LogicalOp::And => (rhs_label, end_label),
-                    primer_ir::LogicalOp::Or => (end_label, rhs_label),
+                    cerune_ir::LogicalOp::And => (rhs_label, end_label),
+                    cerune_ir::LogicalOp::Or => (end_label, rhs_label),
                 };
                 self.instructions.push(Instruction::Branch {
                     condition: left,
@@ -672,7 +672,7 @@ impl Lowerer<'_> {
                     operand: Operand::Temp(dest),
                 }
             }
-            primer_ir::ExprKind::Binary { op, left, right } => {
+            cerune_ir::ExprKind::Binary { op, left, right } => {
                 let source_operand_ty = left.ty.clone();
                 let (left_ty, left) = self.lower_scalar_expr(left);
                 let (right_ty, right) = self.lower_scalar_expr(right);
@@ -700,10 +700,10 @@ impl Lowerer<'_> {
                 } else {
                     let op = if left_ty == Type::I64 {
                         match op {
-                            primer_ir::BinaryOp::Add => BinaryOp::CheckedI64Add,
-                            primer_ir::BinaryOp::Subtract => BinaryOp::CheckedI64Subtract,
-                            primer_ir::BinaryOp::Multiply => BinaryOp::CheckedI64Multiply,
-                            primer_ir::BinaryOp::Divide => BinaryOp::CheckedI64Divide,
+                            cerune_ir::BinaryOp::Add => BinaryOp::CheckedI64Add,
+                            cerune_ir::BinaryOp::Subtract => BinaryOp::CheckedI64Subtract,
+                            cerune_ir::BinaryOp::Multiply => BinaryOp::CheckedI64Multiply,
+                            cerune_ir::BinaryOp::Divide => BinaryOp::CheckedI64Divide,
                             _ => unreachable!("comparisons use dedicated QBE instructions"),
                         }
                     } else {
@@ -724,7 +724,7 @@ impl Lowerer<'_> {
                     operand: Operand::Temp(dest),
                 }
             }
-            primer_ir::ExprKind::Construct {
+            cerune_ir::ExprKind::Construct {
                 type_id, fields, ..
             } => {
                 let slot = self.allocate_aggregate(type_size(self.program, &expr.ty));
@@ -735,7 +735,7 @@ impl Lowerer<'_> {
                     let destination = self.address(Operand::Slot(slot), offset);
                     match (&definition.ty, value) {
                         (
-                            primer_ir::Type::Named(nested),
+                            cerune_ir::Type::Named(nested),
                             Value::Aggregate {
                                 type_id: actual,
                                 address,
@@ -749,7 +749,7 @@ impl Lowerer<'_> {
                             });
                         }
                         (
-                            primer_ir::Type::Array { element, length },
+                            cerune_ir::Type::Array { element, length },
                             Value::Array {
                                 element: actual_element,
                                 length: actual_length,
@@ -780,7 +780,7 @@ impl Lowerer<'_> {
                     address: Operand::Slot(slot),
                 }
             }
-            primer_ir::ExprKind::FieldAccess {
+            cerune_ir::ExprKind::FieldAccess {
                 type_id,
                 field_id,
                 base,
@@ -792,11 +792,11 @@ impl Lowerer<'_> {
                 let address =
                     self.address(address, field_offset(self.program, type_id.0, field_id.0));
                 match &expr.ty {
-                    primer_ir::Type::Named(nested) => Value::Aggregate {
+                    cerune_ir::Type::Named(nested) => Value::Aggregate {
                         type_id: nested.0,
                         address,
                     },
-                    primer_ir::Type::Array { element, length } => Value::Array {
+                    cerune_ir::Type::Array { element, length } => Value::Array {
                         element: array_element_type(element),
                         length: *length,
                         address,
@@ -813,8 +813,8 @@ impl Lowerer<'_> {
                     }
                 }
             }
-            primer_ir::ExprKind::Array(values) => {
-                let primer_ir::Type::Array { element, length } = &expr.ty else {
+            cerune_ir::ExprKind::Array(values) => {
+                let cerune_ir::Type::Array { element, length } = &expr.ty else {
                     unreachable!("array expression must have an array type")
                 };
                 let slot = self.allocate_aggregate(type_size(self.program, &expr.ty));
@@ -874,7 +874,7 @@ impl Lowerer<'_> {
                     address: Operand::Slot(slot),
                 }
             }
-            primer_ir::ExprKind::Index { base, index } => {
+            cerune_ir::ExprKind::Index { base, index } => {
                 let Value::Array {
                     element,
                     length,
@@ -909,7 +909,7 @@ impl Lowerer<'_> {
                     },
                 }
             }
-            primer_ir::ExprKind::Call {
+            cerune_ir::ExprKind::Call {
                 function_id,
                 arguments,
                 ..
@@ -919,10 +919,10 @@ impl Lowerer<'_> {
         }
     }
 
-    fn store_value(&mut self, ty: &primer_ir::Type, value: Value, destination: Operand) {
+    fn store_value(&mut self, ty: &cerune_ir::Type, value: Value, destination: Operand) {
         match (ty, value) {
             (
-                primer_ir::Type::Named(type_id),
+                cerune_ir::Type::Named(type_id),
                 Value::Aggregate {
                     type_id: actual,
                     address,
@@ -936,7 +936,7 @@ impl Lowerer<'_> {
                 });
             }
             (
-                primer_ir::Type::Array { element, length },
+                cerune_ir::Type::Array { element, length },
                 Value::Array {
                     element: actual_element,
                     length: actual_length,
@@ -974,7 +974,7 @@ impl Lowerer<'_> {
         base: Operand,
         element: &ArrayElement,
         length: usize,
-        index: &primer_ir::Expr,
+        index: &cerune_ir::Expr,
         origin: FailureOrigin,
     ) -> Operand {
         let (index_ty, index) = self.lower_scalar_expr(index);
@@ -1047,21 +1047,21 @@ impl Lowerer<'_> {
     fn lower_call(
         &mut self,
         function_id: usize,
-        arguments: &[primer_ir::Expr],
-        result_type: Option<&primer_ir::Type>,
+        arguments: &[cerune_ir::Expr],
+        result_type: Option<&cerune_ir::Type>,
     ) -> Option<Value> {
         let mut lowered_arguments = Vec::new();
         let aggregate_result = result_type.and_then(|ty| match ty {
-            primer_ir::Type::Named(_) | primer_ir::Type::Array { .. } => {
+            cerune_ir::Type::Named(_) | cerune_ir::Type::Array { .. } => {
                 let slot = self.allocate_aggregate(type_size(self.program, ty));
                 lowered_arguments.push((Type::Pointer, Operand::Slot(slot)));
                 Some((ty, slot))
             }
-            primer_ir::Type::String
-            | primer_ir::Type::Bool
-            | primer_ir::Type::Integer(_)
-            | primer_ir::Type::F32
-            | primer_ir::Type::F64 => None,
+            cerune_ir::Type::String
+            | cerune_ir::Type::Bool
+            | cerune_ir::Type::Integer(_)
+            | cerune_ir::Type::F32
+            | cerune_ir::Type::F64 => None,
         });
 
         for argument in arguments {
@@ -1075,17 +1075,17 @@ impl Lowerer<'_> {
 
         let (dest, return_type, scalar_result) = match result_type {
             Some(
-                ty @ (primer_ir::Type::String
-                | primer_ir::Type::Bool
-                | primer_ir::Type::Integer(_)
-                | primer_ir::Type::F32
-                | primer_ir::Type::F64),
+                ty @ (cerune_ir::Type::String
+                | cerune_ir::Type::Bool
+                | cerune_ir::Type::Integer(_)
+                | cerune_ir::Type::F32
+                | cerune_ir::Type::F64),
             ) => {
                 let ty = scalar_type(ty);
                 let dest = self.next_temp();
                 (Some(dest), Some(ty), Some((ty, dest)))
             }
-            Some(primer_ir::Type::Named(_) | primer_ir::Type::Array { .. }) | None => {
+            Some(cerune_ir::Type::Named(_) | cerune_ir::Type::Array { .. }) | None => {
                 (None, None, None)
             }
         };
@@ -1105,24 +1105,24 @@ impl Lowerer<'_> {
         }
 
         aggregate_result.map(|(ty, slot)| match ty {
-            primer_ir::Type::Named(id) => Value::Aggregate {
+            cerune_ir::Type::Named(id) => Value::Aggregate {
                 type_id: id.0,
                 address: Operand::Slot(slot),
             },
-            primer_ir::Type::Array { element, length } => Value::Array {
+            cerune_ir::Type::Array { element, length } => Value::Array {
                 element: array_element_type(element),
                 length: *length,
                 address: Operand::Slot(slot),
             },
-            primer_ir::Type::String
-            | primer_ir::Type::Bool
-            | primer_ir::Type::Integer(_)
-            | primer_ir::Type::F32
-            | primer_ir::Type::F64 => unreachable!("aggregate result type is checked above"),
+            cerune_ir::Type::String
+            | cerune_ir::Type::Bool
+            | cerune_ir::Type::Integer(_)
+            | cerune_ir::Type::F32
+            | cerune_ir::Type::F64 => unreachable!("aggregate result type is checked above"),
         })
     }
 
-    fn lower_scalar_expr(&mut self, expr: &primer_ir::Expr) -> (Type, Operand) {
+    fn lower_scalar_expr(&mut self, expr: &cerune_ir::Expr) -> (Type, Operand) {
         let Value::Scalar { ty, operand } = self.lower_expr(expr) else {
             unreachable!("semantic analysis requires a scalar value here")
         };
@@ -1182,7 +1182,7 @@ impl Lowerer<'_> {
                     value: operand,
                 });
             }
-            Type::Pointer => unreachable!("pointers are not printable Primer values"),
+            Type::Pointer => unreachable!("pointers are not printable Cerune values"),
         }
     }
 
@@ -1220,21 +1220,21 @@ impl Lowerer<'_> {
         label
     }
 
-    fn slot(&self, id: primer_ir::BindingId) -> usize {
+    fn slot(&self, id: cerune_ir::BindingId) -> usize {
         self.slot_map[&id]
     }
 }
 
 fn collect_slots(
-    statements: &[primer_ir::Statement],
-    program: &primer_ir::Program,
+    statements: &[cerune_ir::Statement],
+    program: &cerune_ir::Program,
     slots: &mut Vec<Slot>,
-    slot_map: &mut HashMap<primer_ir::BindingId, usize>,
+    slot_map: &mut HashMap<cerune_ir::BindingId, usize>,
     name_counts: &mut HashMap<String, usize>,
 ) {
     for statement in statements {
         match &statement.kind {
-            primer_ir::StatementKind::Binding { id, name, ty, .. } => {
+            cerune_ir::StatementKind::Binding { id, name, ty, .. } => {
                 let count = name_counts.entry(name.clone()).or_default();
                 let lowered_name = if *count == 0 {
                     name.clone()
@@ -1249,7 +1249,7 @@ fn collect_slots(
                 });
                 slot_map.insert(*id, slot);
             }
-            primer_ir::StatementKind::If {
+            cerune_ir::StatementKind::If {
                 then_body,
                 else_body,
                 ..
@@ -1257,10 +1257,10 @@ fn collect_slots(
                 collect_slots(then_body, program, slots, slot_map, name_counts);
                 collect_slots(else_body, program, slots, slot_map, name_counts);
             }
-            primer_ir::StatementKind::While { body, .. } => {
+            cerune_ir::StatementKind::While { body, .. } => {
                 collect_slots(body, program, slots, slot_map, name_counts);
             }
-            primer_ir::StatementKind::For {
+            cerune_ir::StatementKind::For {
                 initializer,
                 update,
                 body,
@@ -1282,121 +1282,121 @@ fn collect_slots(
                 );
                 collect_slots(body, program, slots, slot_map, name_counts);
             }
-            primer_ir::StatementKind::Assignment { .. }
-            | primer_ir::StatementKind::Print { .. }
-            | primer_ir::StatementKind::Call { .. }
-            | primer_ir::StatementKind::Return { .. }
-            | primer_ir::StatementKind::Break
-            | primer_ir::StatementKind::Continue => {}
+            cerune_ir::StatementKind::Assignment { .. }
+            | cerune_ir::StatementKind::Print { .. }
+            | cerune_ir::StatementKind::Call { .. }
+            | cerune_ir::StatementKind::Return { .. }
+            | cerune_ir::StatementKind::Break
+            | cerune_ir::StatementKind::Continue => {}
         }
     }
 }
 
-fn type_size(program: &primer_ir::Program, ty: &primer_ir::Type) -> usize {
+fn type_size(program: &cerune_ir::Program, ty: &cerune_ir::Type) -> usize {
     match ty {
-        primer_ir::Type::String
-        | primer_ir::Type::Bool
-        | primer_ir::Type::Integer(_)
-        | primer_ir::Type::F32
-        | primer_ir::Type::F64 => 8,
-        primer_ir::Type::Named(id) => program.type_definitions[id.0]
+        cerune_ir::Type::String
+        | cerune_ir::Type::Bool
+        | cerune_ir::Type::Integer(_)
+        | cerune_ir::Type::F32
+        | cerune_ir::Type::F64 => 8,
+        cerune_ir::Type::Named(id) => program.type_definitions[id.0]
             .fields
             .iter()
             .map(|field| type_size(program, &field.ty))
             .sum(),
-        primer_ir::Type::Array { element, length } => type_size(program, element) * length,
+        cerune_ir::Type::Array { element, length } => type_size(program, element) * length,
     }
 }
 
-fn field_offset(program: &primer_ir::Program, type_id: usize, field_id: usize) -> usize {
+fn field_offset(program: &cerune_ir::Program, type_id: usize, field_id: usize) -> usize {
     program.type_definitions[type_id].fields[..field_id]
         .iter()
         .map(|field| type_size(program, &field.ty))
         .sum()
 }
 
-fn scalar_type(ty: &primer_ir::Type) -> Type {
+fn scalar_type(ty: &cerune_ir::Type) -> Type {
     match ty {
-        primer_ir::Type::String => Type::String,
-        primer_ir::Type::Bool => Type::Bool,
-        primer_ir::Type::Integer(_) => Type::I64,
-        primer_ir::Type::F32 => Type::Single,
-        primer_ir::Type::F64 => Type::Double,
-        primer_ir::Type::Named(_) | primer_ir::Type::Array { .. } => {
+        cerune_ir::Type::String => Type::String,
+        cerune_ir::Type::Bool => Type::Bool,
+        cerune_ir::Type::Integer(_) => Type::I64,
+        cerune_ir::Type::F32 => Type::Single,
+        cerune_ir::Type::F64 => Type::Double,
+        cerune_ir::Type::Named(_) | cerune_ir::Type::Array { .. } => {
             unreachable!("expected a scalar type")
         }
     }
 }
 
-fn array_element_type(element: &primer_ir::Type) -> ArrayElement {
+fn array_element_type(element: &cerune_ir::Type) -> ArrayElement {
     match element {
-        primer_ir::Type::String => ArrayElement::Scalar(Type::String),
-        primer_ir::Type::Bool => ArrayElement::Scalar(Type::Bool),
-        primer_ir::Type::Integer(_) => ArrayElement::Scalar(Type::I64),
-        primer_ir::Type::F32 => ArrayElement::Scalar(Type::Single),
-        primer_ir::Type::F64 => ArrayElement::Scalar(Type::Double),
-        primer_ir::Type::Named(id) => ArrayElement::Named(id.0),
-        primer_ir::Type::Array { element, length } => ArrayElement::Array {
+        cerune_ir::Type::String => ArrayElement::Scalar(Type::String),
+        cerune_ir::Type::Bool => ArrayElement::Scalar(Type::Bool),
+        cerune_ir::Type::Integer(_) => ArrayElement::Scalar(Type::I64),
+        cerune_ir::Type::F32 => ArrayElement::Scalar(Type::Single),
+        cerune_ir::Type::F64 => ArrayElement::Scalar(Type::Double),
+        cerune_ir::Type::Named(id) => ArrayElement::Named(id.0),
+        cerune_ir::Type::Array { element, length } => ArrayElement::Array {
             element: Box::new(array_element_type(element)),
             length: *length,
         },
     }
 }
 
-fn array_element_size(program: &primer_ir::Program, element: &ArrayElement) -> usize {
+fn array_element_size(program: &cerune_ir::Program, element: &ArrayElement) -> usize {
     match element {
         ArrayElement::Scalar(_) => 8,
         ArrayElement::Named(id) => {
-            type_size(program, &primer_ir::Type::Named(primer_ir::TypeId(*id)))
+            type_size(program, &cerune_ir::Type::Named(cerune_ir::TypeId(*id)))
         }
         ArrayElement::Array { element, length } => array_element_size(program, element) * length,
     }
 }
 
-impl From<primer_ir::BinaryOp> for BinaryOp {
-    fn from(value: primer_ir::BinaryOp) -> Self {
+impl From<cerune_ir::BinaryOp> for BinaryOp {
+    fn from(value: cerune_ir::BinaryOp) -> Self {
         match value {
-            primer_ir::BinaryOp::Add => Self::Add,
-            primer_ir::BinaryOp::Subtract => Self::Subtract,
-            primer_ir::BinaryOp::Multiply => Self::Multiply,
-            primer_ir::BinaryOp::Divide => Self::Divide,
-            primer_ir::BinaryOp::Remainder
-            | primer_ir::BinaryOp::BitAnd
-            | primer_ir::BinaryOp::BitOr
-            | primer_ir::BinaryOp::BitXor
-            | primer_ir::BinaryOp::ShiftLeft
-            | primer_ir::BinaryOp::ShiftRight => {
+            cerune_ir::BinaryOp::Add => Self::Add,
+            cerune_ir::BinaryOp::Subtract => Self::Subtract,
+            cerune_ir::BinaryOp::Multiply => Self::Multiply,
+            cerune_ir::BinaryOp::Divide => Self::Divide,
+            cerune_ir::BinaryOp::Remainder
+            | cerune_ir::BinaryOp::BitAnd
+            | cerune_ir::BinaryOp::BitOr
+            | cerune_ir::BinaryOp::BitXor
+            | cerune_ir::BinaryOp::ShiftLeft
+            | cerune_ir::BinaryOp::ShiftRight => {
                 unreachable!("integer operation uses separate lowering")
             }
-            primer_ir::BinaryOp::Equal
-            | primer_ir::BinaryOp::NotEqual
-            | primer_ir::BinaryOp::Less
-            | primer_ir::BinaryOp::LessEqual
-            | primer_ir::BinaryOp::Greater
-            | primer_ir::BinaryOp::GreaterEqual => {
+            cerune_ir::BinaryOp::Equal
+            | cerune_ir::BinaryOp::NotEqual
+            | cerune_ir::BinaryOp::Less
+            | cerune_ir::BinaryOp::LessEqual
+            | cerune_ir::BinaryOp::Greater
+            | cerune_ir::BinaryOp::GreaterEqual => {
                 unreachable!("comparisons use a dedicated QBE instruction")
             }
         }
     }
 }
 
-const fn compare_op(op: primer_ir::BinaryOp) -> Option<CompareOp> {
+const fn compare_op(op: cerune_ir::BinaryOp) -> Option<CompareOp> {
     match op {
-        primer_ir::BinaryOp::Add
-        | primer_ir::BinaryOp::Subtract
-        | primer_ir::BinaryOp::Multiply
-        | primer_ir::BinaryOp::Divide
-        | primer_ir::BinaryOp::Remainder
-        | primer_ir::BinaryOp::BitAnd
-        | primer_ir::BinaryOp::BitOr
-        | primer_ir::BinaryOp::BitXor
-        | primer_ir::BinaryOp::ShiftLeft
-        | primer_ir::BinaryOp::ShiftRight => None,
-        primer_ir::BinaryOp::Equal => Some(CompareOp::Equal),
-        primer_ir::BinaryOp::NotEqual => Some(CompareOp::NotEqual),
-        primer_ir::BinaryOp::Less => Some(CompareOp::Less),
-        primer_ir::BinaryOp::LessEqual => Some(CompareOp::LessEqual),
-        primer_ir::BinaryOp::Greater => Some(CompareOp::Greater),
-        primer_ir::BinaryOp::GreaterEqual => Some(CompareOp::GreaterEqual),
+        cerune_ir::BinaryOp::Add
+        | cerune_ir::BinaryOp::Subtract
+        | cerune_ir::BinaryOp::Multiply
+        | cerune_ir::BinaryOp::Divide
+        | cerune_ir::BinaryOp::Remainder
+        | cerune_ir::BinaryOp::BitAnd
+        | cerune_ir::BinaryOp::BitOr
+        | cerune_ir::BinaryOp::BitXor
+        | cerune_ir::BinaryOp::ShiftLeft
+        | cerune_ir::BinaryOp::ShiftRight => None,
+        cerune_ir::BinaryOp::Equal => Some(CompareOp::Equal),
+        cerune_ir::BinaryOp::NotEqual => Some(CompareOp::NotEqual),
+        cerune_ir::BinaryOp::Less => Some(CompareOp::Less),
+        cerune_ir::BinaryOp::LessEqual => Some(CompareOp::LessEqual),
+        cerune_ir::BinaryOp::Greater => Some(CompareOp::Greater),
+        cerune_ir::BinaryOp::GreaterEqual => Some(CompareOp::GreaterEqual),
     }
 }

@@ -1,26 +1,26 @@
 .section .rdata,"dr"
-.Lprimer_fmt_i64:
+.Lcerune_fmt_i64:
   .asciz "%lld\n"
-.Lprimer_fmt_f32:
+.Lcerune_fmt_f32:
   .asciz "%.9g\n"
-.Lprimer_fmt_f64:
+.Lcerune_fmt_f64:
   .asciz "%.17g\n"
-.Lprimer_bool_false:
+.Lcerune_bool_false:
   .asciz "false"
-.Lprimer_bool_true:
+.Lcerune_bool_true:
   .asciz "true"
 .p2align 4
-.Lprimer_sign_f32:
+.Lcerune_sign_f32:
   .long 0x80000000
   .long 0
   .long 0
   .long 0
 .p2align 4
-.Lprimer_sign_f64:
+.Lcerune_sign_f64:
   .quad 0x8000000000000000
   .quad 0
 .p2align 3
-.Lprimer_string_0:
+.Lcerune_string_0:
   .quad 11
   .byte 230
   .byte 151
@@ -34,7 +34,7 @@
   .byte 10
   .byte 0
 .p2align 3
-.Lprimer_string_1:
+.Lcerune_string_1:
   .quad 7
   .byte 99
   .byte 104
@@ -44,7 +44,7 @@
   .byte 101
   .byte 100
 .p2align 3
-.Lprimer_string_2:
+.Lcerune_string_2:
   .quad 11
   .byte 230
   .byte 151
@@ -61,7 +61,7 @@
 .text
 
 .p2align 4
-primer_string_equal:
+cerune_string_equal:
   movq (%rcx), %r8
   cmpq (%rdx), %r8
   jne .Lstring_different
@@ -82,7 +82,7 @@ primer_string_equal:
   retq
 
 .p2align 4
-primer_print_string:
+cerune_print_string:
   subq $56, %rsp
   movq %rcx, 32(%rsp)
   movq $0, 40(%rsp)
@@ -117,26 +117,26 @@ main:
   popq %rbp
   retq
 .Lstdout_ready:
-  leaq .Lprimer_string_0(%rip), %rax
+  leaq .Lcerune_string_0(%rip), %rax
   movq %rax, -8(%rbp)
   movq -8(%rbp), %rax
   movq %rax, -16(%rbp)
-  leaq .Lprimer_string_1(%rip), %rax
+  leaq .Lcerune_string_1(%rip), %rax
   movq %rax, -8(%rbp)
   movq -16(%rbp), %rax
   movq %rax, -24(%rbp)
-  leaq .Lprimer_string_2(%rip), %rax
+  leaq .Lcerune_string_2(%rip), %rax
   movq %rax, %rdx
   movq -24(%rbp), %rcx
-  callq primer_string_equal
+  callq cerune_string_equal
   testq %rax, %rax
-  leaq .Lprimer_bool_false(%rip), %rcx
-  leaq .Lprimer_bool_true(%rip), %rdx
+  leaq .Lcerune_bool_false(%rip), %rcx
+  leaq .Lcerune_bool_true(%rip), %rdx
   cmovne %rdx, %rcx
   callq puts
   movq -8(%rbp), %rax
   movq %rax, %rcx
-  callq primer_print_string
+  callq cerune_print_string
   xorl %eax, %eax
   addq $112, %rsp
   popq %rbp

@@ -1,4 +1,4 @@
-use primer_lang::{
+use cerune_lang::{
     bytecode::{self, Instruction, InstructionKind, InstructionOrigin, Type as BytecodeType},
     codegen, compile, compile_to_bytecode, compile_to_bytecode_text, compile_to_ir,
     compile_to_ir_text,
@@ -371,6 +371,6 @@ fn byte_length_preserves_ir_and_bytecode_origins_and_requires_native_targets() {
             .unwrap()
             .contains("byte_len.string")
     );
-    assert!(primer_lang::compile_to_llvm(source).is_err());
-    assert!(primer_lang::compile_to_qbe(source).is_err());
+    assert!(cerune_lang::compile_to_llvm(source).is_err());
+    assert!(cerune_lang::compile_to_qbe(source).is_err());
 }

@@ -4,7 +4,7 @@
 
 **Status: Implemented**
 
-This document organizes the semantics, syntax, observability, and implementation boundaries of named product types, the first user-defined type introduced in Primer.
+This document organizes the semantics, syntax, observability, and implementation boundaries of named product types, the first user-defined type introduced in Cerune.
 
 The [language reference](../reference/language.en.md) defines the rules needed to use the feature. This document also explains why those rules were chosen and how values are transformed into emitted artifacts.
 
@@ -14,14 +14,14 @@ The [compiler architecture](architecture.en.md) defines the overall compiler str
 
 A product type groups multiple values into named fields and treats them as one meaningful value.
 
-```primer
+```cerune
 type Point {
     x: f64,
     y: f64,
 }
 ```
 
-In addition to grouping values, Primer must make the following information observable:
+In addition to grouping values, Cerune must make the following information observable:
 
 - the types and fields defined in source;
 - which fields were explicit and which used defaults during construction;
@@ -44,7 +44,7 @@ The first product type has the following properties:
 - physical copying, sharing, and decomposition are not fixed by the language;
 - type names are visible throughout the top level of the same file;
 - type names and value names use separate namespaces, while field names are scoped to their type;
-- backend-independent type and field meaning is resolved before Primer IR;
+- backend-independent type and field meaning is resolved before Cerune IR;
 - explicit aggregate literal values are evaluated in source order, followed by omitted defaults in type-definition order;
 - memory layout and ABI decisions happen during or after backend lowering.
 
@@ -73,13 +73,13 @@ field_access :=
 
 The current implementation rejects product types with no fields and empty aggregate literals. A diagnostic points to the `{}` in the type definition and explains that at least one field is required.
 
-Empty types can represent markers and states that carry no data. However, C has no standard empty struct, and physical representations of zero-sized values differ by backend. Primer will add them only after their use and observation behavior are designed separately. Allowing empty types later does not change the meaning of programs accepted today.
+Empty types can represent markers and states that carry no data. However, C has no standard empty struct, and physical representations of zero-sized values differ by backend. Cerune will add them only after their use and observation behavior are designed separately. Allowing empty types later does not change the meaning of programs accepted today.
 
 ## Type definitions
 
 Field types are specified by the type definition:
 
-```primer
+```cerune
 type Point {
     x: f64,
     y: f64,
@@ -88,7 +88,7 @@ type Point {
 
 The field types are not repeated at every construction site:
 
-```primer
+```cerune
 point: Point = Point {
     x: 1.0,
     y: 2.0,
@@ -97,7 +97,7 @@ point: Point = Point {
 
 A field may use a built-in type, a fixed array, or another user-defined type:
 
-```primer
+```cerune
 type Line {
     start: Point,
     end: Point,
@@ -110,7 +110,7 @@ type Path {
 
 `infer` is not accepted as a field type. A type definition must have a resolved shape independent of its use sites.
 
-```primer
+```cerune
 type Point {
     x: infer, // error
 }
@@ -118,7 +118,7 @@ type Point {
 
 The type of a binding may still be inferred from an aggregate literal:
 
-```primer
+```cerune
 point: infer = Point {
     x: 1.0,
     y: 2.0,
@@ -129,7 +129,7 @@ point: infer = Point {
 
 Types with identical fields remain distinct when their names differ:
 
-```primer
+```cerune
 type Point {
     x: f64,
     y: f64,
@@ -153,7 +153,7 @@ Program
 
 Type names are available throughout the top level of the same file regardless of declaration order:
 
-```primer
+```cerune
 type Line {
     start: Point,
     end: Point,
@@ -183,7 +183,7 @@ Names are managed in separate namespaces according to their role. A namespace is
 
 The compiler chooses a namespace from the syntactic position of a name. `Point` in a type annotation and `Point` beginning an aggregate literal look in the type namespace. `point` in an expression looks in the value namespace.
 
-```primer
+```cerune
 type Point {
     x: f64,
 }
@@ -209,7 +209,7 @@ If a name is absent from the required namespace but exists in another namespace,
 
 Semantic analysis diagnoses types whose size cannot be determined because they contain one another directly by value:
 
-```primer
+```cerune
 type A {
     b: B,
 }
@@ -225,7 +225,7 @@ If fixed-size references are introduced later, recursive types through reference
 
 A type author may define an explicit default for a field:
 
-```primer
+```cerune
 type Options {
     retries: i64 = 3,
     verbose: bool = false,
@@ -235,20 +235,20 @@ type Options {
 
 A field without a default must be supplied by an aggregate literal:
 
-```primer
+```cerune
 options: Options = Options {
     timeout: 10.0,
 };
 ```
 
-This construction uses defaults for `retries` and `verbose`. Primer does not introduce an implicit zero value for every type.
+This construction uses defaults for `retries` and `verbose`. Cerune does not introduce an implicit zero value for every type.
 
 Defaults follow these rules:
 
 - a default must match the field type;
 - it is applied for each aggregate construction;
 - an explicit field value suppresses that field's default;
-- use of a default is retained as structured information in Primer IR;
+- use of a default is retained as structured information in Cerune IR;
 - the first implementation handles expressions that do not depend on runtime bindings or another field of the same aggregate.
 
 The final item scopes the first implementation and does not permanently restrict which expressions may be supported later.
@@ -257,7 +257,7 @@ The final item scopes the first implementation and does not permanently restrict
 
 Because fields are named, their order in an aggregate literal does not need to match definition order:
 
-```primer
+```cerune
 point: Point = Point {
     y: 2.0,
     x: 1.0,
@@ -274,15 +274,15 @@ Semantic analysis diagnoses:
 
 Explicit field expressions in an aggregate literal are evaluated in source order. Defaults for omitted fields are then evaluated in type-definition order. A default is not evaluated when that field was supplied explicitly.
 
-Each result is associated with its resolved field through `FieldId`. Evaluation order, deterministic field presentation in Primer IR, and physical layout chosen by a backend are therefore separate information.
+Each result is associated with its resolved field through `FieldId`. Evaluation order, deterministic field presentation in Cerune IR, and physical layout chosen by a backend are therefore separate information.
 
-Primer IR structurally retains both the actual evaluation order and the mapping to `FieldId`. It may present the field list deterministically in type-definition order, but must not reorder expression evaluation to match that presentation. Future function calls and runtime failures therefore cannot make behavior an accidental backend property.
+Cerune IR structurally retains both the actual evaluation order and the mapping to `FieldId`. It may present the field list deterministically in type-definition order, but must not reorder expression evaluation to match that presentation. Future function calls and runtime failures therefore cannot make behavior an accidental backend property.
 
 ## Field access
 
 Field access uses `.` and can be nested:
 
-```primer
+```cerune
 print(point.x);
 print(line.start.y);
 ```
@@ -291,7 +291,7 @@ Semantic analysis resolves a field access to its type and field. Backends do not
 
 In an `if` or `while`, the `{` immediately after the condition starts the body. Parenthesize a construction expression when accessing one of its fields in a condition.
 
-```primer
+```cerune
 if (Flags { enabled: true, }).enabled {
     print(true);
 }
@@ -301,13 +301,13 @@ if (Flags { enabled: true, }).enabled {
 
 Fields are not directly mutated after construction:
 
-```primer
+```cerune
 point.x = 3.0; // error
 ```
 
 A `mut` binding may be reassigned a new value of the same aggregate type:
 
-```primer
+```cerune
 mut point: Point = Point {
     x: 1.0,
     y: 2.0,
@@ -325,7 +325,7 @@ point = Point {
 
 Placing an aggregate in another binding does not create observably shared mutable state:
 
-```primer
+```cerune
 mut a: Point = Point {
     x: 1.0,
     y: 2.0,
@@ -343,9 +343,9 @@ print(b.x); // 1.0
 
 A backend or runtime may physically copy, share, or decompose the value as long as this meaning is preserved. Concrete copy, move, borrow, and reference-identity mechanisms are decided when types and operations requiring them are designed.
 
-## Primer IR
+## Cerune IR
 
-Primer IR retains at least the following meaning:
+Cerune IR retains at least the following meaning:
 
 ```text
 TypeId
@@ -380,7 +380,7 @@ print.f64 field %point@0.%x@0
 
 ## Backend lowering
 
-Primer IR retains type names, field names, types, construction, and field access. The following decisions happen during or after backend lowering:
+Cerune IR retains type names, field names, types, construction, and field access. The following decisions happen during or after backend lowering:
 
 - total aggregate size;
 - field offsets and alignment;
@@ -389,7 +389,7 @@ Primer IR retains type names, field names, types, construction, and field access
 - physical copying or sharing;
 - ABI passing rules.
 
-The current lowering uses C structs, LLVM named aggregates, QBE `alloc8` storage, WAT linear memory, the x86-64 stack, and structured Primer VM values. QBE copies values with `blit`; WAT and x86-64 use field loads and stores. These differences are observable in emitted artifacts.
+The current lowering uses C structs, LLVM named aggregates, QBE `alloc8` storage, WAT linear memory, the x86-64 stack, and structured Cerune VM values. QBE copies values with `blit`; WAT and x86-64 use field loads and stores. These differences are observable in emitted artifacts.
 
 The current internal WAT, QBE, and x86-64 layouts reserve eight bytes for each scalar field. This is not a language-level promise about external ABI or future layout.
 
@@ -420,12 +420,12 @@ The following scope is implemented:
 - value passing through function parameters and results;
 - file-wide type-name resolution;
 - diagnostics for type cycles with infinite size by value;
-- types, fields, construction, field access, and value origins in Primer IR;
+- types, fields, construction, field access, and value origins in Cerune IR;
 - lowering into bytecode, the VM, and every backend;
 - normal, diagnostic, and observation snapshots;
 - synchronized Japanese and English documentation.
 
-`check`, Primer IR, bytecode, the VM, C, LLVM, WAT, QBE, and Windows x86-64 all handle the same language-level semantics. Tests fix the successful behavior, diagnostics, and all eight observation artifacts.
+`check`, Cerune IR, bytecode, the VM, C, LLVM, WAT, QBE, and Windows x86-64 all handle the same language-level semantics. Tests fix the successful behavior, diagnostics, and all eight observation artifacts.
 
 ## Deferred features
 

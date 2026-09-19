@@ -1,9 +1,9 @@
 target triple = "x86_64-unknown-linux-gnu"
 
-%primer.string = type { ptr, i64 }
-@primer.string.0 = private unnamed_addr constant [11 x i8] c"\E6\97\A5\E6\9C\AC\E8\AA\9E\0A\00"
-@primer.string.1 = private unnamed_addr constant [7 x i8] c"\63\68\61\6E\67\65\64"
-@primer.string.2 = private unnamed_addr constant [11 x i8] c"\E6\97\A5\E6\9C\AC\E8\AA\9E\0A\00"
+%cerune.string = type { ptr, i64 }
+@cerune.string.0 = private unnamed_addr constant [11 x i8] c"\E6\97\A5\E6\9C\AC\E8\AA\9E\0A\00"
+@cerune.string.1 = private unnamed_addr constant [7 x i8] c"\63\68\61\6E\67\65\64"
+@cerune.string.2 = private unnamed_addr constant [11 x i8] c"\E6\97\A5\E6\9C\AC\E8\AA\9E\0A\00"
 
 @.fmt_i64 = private unnamed_addr constant [6 x i8] c"%lld\0A\00"
 @.fmt_f32 = private unnamed_addr constant [6 x i8] c"%.9g\0A\00"
@@ -16,12 +16,12 @@ declare i32 @puts(ptr)
 
 declare i32 @putchar(i32)
 
-define internal i1 @primer.string.equal(%primer.string %left, %primer.string %right) {
+define internal i1 @cerune.string.equal(%cerune.string %left, %cerune.string %right) {
 entry:
-  %left.data = extractvalue %primer.string %left, 0
-  %left.length = extractvalue %primer.string %left, 1
-  %right.data = extractvalue %primer.string %right, 0
-  %right.length = extractvalue %primer.string %right, 1
+  %left.data = extractvalue %cerune.string %left, 0
+  %left.length = extractvalue %cerune.string %left, 1
+  %right.data = extractvalue %cerune.string %right, 0
+  %right.length = extractvalue %cerune.string %right, 1
   %same.length = icmp eq i64 %left.length, %right.length
   br i1 %same.length, label %condition, label %different
 condition:
@@ -44,10 +44,10 @@ different:
   ret i1 false
 }
 
-define internal void @primer.print.string(%primer.string %value) {
+define internal void @cerune.print.string(%cerune.string %value) {
 entry:
-  %data = extractvalue %primer.string %value, 0
-  %length = extractvalue %primer.string %value, 1
+  %data = extractvalue %cerune.string %value, 0
+  %length = extractvalue %cerune.string %value, 1
   br label %condition
 condition:
   %index = phi i64 [ 0, %entry ], [ %next, %write ]
@@ -67,17 +67,17 @@ newline:
 
 define i32 @main() {
 entry:
-  %primer_text = alloca %primer.string
-  %primer_saved = alloca %primer.string
-  store %primer.string { ptr @primer.string.0, i64 11 }, ptr %primer_text
-  %tmp0 = load %primer.string, ptr %primer_text
-  store %primer.string %tmp0, ptr %primer_saved
-  store %primer.string { ptr @primer.string.1, i64 7 }, ptr %primer_text
-  %tmp1 = load %primer.string, ptr %primer_saved
-  %tmp2 = call i1 @primer.string.equal(%primer.string %tmp1, %primer.string { ptr @primer.string.2, i64 11 })
+  %cerune_text = alloca %cerune.string
+  %cerune_saved = alloca %cerune.string
+  store %cerune.string { ptr @cerune.string.0, i64 11 }, ptr %cerune_text
+  %tmp0 = load %cerune.string, ptr %cerune_text
+  store %cerune.string %tmp0, ptr %cerune_saved
+  store %cerune.string { ptr @cerune.string.1, i64 7 }, ptr %cerune_text
+  %tmp1 = load %cerune.string, ptr %cerune_saved
+  %tmp2 = call i1 @cerune.string.equal(%cerune.string %tmp1, %cerune.string { ptr @cerune.string.2, i64 11 })
   %tmp3 = select i1 %tmp2, ptr @.bool_true, ptr @.bool_false
   call i32 @puts(ptr %tmp3)
-  %tmp4 = load %primer.string, ptr %primer_text
-  call void @primer.print.string(%primer.string %tmp4)
+  %tmp4 = load %cerune.string, ptr %cerune_text
+  call void @cerune.print.string(%cerune.string %tmp4)
   ret i32 0
 }

@@ -4,10 +4,10 @@
 
 ## 担当する範囲
 
-`emit-obj`はPrimer自身でx86-64命令を符号化し、LinuxのELF64またはWindowsのCOFFオブジェクトを返します。外部アセンブラ、JIT、実行ファイルの起動は不要です。リンクは明示した外部リンカの担当です。
+`emit-obj`はCerune自身でx86-64命令を符号化し、LinuxのELF64またはWindowsのCOFFオブジェクトを返します。外部アセンブラ、JIT、実行ファイルの起動は不要です。リンクは明示した外部リンカの担当です。
 
 ```text
-Primer IR → 共通x86-64命令表現 → Primer内部のASM
+Cerune IR → 共通x86-64命令表現 → Cerune内部のASM
                                   ├→ emit-asm → 外部アセンブラ
                                   └→ 限定的なASMの読み取り → 自前の命令符号化 → ELF/COFF
 ```
@@ -34,27 +34,27 @@ Primer IR → 共通x86-64命令表現 → Primer内部のASM
 
 ```powershell
 cargo build
-target/debug/primer.exe emit-obj examples/packet_counter.prim --target x86_64-pc-windows-msvc --annotate-origins -o target/packet.obj
+target/debug/cerune.exe emit-obj examples/packet_counter.ceru --target x86_64-pc-windows-msvc --annotate-origins -o target/packet.obj
 clang target/packet.obj -o target/packet.exe
 target/packet.exe
 ```
 
 ```sh
 cargo build
-target/debug/primer emit-obj examples/packet_counter.prim --target x86_64-unknown-linux-gnu --annotate-origins -o target/packet.o
+target/debug/cerune emit-obj examples/packet_counter.ceru --target x86_64-unknown-linux-gnu --annotate-origins -o target/packet.o
 cc target/packet.o -o target/packet
 target/packet
 ```
 
-WSLで`CARGO_TARGET_DIR=target/unix`を使う場合は`target/unix/debug/primer`を指定します。エンコードだけなら、実行中のOSと生成先は一致しなくても構いません。実行する環境とリンク時のライブラリは生成先に合わせます。
+WSLで`CARGO_TARGET_DIR=target/unix`を使う場合は`target/unix/debug/cerune`を指定します。エンコードだけなら、実行中のOSと生成先は一致しなくても構いません。実行する環境とリンク時のライブラリは生成先に合わせます。
 
-観測スクリプトでは`--encoder primer`を明示します。既定の`external`は比較対象として残ります。
+観測スクリプトでは`--encoder cerune`を明示します。既定の`external`は比較対象として残ります。
 
 ```powershell
-node scripts/observe-native.cjs --source examples/packet_counter.prim --target x86_64-pc-windows-msvc --primer target/debug/primer.exe --cc clang --objdump llvm-objdump --output-dir target/packet-own-windows --encoder primer --run
+node scripts/observe-native.cjs --source examples/packet_counter.ceru --target x86_64-pc-windows-msvc --cerune target/debug/cerune.exe --cc clang --objdump llvm-objdump --output-dir target/packet-own-windows --encoder cerune --run
 ```
 
-`manifest.json`は`encoder: primer`と`encode-object`工程を記録します。Cドライバはリンクだけに使います。IR、対応するASM、自前オブジェクト、逆アセンブル、VMとの出力比較は[ネイティブコードの観測](native-code.ja.md)と同じ手順で保存します。
+`manifest.json`は`encoder: cerune`と`encode-object`工程を記録します。Cドライバはリンクだけに使います。IR、対応するASM、自前オブジェクト、逆アセンブル、VMとの出力比較は[ネイティブコードの観測](native-code.ja.md)と同じ手順で保存します。
 
 ## 検証
 

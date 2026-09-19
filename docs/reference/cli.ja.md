@@ -1,26 +1,26 @@
-# Primer CLIリファレンス
+# Cerune CLIリファレンス
 
 [English](cli.en.md)
 
-この文書では、Primer v0.1のコマンドラインインターフェースを定義します。
+この文書では、Cerune v0.1のコマンドラインインターフェースを定義します。
 
 ## コマンド
 
 現在のCLIは次のコマンドを提供します。
 
 ```text
-primer check <file>
-primer emit-sources <file> [-o <sources.json>]
-primer emit-ir <file> [-o <output.pir>]
-primer emit-c <file> [-o <output.c>]
-primer emit-llvm <file> [--target <triple>] [-o <output.ll>]
-primer emit-wat <file> [-o <output.wat>]
-primer emit-qbe <file> [--target <triple>] [-o <output.ssa>]
-primer emit-asm <file> [--target <triple>] [--annotate-origins] [-o <output.s>]
-primer emit-obj <file> --target <triple> [--annotate-origins] -o <output.o>
-primer emit-bytecode <file> [-o <output.pbc>]
-primer run <file> [--diagnostic-format runtime-v1]
-primer --version
+cerune check <file>
+cerune emit-sources <file> [-o <sources.json>]
+cerune emit-ir <file> [-o <output.ceir>]
+cerune emit-c <file> [-o <output.c>]
+cerune emit-llvm <file> [--target <triple>] [-o <output.ll>]
+cerune emit-wat <file> [-o <output.wat>]
+cerune emit-qbe <file> [--target <triple>] [-o <output.ssa>]
+cerune emit-asm <file> [--target <triple>] [--annotate-origins] [-o <output.s>]
+cerune emit-obj <file> --target <triple> [--annotate-origins] -o <output.o>
+cerune emit-bytecode <file> [-o <output.cebc>]
+cerune run <file> [--diagnostic-format runtime-v1]
+cerune --version
 ```
 
 ## 検証
@@ -30,54 +30,54 @@ primer --version
 ### 依存ファイルの観測
 
 ```sh
-primer emit-sources examples/modules/main.prim -o sources.json
+cerune emit-sources examples/modules/main.ceru -o sources.json
 ```
 
-ファイル名と本文を明示的に出力します。JSONの`schema`は`primer-sources-v1`、`files`は登録順の`id`・`name`・`text`です。`text`は正規化前の正確なUTF-8本文をJSONエスケープで保持します。import/pubのない入力のIDは既存の匿名ソース0、モジュール入力は入口1からです。実行時記録の`file`とそのファイル内の`bytes`を、この本文で照合します。生成プログラムへ本文を埋め込む操作ではありません。`-o`がなければstdoutへ出します。
+ファイル名と本文を明示的に出力します。JSONの`schema`は`cerune-sources-v1`、`files`は登録順の`id`・`name`・`text`です。`text`は正規化前の正確なUTF-8本文をJSONエスケープで保持します。import/pubのない入力のIDは既存の匿名ソース0、モジュール入力は入口1からです。実行時記録の`file`とそのファイル内の`bytes`を、この本文で照合します。生成プログラムへ本文を埋め込む操作ではありません。`-o`がなければstdoutへ出します。
 
 `run`の既定診断は依存ファイルの名前・行・列を表示します。`--diagnostic-format runtime-v1`では数値の`file`を含む記録を出します。コンパイル失敗時は出力成果物を書き換えません。
 
 ### 構文・型の検証
 
 ```text
-primer check <file>
+cerune check <file>
 ```
 
-`primer check`は、入力されたソースファイルの構文解析、意味検証、型検査を行います。
+`cerune check`は、入力されたソースファイルの構文解析、意味検証、型検査を行います。
 
 `check`の成功は、すべての出力経路がそのプログラムに対応することを保証しません。文字列は全経路で使用できます。LLVMとQBEのターゲットが未指定の場合は、文字列を含む型定義や式をソース位置付きで診断し、成果物を生成しません。この診断では`-o`で指定した既存ファイルも変更しません。
 
-## Primer IRの出力
+## Cerune IRの出力
 
 ```text
-primer emit-ir <file> [-o <output.pir>]
+cerune emit-ir <file> [-o <output.ceir>]
 ```
 
-`primer emit-ir`は、意味と型が解決されたバックエンド非依存のPrimer IRを出力します。
+`cerune emit-ir`は、意味と型が解決されたバックエンド非依存のCerune IRを出力します。
 
 ## 出力成果物の生成
 
 ```text
-primer emit-c <file> [-o <output.c>]
-primer emit-llvm <file> [--target <triple>] [-o <output.ll>]
-primer emit-qbe <file> [--target <triple>] [-o <output.ssa>]
-primer emit-wat <file> [-o <output.wat>]
-primer emit-asm <file> [--target <triple>] [--annotate-origins] [-o <output.s>]
-primer emit-obj <file> --target <triple> [--annotate-origins] -o <output.o>
-primer emit-bytecode <file> [-o <output.pbc>]
+cerune emit-c <file> [-o <output.c>]
+cerune emit-llvm <file> [--target <triple>] [-o <output.ll>]
+cerune emit-qbe <file> [--target <triple>] [-o <output.ssa>]
+cerune emit-wat <file> [-o <output.wat>]
+cerune emit-asm <file> [--target <triple>] [--annotate-origins] [-o <output.s>]
+cerune emit-obj <file> --target <triple> [--annotate-origins] -o <output.o>
+cerune emit-bytecode <file> [-o <output.cebc>]
 ```
 
 各コマンドが出力する成果物は次のとおりです。
 
 | コマンド | 出力経路 | 現在のターゲット | 成果物 |
 | --- | --- | --- | --- |
-| `emit-c` | C | Primerでは指定しない | `.c` |
+| `emit-c` | C | Ceruneでは指定しない | `.c` |
 | `emit-llvm` | LLVM IR | 未指定、または明示的なWindows x64 / Linux x86-64 | `.ll` |
 | `emit-qbe` | QBE IR | 未指定、または明示的なLinux x86-64 | `.ssa` |
 | `emit-wat` | WebAssembly Text | WebAssembly | `.wat` |
 | `emit-asm` | ネイティブアセンブリ | x86-64、Windows / Linux、各OSの呼出規約 | `.s` |
 | `emit-obj` | 自前のネイティブオブジェクト | 明示的なWindows x64 / Linux x86-64 | `.obj` / `.o` |
-| `emit-bytecode` | Primer bytecode | Primer VM | `.pbc` |
+| `emit-bytecode` | Cerune bytecode | Cerune VM | `.cebc` |
 
 テキストを出力する`emit-*`コマンドは、`-o`を指定しない場合、観測結果を標準出力へ書き出します。`-o`を指定した場合は、利用者が出力先のパスを決定します。バイナリの`emit-obj`では`-o`が必須です。
 
@@ -90,7 +90,7 @@ primer emit-bytecode <file> [-o <output.pbc>]
 Linux x86-64上での例:
 
 ```sh
-primer emit-llvm examples/string_lookup.prim --target x86_64-unknown-linux-gnu -o target/string_lookup.ll
+cerune emit-llvm examples/string_lookup.ceru --target x86_64-unknown-linux-gnu -o target/string_lookup.ll
 clang --target=x86_64-unknown-linux-gnu target/string_lookup.ll -o target/string_lookup
 ./target/string_lookup
 ```
@@ -98,12 +98,12 @@ clang --target=x86_64-unknown-linux-gnu target/string_lookup.ll -o target/string
 Windows x64（MSVC CRTとリンカが利用可能な環境）での例:
 
 ```powershell
-primer emit-llvm examples/string_lookup.prim --target x86_64-pc-windows-msvc -o target/string_lookup.ll
+cerune emit-llvm examples/string_lookup.ceru --target x86_64-pc-windows-msvc -o target/string_lookup.ll
 clang --target=x86_64-pc-windows-msvc target/string_lookup.ll -o target/string_lookup.exe
 .\target\string_lookup.exe
 ```
 
-PrimerはLLVMの生成だけを行い、Clangや実行ファイルを起動しません。指定は`target triple`に記録されます。下流ツールにも同じターゲットを渡します。Windowsでは文字列を含むプログラムの標準出力をバイナリモードにし、NUL・CR・LFを保持します。詳しくは[文字列の設計](../design/strings.ja.md#llvmでの表現とターゲット)を参照してください。
+CeruneはLLVMの生成だけを行い、Clangや実行ファイルを起動しません。指定は`target triple`に記録されます。下流ツールにも同じターゲットを渡します。Windowsでは文字列を含むプログラムの標準出力をバイナリモードにし、NUL・CR・LFを保持します。詳しくは[文字列の設計](../design/strings.ja.md#llvmでの表現とターゲット)を参照してください。
 
 ライブラリでは`compile_to_llvm_with_target(source, Some(codegen::llvm::Target::X86_64UnknownLinuxGnu))`、または`X86_64PcWindowsMsvc`を使います。既存の`compile_to_llvm(source)`はターゲット未指定のAPIとして残ります。
 
@@ -112,7 +112,7 @@ PrimerはLLVMの生成だけを行い、Clangや実行ファイルを起動し�
 文字列を含むQBE出力では`--target x86_64-unknown-linux-gnu`を指定します。省略・未対応のターゲット・オプションの重複は診断し、既存の出力ファイルを変更しません。数値だけの既存の呼び出しでは省略できます。
 
 ```sh
-primer emit-qbe examples/string_lookup.prim --target x86_64-unknown-linux-gnu -o target/string_lookup.ssa
+cerune emit-qbe examples/string_lookup.ceru --target x86_64-unknown-linux-gnu -o target/string_lookup.ssa
 qbe -t amd64_sysv -o target/string_lookup.s target/string_lookup.ssa
 cc target/string_lookup.s -o target/string_lookup
 ./target/string_lookup
@@ -124,26 +124,26 @@ cc target/string_lookup.s -o target/string_lookup
 
 `emit-wat`はWebAssembly固定です。`emit-asm`は明示的にWindows/Linuxを選べ、省略時は従来のWindows固定です。
 
-文字列を使うWATは`primer.write_byte(i32) -> void`をimportし、各バイトと末尾LFを渡します。メモリは公開しません。数値・真偽値の既存のホスト関数も含め、ホストは[文字列の出力契約](../design/strings.ja.md#watの出力と外部との境界)を実装します。`emit-wat`自体はホストを起動しません。
+文字列を使うWATは`cerune.write_byte(i32) -> void`をimportし、各バイトと末尾LFを渡します。メモリは公開しません。数値・真偽値の既存のホスト関数も含め、ホストは[文字列の出力契約](../design/strings.ja.md#watの出力と外部との境界)を実装します。`emit-wat`自体はホストを起動しません。
 
-実行時検査を持つWATは`primer.write_error_byte(i32) -> void`もimportします。ホストはこのASCII診断をstderrとして出力し、`unreachable`で停止しても先行stdoutを保持します。[実行時診断の契約](../design/runtime-diagnostics.ja.md)を参照してください。
+実行時検査を持つWATは`cerune.write_error_byte(i32) -> void`もimportします。ホストはこのASCII診断をstderrとして出力し、`unreachable`で停止しても先行stdoutを保持します。[実行時診断の契約](../design/runtime-diagnostics.ja.md)を参照してください。
 
-Windows x64の直接アセンブリは`primer emit-asm examples/string_lookup.prim -o target/string_lookup.s`で生成し、`clang --target=x86_64-pc-windows-msvc target/string_lookup.s -o target/string_lookup.exe`でビルドできます。文字列の出力前に標準出力をバイナリモードへ切り替えます。
+Windows x64の直接アセンブリは`cerune emit-asm examples/string_lookup.ceru -o target/string_lookup.s`で生成し、`clang --target=x86_64-pc-windows-msvc target/string_lookup.s -o target/string_lookup.exe`でビルドできます。文字列の出力前に標準出力をバイナリモードへ切り替えます。
 
 ## 実行
 
 ```text
-primer run <file>
+cerune run <file>
 ```
 
-`primer run`はPrimer bytecodeへloweringし、生成された`BytecodeProgram`をPrimer VMで実行します。
+`cerune run`はCerune bytecodeへloweringし、生成された`BytecodeProgram`をCerune VMで実行します。
 
 実行結果は検証や実験に利用できますが、[コンパイラ設計](../design/architecture.ja.md)で定める二つのコンパイラ観測境界とは区別します。
 
 実行時エラーがソースコードに由来するbytecode命令で発生した場合、診断にはソース位置とbytecode命令番号の両方を表示します。
 
 ```text
-primer: cannot divide an integer by zero at 1:7 (bytecode instruction 0002)
+cerune: cannot divide an integer by zero at 1:7 (bytecode instruction 0002)
 ```
 
 対応するソース位置がない場合も、bytecode命令番号は表示します。簡潔な診断には、ソース本文や入力ファイルのパスを含めません。
@@ -153,14 +153,14 @@ primer: cannot divide an integer by zero at 1:7 (bytecode instruction 0002)
 ## バージョン表示
 
 ```text
-primer --version
+cerune --version
 ```
 
-`primer --version`はPrimerのバージョンを表示します。
+`cerune --version`はCeruneのバージョンを表示します。
 
-## Primerが扱わない外部設定
+## Ceruneが扱わない外部設定
 
-Primerは、次のような外部実験の方針を決定しません。
+Ceruneは、次のような外部実験の方針を決定しません。
 
 - GCCとClangのどちらを使用するか
 - 外部コンパイラの最適化レベル
@@ -169,21 +169,21 @@ Primerは、次のような外部実験の方針を決定しません。
 - 測定方法
 - 比較方法
 
-これらはPrimerを呼び出す側が決定し、必要に応じて記録します。
+これらはCeruneを呼び出す側が決定し、必要に応じて記録します。
 
 ## LLVMの出自を辿る
 
 ```sh
-cargo run -- emit-ir examples/string_origins.prim
-cargo run -- emit-llvm examples/string_origins.prim --target x86_64-unknown-linux-gnu --annotate-origins -o string-origins.ll
-cargo run -- run examples/string_origins.prim
+cargo run -- emit-ir examples/string_origins.ceru
+cargo run -- emit-llvm examples/string_origins.ceru --target x86_64-unknown-linux-gnu --annotate-origins -o string-origins.ll
+cargo run -- run examples/string_origins.ceru
 ```
 
 Windows向けには`--target x86_64-pc-windows-msvc`を指定します。`--annotate-origins`はLLVMだけの任意指定です。通常の出力は従来どおりです。APIでは`compile_to_llvm_with_options(source, llvm::Options { target, annotate_origins: true })`を使います。コメントの意味と対応範囲は[可観測性の契約](../design/observability.ja.md#llvmの出自注釈)を参照してください。
 
 ## WATのu64出力
 
-`u64`を表示する成果物は`primer.print_u64(i64) -> void`をimportします。ホストは符号なし64ビットの十進数とLFを出力します。JavaScriptでは`BigInt.asUintN(64, value).toString()`を使います。[u64の設計](../design/u64.ja.md)を参照してください。
+`u64`を表示する成果物は`cerune.print_u64(i64) -> void`をimportします。ホストは符号なし64ビットの十進数とLFを出力します。JavaScriptでは`BigInt.asUintN(64, value).toString()`を使います。[u64の設計](../design/u64.ja.md)を参照してください。
 
 ## 自前オブジェクトの生成
 

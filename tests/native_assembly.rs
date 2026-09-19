@@ -12,7 +12,7 @@ mod termination;
 #[path = "support/u64_cases.rs"]
 mod u64_cases;
 
-use primer_lang::{
+use cerune_lang::{
     codegen::x86_64::Target, compile_to_asm_with_target, compile_to_x86_64_win_asm, run_vm,
 };
 use std::{
@@ -36,7 +36,7 @@ impl Workspace {
         loop {
             let id = NEXT.fetch_add(1, Ordering::Relaxed);
             let path = std::env::temp_dir()
-                .join(format!("primer-native-{}-{stamp}-{id}", std::process::id()));
+                .join(format!("cerune-native-{}-{stamp}-{id}", std::process::id()));
             match fs::create_dir(&path) {
                 Ok(()) => return Self(path),
                 Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => continue,
@@ -75,7 +75,7 @@ fn concurrent_test_workspaces_are_independent() {
 #[test]
 fn native_process_deadline_reports_output_and_stops_an_infinite_loop() {
     let workspace = Workspace::new();
-    let node = std::env::var_os("PRIMER_TEST_NODE").unwrap_or_else(|| "node".into());
+    let node = std::env::var_os("CERUNE_TEST_NODE").unwrap_or_else(|| "node".into());
     let result = bounded_output(Command::new(node).args(["-e", "console.log('started'); setInterval(() => {}, 1000); process.on('SIGTERM', () => {}); "]),
         &workspace.0, "intentional-hang", Duration::from_secs(1));
     let error = result.unwrap_err();
@@ -87,7 +87,7 @@ fn native_process_deadline_reports_output_and_stops_an_infinite_loop() {
 impl Drop for Workspace {
     fn drop(&mut self) {
         use std::io::Write;
-        let trace = std::env::var_os("PRIMER_TEST_TRACE").is_some();
+        let trace = std::env::var_os("CERUNE_TEST_TRACE").is_some();
         let start = Instant::now();
         if trace {
             let _ = writeln!(
@@ -140,12 +140,12 @@ fn cases() -> Vec<(String, String)> {
         .join(",");
     cases.push((format!("print(\"large frame\"); fn take(values: [u64; 600], x: f64, y: u64, z: f32) -> u64 {{ print(x + f64(z)); return values[599] + y; }} data: [u64; 600] = [{values}]; print(take(data, 2.5, 0, 1.5));"), "large frame\n4\n18446744073709551615\n".into()));
     cases.push((format!("print(\"large return\"); fn copy(values: [u64; 600]) -> [u64; 600] {{ return values; }} data: [u64; 600] = [{values}]; mut copied: [u64; 600] = copy(data); copied[599] = 7; print(data[599]); print(copied[599]);"), "large return\n18446744073709551615\n7\n".into()));
-    cases.push((include_str!("../examples/native_values.prim").into(), "native values\n18446744073709551615\n-7\n4\n4\n18446744073709551615\n9223372036854775808\n日本語\0\n".into()));
+    cases.push((include_str!("../examples/native_values.ceru").into(), "native values\n18446744073709551615\n-7\n4\n4\n18446744073709551615\n9223372036854775808\n日本語\0\n".into()));
     let mut paths: Vec<_> =
         fs::read_dir(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("examples"))
             .unwrap()
             .map(|entry| entry.unwrap().path())
-            .filter(|path| path.extension().is_some_and(|s| s == "prim"))
+            .filter(|path| path.extension().is_some_and(|s| s == "ceru"))
             .collect();
     paths.sort();
     for path in paths {
@@ -159,11 +159,11 @@ fn cases() -> Vec<(String, String)> {
 #[test]
 fn runtime_record_parser_rejects_incomplete_or_unrelated_failures() {
     let script = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("scripts/observe-native.cjs");
-    let node = std::env::var_os("PRIMER_TEST_NODE").unwrap_or_else(|| "node".into());
+    let node = std::env::var_os("CERUNE_TEST_NODE").unwrap_or_else(|| "node".into());
     let result = Command::new(node).arg("-e").arg(r#"
 const assert = require('node:assert/strict');
 const {parseRuntimeFailure: parse} = require(process.argv[1]);
-const valid = 'primer: runtime-v1 code=division-by-zero node=2 bytes=6..11\n';
+const valid = 'cerune: runtime-v1 code=division-by-zero node=2 bytes=6..11\n';
 assert.deepEqual(parse(Buffer.from(valid)), {schema:'runtime-v1', code:'division-by-zero', node:2, start:6, end:11});
 assert.deepEqual(parse(Buffer.from(valid.replace('\n','\r\n'))), parse(Buffer.from(valid)));
 for (const text of ['', 'segmentation fault\n', valid + '\n', valid + valid, valid.trimEnd(),
@@ -180,7 +180,7 @@ for (const text of ['', 'segmentation fault\n', valid + '\n', valid + valid, val
 
 #[test]
 fn runtime_failures_match_vm_codes_origins_and_prior_output() {
-    use primer_lang::{RunError, compile_to_native_object};
+    use cerune_lang::{RunError, compile_to_native_object};
     let cases = runtime_cases::FAILURES;
     let workspace = Workspace::new();
     let target = if cfg!(windows) {
@@ -189,9 +189,9 @@ fn runtime_failures_match_vm_codes_origins_and_prior_output() {
         Target::X86_64UnknownLinuxGnu
     };
     let cc = std::env::var_os(if cfg!(windows) {
-        "PRIMER_TEST_ASM_CLANG"
+        "CERUNE_TEST_ASM_CLANG"
     } else {
-        "PRIMER_TEST_CC"
+        "CERUNE_TEST_CC"
     })
     .unwrap_or_else(|| if cfg!(windows) { "clang" } else { "cc" }.into());
     let exe = workspace.0.join(if cfg!(windows) {
@@ -210,7 +210,7 @@ fn runtime_failures_match_vm_codes_origins_and_prior_output() {
         let failure = error.runtime_failure().unwrap();
         assert_eq!(failure.code.name(), expected_code, "{body}");
         assert_eq!(error.vm_error().output(), "開始\0\r\n\nfalse\n", "{body}");
-        for encoder in ["asm", "primer"] {
+        for encoder in ["asm", "cerune"] {
             let input = workspace.0.join(if encoder == "asm" {
                 "program.s"
             } else {
@@ -265,10 +265,10 @@ fn runtime_failures_match_vm_codes_origins_and_prior_output() {
                 String::from_utf8(result.stderr)
                     .unwrap()
                     .replace("\r\n", "\n"),
-                format!("primer: {}\n", failure.record()),
+                format!("cerune: {}\n", failure.record()),
                 "{encoder}: {body}"
             );
-            if std::env::var_os("PRIMER_TEST_TRACE").is_some() {
+            if std::env::var_os("CERUNE_TEST_TRACE").is_some() {
                 use std::io::Write;
                 let _ = writeln!(std::io::stderr().lock(), "[native-case] verified {label}");
             }
@@ -292,11 +292,11 @@ fn explicit_targets_preserve_windows_output_and_determinism() {
             compile_to_asm_with_target(&source, Target::X86_64PcWindowsMsvc).unwrap()
         );
         for target in [Target::X86_64PcWindowsMsvc, Target::X86_64UnknownLinuxGnu] {
-            let annotated = primer_lang::compile_to_asm_with_origins(&source, target).unwrap();
+            let annotated = cerune_lang::compile_to_asm_with_origins(&source, target).unwrap();
             let plain = annotated
                 .lines()
                 .filter(|line| {
-                    !line.starts_with("# primer-") && !line.starts_with("primer_origin_")
+                    !line.starts_with("# cerune-") && !line.starts_with("cerune_origin_")
                 })
                 .collect::<Vec<_>>()
                 .join("\n")
@@ -309,7 +309,7 @@ fn explicit_targets_preserve_windows_output_and_determinism() {
 #[test]
 #[cfg(all(target_os = "linux", target_arch = "x86_64", target_env = "gnu"))]
 fn linux_assembly_executes_all_examples_and_rejects_invalid_operations() {
-    let cc = std::env::var_os("PRIMER_TEST_CC").unwrap_or_else(|| "cc".into());
+    let cc = std::env::var_os("CERUNE_TEST_CC").unwrap_or_else(|| "cc".into());
     let workspace = Workspace::new();
     let input = workspace.0.join("program.s");
     let exe = workspace.0.join("program");
@@ -356,14 +356,14 @@ fn linux_assembly_executes_all_examples_and_rejects_invalid_operations() {
 
 #[test]
 fn machine_artifacts_execute_examples_and_retain_origin_symbols() {
-    let node = std::env::var_os("PRIMER_TEST_NODE").unwrap_or_else(|| "node".into());
+    let node = std::env::var_os("CERUNE_TEST_NODE").unwrap_or_else(|| "node".into());
     let cc = std::env::var_os(if cfg!(windows) {
-        "PRIMER_TEST_ASM_CLANG"
+        "CERUNE_TEST_ASM_CLANG"
     } else {
-        "PRIMER_TEST_CC"
+        "CERUNE_TEST_CC"
     })
     .unwrap_or_else(|| if cfg!(windows) { "clang" } else { "cc" }.into());
-    let objdump = std::env::var_os("PRIMER_TEST_OBJDUMP").unwrap_or_else(|| {
+    let objdump = std::env::var_os("CERUNE_TEST_OBJDUMP").unwrap_or_else(|| {
         if cfg!(windows) {
             "llvm-objdump"
         } else {
@@ -373,7 +373,7 @@ fn machine_artifacts_execute_examples_and_retain_origin_symbols() {
     });
     let script = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("scripts/observe-native.cjs");
     let workspace = Workspace::new();
-    let source_path = workspace.0.join("source.prim");
+    let source_path = workspace.0.join("source.ceru");
     let target = if cfg!(windows) {
         Target::X86_64PcWindowsMsvc
     } else {
@@ -390,8 +390,8 @@ fn machine_artifacts_execute_examples_and_retain_origin_symbols() {
             .args([
                 "--target",
                 target.triple(),
-                "--primer",
-                env!("CARGO_BIN_EXE_primer"),
+                "--cerune",
+                env!("CARGO_BIN_EXE_cerune"),
             ])
             .arg("--cc")
             .arg(&cc)
@@ -417,12 +417,12 @@ fn machine_artifacts_execute_examples_and_retain_origin_symbols() {
             "output-matched"
         }));
         let object = fs::read_to_string(directory.join("object.txt")).unwrap();
-        assert!(object.contains("primer_origin_n") && object.contains(".text"));
+        assert!(object.contains("cerune_origin_n") && object.contains(".text"));
         directory
     };
     for (index, (source, expected)) in cases().into_iter().enumerate() {
         let directory = invoke(&source, &format!("success-{index}"), false, "external");
-        let own = invoke(&source, &format!("encoded-{index}"), false, "primer");
+        let own = invoke(&source, &format!("encoded-{index}"), false, "cerune");
         assert_eq!(
             fs::read(own.join("native.stdout")).unwrap(),
             fs::read(directory.join("native.stdout")).unwrap()
@@ -486,29 +486,29 @@ fn machine_artifacts_execute_examples_and_retain_origin_symbols() {
         .chain(
             [
                 "print(7); print(1 / 0);",
-                include_str!("../examples/runtime_failures/overflow.prim"),
-                include_str!("../examples/runtime_failures/array_update.prim"),
-                include_str!("../examples/runtime_failures/function_division.prim"),
-                include_str!("../examples/runtime_failures/call_sequence.prim"),
+                include_str!("../examples/runtime_failures/overflow.ceru"),
+                include_str!("../examples/runtime_failures/array_update.ceru"),
+                include_str!("../examples/runtime_failures/function_division.ceru"),
+                include_str!("../examples/runtime_failures/call_sequence.ceru"),
             ]
             .iter(),
         )
         .enumerate()
     {
         invoke(source, &format!("failure-{index}"), true, "external");
-        invoke(source, &format!("encoded-failure-{index}"), true, "primer");
+        invoke(source, &format!("encoded-failure-{index}"), true, "cerune");
     }
 }
 
 #[test]
 fn object_cli_requires_explicit_target_and_output_and_never_runs_an_assembler() {
     let workspace = Workspace::new();
-    let input = workspace.0.join("source.prim");
+    let input = workspace.0.join("source.ceru");
     let output = workspace.0.join("program.o");
-    let source = include_str!("../examples/native_values.prim");
+    let source = include_str!("../examples/native_values.ceru");
     fs::write(&input, source).unwrap();
     for target in [Target::X86_64PcWindowsMsvc, Target::X86_64UnknownLinuxGnu] {
-        let result = Command::new(env!("CARGO_BIN_EXE_primer"))
+        let result = Command::new(env!("CARGO_BIN_EXE_cerune"))
             .arg("emit-obj")
             .arg(&input)
             .args(["--target", target.triple(), "--annotate-origins", "-o"])
@@ -520,7 +520,7 @@ fn object_cli_requires_explicit_target_and_output_and_never_runs_an_assembler() 
         assert!(result.stdout.is_empty() && result.stderr.is_empty());
         assert_eq!(
             fs::read(&output).unwrap(),
-            primer_lang::compile_to_native_object(source, target, true).unwrap()
+            cerune_lang::compile_to_native_object(source, target, true).unwrap()
         );
     }
     for options in [
@@ -534,7 +534,7 @@ fn object_cli_requires_explicit_target_and_output_and_never_runs_an_assembler() 
         ],
     ] {
         fs::write(&output, "existing output").unwrap();
-        let result = Command::new(env!("CARGO_BIN_EXE_primer"))
+        let result = Command::new(env!("CARGO_BIN_EXE_cerune"))
             .arg("emit-obj")
             .arg(&input)
             .args(options)
@@ -546,7 +546,7 @@ fn object_cli_requires_explicit_target_and_output_and_never_runs_an_assembler() 
         assert!(result.stdout.is_empty());
         assert_eq!(fs::read_to_string(&output).unwrap(), "existing output");
     }
-    let missing_output = Command::new(env!("CARGO_BIN_EXE_primer"))
+    let missing_output = Command::new(env!("CARGO_BIN_EXE_cerune"))
         .arg("emit-obj")
         .arg(&input)
         .args(["--target", "x86_64-unknown-linux-gnu"])
@@ -558,10 +558,10 @@ fn object_cli_requires_explicit_target_and_output_and_never_runs_an_assembler() 
 
 #[test]
 fn native_observation_rejects_missing_tools_and_existing_output() {
-    let node = std::env::var_os("PRIMER_TEST_NODE").unwrap_or_else(|| "node".into());
+    let node = std::env::var_os("CERUNE_TEST_NODE").unwrap_or_else(|| "node".into());
     let script = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("scripts/observe-native.cjs");
     let workspace = Workspace::new();
-    let source = workspace.0.join("source.prim");
+    let source = workspace.0.join("source.ceru");
     let output = workspace.0.join("output");
     fs::write(&source, "print(1);").unwrap();
     let invoke = || {
@@ -572,12 +572,12 @@ fn native_observation_rejects_missing_tools_and_existing_output() {
             .args([
                 "--target",
                 "x86_64-unknown-linux-gnu",
-                "--primer",
-                env!("CARGO_BIN_EXE_primer"),
+                "--cerune",
+                env!("CARGO_BIN_EXE_cerune"),
                 "--cc",
-                "primer-nonexistent-tool",
+                "cerune-nonexistent-tool",
                 "--objdump",
-                "primer-nonexistent-tool",
+                "cerune-nonexistent-tool",
             ])
             .arg("--output-dir")
             .arg(&output)
@@ -604,7 +604,7 @@ fn native_observation_rejects_missing_tools_and_existing_output() {
 #[test]
 fn cli_rejects_unknown_targets_before_replacing_output() {
     let workspace = Workspace::new();
-    let input = workspace.0.join("source.prim");
+    let input = workspace.0.join("source.ceru");
     let output = workspace.0.join("program.s");
     fs::write(&input, "print(1u64);").unwrap();
     for options in [
@@ -613,7 +613,7 @@ fn cli_rejects_unknown_targets_before_replacing_output() {
         vec!["--annotate-origins", "--annotate-origins"],
     ] {
         fs::write(&output, "existing output").unwrap();
-        let result = Command::new(env!("CARGO_BIN_EXE_primer"))
+        let result = Command::new(env!("CARGO_BIN_EXE_cerune"))
             .arg("emit-asm")
             .arg(&input)
             .arg("-o")

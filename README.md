@@ -1,26 +1,28 @@
-[![CI](https://github.com/Hokutaka/Primer/actions/workflows/ci.yml/badge.svg)](https://github.com/Hokutaka/Primer/actions/workflows/ci.yml)
+[![CI](https://github.com/Hokutaka/Cerune/actions/workflows/ci.yml/badge.svg)](https://github.com/Hokutaka/Cerune/actions/workflows/ci.yml)
 
-# Primer
+# Cerune
 
 日本語 | [English](README.en.md)
 
-Primerは、コンパイラによる変換を観測可能にするための実験用プログラミング言語です。
+Ceruneは、コンパイラによる変換を観測可能にするための実験用プログラミング言語です。
 
-計算結果だけでなく、「どの型で計算し、どんなコードへ変換されたか」を調べられることを重視します。意味と型を解決した共通のPrimer IR（中間表現）から、各出力先のコードやbytecodeを生成します。洗練された実装と可観測性の両立を目指し、観測することと内部を書き換えることは区別します。
+旧名Primerからの[命名と移行の案内](docs/design/naming.ja.md)では、`.ceru`・`.ceir`などの対応と既存ツールの更新方法を説明しています。
+
+計算結果だけでなく、「どの型で計算し、どんなコードへ変換されたか」を調べられることを重視します。意味と型を解決した共通のCerune IR（中間表現）から、各出力先のコードやbytecodeを生成します。洗練された実装と可観測性の両立を目指し、観測することと内部を書き換えることは区別します。
 
 ## まず動かす
 
 Rustの開発環境（rustupとCargo）が必要です。リポジトリを取得し、そのルートでCLIをインストールします。
 
 ```sh
-git clone https://github.com/Hokutaka/Primer.git
-cd Primer
+git clone https://github.com/Hokutaka/Cerune.git
+cd Cerune
 cargo install --path .
 ```
 
-[examples/floating_point.prim](examples/floating_point.prim)は、同じ足し算を異なる型で行う例です。
+[examples/floating_point.ceru](examples/floating_point.ceru)は、同じ足し算を異なる型で行う例です。
 
-```primer
+```cerune
 a: f32 = 0.1 + 0.2;
 b: f64 = 0.1 + 0.2;
 c: infer = 0.1 + 0.2;
@@ -31,10 +33,10 @@ print(c);
 ```
 
 ```sh
-primer run examples/floating_point.prim
+cerune run examples/floating_point.ceru
 ```
 
-Primer VMでの実行結果は次のとおりです。
+Cerune VMでの実行結果は次のとおりです。
 
 ```text
 0.300000012
@@ -44,26 +46,26 @@ Primer VMでの実行結果は次のとおりです。
 
 `f32`と`f64`では数値を表せる精度が違います。`infer`は型推論を明示する指定で、この例の`c`は`f64`になります。
 
-開発中は`primer`の代わりに`cargo run --quiet --`を使うと、再インストールせずに変更後のコードを実行できます。
+開発中は`cerune`の代わりに`cargo run --quiet --`を使うと、再インストールせずに変更後のコードを実行できます。
 
 ## 計算と変換を観測する
 
 [モジュール](docs/design/modules.ja.md)で型・関数を別ファイルへ分け、明示的なimport・名前空間・公開範囲を使えます。[分割版と単一ファイル版のexample](examples/modules/README.md)を比較できます。
 
-言語の検査失敗は全出力経路で停止理由・ソース位置・停止前の出力を照合できます。[実行時診断](docs/design/runtime-diagnostics.ja.md)と[意図した停止の4例](examples/runtime_failures/README.md)を参照してください。LLVMは検査付きの数値処理にも明示ターゲットが必要で、WATの実行ホストには診断出力用の`primer.write_error_byte`を追加します。
+言語の検査失敗は全出力経路で停止理由・ソース位置・停止前の出力を照合できます。[実行時診断](docs/design/runtime-diagnostics.ja.md)と[意図した停止の4例](examples/runtime_failures/README.md)を参照してください。LLVMは検査付きの数値処理にも明示ターゲットが必要で、WATの実行ホストには診断出力用の`cerune.write_error_byte`を追加します。
 
 同じソースを、実行するだけでなく中間表現や生成コードとして確認できます。
 
 ```sh
-primer emit-ir examples/floating_point.prim
-primer emit-c examples/floating_point.prim
+cerune emit-ir examples/floating_point.ceru
+cerune emit-c examples/floating_point.ceru
 ```
 
-`emit-ir`では解決済みの型と演算を、`emit-c`ではそれらをCでどう表現したかを読めます。バックエンドは共通のPrimer IRを受け取り、ソースの意味を解釈し直しません。
+`emit-ir`では解決済みの型と演算を、`emit-c`ではそれらをCでどう表現したかを読めます。バックエンドは共通のCerune IRを受け取り、ソースの意味を解釈し直しません。
 
-テキストを生成する`emit-*`は標準出力へ書き出します。ファイルに残す場合は、例えば`primer emit-c examples/floating_point.prim -o floating_point.c`と指定します。バイナリを生成する`emit-obj`は`--target`と`-o`が必須です。構文や型の検証だけなら`primer check examples/floating_point.prim`を使います。
+テキストを生成する`emit-*`は標準出力へ書き出します。ファイルに残す場合は、例えば`cerune emit-c examples/floating_point.ceru -o floating_point.c`と指定します。バイナリを生成する`emit-obj`は`--target`と`-o`が必須です。構文や型の検証だけなら`cerune check examples/floating_point.ceru`を使います。
 
-公開している観測点はPrimer IRと出力成果物です。バックエンド固有のRust IRは内部の変換境界として扱います。詳しくは[コンパイラ設計](docs/design/architecture.ja.md)と[可観測性の契約](docs/design/observability.ja.md)を参照してください。
+公開している観測点はCerune IRと出力成果物です。バックエンド固有のRust IRは内部の変換境界として扱います。詳しくは[コンパイラ設計](docs/design/architecture.ja.md)と[可観測性の契約](docs/design/observability.ja.md)を参照してください。
 
 ## 現在できること
 
@@ -72,7 +74,7 @@ primer emit-c examples/floating_point.prim
 - **関数と制御:** 型付き関数、`void`、明示的な`return`。トップレベル実行文または`fn main() -> void`。`if` / `else`、`while`、`for`、`break` / `continue`。
 - **演算:** 算術、整数の剰余とビット演算、比較、`!`、短絡評価する`&&`・`||`。
 - **明示変換:** `f64(value)`と`convert<f64>(value)`など、同じ意味の二つの表記。実装済みの数値型の間で、値を保てる場合だけ変換。
-- **出力と実行:** `print(expr);`、Primer IRと各出力先の成果物の生成、Primer VMによる実行。
+- **出力と実行:** `print(expr);`、Cerune IRと各出力先の成果物の生成、Cerune VMによる実行。
 
 整数の桁あふれ、不正な整数除算、配列の範囲外参照、値を保てない変換では実行を停止します。暗黙の数値変換はしません。通常の浮動小数点計算には丸めがあります。
 
@@ -80,7 +82,7 @@ primer emit-c examples/floating_point.prim
 
 動的な長さの配列、再帰、失敗からの回復、明示的な丸め・切り捨て操作は未実装です。現在の生成先では小さい整数型も64ビット領域に格納し、値の範囲を検査します。
 
-`u64`は0〜18446744073709551615を扱います。[設計と経路ごとの表現](docs/design/u64.ja.md)、[実行例](examples/u64_values.prim)を参照してください。
+`u64`は0〜18446744073709551615を扱います。[設計と経路ごとの表現](docs/design/u64.ja.md)、[実行例](examples/u64_values.ceru)を参照してください。
 
 ### 出力先
 
@@ -92,9 +94,9 @@ primer emit-c examples/floating_point.prim
 | `emit-wat` | WebAssembly Text（`.wat`） | WebAssembly用ツールとホストで実行 |
 | `emit-asm` | Windows/Linux x86-64アセンブリ（`.s`） | アセンブル・リンク |
 | `emit-obj` | 自前符号化したELF/COFF（`.o` / `.obj`） | 外部リンカでリンク。`--target`と`-o`は必須 |
-| `emit-bytecode` | Primer bytecode（`.pbc`） | 命令列を確認。VM実行はソースに対する`run`を使用 |
+| `emit-bytecode` | Cerune bytecode（`.cebc`） | 命令列を確認。VM実行はソースに対する`run`を使用 |
 
-Primerは成果物の生成までを担当します。外部ツールの選択、対象CPUや最適化設定、測定方法は呼び出す側が決定します。詳細は[出力経路とターゲット](docs/design/targets.ja.md)を参照してください。
+Ceruneは成果物の生成までを担当します。外部ツールの選択、対象CPUや最適化設定、測定方法は呼び出す側が決定します。詳細は[出力経路とターゲット](docs/design/targets.ja.md)を参照してください。
 
 Linux ASMと機械語までの観測は[ネイティブコードの設計と実行手順](docs/design/native-code.ja.md)を参照してください。
 
@@ -102,10 +104,10 @@ Linux ASMと機械語までの観測は[ネイティブコードの設計と実�
 
 | 分類 | サンプル |
 | --- | --- |
-| 基本 | [小さな数値の表示](examples/small_values.prim)、[短絡評価](examples/short_circuit.prim) |
-| データ構造 | [リングバッファ](examples/ring_buffer.prim)、[構造体と配列の受け渡し](examples/function_values.prim) |
-| 数値計算 | [測定値の平均・分散](examples/measurement_statistics.prim)、[直線の学習](examples/linear_regression.prim) |
-| アルゴリズム | [最短経路](examples/shortest_paths.prim)、[部分和のビット集合](examples/subset_sum_bits.prim) |
+| 基本 | [小さな数値の表示](examples/small_values.ceru)、[短絡評価](examples/short_circuit.ceru) |
+| データ構造 | [リングバッファ](examples/ring_buffer.ceru)、[構造体と配列の受け渡し](examples/function_values.ceru) |
+| 数値計算 | [測定値の平均・分散](examples/measurement_statistics.ceru)、[直線の学習](examples/linear_regression.ceru) |
+| アルゴリズム | [最短経路](examples/shortest_paths.ceru)、[部分和のビット集合](examples/subset_sum_bits.ceru) |
 
 [サンプル一覧](examples/README.md)から、ほかの例も探せます。リポジトリのルートからまとめて実行できます。
 
@@ -122,7 +124,7 @@ bash scripts/run-examples.sh
 bash scripts/test.sh
 ```
 
-`run-examples`はサンプルの実行結果を表示します。PowerShellでは`-Pattern "matrix*.prim"`、Bashでは`--pattern 'matrix*.prim'`で対象を絞れます。`test.sh`はfmt・clippy・全テストを実行し、期待する結果との照合も行います。サンプルのテストだけなら`cargo test --test examples`を使います。
+`run-examples`はサンプルの実行結果を表示します。PowerShellでは`-Pattern "matrix*.ceru"`、Bashでは`--pattern 'matrix*.ceru'`で対象を絞れます。`test.sh`はfmt・clippy・全テストを実行し、期待する結果との照合も行います。サンプルのテストだけなら`cargo test --test examples`を使います。
 
 `.sh`側のビルド先は既定で`target/unix`です。Windowsの生成物とは分離し、`CARGO_TARGET_DIR`が指定されていればそちらを使います。
 
@@ -134,9 +136,9 @@ bash scripts/test.sh
 ## 関連ツール
 
 - [Tint\*](https://github.com/Hokutaka/Tint-St.): ソースと生成された表現を並べて観察するための開発・観察環境。
-- [Whitebase](https://github.com/Hokutaka/Whitebase): Rust・C++・Assemblyの組み込み演算を実行・測定・比較する実験環境。Primerの生成物との連携は未実装です。
+- [Whitebase](https://github.com/Hokutaka/Whitebase): Rust・C++・Assemblyの組み込み演算を実行・測定・比較する実験環境。Ceruneの生成物との連携は未実装です。
 
-言語の意味とコンパイル処理はPrimerが担当します。Whitebaseとの連携では、生成物を使った実験を利用側に分ける方針です。現在の実装と連携時の境界は[ツールの責務](docs/design/architecture.ja.md#ツールの責務)を参照してください。
+言語の意味とコンパイル処理はCeruneが担当します。Whitebaseとの連携では、生成物を使った実験を利用側に分ける方針です。現在の実装と連携時の境界は[ツールの責務](docs/design/architecture.ja.md#ツールの責務)を参照してください。
 
 ## ライセンス
 

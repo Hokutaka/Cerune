@@ -1,4 +1,4 @@
-use primer_lang::{
+use cerune_lang::{
     codegen::llvm::{Options, Target},
     compile_to_llvm_with_options,
 };
@@ -19,14 +19,14 @@ fn emit(source: &str, annotated: bool) -> String {
 fn annotations_preserve_every_example_and_are_deterministic() {
     for entry in fs::read_dir(PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("examples")).unwrap() {
         let path = entry.unwrap().path();
-        if path.extension().is_none_or(|ext| ext != "prim") {
+        if path.extension().is_none_or(|ext| ext != "ceru") {
             continue;
         }
         let source = fs::read_to_string(&path).unwrap();
         let annotated = emit(&source, true);
         let without_comments: String = annotated
             .lines()
-            .filter(|line| !line.starts_with("; primer-origin"))
+            .filter(|line| !line.starts_with("; cerune-origin"))
             .map(|line| format!("{line}\n"))
             .collect();
         assert_eq!(without_comments, emit(&source, false), "{}", path.display());
@@ -37,28 +37,28 @@ fn annotations_preserve_every_example_and_are_deterministic() {
 #[test]
 fn annotations_preserve_failure_records_and_instructions() {
     for source in [
-        include_str!("../examples/runtime_failures/overflow.prim"),
-        include_str!("../examples/runtime_failures/array_update.prim"),
-        include_str!("../examples/runtime_failures/function_division.prim"),
+        include_str!("../examples/runtime_failures/overflow.ceru"),
+        include_str!("../examples/runtime_failures/array_update.ceru"),
+        include_str!("../examples/runtime_failures/function_division.ceru"),
     ] {
         let annotated = emit(source, true);
         let without_comments: String = annotated
             .lines()
-            .filter(|line| !line.starts_with("; primer-origin"))
+            .filter(|line| !line.starts_with("; cerune-origin"))
             .map(|line| format!("{line}\n"))
             .collect();
         assert_eq!(without_comments, emit(source, false));
-        assert!(without_comments.contains("@primer.runtime.fail"));
+        assert!(without_comments.contains("@cerune.runtime.fail"));
     }
 }
 
 #[test]
 fn origin_example_has_reviewable_ir_and_llvm() {
     // fixtureはLFで固定します。利用時のSpanは入力そのもののバイト位置です。
-    let source = include_str!("../examples/string_origins.prim").replace("\r\n", "\n");
+    let source = include_str!("../examples/string_origins.ceru").replace("\r\n", "\n");
     assert_eq!(
-        primer_lang::compile_to_ir_text(&source).unwrap(),
-        include_str!("fixtures/observation/string-origins/expected/ir.pir").replace("\r\n", "\n")
+        cerune_lang::compile_to_ir_text(&source).unwrap(),
+        include_str!("fixtures/observation/string-origins/expected/ir.ceir").replace("\r\n", "\n")
     );
     assert_eq!(
         emit(&source, true),
@@ -68,8 +68,8 @@ fn origin_example_has_reviewable_ir_and_llvm() {
 
 #[test]
 fn cli_annotation_option_is_explicit() {
-    let source = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("examples/string_origins.prim");
-    let output = Command::new(env!("CARGO_BIN_EXE_primer"))
+    let source = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("examples/string_origins.ceru");
+    let output = Command::new(env!("CARGO_BIN_EXE_cerune"))
         .arg("emit-llvm")
         .arg(&source)
         .args(["--annotate-origins", "--target", "x86_64-unknown-linux-gnu"])
@@ -82,7 +82,7 @@ fn cli_annotation_option_is_explicit() {
         emit(&fs::read_to_string(&source).unwrap(), true).as_bytes()
     );
     for route in ["emit-llvm", "emit-qbe"] {
-        let output = Command::new(env!("CARGO_BIN_EXE_primer"))
+        let output = Command::new(env!("CARGO_BIN_EXE_cerune"))
             .arg(route)
             .arg(&source)
             .args(["--annotate-origins", "--annotate-origins"])

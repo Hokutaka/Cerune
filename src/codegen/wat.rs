@@ -10,9 +10,9 @@ mod unsigned;
 pub use emit::emit;
 use lower::lower;
 
-use crate::{diagnostic::Diagnostic, ir as primer_ir};
+use crate::{diagnostic::Diagnostic, ir as cerune_ir};
 
-pub fn emit_wat(program: &primer_ir::Program) -> Result<String, Diagnostic> {
+pub fn emit_wat(program: &cerune_ir::Program) -> Result<String, Diagnostic> {
     let module = lower(program);
 
     Ok(emit(&module))
@@ -67,11 +67,11 @@ mod tests {
 
         let wat = emit_wat(&program).unwrap();
 
-        assert!(wat.contains("(func $primer_i64_add"));
-        assert!(wat.contains("call $primer_i64_add"));
+        assert!(wat.contains("(func $cerune_i64_add"));
+        assert!(wat.contains("call $cerune_i64_add"));
         assert!(wat.contains("unreachable"));
 
-        assert!(wat.contains("(local $primer_x i64)"));
+        assert!(wat.contains("(local $cerune_x i64)"));
 
         assert!(wat.contains("call $print_i64"));
     }
@@ -89,7 +89,7 @@ mod tests {
         .unwrap();
         let wat = emit_wat(&program).unwrap();
 
-        for helper in ["$primer_i64_add", "$primer_i64_sub", "$primer_i64_mul"] {
+        for helper in ["$cerune_i64_add", "$cerune_i64_sub", "$cerune_i64_mul"] {
             assert!(wat.contains(helper));
         }
         assert!(wat.contains("i64.div_s"));
@@ -140,7 +140,7 @@ mod tests {
 
         let wat = emit_wat(&program).unwrap();
 
-        assert!(wat.contains("(local $primer_b f32)"));
+        assert!(wat.contains("(local $cerune_b f32)"));
 
         assert!(wat.contains("f32.add"));
     }
@@ -188,9 +188,9 @@ mod tests {
         let wat = emit_wat(&program).unwrap();
 
         assert!(wat.contains(
-            "(func $primer_fn_add_0 (param $primer_left i64) (param $primer_right i64) (result i64)"
+            "(func $cerune_fn_add_0 (param $cerune_left i64) (param $cerune_right i64) (result i64)"
         ));
-        assert!(wat.contains("call $primer_fn_add_0"));
+        assert!(wat.contains("call $cerune_fn_add_0"));
         assert!(wat.contains("return"));
     }
 }

@@ -1,24 +1,24 @@
 .section .rdata,"dr"
-.Lprimer_fmt_i64:
+.Lcerune_fmt_i64:
   .asciz "%lld\n"
-.Lprimer_fmt_f32:
+.Lcerune_fmt_f32:
   .asciz "%.9g\n"
-.Lprimer_fmt_f64:
+.Lcerune_fmt_f64:
   .asciz "%.17g\n"
 .p2align 4
-.Lprimer_sign_f32:
+.Lcerune_sign_f32:
   .long 0x80000000
   .long 0
   .long 0
   .long 0
 .p2align 4
-.Lprimer_sign_f64:
+.Lcerune_sign_f64:
   .quad 0x8000000000000000
   .quad 0
 
 .text
 .p2align 4
-primer_fn_add_0:
+cerune_fn_add_0:
   pushq %rbp
   movq %rsp, %rbp
   subq $80, %rsp
@@ -30,28 +30,28 @@ primer_fn_add_0:
   movq %rax, %rcx
   movq -24(%rbp), %rax
   addq %rcx, %rax
-  jno .Lprimer_fn_0_integer_ok_0
+  jno .Lcerune_fn_0_integer_ok_0
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
-  leaq .Lprimer_failure_0(%rip), %rdx
+  leaq .Lcerune_failure_0(%rip), %rdx
   movl $61, %r8d
   callq _write
   ud2
-.Lprimer_fn_0_integer_ok_0:
+.Lcerune_fn_0_integer_ok_0:
   addq $80, %rsp
   popq %rbp
   retq
 
 .p2align 4
-primer_fn_show_1:
+cerune_fn_show_1:
   pushq %rbp
   movq %rsp, %rbp
   subq $48, %rsp
   movq %rcx, -8(%rbp)
   movq -8(%rbp), %rax
   movq %rax, %rdx
-  leaq .Lprimer_fmt_i64(%rip), %rcx
+  leaq .Lcerune_fmt_i64(%rip), %rcx
   callq printf
   addq $48, %rsp
   popq %rbp
@@ -69,17 +69,17 @@ main:
   movq %rax, -24(%rbp)
   movq -16(%rbp), %rcx
   movq -24(%rbp), %rdx
-  callq primer_fn_add_0
+  callq cerune_fn_add_0
   movq %rax, -8(%rbp)
   movq -8(%rbp), %rax
   movq %rax, -16(%rbp)
   movq -16(%rbp), %rcx
-  callq primer_fn_show_1
+  callq cerune_fn_show_1
   xorl %eax, %eax
   addq $80, %rsp
   popq %rbp
   retq
 
 .section .rdata,"dr"
-.Lprimer_failure_0:
-  .asciz "primer: runtime-v1 code=integer-overflow node=1 bytes=50..62\n"
+.Lcerune_failure_0:
+  .asciz "cerune: runtime-v1 code=integer-overflow node=1 bytes=50..62\n"

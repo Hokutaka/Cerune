@@ -4,11 +4,11 @@
 
 Status: Implemented
 
-This document records design decisions and observable information for Primer fixed arrays. Current syntax is defined by the [language reference](../reference/language.en.md).
+This document records design decisions and observable information for Cerune fixed arrays. Current syntax is defined by the [language reference](../reference/language.en.md).
 
 ## What is available
 
-```primer
+```cerune
 values: [i64; 4] = [2, 4, 6, 8];
 print(values[2]);
 ```
@@ -39,7 +39,7 @@ Dynamic lengths are outside the current scope.
 
 Putting an array into another binding copies the whole value. Two bindings do not silently share one hidden mutable region.
 
-This is the same language-level rule as named product types. Physical instructions and memory copies differ by backend without changing Primer semantics.
+This is the same language-level rule as named product types. Physical instructions and memory copies differ by backend without changing Cerune semantics.
 
 Updating an element of a `mut` array changes only the value held by that binding. An array copied to another binding before the update remains unchanged. Element assignment does not introduce shared mutable storage.
 
@@ -47,7 +47,7 @@ Updating an element of a `mut` array changes only the value held by that binding
 
 A named product type may be an array element, and a fixed array may be a field of a product type.
 
-```primer
+```cerune
 type Point {
     x: i64,
     y: i64,
@@ -62,7 +62,7 @@ Arrays and product types still copy as independent values when combined. The fro
 
 Fixed arrays may also be nested directly.
 
-```primer
+```cerune
 matrix: [[i64; 3]; 2] = [[1, 2, 3], [4, 5, 6]];
 print(matrix[1][2]);
 ```
@@ -73,7 +73,7 @@ An inner array is also one value. Copying or reassigning the complete array copi
 
 Valid indices range from `0` through `length - 1`. Negative indices and indices greater than or equal to `length` are out of bounds.
 
-The Primer VM and every generated route perform the check: C, LLVM IR, QBE IR, WebAssembly Text, and Windows x86-64 assembly. Silently removing the check as an optimization would change current language semantics.
+The Cerune VM and every generated route perform the check: C, LLVM IR, QBE IR, WebAssembly Text, and Windows x86-64 assembly. Silently removing the check as an optimization would change current language semantics.
 
 For element assignment, indices are evaluated one at a time from left to right and each level is bounds-checked immediately. The right-hand side is evaluated only after every index is valid, followed by one write. A failed check leaves the array unchanged and does not evaluate the right-hand side.
 
@@ -82,9 +82,9 @@ For element assignment, indices are evaluated one at a time from left to right a
 | Stage | Preserved information |
 | --- | --- |
 | AST | Element type syntax, length, elements, index expressions, assignment root and index path, and spans |
-| Primer IR | Resolved `[element; length]`, `array[...]`, `index(...)`, and typed assignment targets |
+| Cerune IR | Resolved `[element; length]`, `array[...]`, `index(...)`, and typed assignment targets |
 | Bytecode | `array.new`, `array.get`, `array.check`, `array.assign`, and instruction origin |
-| Primer VM | Array value, element type, length, failing index, and instruction position |
+| Cerune VM | Array value, element type, length, failing index, and instruction position |
 | Backend IR | Recursive types, placement, copies, each bounds check, element-address calculation, and load, store, or aggregate copy |
 | Artifact | Backend-specific array representation and executable bounds checks |
 
@@ -94,14 +94,14 @@ Length remains explicit type information instead of being inferred from hidden r
 
 | Backend | Array | Bounds check |
 | --- | --- | --- |
-| C | A dedicated `struct` containing a C array | `primer_array_get_*` / `primer_array_at_*` helpers per used type and length |
+| C | A dedicated `struct` containing a C array | `cerune_array_get_*` / `cerune_array_at_*` helpers per used type and length |
 | LLVM IR | `[N x element]` | Internal get/set helpers per used type and length; failure calls `llvm.trap` |
 | QBE IR | Stack storage with 8-byte scalar units and product stride derived from fields | Comparisons and branches; failure calls `abort` |
 | WebAssembly Text | Linear memory with 8-byte scalar units and product stride derived from fields | `i64.lt_s` / `i64.ge_s`; failure executes `unreachable` |
 | Windows x86-64 | One stack slot per scalar and multiple field-derived slots per product value | Negative and upper-bound comparisons; failure executes `ud2` |
-| Primer bytecode | A typed array value | The VM checks `array.get` and `array.check` |
+| Cerune bytecode | A typed array value | The VM checks `array.get` and `array.check` |
 
-QBE, WebAssembly, and Windows x86-64 currently reserve 8-byte units even for 4-byte scalar values. A product or array element uses the storage required by the complete value as its stride. This simple, observable layout is a backend-lowering choice, not part of the Primer type meaning.
+QBE, WebAssembly, and Windows x86-64 currently reserve 8-byte units even for 4-byte scalar values. A product or array element uses the storage required by the complete value as its stride. This simple, observable layout is a backend-lowering choice, not part of the Cerune type meaning.
 
 ## Security boundary
 

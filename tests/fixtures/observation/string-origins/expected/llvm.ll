@@ -1,11 +1,11 @@
-; primer-origins v1: UTF-8 byte ranges, end exclusive
-; primer-origin: synthetic
+; cerune-origins v1: UTF-8 byte ranges, end exclusive
+; cerune-origin: synthetic
 target triple = "x86_64-unknown-linux-gnu"
 
-%primer.string = type { ptr, i64 }
-@primer.string.0 = private unnamed_addr constant [10 x i8] c"\E6\97\A5\E6\9C\AC\E8\AA\9E\00"
-@primer.string.1 = private unnamed_addr constant [10 x i8] c"\E6\97\A5\E6\9C\AC\E8\AA\9E\00"
-@primer.string.2 = private unnamed_addr constant [7 x i8] c"\73\6B\69\70\70\65\64"
+%cerune.string = type { ptr, i64 }
+@cerune.string.0 = private unnamed_addr constant [10 x i8] c"\E6\97\A5\E6\9C\AC\E8\AA\9E\00"
+@cerune.string.1 = private unnamed_addr constant [10 x i8] c"\E6\97\A5\E6\9C\AC\E8\AA\9E\00"
+@cerune.string.2 = private unnamed_addr constant [7 x i8] c"\73\6B\69\70\70\65\64"
 
 @.fmt_i64 = private unnamed_addr constant [6 x i8] c"%lld\0A\00"
 @.fmt_f32 = private unnamed_addr constant [6 x i8] c"%.9g\0A\00"
@@ -18,12 +18,12 @@ declare i32 @puts(ptr)
 
 declare i32 @putchar(i32)
 
-define internal i1 @primer.string.equal(%primer.string %left, %primer.string %right) {
+define internal i1 @cerune.string.equal(%cerune.string %left, %cerune.string %right) {
 entry:
-  %left.data = extractvalue %primer.string %left, 0
-  %left.length = extractvalue %primer.string %left, 1
-  %right.data = extractvalue %primer.string %right, 0
-  %right.length = extractvalue %primer.string %right, 1
+  %left.data = extractvalue %cerune.string %left, 0
+  %left.length = extractvalue %cerune.string %left, 1
+  %right.data = extractvalue %cerune.string %right, 0
+  %right.length = extractvalue %cerune.string %right, 1
   %same.length = icmp eq i64 %left.length, %right.length
   br i1 %same.length, label %condition, label %different
 condition:
@@ -46,10 +46,10 @@ different:
   ret i1 false
 }
 
-define internal void @primer.print.string(%primer.string %value) {
+define internal void @cerune.print.string(%cerune.string %value) {
 entry:
-  %data = extractvalue %primer.string %value, 0
-  %length = extractvalue %primer.string %value, 1
+  %data = extractvalue %cerune.string %value, 0
+  %length = extractvalue %cerune.string %value, 1
   br label %condition
 condition:
   %index = phi i64 [ 0, %entry ], [ %next, %write ]
@@ -67,67 +67,67 @@ newline:
   ret void
 }
 
-; primer-origin: synthetic
-define %primer.string @primer.fn.echo.0(%primer.string %arg0) {
+; cerune-origin: synthetic
+define %cerune.string @cerune.fn.echo.0(%cerune.string %arg0) {
 entry:
-  %primer_value = alloca %primer.string
-  store %primer.string %arg0, ptr %primer_value
-; primer-origin: #1 bytes 136..141
-  %tmp0 = load %primer.string, ptr %primer_value
-; primer-origin: #0 bytes 130..143
-  call void @primer.print.string(%primer.string %tmp0)
-; primer-origin: #3 bytes 155..160
-  %tmp1 = load %primer.string, ptr %primer_value
-; primer-origin: #2 bytes 148..161
-  ret %primer.string %tmp1
+  %cerune_value = alloca %cerune.string
+  store %cerune.string %arg0, ptr %cerune_value
+; cerune-origin: #1 bytes 136..141
+  %tmp0 = load %cerune.string, ptr %cerune_value
+; cerune-origin: #0 bytes 130..143
+  call void @cerune.print.string(%cerune.string %tmp0)
+; cerune-origin: #3 bytes 155..160
+  %tmp1 = load %cerune.string, ptr %cerune_value
+; cerune-origin: #2 bytes 148..161
+  ret %cerune.string %tmp1
 }
 
-; primer-origin: synthetic
+; cerune-origin: synthetic
 define i32 @main() {
 entry:
-  %primer_left = alloca %primer.string
-  %primer_same = alloca i1
-  %primer_logical_result2 = alloca i1
-; primer-origin: #4 bytes 165..194
-  store %primer.string { ptr @primer.string.0, i64 10 }, ptr %primer_left
-; primer-origin: #9 bytes 213..217
-  %tmp0 = load %primer.string, ptr %primer_left
-; primer-origin: #8 bytes 208..218
-  %tmp1 = call %primer.string @primer.fn.echo.0(%primer.string %tmp0)
-; primer-origin: #7 bytes 208..235
-  %tmp2 = call i1 @primer.string.equal(%primer.string %tmp1, %primer.string { ptr @primer.string.1, i64 10 })
-; primer-origin: #6 bytes 195..236
-  store i1 %tmp2, ptr %primer_same
-; primer-origin: #12 bytes 243..247
-  %tmp3 = load i1, ptr %primer_same
-; primer-origin: #11 bytes 237..249
+  %cerune_left = alloca %cerune.string
+  %cerune_same = alloca i1
+  %cerune_logical_result2 = alloca i1
+; cerune-origin: #4 bytes 165..194
+  store %cerune.string { ptr @cerune.string.0, i64 10 }, ptr %cerune_left
+; cerune-origin: #9 bytes 213..217
+  %tmp0 = load %cerune.string, ptr %cerune_left
+; cerune-origin: #8 bytes 208..218
+  %tmp1 = call %cerune.string @cerune.fn.echo.0(%cerune.string %tmp0)
+; cerune-origin: #7 bytes 208..235
+  %tmp2 = call i1 @cerune.string.equal(%cerune.string %tmp1, %cerune.string { ptr @cerune.string.1, i64 10 })
+; cerune-origin: #6 bytes 195..236
+  store i1 %tmp2, ptr %cerune_same
+; cerune-origin: #12 bytes 243..247
+  %tmp3 = load i1, ptr %cerune_same
+; cerune-origin: #11 bytes 237..249
   %tmp4 = select i1 %tmp3, ptr @.bool_true, ptr @.bool_false
-; primer-origin: #11 bytes 237..249
+; cerune-origin: #11 bytes 237..249
   call i32 @puts(ptr %tmp4)
-; primer-origin: #14 bytes 256..288
-  store i1 0, ptr %primer_logical_result2
-; primer-origin: #14 bytes 256..288
+; cerune-origin: #14 bytes 256..288
+  store i1 0, ptr %cerune_logical_result2
+; cerune-origin: #14 bytes 256..288
   br i1 0, label %block0, label %block1
-; primer-origin: #14 bytes 256..288
+; cerune-origin: #14 bytes 256..288
 block0: ; logical_rhs
-; primer-origin: #17 bytes 265..280
-  %tmp5 = call %primer.string @primer.fn.echo.0(%primer.string { ptr @primer.string.2, i64 7 })
-; primer-origin: #19 bytes 284..288
-  %tmp6 = load %primer.string, ptr %primer_left
-; primer-origin: #16 bytes 265..288
-  %tmp7 = call i1 @primer.string.equal(%primer.string %tmp5, %primer.string %tmp6)
-; primer-origin: #14 bytes 256..288
-  store i1 %tmp7, ptr %primer_logical_result2
-; primer-origin: #14 bytes 256..288
+; cerune-origin: #17 bytes 265..280
+  %tmp5 = call %cerune.string @cerune.fn.echo.0(%cerune.string { ptr @cerune.string.2, i64 7 })
+; cerune-origin: #19 bytes 284..288
+  %tmp6 = load %cerune.string, ptr %cerune_left
+; cerune-origin: #16 bytes 265..288
+  %tmp7 = call i1 @cerune.string.equal(%cerune.string %tmp5, %cerune.string %tmp6)
+; cerune-origin: #14 bytes 256..288
+  store i1 %tmp7, ptr %cerune_logical_result2
+; cerune-origin: #14 bytes 256..288
   br label %block1
-; primer-origin: #14 bytes 256..288
+; cerune-origin: #14 bytes 256..288
 block1: ; logical_end
-; primer-origin: #14 bytes 256..288
-  %tmp8 = load i1, ptr %primer_logical_result2
-; primer-origin: #13 bytes 250..290
+; cerune-origin: #14 bytes 256..288
+  %tmp8 = load i1, ptr %cerune_logical_result2
+; cerune-origin: #13 bytes 250..290
   %tmp9 = select i1 %tmp8, ptr @.bool_true, ptr @.bool_false
-; primer-origin: #13 bytes 250..290
+; cerune-origin: #13 bytes 250..290
   call i32 @puts(ptr %tmp9)
-; primer-origin: synthetic
+; cerune-origin: synthetic
   ret i32 0
 }

@@ -13,8 +13,8 @@ pub(super) fn emit_binary(
     reporter: &mut Reporter,
     output: &mut String,
 ) {
-    let bad = format!(".Lprimer_{prefix}_u64_bad_{label}");
-    let done = format!(".Lprimer_{prefix}_u64_done_{label}");
+    let bad = format!(".Lcerune_{prefix}_u64_bad_{label}");
+    let done = format!(".Lcerune_{prefix}_u64_done_{label}");
     match op {
         Op::Add => output.push_str(&format!("  addq %rcx, %rax\n  jc {bad}\n")),
         Op::Subtract => output.push_str(&format!("  subq %rcx, %rax\n  jc {bad}\n")),
@@ -60,7 +60,7 @@ pub(super) fn emit_conversion(
     reporter: &mut Reporter,
     output: &mut String,
 ) {
-    let base = format!(".Lprimer_{prefix}_u64_convert_{label}");
+    let base = format!(".Lcerune_{prefix}_u64_convert_{label}");
     let bad = format!("{base}_bad");
     let done = format!("{base}_done");
     match (c.from, c.to) {

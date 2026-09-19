@@ -5,7 +5,7 @@ mod process;
 #[path = "support/runtime_cases.rs"]
 mod runtime_cases;
 
-use primer_lang::{RunError, run_vm};
+use cerune_lang::{RunError, run_vm};
 use std::{
     ffi::OsString,
     fs,
@@ -23,7 +23,7 @@ impl Workspace {
             .unwrap()
             .as_nanos();
         let path = std::env::temp_dir().join(format!(
-            "primer-runtime-{route}-{}-{stamp}",
+            "cerune-runtime-{route}-{}-{stamp}",
             std::process::id()
         ));
         fs::create_dir(&path).unwrap();
@@ -101,7 +101,7 @@ fn assert_failure(output: Output, source: &str, expected_code: &str, route: &str
     // 既存のWindows数値専用出力はCRTのCRLFです。文字列のバイト列には適用しません。
     if cfg!(windows)
         && route != "wat"
-        && !primer_lang::compile_to_c(source)
+        && !cerune_lang::compile_to_c(source)
             .unwrap()
             .contains("_setmode(")
     {
@@ -119,7 +119,7 @@ fn assert_failure(output: Output, source: &str, expected_code: &str, route: &str
         String::from_utf8(output.stderr)
             .unwrap()
             .replace("\r\n", "\n"),
-        format!("primer: {}\n", failure.record()),
+        format!("cerune: {}\n", failure.record()),
         "{route}: {source}"
     );
 }
@@ -129,11 +129,11 @@ fn cases() -> Vec<(String, &'static str)> {
         (format!("// 日本語\r\nprint(\"開始\\0\\r\\n\");\r\nprint(false && (1 / 0 == 0));\r\n{body}"), code)
     }).collect();
     cases.extend([
-        (include_str!("../examples/runtime_failures/overflow.prim").into(), "integer-overflow"),
-        (include_str!("../examples/runtime_failures/array_update.prim").into(), "array-index-out-of-bounds"),
-        (include_str!("../examples/runtime_failures/function_division.prim").into(), "division-by-zero"),
+        (include_str!("../examples/runtime_failures/overflow.ceru").into(), "integer-overflow"),
+        (include_str!("../examples/runtime_failures/array_update.ceru").into(), "array-index-out-of-bounds"),
+        (include_str!("../examples/runtime_failures/function_division.ceru").into(), "division-by-zero"),
         // 同じ関数を正常・失敗の順に呼んでも、呼び出し元ではなく演算の位置を報告します。
-        (include_str!("../examples/runtime_failures/call_sequence.prim").into(), "division-by-zero"),
+        (include_str!("../examples/runtime_failures/call_sequence.ceru").into(), "division-by-zero"),
         // 左側の失敗で右側を実行せず、別の失敗理由で上書きしません。
         ("fn left() -> i64 { print(1); return 1 / 0; } fn right() -> i64 { print(2); return 1 % 0; } print(left() + right());".into(), "division-by-zero"),
         ("mut a: [[i64; 1]; 1] = [[0]]; a[1][1] = 1 / 0;".into(), "array-index-out-of-bounds"),
@@ -157,19 +157,19 @@ fn compare_native(route: &str, compiler: OsString, qbe: Option<OsString>) {
     });
     for (index, (source, code)) in cases().into_iter().enumerate() {
         let artifact = match route {
-            "c" => primer_lang::compile_to_c(&source).unwrap(),
-            "llvm" => primer_lang::compile_to_llvm_with_target(
+            "c" => cerune_lang::compile_to_c(&source).unwrap(),
+            "llvm" => cerune_lang::compile_to_llvm_with_target(
                 &source,
                 Some(if cfg!(windows) {
-                    primer_lang::codegen::llvm::Target::X86_64PcWindowsMsvc
+                    cerune_lang::codegen::llvm::Target::X86_64PcWindowsMsvc
                 } else {
-                    primer_lang::codegen::llvm::Target::X86_64UnknownLinuxGnu
+                    cerune_lang::codegen::llvm::Target::X86_64UnknownLinuxGnu
                 }),
             )
             .unwrap(),
-            _ => primer_lang::compile_to_qbe_with_target(
+            _ => cerune_lang::compile_to_qbe_with_target(
                 &source,
-                Some(primer_lang::codegen::qbe::Target::X86_64UnknownLinuxGnu),
+                Some(cerune_lang::codegen::qbe::Target::X86_64UnknownLinuxGnu),
             )
             .unwrap(),
         };
@@ -222,14 +222,14 @@ fn compare_native(route: &str, compiler: OsString, qbe: Option<OsString>) {
 
 #[test]
 fn c_failures_match_vm_with_and_without_optimization() {
-    if let Some(cc) = tool("PRIMER_TEST_CC", "clang", "--version") {
+    if let Some(cc) = tool("CERUNE_TEST_CC", "clang", "--version") {
         compare_native("c", cc, None);
     }
 }
 
 #[test]
 fn llvm_failures_match_vm_with_and_without_optimization() {
-    if let Some(cc) = tool("PRIMER_TEST_LLVM_CLANG", "clang", "--version") {
+    if let Some(cc) = tool("CERUNE_TEST_LLVM_CLANG", "clang", "--version") {
         compare_native("llvm", cc, None);
     }
 }
@@ -238,8 +238,8 @@ fn llvm_failures_match_vm_with_and_without_optimization() {
 #[cfg(all(target_os = "linux", target_arch = "x86_64"))]
 fn qbe_failures_match_vm_with_and_without_optimization() {
     if let (Some(cc), Some(qbe)) = (
-        tool("PRIMER_TEST_CC", "cc", "--version"),
-        tool("PRIMER_TEST_QBE", "qbe", "-h"),
+        tool("CERUNE_TEST_CC", "cc", "--version"),
+        tool("CERUNE_TEST_QBE", "qbe", "-h"),
     ) {
         compare_native("qbe", cc, Some(qbe));
     }
@@ -247,11 +247,11 @@ fn qbe_failures_match_vm_with_and_without_optimization() {
 
 #[test]
 fn wat_failures_match_vm_and_preserve_output_on_trap() {
-    let Some(node) = tool("PRIMER_TEST_NODE", "node", "--version") else {
+    let Some(node) = tool("CERUNE_TEST_NODE", "node", "--version") else {
         return;
     };
-    let Some(wabt) = std::env::var_os("PRIMER_TEST_WAT2WASM_JS") else {
-        eprintln!("WAT runtime comparison skipped; set PRIMER_TEST_WAT2WASM_JS to require it");
+    let Some(wabt) = std::env::var_os("CERUNE_TEST_WAT2WASM_JS") else {
+        eprintln!("WAT runtime comparison skipped; set CERUNE_TEST_WAT2WASM_JS to require it");
         return;
     };
     assert!(Path::new(&wabt).is_file(), "missing wat2wasm: {wabt:?}");
@@ -260,7 +260,7 @@ fn wat_failures_match_vm_and_preserve_output_on_trap() {
     let wasm = workspace.0.join("program.wasm");
     let host = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/support/run_wasm.cjs");
     for (index, (source, code)) in cases().into_iter().enumerate() {
-        fs::write(&input, primer_lang::compile_to_wat(&source).unwrap()).unwrap();
+        fs::write(&input, cerune_lang::compile_to_wat(&source).unwrap()).unwrap();
         let label = format!("wat-{index}/{code}");
         success(
             workspace.command(
@@ -285,47 +285,47 @@ fn wat_failures_match_vm_and_preserve_output_on_trap() {
 
 #[test]
 fn wat_host_requires_a_valid_record_and_an_unreachable_trap() {
-    let Some(node) = tool("PRIMER_TEST_NODE", "node", "--version") else {
+    let Some(node) = tool("CERUNE_TEST_NODE", "node", "--version") else {
         return;
     };
-    let Some(wabt) = std::env::var_os("PRIMER_TEST_WAT2WASM_JS") else {
-        eprintln!("WAT host comparison skipped; set PRIMER_TEST_WAT2WASM_JS to require it");
+    let Some(wabt) = std::env::var_os("CERUNE_TEST_WAT2WASM_JS") else {
+        eprintln!("WAT host comparison skipped; set CERUNE_TEST_WAT2WASM_JS to require it");
         return;
     };
     let workspace = Workspace::new("wat-host");
     let input = workspace.0.join("program.wat");
     let wasm = workspace.0.join("program.wasm");
     let host = Path::new(env!("CARGO_MANIFEST_DIR")).join("tests/support/run_wasm.cjs");
-    let record = "primer: runtime-v1 code=division-by-zero node=7 bytes=0..1\n";
+    let record = "cerune: runtime-v1 code=division-by-zero node=7 bytes=0..1\n";
     for (label, diagnostic, tail, accepted) in [
         ("reported-unreachable", record, "unreachable", true),
         (
             "reported-file",
-            "primer: runtime-v1 code=division-by-zero node=7 file=2 bytes=0..1\n",
+            "cerune: runtime-v1 code=division-by-zero node=7 file=2 bytes=0..1\n",
             "unreachable",
             true,
         ),
         (
             "zero-file",
-            "primer: runtime-v1 code=division-by-zero node=7 file=0 bytes=0..1\n",
+            "cerune: runtime-v1 code=division-by-zero node=7 file=0 bytes=0..1\n",
             "unreachable",
             false,
         ),
         (
             "leading-zero-file",
-            "primer: runtime-v1 code=division-by-zero node=7 file=02 bytes=0..1\n",
+            "cerune: runtime-v1 code=division-by-zero node=7 file=02 bytes=0..1\n",
             "unreachable",
             false,
         ),
         (
             "unsafe-file",
-            "primer: runtime-v1 code=division-by-zero node=7 file=9007199254740992 bytes=0..1\n",
+            "cerune: runtime-v1 code=division-by-zero node=7 file=9007199254740992 bytes=0..1\n",
             "unreachable",
             false,
         ),
         (
             "duplicate-file",
-            "primer: runtime-v1 code=division-by-zero node=7 file=2 file=3 bytes=0..1\n",
+            "cerune: runtime-v1 code=division-by-zero node=7 file=2 file=3 bytes=0..1\n",
             "unreachable",
             false,
         ),
@@ -345,19 +345,19 @@ fn wat_host_requires_a_valid_record_and_an_unreachable_trap() {
         ),
         (
             "reversed-span",
-            "primer: runtime-v1 code=division-by-zero node=7 bytes=1..0\n",
+            "cerune: runtime-v1 code=division-by-zero node=7 bytes=1..0\n",
             "unreachable",
             false,
         ),
         (
             "leading-zero",
-            "primer: runtime-v1 code=division-by-zero node=07 bytes=0..1\n",
+            "cerune: runtime-v1 code=division-by-zero node=07 bytes=0..1\n",
             "unreachable",
             false,
         ),
         (
             "unsafe-node",
-            "primer: runtime-v1 code=division-by-zero node=9007199254740992 bytes=0..1\n",
+            "cerune: runtime-v1 code=division-by-zero node=9007199254740992 bytes=0..1\n",
             "unreachable",
             false,
         ),
@@ -366,7 +366,7 @@ fn wat_host_requires_a_valid_record_and_an_unreachable_trap() {
             .bytes()
             .map(|byte| format!("i32.const {byte} call $write_error_byte\n"))
             .collect();
-        fs::write(&input, format!("(module\n(import \"primer\" \"write_error_byte\" (func $write_error_byte (param i32)))\n(import \"primer\" \"print_i64\" (func $print_i64 (param i64)))\n(memory 1)\n(func (export \"main\") i64.const 7 call $print_i64 {report} {tail}))")).unwrap();
+        fs::write(&input, format!("(module\n(import \"cerune\" \"write_error_byte\" (func $write_error_byte (param i32)))\n(import \"cerune\" \"print_i64\" (func $print_i64 (param i64)))\n(memory 1)\n(func (export \"main\") i64.const 7 call $print_i64 {report} {tail}))")).unwrap();
         success(
             workspace.command(
                 Command::new(&node)

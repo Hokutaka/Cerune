@@ -12,8 +12,8 @@ pub(super) fn emit(
     if conversion.uses_u64() {
         return super::unsigned::emit_conversion(conversion, label, prefix, reporter, output);
     }
-    let bad = format!(".Lprimer_{prefix}_convert_bad_{label}");
-    let done = format!(".Lprimer_{prefix}_convert_done_{label}");
+    let bad = format!(".Lcerune_{prefix}_convert_bad_{label}");
+    let done = format!(".Lcerune_{prefix}_convert_done_{label}");
     match (conversion.from, conversion.to) {
         (NumericType::Integer(_), NumericType::F32 | NumericType::F64) => {
             output.push_str("  movq %rax, %r10\n");

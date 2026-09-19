@@ -3,5 +3,5 @@
 version = 4
 
 [[package]]
-name = "primer-lang"
+name = "cerune-lang"
 version = "0.1.0"

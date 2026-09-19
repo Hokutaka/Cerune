@@ -1,10 +1,10 @@
 (module
-  (import "primer" "write_error_byte" (func $write_error_byte (param i32)))
-  (import "primer" "print_i64" (func $print_i64 (param i64)))
-  (import "primer" "print_f32" (func $print_f32 (param f32)))
-  (import "primer" "print_f64" (func $print_f64 (param f64)))
+  (import "cerune" "write_error_byte" (func $write_error_byte (param i32)))
+  (import "cerune" "print_i64" (func $print_i64 (param i64)))
+  (import "cerune" "print_f32" (func $print_f32 (param f32)))
+  (import "cerune" "print_f64" (func $print_f64 (param f64)))
 
-  (func $primer_i64_add_n14_b110_117 (param $left i64) (param $right i64) (result i64)
+  (func $cerune_i64_add_n14_b110_117 (param $left i64) (param $right i64) (result i64)
     (local $result i64)
     local.get $left
     local.get $right
@@ -20,18 +20,18 @@
     i64.const 0
     i64.lt_s
     if
-      ;; primer: runtime-v1 code=integer-overflow node=14 bytes=110..117
-      i32.const 112
-      call $write_error_byte
-      i32.const 114
-      call $write_error_byte
-      i32.const 105
-      call $write_error_byte
-      i32.const 109
+      ;; cerune: runtime-v1 code=integer-overflow node=14 bytes=110..117
+      i32.const 99
       call $write_error_byte
       i32.const 101
       call $write_error_byte
       i32.const 114
+      call $write_error_byte
+      i32.const 117
+      call $write_error_byte
+      i32.const 110
+      call $write_error_byte
+      i32.const 101
       call $write_error_byte
       i32.const 58
       call $write_error_byte
@@ -154,7 +154,7 @@
     local.get $result
   )
 
-  (func $primer_i64_add_n18_b51_56 (param $left i64) (param $right i64) (result i64)
+  (func $cerune_i64_add_n18_b51_56 (param $left i64) (param $right i64) (result i64)
     (local $result i64)
     local.get $left
     local.get $right
@@ -170,18 +170,18 @@
     i64.const 0
     i64.lt_s
     if
-      ;; primer: runtime-v1 code=integer-overflow node=18 bytes=51..56
-      i32.const 112
-      call $write_error_byte
-      i32.const 114
-      call $write_error_byte
-      i32.const 105
-      call $write_error_byte
-      i32.const 109
+      ;; cerune: runtime-v1 code=integer-overflow node=18 bytes=51..56
+      i32.const 99
       call $write_error_byte
       i32.const 101
       call $write_error_byte
       i32.const 114
+      call $write_error_byte
+      i32.const 117
+      call $write_error_byte
+      i32.const 110
+      call $write_error_byte
+      i32.const 101
       call $write_error_byte
       i32.const 58
       call $write_error_byte
@@ -301,40 +301,40 @@
   )
 
   (func $main
-    (local $primer_sum i64)
-    (local $primer_i i64)
+    (local $cerune_sum i64)
+    (local $cerune_i i64)
 
     i64.const 0
-    local.set $primer_sum
+    local.set $cerune_sum
     i64.const 0
-    local.set $primer_i
+    local.set $cerune_i
     block $for_end_0
       loop $for_condition_0
-        local.get $primer_i
+        local.get $cerune_i
         i64.const 6
         i64.lt_s
         i32.eqz
         br_if $for_end_0
         block $for_continue_0
-          local.get $primer_i
+          local.get $cerune_i
           i64.const 2
           i64.lt_s
           if
             br $for_continue_0
           end
-          local.get $primer_sum
-          local.get $primer_i
-          call $primer_i64_add_n14_b110_117
-          local.set $primer_sum
+          local.get $cerune_sum
+          local.get $cerune_i
+          call $cerune_i64_add_n14_b110_117
+          local.set $cerune_sum
         end
-        local.get $primer_i
+        local.get $cerune_i
         i64.const 1
-        call $primer_i64_add_n18_b51_56
-        local.set $primer_i
+        call $cerune_i64_add_n18_b51_56
+        local.set $cerune_i
         br $for_condition_0
       end
     end
-    local.get $primer_sum
+    local.get $cerune_sum
     call $print_i64
   )
   (export "main" (func $main))

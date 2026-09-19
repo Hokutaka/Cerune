@@ -1,4 +1,4 @@
-use primer_lang::{
+use cerune_lang::{
     RunError,
     bytecode::{InstructionKind, InstructionOrigin},
     compile_to_bytecode, run_vm,

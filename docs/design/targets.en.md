@@ -2,17 +2,17 @@
 
 [日本語](targets.ja.md)
 
-This document distinguishes output routes, targets, artifacts, and backends in Primer's generated output.
+This document distinguishes output routes, targets, artifacts, and backends in Cerune's generated output.
 
-This distinction is necessary to identify observations from the same Primer program correctly and to preserve room for additional instruction sets and execution environments.
+This distinction is necessary to identify observations from the same Cerune program correctly and to preserve room for additional instruction sets and execution environments.
 
 ## Terminology
 
 ### Output route
 
-An output route describes which kind of representation is produced from Primer IR.
+An output route describes which kind of representation is produced from Cerune IR.
 
-The current output routes are C, LLVM IR, QBE IR, WebAssembly Text, native assembly, native objects, and Primer bytecode.
+The current output routes are C, LLVM IR, QBE IR, WebAssembly Text, native assembly, native objects, and Cerune bytecode.
 
 ### Target
 
@@ -23,17 +23,17 @@ A target describes the execution environment assumed by an artifact. It has the 
 - ABI, such as Windows x64, System V, or RISC-V LP64D;
 - features, such as the RISC-V M, A, F, and D extensions.
 
-Some output routes do not have a target selected by Primer. For example, the caller of an external C compiler may decide which environment a C source artifact is compiled for.
+Some output routes do not have a target selected by Cerune. For example, the caller of an external C compiler may decide which environment a C source artifact is compiled for.
 
 ### Artifact
 
-An artifact is the actual observable output, such as C source, LLVM IR, assembly, or Primer bytecode.
+An artifact is the actual observable output, such as C source, LLVM IR, assembly, or Cerune bytecode.
 
 An artifact format may have attributes such as assembly syntax or file format. Even when two artifacts are both assembly, GNU AT&T syntax and Intel syntax are distinct formats.
 
 ### Backend
 
-A backend is an internal implementation component that lowers Primer IR for a particular output route and target and then produces an artifact.
+A backend is an internal implementation component that lowers Cerune IR for a particular output route and target and then produces an artifact.
 
 Backend is an implementation term. It is not used as a collective name for an output route, target, and artifact.
 
@@ -43,15 +43,15 @@ The current outputs can be described as follows:
 
 | Output route | Target | Artifact |
 | --- | --- | --- |
-| C | not selected by Primer | C source `.c` |
+| C | not selected by Cerune | C source `.c` |
 | LLVM IR | unspecified, or explicit Windows x64 / Linux x86-64 (required for strings and runtime checks) | LLVM IR `.ll` |
 | QBE IR | unspecified, or explicit Linux x86-64 (required for strings) | QBE IR `.ssa` |
 | WebAssembly Text | WebAssembly | WAT `.wat` |
 | Native assembly | x86-64, Windows / Linux, respective calling conventions | GNU-style assembly `.s` |
 | Native object | explicit Windows x64 / Linux x86-64 | COFF `.obj` / ELF64 `.o` |
-| Primer bytecode | Primer VM | Primer bytecode `.pbc` |
+| Cerune bytecode | Cerune VM | Cerune bytecode `.cebc` |
 
-"Not selected by Primer" does not mean inferred implicitly from the host environment. It means that Primer does not include target-specific decisions in that observation and that the caller of a downstream tool selects the target.
+"Not selected by Cerune" does not mean inferred implicitly from the host environment. It means that Cerune does not include target-specific decisions in that observation and that the caller of a downstream tool selects the target.
 
 ## Artifact consumer boundary
 
@@ -65,18 +65,18 @@ QBE strings pair explicit `x86_64-unknown-linux-gnu` selection with downstream `
 
 | Question | What is checked | Owner |
 | --- | --- | --- |
-| Can it be generated? | Whether the Primer version supports the output route and target; source-specific errors are diagnosed during generation | Primer |
+| Can it be generated? | Whether the Cerune version supports the output route and target; source-specific errors are diagnosed during generation | Cerune |
 | Can it be built? | Whether suitable compilers, assemblers, linkers, and required libraries are available | Consumer |
 | Can it be executed? | Whether CPU, OS, runtime libraries, and host functions meet the requirements | Consumer |
 | May it be executed? | Whether user authorization and execution-environment restrictions permit it | Consumer execution policy |
 
 Finding an external tool does not establish that a build or execution will succeed. Keep preflight checks separate from actual stage results, distinguishing unsupported routes, missing tools, policy denial, generation failure, build failure, execution failure, and timeout. Do not silently drop unexecutable routes or count them as successes.
 
-The environment running Primer is separate from the artifact target. Calling `emit-asm` in WSL still produces GNU AT&T assembly for Windows x86-64. Select Linux assembly explicitly with `--target x86_64-unknown-linux-gnu`. Even on Windows, Primer's internal aggregate passing convention does not guarantee external C ABI compatibility.
+The environment running Cerune is separate from the artifact target. Calling `emit-asm` in WSL still produces GNU AT&T assembly for Windows x86-64. Select Linux assembly explicitly with `--target x86_64-unknown-linux-gnu`. Even on Windows, Cerune's internal aggregate passing convention does not guarantee external C ABI compatibility.
 
 ### What comparison establishes
 
-The current CLI runs source in the VM through `run` and returns artifacts through `emit-*`. Comparing exit status and standard output through these commands does not require a new public API. There is no CLI for loading and executing `.pbc` files in the VM.
+The current CLI runs source in the VM through `run` and returns artifacts through `emit-*`. Comparing exit status and standard output through these commands does not require a new public API. There is no CLI for loading and executing `.cebc` files in the VM.
 
 Matching standard output establishes matching displayed results. It does not prove equality of unprinted information such as floating-point NaN payload bits. If bitwise comparison becomes necessary, design a separate typed observation format. Numeric tolerances and newline normalization must also be explicit comparison conditions when used.
 
@@ -84,7 +84,7 @@ Do not treat the VM alone as an oracle. Retain checks against known expected res
 
 ### Recording and safety
 
-The consumer records input and artifact identity, Primer build identity, output route, actual target, external-tool versions and explicit options, stage results, and comparison conditions. `primer --version` reports the package version. To distinguish development builds sharing a version, also record the verified commit or executable hash. A machine-readable supported-route listing is not implemented. Define a versioned public schema from actual consumer needs when one becomes necessary.
+The consumer records input and artifact identity, Cerune build identity, output route, actual target, external-tool versions and explicit options, stage results, and comparison conditions. `cerune --version` reports the package version. To distinguish development builds sharing a version, also record the verified commit or executable hash. A machine-readable supported-route listing is not implemented. Define a versioned public schema from actual consumer needs when one becomes necessary.
 
 Do not interpret strings in artifacts or observation data as executable commands or authorization. Executing generated code is a separate operation from reading observations. The consumer selects trusted tools and arguments and runs untrusted code in appropriate isolation. Timeouts and separate processes alone are not a security sandbox; also bound captured output. Do not unconditionally record source text, paths, or entire environments.
 
@@ -92,22 +92,22 @@ Do not interpret strings in artifacts or observation data as executable commands
 
 When a target affects an artifact, an observation is identified by at least the following conditions:
 
-- Primer version;
+- Cerune version;
 - source input;
 - output route;
 - target;
 - target features;
 - explicit options.
 
-When these conditions are the same, Primer produces a deterministic observation.
+When these conditions are the same, Cerune produces a deterministic observation.
 
 Target information does not have to be embedded in the artifact itself. However, the output route and target that produced an artifact must be identifiable from the CLI invocation or associated metadata.
 
-Selecting a target implicitly from the host OS, host CPU, or environment variables would allow the same explicit input to produce different results. Primer does not make implicit target choices that affect observations.
+Selecting a target implicitly from the host OS, host CPU, or environment variables would allow the same explicit input to produce different results. Cerune does not make implicit target choices that affect observations.
 
 ## Lowering boundary
 
-Primer IR preserves meaning that is independent of output routes and targets.
+Cerune IR preserves meaning that is independent of output routes and targets.
 
 Decisions such as the following are made after backend lowering begins:
 
@@ -119,7 +119,7 @@ Decisions such as the following are made after backend lowering begins:
 - instructions selected for target features;
 - assembly syntax and artifact format.
 
-Target-specific IR may remain an internal boundary of each backend. Primer does not require a universal machine IR shared by every target.
+Target-specific IR may remain an internal boundary of each backend. Cerune does not require a universal machine IR shared by every target.
 
 ## Adding a target
 
@@ -127,13 +127,13 @@ Adding a target preserves the following properties:
 
 - the target has a stable identity;
 - supported combinations of output routes and targets are explicit;
-- target-specific decisions do not enter Primer IR;
+- target-specific decisions do not enter Cerune IR;
 - unsupported combinations produce diagnostics;
 - target features have deterministic ordering and representation;
 - the same explicit conditions produce the same artifact.
 
 Adding a target does not grant new authority to an observation API. A target identifier is data that selects lowering conditions, not authority to execute external commands or mutate compiler state.
 
-Selection and execution of external assemblers, linkers, and compilers remain the responsibility of the consumer of Primer artifacts.
+Selection and execution of external assemblers, linkers, and compilers remain the responsibility of the consumer of Cerune artifacts.
 
 See [native code](native-code.en.md) for machine-code object and executable generation and observation.

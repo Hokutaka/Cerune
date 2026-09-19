@@ -1,8 +1,8 @@
-# Primer language reference
+# Cerune language reference
 
 [日本語](language.ja.md)
 
-This document defines the syntax and semantics of Primer v0.1.
+This document defines the syntax and semantics of Cerune v0.1.
 
 ## Grammar
 
@@ -127,7 +127,7 @@ Bindings are immutable by default. Only a binding declared with `mut` can be rea
 
 A type specifier is always required.
 
-```primer
+```cerune
 count: i64 = 42;
 single: f32 = 0.1 + 0.2;
 double: f64 = 0.1 + 0.2;
@@ -140,7 +140,7 @@ value: infer = count * 2;
 
 `string` is a UTF-8 string, written in double quotes. Empty strings (`""`) and Japanese text are supported.
 
-```primer
+```cerune
 mut text: string = "こんにちは";
 saved: infer = text;
 text = "こんばんは";
@@ -167,7 +167,7 @@ Supported escapes inside strings are:
 
 Concatenation, string indexing, character counts, ordering, and numeric conversions are not implemented. Strings do not implicitly convert to or from other types.
 
-`print` writes the contents unchanged and appends LF. In contrast, textual Primer IR and bytecode escape line breaks and control characters. Decoded values are kept distinct from the UTF-8 byte range (Span) of the original quoted spelling.
+`print` writes the contents unchanged and appends LF. In contrast, textual Cerune IR and bytecode escape line breaks and control characters. Decoded values are kept distinct from the UTF-8 byte range (Span) of the original quoted spelling.
 
 Strings are supported by every output route. LLVM and QBE require [CLI target selection](cli.en.md#llvm-target-selection); omitting it produces a source-located diagnostic before lowering, including strings in unused types, functions, and branches. Direct assembly supports Windows x64 and Linux x86-64; native objects require an explicit target. WAT uses the WebAssembly output host contract.
 
@@ -177,7 +177,7 @@ C emission uses read-only data retained until process exit, paired with a byte c
 
 `byte_len(text)` accepts one `string` and returns its stored UTF-8 byte count as `i64`. Its argument is evaluated once.
 
-```primer
+```cerune
 print(byte_len(""));          // 0
 print(byte_len("日本語"));    // 9
 print(byte_len("\0\r\n"));  // 3
@@ -195,7 +195,7 @@ NUL and line endings count as data. No Unicode normalization occurs. This does n
 
 `type` defines a named product type that groups several fields into one value. Types have nominal identity, so two types with the same fields are still distinct.
 
-```primer
+```cerune
 type Point {
     x: f64 = 0.0,
     y: f64,
@@ -210,11 +210,11 @@ print(point.x);
 
 Every field type is explicit and cannot use `infer`. A field without a default is required when constructing a value. Fields are named, so construction order may differ from definition order. Trailing commas are accepted.
 
-Explicit field expressions are evaluated in source order. Defaults for omitted fields are then evaluated in definition order. Primer IR exposes this order and whether each value was explicit or came from a default.
+Explicit field expressions are evaluated in source order. Defaults for omitted fields are then evaluated in definition order. Cerune IR exposes this order and whether each value was explicit or came from a default.
 
 `.` accesses a field and may be chained as in `segment.start.x`. Fields cannot be assigned directly. To make a change, construct a new value and reassign the whole `mut` binding.
 
-```primer
+```cerune
 mut point: Point = Point { x: 1.0, y: 2.0, };
 point = Point { x: 3.0, y: point.y, };
 ```
@@ -223,7 +223,7 @@ Reassigning the original binding after copying a product value into another bind
 
 The `{` immediately after an `if` or `while` condition starts its block. Parenthesize a construction expression when accessing one of its fields in a condition.
 
-```primer
+```cerune
 type Flags { enabled: bool, }
 
 if (Flags { enabled: true, }).enabled {
@@ -239,18 +239,18 @@ See [Named product type design](../design/product-types.en.md) for the detailed 
 
 A fixed array is a value containing a known number of boxes of the same type. `[i64; 4]` means an array with four `i64` boxes.
 
-```primer
+```cerune
 values: [i64; 4] = [2, 4, 6, 8];
 print(values[2]);
 ```
 
-The length is part of the type, so `[i64; 3]` and `[i64; 4]` are different types. Primer reports an error when a literal has the wrong number of elements or its element types differ. Empty array literals are not currently available because they provide no element type to infer.
+The length is part of the type, so `[i64; 3]` and `[i64; 4]` are different types. Cerune reports an error when a literal has the wrong number of elements or its element types differ. Empty array literals are not currently available because they provide no element type to infer.
 
-An index has type `i64`, and the first index is `0`. In the example above, `values[2]` reads the third value, `6`. A negative index or an index greater than or equal to the length stops execution in both the Primer VM and generated programs. Every backend leaves this bounds check visible in its artifact.
+An index has type `i64`, and the first index is `0`. In the example above, `values[2]` reads the third value, `6`. A negative index or an index greater than or equal to the length stops execution in both the Cerune VM and generated programs. Every backend leaves this bounds check visible in its artifact.
 
 An array is copied as one value. Reassigning the original `mut` binding after a copy does not change the earlier copy.
 
-```primer
+```cerune
 mut first: [i64; 2] = [10, 20];
 second: [i64; 2] = first;
 first = [30, 40];
@@ -259,7 +259,7 @@ print(second[0]); // 10
 
 An element type may be `bool`, `i8`, `u8`, `i16`, `u16`, `i32`, `u32`, `i64`, `u64`, `f32`, `f64`, `string`, a named product type, or another fixed array. A fixed array may also be used as a field of a product type.
 
-```primer
+```cerune
 type Point {
     x: i64,
     y: i64,
@@ -283,7 +283,7 @@ print(path.points[2].y);
 
 Fixed arrays may be nested directly. In `matrix[row][column]`, the two indices are checked in sequence.
 
-```primer
+```cerune
 matrix: [[i64; 3]; 2] = [[1, 2, 3], [4, 5, 6]];
 print(matrix[1][2]); // 6
 ```
@@ -298,15 +298,15 @@ See [Fixed array design](../design/fixed-arrays.en.md) for the detailed design a
 
 ## Modules and visibility
 
-```primer
-import "values.prim" as values;
+```cerune
+import "values.ceru" as values;
 item: values::Reading = values::reading(7);
 print(item.amount);
 ```
 
 Use external types and functions through `alias::name`. Imports precede definitions and statements. Definitions are private to their file unless marked `pub fn` or `pub type`. Public types expose all fields; public parameter/result types and fields cannot contain private types.
 
-Imported files allow only imports, types, and functions at top level. Loading executes no initialization and never invokes a dependency's `main`. Relative `.prim` paths resolve against the declaring file's directory, using `/` separators. Cycles, private access, duplicate aliases, and alias collisions with definitions or bindings are diagnosed. `import`, `as`, and `pub` are keywords.
+Imported files allow only imports, types, and functions at top level. Loading executes no initialization and never invokes a dependency's `main`. Relative `.ceru` paths resolve against the declaring file's directory, using `/` separators. Cycles, private access, duplicate aliases, and alias collisions with definitions or bindings are diagnosed. `import`, `as`, and `pub` are keywords.
 
 Re-exports, wildcards, imported variables, and mutable module state are unsupported. See the [rules and loading limits](../design/modules.en.md) and [executable examples](../../examples/modules/README.en.md).
 
@@ -314,7 +314,7 @@ Re-exports, wildcards, imported variables, and mutable module state are unsuppor
 
 `fn` defines a named computation. Every parameter and the return type are explicit.
 
-```primer
+```cerune
 fn add(left: i64, right: i64) -> i64 {
     return left + right;
 }
@@ -322,11 +322,11 @@ fn add(left: i64, right: i64) -> i64 {
 answer: i64 = add(20, 22);
 ```
 
-A value-returning function uses an explicit `return expression;`. A trailing expression is not an implicit result. Primer reports an error when it cannot prove that every path returns a value.
+A value-returning function uses an explicit `return expression;`. A trailing expression is not an implicit result. Cerune reports an error when it cannot prove that every path returns a value.
 
 A function without a value uses `-> void`. It may reach the end of its block or exit early with `return;`. A value-returning call is used as an expression, while a `void` call is a statement.
 
-```primer
+```cerune
 fn show(value: i64) -> void {
     print(value);
 }
@@ -340,13 +340,13 @@ Top-level executable statements receive a compiler-generated entrypoint. A progr
 
 Function parameters and results may use `bool`, `i8`, `u8`, `i16`, `u16`, `i32`, `u32`, `i64`, `u64`, `f32`, `f64`, `string`, named product types, and fixed arrays. Products and arrays are passed as values, so the received value and the caller's value do not share a mutable location. There is no fixed language-level parameter-count limit. Recursion and command-line arguments are not yet supported. Unsupported forms produce diagnostics instead of silently changing meaning.
 
-Primer IR and bytecode expose function IDs, parameter binding IDs, calls, and returns. Backend artifacts expose how those entities become function symbols, arguments, local storage, and ABI registers or memory. See [Function design](../design/functions.en.md) for details.
+Cerune IR and bytecode expose function IDs, parameter binding IDs, calls, and returns. Backend artifacts expose how those entities become function symbols, arguments, local storage, and ABI registers or memory. See [Function design](../design/functions.en.md) for details.
 
 ## Mutable bindings and reassignment
 
 A binding that needs to change is declared with `mut` before its name:
 
-```primer
+```cerune
 mut count: i64 = 40;
 count = count + 2;
 print(count);
@@ -356,26 +356,26 @@ print(count);
 
 Reassigning a binding without `mut` is a type-checking error:
 
-```primer
+```cerune
 count: i64 = 40;
 count = 42; // error
 ```
 
 The assigned value must have the type resolved when the binding was declared. With `infer`, inference happens only at the declaration:
 
-```primer
+```cerune
 mut value: infer = 1; // resolved as i64
 value = 2;            // OK
 value = 0.5;          // error
 ```
 
-Primer IR preserves initialization and reassignment as different statements. Bytecode likewise distinguishes initialization `store` from reassignment `assign`.
+Cerune IR preserves initialization and reassignment as different statements. Bytecode likewise distinguishes initialization `store` from reassignment `assign`.
 
 ## Conditionals, loops, and block scope
 
 `if` executes statements according to a `bool` condition. The `else` block is optional.
 
-```primer
+```cerune
 if value < 10 {
     print(value);
 } else {
@@ -387,7 +387,7 @@ A condition that is not `bool` is a type-checking error. An `if` is currently a 
 
 `while` repeats its body while its condition is `true`. The condition is evaluated before the body on every iteration, so a condition that starts as `false` executes the body zero times.
 
-```primer
+```cerune
 mut count: i64 = 0;
 
 while count < 3 {
@@ -400,7 +400,7 @@ The condition of a `while` must also be `bool`. A `while` is a statement and doe
 
 `for` groups a start statement, a `bool` continuation condition, an update statement, and a body. The start statement may declare a new binding or assign to an existing `mut` binding:
 
-```primer
+```cerune
 mut sum: i64 = 0;
 
 for (mut i: i64 = 0; i < 6; i = i + 1) {
@@ -414,7 +414,7 @@ A binding declared by the start statement is visible in the condition, update, a
 
 `break;` exits the innermost loop. In a `while`, `continue;` proceeds directly to its condition. In a `for`, it proceeds to the update and then the condition. Neither may be used outside a loop.
 
-```primer
+```cerune
 while value < 10 {
     value = value + 1;
 
@@ -428,13 +428,13 @@ while value < 10 {
 }
 ```
 
-Primer currently has no labeled `break` or `continue` for naming an outer loop.
+Cerune currently has no labeled `break` or `continue` for naming an outer loop.
 
 Each braced block creates a new scope. Bindings declared inside a block are not visible outside it. An inner block can read an outer binding and can reassign it when it is `mut`.
 
 An inner block may declare a distinct binding with the same name as an outer binding.
 
-```primer
+```cerune
 mut value: i64 = 1;
 
 if true {
@@ -446,11 +446,11 @@ if true {
 print(value);           // the i64 value
 ```
 
-Primer IR assigns deterministic IDs to bindings so references remain unambiguous when names are reused. Structured `if`, `while`, `for`, `break`, and `continue` statements remain visible in Primer IR. A `for` keeps its initializer, condition, body, and update as distinct parts. During lowering into Bytecode and backend IRs, structured loops become condition, body, update when applicable, and exit paths. `break` and `continue` become jumps to the correct path of their target loop.
+Cerune IR assigns deterministic IDs to bindings so references remain unambiguous when names are reused. Structured `if`, `while`, `for`, `break`, and `continue` statements remain visible in Cerune IR. A `for` keeps its initializer, condition, body, and update as distinct parts. During lowering into Bytecode and backend IRs, structured loops become condition, body, update when applicable, and exit paths. `break` and `continue` become jumps to the correct path of their target loop.
 
 ## Types
 
-Primer v0.1 has one boolean type, ten numeric types, a string type, fixed arrays, and user-defined named product types:
+Cerune v0.1 has one boolean type, ten numeric types, a string type, fixed arrays, and user-defined named product types:
 
 ```text
 bool
@@ -474,7 +474,7 @@ Backends map supported types to their own representations during lowering. Strin
 For example, the C backend maps them as follows:
 
 ```text
-Primer    C
+Cerune    C
 bool      bool
 i8        int64_t
 u8        int64_t
@@ -507,14 +507,14 @@ Range and storage width are separate. All integer types currently use 64-bit loc
 
 `bool` has two values, `true` and `false`. The `!` operator negates a boolean value.
 
-```primer
+```cerune
 enabled: bool = true;
 disabled: bool = !enabled;
 ```
 
 `==` and `!=` compare numbers, booleans, or strings of the same type. Whole-array and whole-product comparison is not supported. Numeric types additionally support `<`, `<=`, `>`, and `>=`. A comparison always produces `bool`.
 
-```primer
+```cerune
 same: bool = enabled == true;
 small: bool = 1 + 2 < 4;
 different: bool = 0.1f32 != 0.2f32;
@@ -533,7 +533,7 @@ Evaluate the left operand once, then decide whether to evaluate the right operan
 | `left && right` | The left operand is `true` | `false` |
 | `left \|\| right` | The left operand is `false` | `true` |
 
-```primer
+```cerune
 count: i64 = 0;
 print(count != 0 && 12 / count > 2); // false; the division is not executed
 values: [i64; 2] = [4, 9];
@@ -547,15 +547,15 @@ Name resolution and type checking still apply to both operands. `false && missin
 
 Precedence from strongest to weakest is unary operations, multiplication/division/remainder, addition/subtraction, shifts, ordering comparisons, equality comparisons, `&`, `^`, `|`, `&&`, then `||`. Thus `a < b && c == d || ready` means `((a < b) && (c == d)) || ready`. Repeated operators associate to the left; parentheses change grouping. `a < b < c` is not a range comparison.
 
-Logical operators work anywhere a `bool` expression is accepted, including bindings, function arguments/results, array elements, and product fields, not only conditions. The [short-circuit example](../../examples/short_circuit.prim) includes array traversal.
+Logical operators work anywhere a `bool` expression is accepted, including bindings, function arguments/results, array elements, and product fields, not only conditions. The [short-circuit example](../../examples/short_circuit.ceru) includes array traversal.
 
-Primer IR retains `and.short_circuit.bool` and `or.short_circuit.bool`. Lowering uses conditional jumps in bytecode, `&&`/`||` in C, branches in LLVM/QBE/Windows x86-64, and a Boolean-producing `if` in WAT. It never evaluates the right operand eagerly before selecting a result.
+Cerune IR retains `and.short_circuit.bool` and `or.short_circuit.bool`. Lowering uses conditional jumps in bytecode, `&&`/`||` in C, branches in LLVM/QBE/Windows x86-64, and a Boolean-producing `if` in WAT. It never evaluates the right operand eagerly before selecting a result.
 
 ## Numeric literals
 
 Integer literals use an explicit suffix if present, otherwise the expected integer type from context, and default to `i64` only when no type information is available.
 
-```primer
+```cerune
 x: i64 = 42;
 ```
 
@@ -563,7 +563,7 @@ An integer literal remains a sequence of decimal digits until its type is known.
 
 Integer suffixes are `i8`, `u8`, `i16`, `u16`, `i32`, `u32`, `i64`, and `u64`. Unsuffixed numbers receive expected types from declarations, assignments, arguments, returns, fields, and array elements. Without an outer expected type, already typed values in the same arithmetic expression supply the type.
 
-```primer
+```cerune
 count: i32 = 4;
 first: infer = count + 1;
 second: infer = (1 + 2) + count;
@@ -577,23 +577,23 @@ An array declared with `infer` still derives its element type from the first ele
 
 Floating-point literals without a suffix are contextually typed when an explicit floating-point type is available.
 
-```primer
+```cerune
 a: f32 = 0.1 + 0.2;
 b: f64 = 0.1 + 0.2;
 ```
 
-That distinction is resolved in Primer IR before backend lowering.
+That distinction is resolved in Cerune IR before backend lowering.
 
 For example, the C backend may emit:
 
 ```c
-float primer_a = (0.1f + 0.2f);
-double primer_b = (0.1 + 0.2);
+float cerune_a = (0.1f + 0.2f);
+double cerune_b = (0.1 + 0.2);
 ```
 
 When no expected floating-point type is available, an unsuffixed floating-point literal defaults to `f64`.
 
-```primer
+```cerune
 x: infer = 0.1 + 0.2;
 ```
 
@@ -601,14 +601,14 @@ Here `x` is inferred as `f64`.
 
 A literal suffix can explicitly select its type:
 
-```primer
+```cerune
 a: infer = 0.1f32 + 0.2f32;
 b: infer = 0.1f64 + 0.2f64;
 ```
 
 Scientific notation is also accepted for floating-point literals:
 
-```primer
+```cerune
 x: f64 = 1.5e-3;
 ```
 
@@ -630,27 +630,27 @@ f64 op f64 -> f64
 
 Integer `+`, `-`, `*`, and signed integer unary `-` stop execution when their result is outside that integer type's range. They do not silently wrap from one end of the range to the other. Integer division by zero and division of the minimum signed integer value by `-1` also stop execution. Unary minus is rejected for unsigned `u8`, `u16`, and `u32`, including `-0u8` and `-0u32`. Integer division rounds toward zero.
 
-The Primer VM diagnoses the failing operation kind, type, bytecode instruction index, and source location. Generated C, LLVM IR, QBE IR, WebAssembly Text, and Windows x86-64 assembly retain corresponding checks or traps, making the enforcement point observable.
+The Cerune VM diagnoses the failing operation kind, type, bytecode instruction index, and source location. Generated C, LLVM IR, QBE IR, WebAssembly Text, and Windows x86-64 assembly retain corresponding checks or traps, making the enforcement point observable.
 
-Primer v0.1 performs no implicit numeric conversion.
+Cerune v0.1 performs no implicit numeric conversion.
 
 For example, the following expression is a type error because its operands are `i64` and `f64`:
 
-```primer
+```cerune
 x: infer = 1 + 0.1;
 ```
 
 Explicit binding types are checked against the resolved expression type:
 
-```primer
+```cerune
 x: f32 = 0.1 + 0.2;
 ```
 
 The `f32` binding supplies the expected type to unsuffixed floating-point literals, so the expression is evaluated as `f32`.
 
-This decision is recorded in Primer IR and is not recomputed by individual backends.
+This decision is recorded in Cerune IR and is not recomputed by individual backends.
 
-Comparison operands must also have the same type. Primer IR exposes the operand type separately from the resulting `bool` type.
+Comparison operands must also have the same type. Cerune IR exposes the operand type separately from the resulting `bool` type.
 
 ## Remainder and bit operations
 
@@ -676,15 +676,15 @@ Signed bit operations use two's complement semantics. Signed right shift preserv
 
 These binary operations evaluate the left operand and then the right operand, each once. If the left fails, the right is not executed. `&` and `|` do not short-circuit: `0u8 & (1u8 % 0)` fails. An enclosing `&&` or `||` can still skip an entire right operand containing these operations.
 
-Comparisons bind more tightly than bit operations; write `(flags & mask) != 0` to test bits. See [bit flags](../../examples/bit_flags.prim), [ring buffer](../../examples/ring_buffer.prim), and [subset sum](../../examples/subset_sum_bits.prim).
+Comparisons bind more tightly than bit operations; write `(flags & mask) != 0` to test bits. See [bit flags](../../examples/bit_flags.ceru), [ring buffer](../../examples/ring_buffer.ceru), and [subset sum](../../examples/subset_sum_bits.ceru).
 
-Primer IR and bytecode retain the operation and original kind, such as `rem.u8`, `bit_and.u8`, `bit_or.u8`, `bit_xor.u8`, `bit_not.u8`, `shl.checked.u8`, and `shr.u8`. VM failures retain the source `NodeId` and `Span`. Out-of-range results, invalid shift counts, and a zero remainder divisor have distinct diagnoses.
+Cerune IR and bytecode retain the operation and original kind, such as `rem.u8`, `bit_and.u8`, `bit_or.u8`, `bit_xor.u8`, `bit_not.u8`, `shl.checked.u8`, and `shr.u8`. VM failures retain the source `NodeId` and `Span`. Out-of-range results, invalid shift counts, and a zero remainder divisor have distinct diagnoses.
 
 ## Explicit numeric conversions
 
 Numeric conversion has two equivalent spellings:
 
-```primer
+```cerune
 value: i64 = 42;
 compact: infer = i64(value);
 explicit: infer = convert<i64>(value);
@@ -692,7 +692,7 @@ explicit: infer = convert<i64>(value);
 
 All pairs among `i8`, `u8`, `i16`, `u16`, `i32`, `u32`, `i64`, `u64`, `f32`, and `f64` support explicit conversion. Conversion succeeds only if the destination preserves the value; otherwise execution stops. It does not truncate, round, or wrap. Conversions involving `bool`, arrays, or product types are not supported.
 
-```primer
+```cerune
 count: u32 = 3000000000;
 wide: i64 = i64(count);
 back: u32 = convert<u32>(wide);
@@ -713,7 +713,7 @@ Both spellings evaluate the expression inside parentheses exactly once. The dest
 | `f64` to `f32` | The value is exactly representable and is not NaN; infinity and zero signs are preserved |
 | Same type | The original value is kept, including NaN payload and sign bits |
 
-```primer
+```cerune
 print(f64(1 / 2));       // 0: integer division happens first
 print(f64(1) / f64(2));  // 0.5: floating-point division
 print(i32(3.0));         // 3
@@ -732,9 +732,9 @@ Floating-point conversion failures record source/destination types, reason, and 
 
 If input evaluation fails, the diagnostic points to that operation. For example, `i64(1 / 0)` stops at division before conversion is reached.
 
-Primer IR retains source/destination types, input, original spelling, and source location. Both spellings use the same operation kind; spelling is origin information. Integer-only conversions retain `ConvertInteger` and bytecode such as `convert.checked i32 -> u32`. Conversions involving floats use `ConvertNumeric` and `convert.exact i64 -> f64`. Both instructions retain the corresponding Primer IR `NodeId` and `Span`.
+Cerune IR retains source/destination types, input, original spelling, and source location. Both spellings use the same operation kind; spelling is origin information. Integer-only conversions retain `ConvertInteger` and bytecode such as `convert.checked i32 -> u32`. Conversions involving floats use `ConvertNumeric` and `convert.exact i64 -> f64`. Both instructions retain the corresponding Cerune IR `NodeId` and `Span`.
 
-C, LLVM, QBE, WAT, and Windows x86-64 retain integer values in 64-bit storage and check narrower integer destinations. Floating-point conversions retain a typed operation in backend IR and generate checks before accepting a changed representation. Same-type conversions need no native instruction; they remain explicit in Primer IR and bytecode. Integer-to-`i64` conversions also need no extra native operation; float-to-`i64` conversions still require checks.
+C, LLVM, QBE, WAT, and Windows x86-64 retain integer values in 64-bit storage and check narrower integer destinations. Floating-point conversions retain a typed operation in backend IR and generate checks before accepting a changed representation. Same-type conversions need no native instruction; they remain explicit in Cerune IR and bytecode. Integer-to-`i64` conversions also need no extra native operation; float-to-`i64` conversions still require checks.
 
 Functions and types cannot be defined with the built-in type names `bool`, `i8`, `u8`, `i16`, `u16`, `i32`, `u32`, `i64`, `u64`, `f32`, `f64`, or `string`; these are diagnosed at the definition. `convert` is not a keyword: ordinary calls such as `convert(value)` and comparisons such as `convert < limit` remain available. The `convert<type>(expression)` form is a built-in conversion whose meaning does not change when a user function named `convert` exists. This form does not introduce user-defined generic functions.
 
@@ -742,7 +742,7 @@ Functions and types cannot be defined with the built-in type names `bool`, `i8`,
 
 `print(expression);` accepts the current boolean and numeric types, plus `string` in the VM and C emission. Select a field of a named product or an element of a fixed array before printing it.
 
-Primer keeps floating-point output precise enough to expose the behavior being observed.
+Cerune keeps floating-point output precise enough to expose the behavior being observed.
 
 Negative zero is printed as `-0`, preserving its sign rather than normalizing it to `0`.
 
@@ -759,15 +759,15 @@ Significant digits include the integer part, not just digits after the decimal p
 
 After rounding to the significant-digit limit, a decimal exponent below `-4` or at least the precision selects scientific notation using `e`. Other values use fixed notation. Exponents include a sign and at least two digits. For example, `1e-20` prints as `9.9999999999999995e-21`, not `0`. This means approximately ten to the power minus twenty; the longer digits expose the approximation stored in `f64`.
 
-Printing does not change the value. `1.0 + 1e-20 == 1.0` is `true` because of arithmetic rounding, not because printing discards small values. See the [small-values example](../../examples/small_values.prim).
+Printing does not change the value. `1.0 + 1e-20 == 1.0` is `true` because of arithmetic rounding, not because printing discards small values. See the [small-values example](../../examples/small_values.ceru).
 
-The VM formats values by these rules. C, LLVM, QBE, and Windows x86-64 generated code uses `printf` with `%.9g` and `%.17g`. WAT passes numeric values unchanged to host imports `primer.print_f32` and `primer.print_f64`; the host must provide the same formatting policy.
+The VM formats values by these rules. C, LLVM, QBE, and Windows x86-64 generated code uses `printf` with `%.9g` and `%.17g`. WAT passes numeric values unchanged to host imports `cerune.print_f32` and `cerune.print_f64`; the host must provide the same formatting policy.
 
 The VM prints infinities as `inf` and `-inf`, and NaN as `NaN`. Generated-code spellings of special values depend on the target runtime. Decimal `print` output does not distinguish NaN payloads.
 
 For example, an `f32` calculation such as:
 
-```primer
+```cerune
 x: f32 = 0.1 + 0.2;
 print(x);
 ```
