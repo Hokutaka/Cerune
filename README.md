@@ -4,142 +4,89 @@
 
 日本語 | [English](README.en.md)
 
-Ceruneは、コンパイラによる変換を観測可能にするための実験用プログラミング言語です。
+Ceruneは、型・中間表現・生成コードまで計算の変換を追える実験用言語です。可観測性を重視し、観測と内部への干渉を区別します。
 
-旧名Primerからの[命名と移行の案内](docs/design/naming.ja.md)では、`.ceru`・`.ceir`などの対応と既存ツールの更新方法を説明しています。
+## まず試す
 
-計算結果だけでなく、「どの型で計算し、どんなコードへ変換されたか」を調べられることを重視します。意味と型を解決した共通のCerune IR（中間表現）から、各出力先のコードやbytecodeを生成します。洗練された実装と可観測性の両立を目指し、観測することと内部を書き換えることは区別します。
-
-## まず動かす
-
-Rustの開発環境（rustupとCargo）が必要です。リポジトリを取得し、そのルートでCLIをインストールします。
+Rust（rustup・Cargo）が必要です。
 
 ```sh
 git clone https://github.com/Hokutaka/Cerune.git
 cd Cerune
 cargo install --path .
+cerune run examples/floating_point.ceru
 ```
 
-[examples/floating_point.ceru](examples/floating_point.ceru)は、同じ足し算を異なる型で行う例です。
+同じ足し算でも、型によって結果が変わります。コメントは実行結果です。
 
 ```cerune
 a: f32 = 0.1 + 0.2;
 b: f64 = 0.1 + 0.2;
 c: infer = 0.1 + 0.2;
 
-print(a);
-print(b);
-print(c);
+print(a); // 0.300000012
+print(b); // 0.30000000000000004
+print(c); // 0.30000000000000004（inferでf64に推論）
 ```
-
-```sh
-cerune run examples/floating_point.ceru
-```
-
-Cerune VMでの実行結果は次のとおりです。
-
-```text
-0.300000012
-0.30000000000000004
-0.30000000000000004
-```
-
-`f32`と`f64`では数値を表せる精度が違います。`infer`は型推論を明示する指定で、この例の`c`は`f64`になります。
-
-開発中は`cerune`の代わりに`cargo run --quiet --`を使うと、再インストールせずに変更後のコードを実行できます。
-
-## 計算と変換を観測する
-
-[モジュール](docs/design/modules.ja.md)で型・関数を別ファイルへ分け、明示的なimport・名前空間・公開範囲を使えます。[分割版と単一ファイル版のexample](examples/modules/README.md)を比較できます。
-
-言語の検査失敗は全出力経路で停止理由・ソース位置・停止前の出力を照合できます。[実行時診断](docs/design/runtime-diagnostics.ja.md)と[意図した停止の4例](examples/runtime_failures/README.md)を参照してください。LLVMは検査付きの数値処理にも明示ターゲットが必要で、WATの実行ホストには診断出力用の`cerune.write_error_byte`を追加します。
-
-同じソースを、実行するだけでなく中間表現や生成コードとして確認できます。
 
 ```sh
 cerune emit-ir examples/floating_point.ceru
-cerune emit-c examples/floating_point.ceru
+cerune emit-c examples/floating_point.ceru -o floating_point.c
 ```
 
-`emit-ir`では解決済みの型と演算を、`emit-c`ではそれらをCでどう表現したかを読めます。バックエンドは共通のCerune IRを受け取り、ソースの意味を解釈し直しません。
+開発中は`cerune`を`cargo run --quiet --`に置き換えられます。
 
-テキストを生成する`emit-*`は標準出力へ書き出します。ファイルに残す場合は、例えば`cerune emit-c examples/floating_point.ceru -o floating_point.c`と指定します。バイナリを生成する`emit-obj`は`--target`と`-o`が必須です。構文や型の検証だけなら`cerune check examples/floating_point.ceru`を使います。
+## 機能
 
-公開している観測点はCerune IRと出力成果物です。バックエンド固有のRust IRは内部の変換境界として扱います。詳しくは[コンパイラ設計](docs/design/architecture.ja.md)と[可観測性の契約](docs/design/observability.ja.md)を参照してください。
-
-## 現在できること
-
-- **型と変数:** 静的型付け。`bool`、`i8`・`u8`・`i16`・`u16`・`i32`・`u32`・`i64`・`u64`、`f32`・`f64`、`string`。型宣言、`infer`、不変な束縛と`mut`による可変な束縛。
-- **データ構造:** 名前付き構造体（product type）、フィールドの既定値と参照、入れ子にできる固定長配列。値コピーと配列要素の更新。
-- **関数と制御:** 型付き関数、`void`、明示的な`return`。トップレベル実行文または`fn main() -> void`。`if` / `else`、`while`、`for`、`break` / `continue`。
-- **演算:** 算術、整数の剰余とビット演算、比較、`!`、短絡評価する`&&`・`||`。
-- **明示変換:** `f64(value)`と`convert<f64>(value)`など、同じ意味の二つの表記。実装済みの数値型の間で、値を保てる場合だけ変換。
-- **出力と実行:** `print(expr);`、Cerune IRと各出力先の成果物の生成、Cerune VMによる実行。
-
-整数の桁あふれ、不正な整数除算、配列の範囲外参照、値を保てない変換では実行を停止します。暗黙の数値変換はしません。通常の浮動小数点計算には丸めがあります。
-
-文字列はUTF-8の不変な値で、表示・等値比較・UTF-8バイト数の取得・関数やデータ構造での受け渡しに対応します。すべての出力経路で使用できます。LLVMとQBEでは実行環境を`--target`で明示します。[LLVMのターゲット指定](docs/reference/cli.ja.md#llvmのターゲット指定)はWindows x64 / Linux x86-64に対応します。QBEはLinux x86-64、直接アセンブリはWindows x64 / Linux x86-64、WATはWebAssemblyの出力用ホスト関数を使います。表現の違いは[文字列の設計](docs/design/strings.ja.md)に記載しています。連結や文字列の添字参照は未実装です。
-
-動的な長さの配列、再帰、失敗からの回復、明示的な丸め・切り捨て操作は未実装です。現在の生成先では小さい整数型も64ビット領域に格納し、値の範囲を検査します。
-
-`u64`は0〜18446744073709551615を扱います。[設計と経路ごとの表現](docs/design/u64.ja.md)、[実行例](examples/u64_values.ceru)を参照してください。
-
-### 出力先
-
-| コマンド | 成果物 | その後の処理 |
-| --- | --- | --- |
-| `emit-c` | C（`.c`） | GCC / Clangなどでコンパイル |
-| `emit-llvm` | LLVM IR（`.ll`） | LLVM / Clangでコンパイル |
-| `emit-qbe` | QBE IR（`.ssa`） | QBEで処理 |
-| `emit-wat` | WebAssembly Text（`.wat`） | WebAssembly用ツールとホストで実行 |
-| `emit-asm` | Windows/Linux x86-64アセンブリ（`.s`） | アセンブル・リンク |
-| `emit-obj` | 自前符号化したELF/COFF（`.o` / `.obj`） | 外部リンカでリンク。`--target`と`-o`は必須 |
-| `emit-bytecode` | Cerune bytecode（`.cebc`） | 命令列を確認。VM実行はソースに対する`run`を使用 |
-
-Ceruneは成果物の生成までを担当します。外部ツールの選択、対象CPUや最適化設定、測定方法は呼び出す側が決定します。詳細は[出力経路とターゲット](docs/design/targets.ja.md)を参照してください。
-
-Linux ASMと機械語までの観測は[ネイティブコードの設計と実行手順](docs/design/native-code.ja.md)を参照してください。
-
-## サンプルと文書
-
-| 分類 | サンプル |
+| 分類 | 対応内容 |
 | --- | --- |
-| 基本 | [小さな数値の表示](examples/small_values.ceru)、[短絡評価](examples/short_circuit.ceru) |
-| データ構造 | [リングバッファ](examples/ring_buffer.ceru)、[構造体と配列の受け渡し](examples/function_values.ceru) |
-| 数値計算 | [測定値の平均・分散](examples/measurement_statistics.ceru)、[直線の学習](examples/linear_regression.ceru) |
-| アルゴリズム | [最短経路](examples/shortest_paths.ceru)、[部分和のビット集合](examples/subset_sum_bits.ceru) |
+| 整数 | `i8`・`i16`・`i32`・`i64`、`u8`・`u16`・`u32`・`u64` |
+| その他の型 | `bool`、`f32`・`f64`、不変なUTF-8の`string` |
+| 変数・演算 | 静的型付け、`infer`、`mut`、算術・比較・ビット演算、短絡評価、明示的な数値変換 |
+| データ構造 | 構造体、固定長配列、入れ子、値コピー、配列要素の更新 |
+| 関数・制御 | 型付き関数、`return`、`if` / `else`、`while`・`for`、`break` / `continue` |
+| モジュール | 明示的なimport、名前空間、`pub`による公開範囲 |
+| 文字列 | 表示、等値比較、UTF-8バイト数、関数・配列・構造体での受け渡し |
+| 診断 | 停止理由、ソース位置、停止前の出力を各経路で照合 |
 
-[サンプル一覧](examples/README.md)から、ほかの例も探せます。リポジトリのルートからまとめて実行できます。
+**計算の規則：** 暗黙の数値変換はありません。整数の桁あふれ、不正な整数除算、範囲外参照、値を保てない変換では停止します。浮動小数点計算には丸めがあります。
 
-PowerShell:
+**未実装：** 再帰、動的配列、文字列の連結・添字参照、失敗からの回復、明示的な丸め・切り捨て。
 
-```powershell
-.\scripts\run-examples.ps1
-```
+## 実行と出力
 
-WSL / Bash（WSL側にもRustの開発環境が必要です）:
+共通のCerune IRから各成果物を生成します。コンパイル・リンク用の外部ツールは利用側で選びます。
 
-```bash
-bash scripts/run-examples.sh
-bash scripts/test.sh
-```
+| コマンド | 結果・成果物 | 用途・対象 |
+| --- | --- | --- |
+| `check` / `run` | 構文・型検査 / VM実行 | Ceruneソース（`.ceru`） |
+| `emit-ir` | Cerune IR（`.ceir`） | 型・演算の観測 |
+| `emit-bytecode` | bytecodeテキスト（`.cebc`） | 命令列の観測 |
+| `emit-c` | C（`.c`） | GCC / Clangなど |
+| `emit-llvm` | LLVM IR（`.ll`） | LLVM / Clang、Windows / Linux x86-64 |
+| `emit-qbe` | QBE IR（`.ssa`） | QBE、Linux x86-64 |
+| `emit-wat` | WebAssembly Text（`.wat`） | WebAssembly用ツールとホスト |
+| `emit-asm` | アセンブリ（`.s`） | Windows / Linux x86-64 |
+| `emit-obj` | 自前符号化したELF / COFF（`.o` / `.obj`） | 外部リンカ。`--target`・`-o`必須 |
 
-`run-examples`はサンプルの実行結果を表示します。PowerShellでは`-Pattern "matrix*.ceru"`、Bashでは`--pattern 'matrix*.ceru'`で対象を絞れます。`test.sh`はfmt・clippy・全テストを実行し、期待する結果との照合も行います。サンプルのテストだけなら`cargo test --test examples`を使います。
+テキストは標準出力へ、`-o`でファイルへ保存します。LLVM・QBEの文字列出力とLLVMの検査付き数値演算には`--target`が必要です。WATは出力・診断用のホスト関数を使います。
 
-`.sh`側のビルド先は既定で`target/unix`です。Windowsの生成物とは分離し、`CARGO_TARGET_DIR`が指定されていればそちらを使います。
+## サンプルと開発
 
-- [言語リファレンス](docs/reference/language.ja.md): 現在の構文、型、演算、変換の規則。
-- [言語機能と今後の順序](docs/design/language-roadmap.ja.md): 実装済み機能、追加候補、GPU計算を検討する際の契約。
-- [CLIリファレンス](docs/reference/cli.ja.md): コマンドとオプション。
-- [文書一覧](docs/README.md): 設計判断を記録する`docs/design/`と、現在の仕様を記録する`docs/reference/`の日英索引。
+| 操作 | コマンド |
+| --- | --- |
+| サンプルを一括実行（PowerShell） | `.\scripts\run-examples.ps1` |
+| サンプルを一括実行（WSL / Bash） | `bash scripts/run-examples.sh` |
+| サンプルの期待値を検証 | `cargo test --test examples` |
+| fmt・Clippy・全テスト（WSL / Bash） | `bash scripts/test.sh` |
 
-## 関連ツール
+WSL側にもRustが必要です。`.sh`のビルド先は既定で`target/unix`です。
 
-- [Tint\*](https://github.com/Hokutaka/Tint-St.): ソースと生成された表現を並べて観察するための開発・観察環境。
-- [Whitebase](https://github.com/Hokutaka/Whitebase): Rust・C++・Assemblyの組み込み演算を実行・測定・比較する実験環境。Ceruneの生成物との連携は未実装です。
+## 文書・関連ツール
 
-言語の意味とコンパイル処理はCeruneが担当します。Whitebaseとの連携では、生成物を使った実験を利用側に分ける方針です。現在の実装と連携時の境界は[ツールの責務](docs/design/architecture.ja.md#ツールの責務)を参照してください。
+- [型・用途別サンプル](examples/README.md) · [言語仕様](docs/reference/language.ja.md) · [CLI](docs/reference/cli.ja.md)
+- [設計文書](docs/README.md) · [今後の計画](docs/design/language-roadmap.ja.md) · [Primerからの移行](docs/design/naming.ja.md)
+- [Tint\*](https://github.com/Hokutaka/Tint-St.)：ソースと生成表現を並べて観察する環境。
+- [Whitebase](https://github.com/Hokutaka/Whitebase)：Rust・C++・Assemblyの演算を測定・比較する環境。Ceruneとの連携は未実装。
 
-## ライセンス
-
-[MIT License](LICENSE)の条件で公開しています。
+[MIT License](LICENSE)
