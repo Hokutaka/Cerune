@@ -792,7 +792,7 @@ Functions and types cannot be defined with the built-in type names `bool`, `i8`,
 
 ## Output
 
-`print(expression);` accepts the current boolean and numeric types, plus `string` in the VM and C emission. Select a field of a named product or an element of a fixed array before printing it.
+`print(expression);` accepts booleans, numbers, and `string` across all routes. Print product fields or fixed-array elements individually; extract sum-type payloads with `match` before printing them.
 
 Cerune keeps floating-point output precise enough to expose the behavior being observed.
 

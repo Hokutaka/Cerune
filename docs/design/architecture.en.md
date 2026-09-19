@@ -106,20 +106,21 @@ u16
 i32
 u32
 i64
+u64
 f32
 f64
 string
-named product types
+named product types (including expanded sum types)
 fixed arrays
 ```
 
 `infer` is resolved before Cerune IR is produced and therefore does not appear as a runtime or backend type.
 
-The AST, semantic model, Cerune IR, and bytecode share `IntegerType`, with `I8`, `U8`, `I16`, `U16`, `I32`, `U32`, and `I64` kinds exposing names, signedness, bit widths, and bounds. VM values retain their integer kind; instructions check type agreement and result ranges.
+The AST, semantic model, Cerune IR, and bytecode share `IntegerType`, with `I8`, `U8`, `I16`, `U16`, `I32`, `U32`, `I64`, and `U64` kinds exposing names, signedness, bit widths, and bounds. VM values retain their integer kind; instructions check type agreement and result ranges.
 
 Unsuffixed floating-point literals are also resolved before backend lowering. A backend does not need to repeat contextual type inference.
 
-Integer literals retain their decimal digits in lexer tokens and the AST. Semantic analysis checks the range against the expected integer type, and construction of Cerune IR converts the literal into a resolved value. This prevents the lexer's `i64` range from constraining future integer types.
+Integer literals retain their decimal digits in lexer tokens and the AST. Semantic analysis checks the range against the expected integer type, and construction of Cerune IR converts the literal into a resolved value. This also permits `u64` literals above the maximum `i64` value.
 
 The integer conversion spellings `i32(value)` and `convert<i32>(value)` resolve to the same `ConvertInteger`, with original spelling retained as `ConversionSyntax`. The destination does not retype the input, which is evaluated once. All pairs of the eight implemented integer types are supported. Out-of-range conversion is a distinct VM error from arithmetic overflow. Bytecode conversion instructions retain both integer kinds and source origin.
 

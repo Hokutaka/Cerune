@@ -29,9 +29,9 @@ Cerune prioritizes explaining a computation's meaning and its transformation int
 | Bindings and conversions | Immutable by default, `mut`, explicit `infer`, `T(value)` and `convert<T>(value)` | `infer` is not a runtime type; conversions do not request truncation or saturation | [integer_conversions](../../examples/integer_conversions.ceru) |
 | Sum types | `enum` payload variants, exhaustive `match` | No guards, match expressions, or generic Option/Result | [sum_lookup](../../examples/sum_lookup.ceru) |
 | Compile-time constants | Typed `const`, dependency evaluation, `pub const` | No function calls, block-local declarations, or names in array type lengths | [constants](../../examples/constants.ceru) |
-| Modules | Explicit imports, namespaces, function/type visibility | Cycles/private access diagnosed; no re-exports, module variables, or package distribution | [modules](../../examples/modules/README.en.md) |
+| Modules | Explicit imports, namespaces, function/type/constant visibility | Cycles/private access diagnosed; no re-exports, module variables, or package distribution | [modules](../../examples/modules/README.en.md) |
 
-The [example type tables](../../examples/README.en.md) list ranges and applications. Whole-array and whole-product printing and equality are not implemented.
+The [example type tables](../../examples/README.en.md) list ranges and applications. Whole-array, whole-product, and whole-sum printing and equality are not implemented.
 
 ## Separate language features from output routes
 
