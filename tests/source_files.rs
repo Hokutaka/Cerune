@@ -144,6 +144,35 @@ fn named_ir_and_annotations_keep_file_ids_without_embedding_paths() {
 }
 
 struct Workspace(PathBuf);
+
+#[test]
+fn simultaneous_source_workspaces_do_not_share_files_even_with_the_same_clock_value() {
+    let barrier = std::sync::Arc::new(std::sync::Barrier::new(16));
+    let handles: Vec<_> = (0..16)
+        .map(|index| {
+            let barrier = barrier.clone();
+            std::thread::spawn(move || {
+                barrier.wait();
+                let workspace = Workspace::at_stamp(0);
+                fs::write(workspace.0.join("marker"), index.to_string()).unwrap();
+                (workspace, index)
+            })
+        })
+        .collect();
+    let workspaces: Vec<_> = handles
+        .into_iter()
+        .map(|handle| handle.join().unwrap())
+        .collect();
+    let paths: std::collections::BTreeSet<_> = workspaces.iter().map(|(w, _)| &w.0).collect();
+    assert_eq!(paths.len(), 16);
+    for (workspace, index) in &workspaces {
+        assert_eq!(
+            fs::read_to_string(workspace.0.join("marker")).unwrap(),
+            index.to_string()
+        );
+    }
+}
+
 impl Workspace {
     fn new() -> Self {
         crash_dialogs::suppress();
@@ -151,12 +180,24 @@ impl Workspace {
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap()
             .as_nanos();
-        let path = std::env::temp_dir().join(format!(
-            "primer-source-files-{}-{stamp}",
-            std::process::id()
-        ));
-        fs::create_dir(&path).unwrap();
-        Self(path)
+        Self::at_stamp(stamp)
+    }
+    fn at_stamp(stamp: u128) -> Self {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        static NEXT: AtomicUsize = AtomicUsize::new(0);
+        // 同じ時刻の並列テストも分離し、既存ディレクトリを再利用しません。
+        loop {
+            let id = NEXT.fetch_add(1, Ordering::Relaxed);
+            let path = std::env::temp_dir().join(format!(
+                "primer-source-files-{}-{stamp}-{id}",
+                std::process::id()
+            ));
+            match fs::create_dir(&path) {
+                Ok(()) => return Self(path),
+                Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => continue,
+                Err(error) => panic!("create test workspace: {error}"),
+            }
+        }
     }
     fn run(&self, command: &mut Command, label: &str) -> Output {
         process::bounded_output(command, &self.0, label, Duration::from_secs(30)).unwrap()

@@ -15,10 +15,24 @@ impl Workspace {
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap()
             .as_nanos();
-        let path =
-            std::env::temp_dir().join(format!("primer-modules-{}-{stamp}", std::process::id()));
-        fs::create_dir(&path).unwrap();
-        Self(path)
+        Self::at_stamp(stamp)
+    }
+    fn at_stamp(stamp: u128) -> Self {
+        use std::sync::atomic::{AtomicUsize, Ordering};
+        static NEXT: AtomicUsize = AtomicUsize::new(0);
+        // 同じ時刻の並列テストも分離し、既存ディレクトリを再利用しません。
+        loop {
+            let id = NEXT.fetch_add(1, Ordering::Relaxed);
+            let path = std::env::temp_dir().join(format!(
+                "primer-modules-{}-{stamp}-{id}",
+                std::process::id()
+            ));
+            match fs::create_dir(&path) {
+                Ok(()) => return Self(path),
+                Err(error) if error.kind() == std::io::ErrorKind::AlreadyExists => continue,
+                Err(error) => panic!("create test workspace: {error}"),
+            }
+        }
     }
     fn put(&self, name: &str, text: &str) -> PathBuf {
         let path = self.0.join(name);
