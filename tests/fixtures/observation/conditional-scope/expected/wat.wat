@@ -1,11 +1,11 @@
 (module
-  (import "primer" "write_error_byte" (func $write_error_byte (param i32)))
-  (import "primer" "print_bool" (func $print_bool (param i32)))
-  (import "primer" "print_i64" (func $print_i64 (param i64)))
-  (import "primer" "print_f32" (func $print_f32 (param f32)))
-  (import "primer" "print_f64" (func $print_f64 (param f64)))
+  (import "cerune" "write_error_byte" (func $write_error_byte (param i32)))
+  (import "cerune" "print_bool" (func $print_bool (param i32)))
+  (import "cerune" "print_i64" (func $print_i64 (param i64)))
+  (import "cerune" "print_f32" (func $print_f32 (param f32)))
+  (import "cerune" "print_f64" (func $print_f64 (param f64)))
 
-  (func $primer_i64_sub_n13_b115_117 (param $left i64) (param $right i64) (result i64)
+  (func $cerune_i64_sub_n13_b115_117 (param $left i64) (param $right i64) (result i64)
     (local $result i64)
     local.get $left
     local.get $right
@@ -21,18 +21,18 @@
     i64.const 0
     i64.lt_s
     if
-      ;; primer: runtime-v1 code=integer-overflow node=13 bytes=115..117
-      i32.const 112
-      call $write_error_byte
-      i32.const 114
-      call $write_error_byte
-      i32.const 105
-      call $write_error_byte
-      i32.const 109
+      ;; cerune: runtime-v1 code=integer-overflow node=13 bytes=115..117
+      i32.const 99
       call $write_error_byte
       i32.const 101
       call $write_error_byte
       i32.const 114
+      call $write_error_byte
+      i32.const 117
+      call $write_error_byte
+      i32.const 110
+      call $write_error_byte
+      i32.const 101
       call $write_error_byte
       i32.const 58
       call $write_error_byte
@@ -156,28 +156,28 @@
   )
 
   (func $main
-    (local $primer_value i64)
-    (local $primer_value_1 i32)
+    (local $cerune_value i64)
+    (local $cerune_value_1 i32)
 
     i64.const 1
-    local.set $primer_value
-    local.get $primer_value
+    local.set $cerune_value
+    local.get $cerune_value
     i64.const 2
     i64.lt_s
     if
       i64.const 42
-      local.set $primer_value
+      local.set $cerune_value
       i32.const 1
-      local.set $primer_value_1
-      local.get $primer_value_1
+      local.set $cerune_value_1
+      local.get $cerune_value_1
       call $print_bool
     else
       i64.const 0
       i64.const 1
-      call $primer_i64_sub_n13_b115_117
-      local.set $primer_value
+      call $cerune_i64_sub_n13_b115_117
+      local.set $cerune_value
     end
-    local.get $primer_value
+    local.get $cerune_value
     call $print_i64
   )
   (export "main" (func $main))

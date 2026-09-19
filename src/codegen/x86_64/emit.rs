@@ -13,7 +13,7 @@ pub fn emit_with_origins(module: &Module, annotate: bool) -> String {
     let mut reporter = Reporter::new(module.target);
     let mut output = initial_data(uses_bool_print(module), module.target);
     if annotate {
-        output.insert_str(0, "# primer-asm-origins v1: UTF-8 byte ranges, end exclusive\n# primer-origin: synthetic\n");
+        output.insert_str(0, "# cerune-asm-origins v1: UTF-8 byte ranges, end exclusive\n# cerune-origin: synthetic\n");
     }
     if module
         .instructions
@@ -21,7 +21,7 @@ pub fn emit_with_origins(module: &Module, annotate: bool) -> String {
         .chain(module.functions.iter().flat_map(|f| f.instructions.iter()))
         .any(|i| matches!(i, Instruction::CallPrintU64))
     {
-        output.push_str(".Lprimer_fmt_u64:\n  .asciz \"%llu\\n\"\n");
+        output.push_str(".Lcerune_fmt_u64:\n  .asciz \"%llu\\n\"\n");
     }
     if module.uses_strings {
         super::string::emit_data(module, &mut output);
@@ -46,7 +46,7 @@ pub fn emit_with_origins(module: &Module, annotate: bool) -> String {
     }
 
     if annotate {
-        output.push_str("# primer-origin: synthetic\n");
+        output.push_str("# cerune-origin: synthetic\n");
     }
     output.push_str(".globl main\n");
 
@@ -60,7 +60,7 @@ pub fn emit_with_origins(module: &Module, annotate: bool) -> String {
 
     emit_stack_allocation(module.frame_size, module.target, &mut output);
     if module.uses_strings && !module.target.is_linux() {
-        // 固定ターゲットのWindows CRTで、最初のPrimer処理より前にLF変換を止めます。
+        // 固定ターゲットのWindows CRTで、最初のCerune処理より前にLF変換を止めます。
         output.push_str("  movl $1, %ecx\n  movl $32768, %edx\n  callq _setmode\n  cmpl $-1, %eax\n  jne .Lstdout_ready\n  movl $1, %eax\n");
         emit_epilogue(module.frame_size, false, &mut output);
         output.push_str(".Lstdout_ready:\n");
@@ -81,7 +81,7 @@ pub fn emit_with_origins(module: &Module, annotate: bool) -> String {
     }
 
     if annotate {
-        output.push_str("# primer-origin: synthetic\n");
+        output.push_str("# cerune-origin: synthetic\n");
     }
     if let Some(function_id) = module.explicit_main {
         output.push_str(&format!(
@@ -115,7 +115,7 @@ fn emit_function(
     output: &mut String,
 ) {
     if annotate {
-        output.push_str("# primer-origin: synthetic\n");
+        output.push_str("# cerune-origin: synthetic\n");
     }
     output.push_str(".p2align 4\n");
     output.push_str(&format!("{}:\n", function_name(function)));
@@ -181,7 +181,7 @@ fn emit_stack_allocation(frame_size: usize, target: super::Target, output: &mut 
 }
 
 fn function_name(function: &Function) -> String {
-    format!("primer_fn_{}_{}", function.name, function.id)
+    format!("cerune_fn_{}_{}", function.name, function.id)
 }
 
 fn emit_epilogue(frame_size: usize, zero_result: bool, output: &mut String) {
@@ -198,7 +198,7 @@ fn emit_float_constant(constant: &FloatConstant, output: &mut String) {
         FloatConstant::F32 { id, bits } => {
             output.push_str(".p2align 2\n");
 
-            output.push_str(&format!(".Lprimer_f32_{id}:\n"));
+            output.push_str(&format!(".Lcerune_f32_{id}:\n"));
 
             output.push_str(&format!("  .long 0x{bits:08X}\n"));
         }
@@ -206,7 +206,7 @@ fn emit_float_constant(constant: &FloatConstant, output: &mut String) {
         FloatConstant::F64 { id, bits } => {
             output.push_str(".p2align 3\n");
 
-            output.push_str(&format!(".Lprimer_f64_{id}:\n"));
+            output.push_str(&format!(".Lcerune_f64_{id}:\n"));
 
             output.push_str(&format!("  .quad 0x{bits:016X}\n"));
         }
@@ -225,10 +225,10 @@ fn emit_instruction(
         Instruction::CallPrintSysV(ty) => emit_sysv_print(*ty, output),
         Instruction::CallPrintU64 => {
             if module.target.is_linux() {
-                output.push_str("  movq %rax, %rsi\n  leaq .Lprimer_fmt_u64(%rip), %rdi\n  xorl %eax, %eax\n  callq printf\n");
+                output.push_str("  movq %rax, %rsi\n  leaq .Lcerune_fmt_u64(%rip), %rdi\n  xorl %eax, %eax\n  callq printf\n");
             } else {
                 output.push_str(
-                    "  movq %rax, %rdx\n  leaq .Lprimer_fmt_u64(%rip), %rcx\n  callq printf\n",
+                    "  movq %rax, %rdx\n  leaq .Lcerune_fmt_u64(%rip), %rcx\n  callq printf\n",
                 );
             }
         }
@@ -246,18 +246,18 @@ fn emit_instruction(
         }
         Instruction::LoadStringLength => output.push_str("  movq (%rax), %rax\n"),
         Instruction::LoadStringConstant(id) => {
-            output.push_str(&format!("  leaq .Lprimer_string_{id}(%rip), %rax\n"))
+            output.push_str(&format!("  leaq .Lcerune_string_{id}(%rip), %rax\n"))
         }
         Instruction::CompareString { left_offset, equal } => {
             let left = integer_argument_register(0, module.target);
             let right = integer_argument_register(1, module.target);
-            output.push_str(&format!("  movq %rax, {right}\n  movq {left_offset}(%rbp), {left}\n  callq primer_string_equal\n"));
+            output.push_str(&format!("  movq %rax, {right}\n  movq {left_offset}(%rbp), {left}\n  callq cerune_string_equal\n"));
             if !equal {
                 output.push_str("  xorl $1, %eax\n");
             }
         }
         Instruction::PrintString => {
-            output.push_str("  movq %rax, %rcx\n  callq primer_print_string\n")
+            output.push_str("  movq %rax, %rcx\n  callq cerune_print_string\n")
         }
         Instruction::ConvertNumeric { conversion, label } => {
             super::conversion::emit(*conversion, *label, label_prefix, reporter, output)
@@ -270,8 +270,8 @@ fn emit_instruction(
                 return super::unsigned::emit_binary(*op, *label, label_prefix, reporter, output);
             }
             use crate::codegen::IntegerBinaryOp;
-            let bad = format!(".Lprimer_{label_prefix}_integer_bad_{label}");
-            let done = format!(".Lprimer_{label_prefix}_integer_done_{label}");
+            let bad = format!(".Lcerune_{label_prefix}_integer_bad_{label}");
+            let done = format!(".Lcerune_{label_prefix}_integer_done_{label}");
             match op {
                 IntegerBinaryOp::Add
                 | IntegerBinaryOp::Subtract
@@ -281,7 +281,7 @@ fn emit_instruction(
                 IntegerBinaryOp::BitOr => output.push_str("  orq %rcx, %rax\n"),
                 IntegerBinaryOp::BitXor => output.push_str("  xorq %rcx, %rax\n"),
                 IntegerBinaryOp::Remainder => {
-                    let divide = format!(".Lprimer_{label_prefix}_integer_rem_{label}");
+                    let divide = format!(".Lcerune_{label_prefix}_integer_rem_{label}");
                     output.push_str(&format!("  testq %rcx, %rcx\n  je {bad}\n  cmpq $-1, %rcx\n  jne {divide}\n  xorq %rax, %rax\n  jmp {done}\n{divide}:\n  cqto\n  idivq %rcx\n  movq %rdx, %rax\n  jmp {done}\n{bad}:\n"));
                     reporter.emit(Failure::RemainderByZero, output);
                     output.push_str(&format!("{done}:\n"));
@@ -304,8 +304,8 @@ fn emit_instruction(
             }
         }
         Instruction::CheckIntegerRange { ty, label, failure } => {
-            let bad = format!(".Lprimer_{label_prefix}_range_bad_{label}");
-            let done = format!(".Lprimer_{label_prefix}_range_ok_{label}");
+            let bad = format!(".Lcerune_{label_prefix}_range_bad_{label}");
+            let done = format!(".Lcerune_{label_prefix}_range_ok_{label}");
             output.push_str(&format!("  # semantic {}, storage i64\n  movabsq ${}, %r11\n  cmpq %r11, %rax\n  jl {bad}\n  movabsq ${}, %r11\n  cmpq %r11, %rax\n  jle {done}\n{bad}:\n", ty.name(), ty.minimum(), ty.maximum()));
             reporter.emit(*failure, output);
             output.push_str(&format!("{done}:\n"));
@@ -357,8 +357,8 @@ fn emit_instruction(
             length,
             label,
         } => {
-            let trap = format!(".Lprimer_{label_prefix}_array_oob_{label}");
-            let done = format!(".Lprimer_{label_prefix}_array_done_{label}");
+            let trap = format!(".Lcerune_{label_prefix}_array_oob_{label}");
+            let done = format!(".Lcerune_{label_prefix}_array_done_{label}");
             output.push_str("  testq %rax, %rax\n");
             output.push_str(&format!("  js {trap}\n"));
             output.push_str(&format!("  cmpq ${length}, %rax\n"));
@@ -388,8 +388,8 @@ fn emit_instruction(
             destination_offset,
             label,
         } => {
-            let trap = format!(".Lprimer_{label_prefix}_array_oob_{label}");
-            let done = format!(".Lprimer_{label_prefix}_array_done_{label}");
+            let trap = format!(".Lcerune_{label_prefix}_array_oob_{label}");
+            let done = format!(".Lcerune_{label_prefix}_array_done_{label}");
             output.push_str("  testq %rax, %rax\n");
             output.push_str(&format!("  js {trap}\n"));
             output.push_str(&format!("  cmpq ${length}, %rax\n"));
@@ -415,8 +415,8 @@ fn emit_instruction(
             destination_offset,
             label,
         } => {
-            let trap = format!(".Lprimer_{label_prefix}_array_oob_{label}");
-            let done = format!(".Lprimer_{label_prefix}_array_done_{label}");
+            let trap = format!(".Lcerune_{label_prefix}_array_oob_{label}");
+            let done = format!(".Lcerune_{label_prefix}_array_done_{label}");
             output.push_str("  testq %rax, %rax\n");
             output.push_str(&format!("  js {trap}\n"));
             output.push_str(&format!("  cmpq ${length}, %rax\n"));
@@ -552,11 +552,11 @@ fn emit_instruction(
         Instruction::Return => emit_epilogue(frame_size, false, output),
 
         Instruction::LoadF32Constant(id) => {
-            output.push_str(&format!("  movss .Lprimer_f32_{id}(%rip), %xmm0\n"));
+            output.push_str(&format!("  movss .Lcerune_f32_{id}(%rip), %xmm0\n"));
         }
 
         Instruction::LoadF64Constant(id) => {
-            output.push_str(&format!("  movsd .Lprimer_f64_{id}(%rip), %xmm0\n"));
+            output.push_str(&format!("  movsd .Lcerune_f64_{id}(%rip), %xmm0\n"));
         }
 
         Instruction::NegI64 => {
@@ -564,7 +564,7 @@ fn emit_instruction(
         }
 
         Instruction::TrapIfOverflow(label) => {
-            let done = format!(".Lprimer_{label_prefix}_integer_ok_{label}");
+            let done = format!(".Lcerune_{label_prefix}_integer_ok_{label}");
             output.push_str(&format!("  jno {done}\n"));
             reporter.emit(Failure::IntegerOverflow, output);
             output.push_str(&format!("{done}:\n"));
@@ -575,11 +575,11 @@ fn emit_instruction(
         }
 
         Instruction::NegF32 => {
-            output.push_str("  xorps .Lprimer_sign_f32(%rip), %xmm0\n");
+            output.push_str("  xorps .Lcerune_sign_f32(%rip), %xmm0\n");
         }
 
         Instruction::NegF64 => {
-            output.push_str("  xorpd .Lprimer_sign_f64(%rip), %xmm0\n");
+            output.push_str("  xorpd .Lcerune_sign_f64(%rip), %xmm0\n");
         }
 
         Instruction::MoveRaxToRcx => {
@@ -608,8 +608,8 @@ fn emit_instruction(
         }
 
         Instruction::TrapIfInvalidI64Division(label) => {
-            let trap = format!(".Lprimer_{label_prefix}_division_trap_{label}");
-            let done = format!(".Lprimer_{label_prefix}_division_ok_{label}");
+            let trap = format!(".Lcerune_{label_prefix}_division_trap_{label}");
+            let done = format!(".Lcerune_{label_prefix}_division_ok_{label}");
             output.push_str("  testq %rcx, %rcx\n");
             output.push_str(&format!("  je {trap}\n"));
             output.push_str("  cmpq $-1, %rcx\n");
@@ -668,7 +668,7 @@ fn emit_instruction(
         }
 
         Instruction::LoadFormatI64ToRcx => {
-            output.push_str("  leaq .Lprimer_fmt_i64(%rip), %rcx\n");
+            output.push_str("  leaq .Lcerune_fmt_i64(%rip), %rcx\n");
         }
 
         Instruction::ConvertF32ToF64Argument => {
@@ -680,7 +680,7 @@ fn emit_instruction(
         }
 
         Instruction::LoadFormatF32ToRcx => {
-            output.push_str("  leaq .Lprimer_fmt_f32(%rip), %rcx\n");
+            output.push_str("  leaq .Lcerune_fmt_f32(%rip), %rcx\n");
         }
 
         Instruction::CopyXmm0ToXmm1F64Scalar => {
@@ -688,7 +688,7 @@ fn emit_instruction(
         }
 
         Instruction::LoadFormatF64ToRcx => {
-            output.push_str("  leaq .Lprimer_fmt_f64(%rip), %rcx\n");
+            output.push_str("  leaq .Lcerune_fmt_f64(%rip), %rcx\n");
         }
 
         Instruction::CallPrintf => {
@@ -697,8 +697,8 @@ fn emit_instruction(
 
         Instruction::CallPrintBool => {
             output.push_str("  testq %rax, %rax\n");
-            output.push_str("  leaq .Lprimer_bool_false(%rip), %rcx\n");
-            output.push_str("  leaq .Lprimer_bool_true(%rip), %rdx\n");
+            output.push_str("  leaq .Lcerune_bool_false(%rip), %rcx\n");
+            output.push_str("  leaq .Lcerune_bool_true(%rip), %rdx\n");
             output.push_str("  cmovne %rdx, %rcx\n");
             output.push_str("  callq puts\n");
         }
@@ -707,22 +707,22 @@ fn emit_instruction(
 
 fn block_label(prefix: &str, id: usize) -> String {
     if prefix == "main" {
-        format!(".Lprimer_block_{id}")
+        format!(".Lcerune_block_{id}")
     } else {
-        format!(".Lprimer_{prefix}_block_{id}")
+        format!(".Lcerune_{prefix}_block_{id}")
     }
 }
 
 fn emit_sysv_print(ty: Type, output: &mut String) {
     match ty {
-        Type::String => output.push_str("  movq %rax, %rdi\n  callq primer_print_string\n"),
-        Type::Bool => output.push_str("  testq %rax, %rax\n  leaq .Lprimer_bool_false(%rip), %rdi\n  leaq .Lprimer_bool_true(%rip), %rsi\n  cmovne %rsi, %rdi\n  callq puts\n"),
-        Type::I64 => output.push_str("  movq %rax, %rsi\n  leaq .Lprimer_fmt_i64(%rip), %rdi\n  xorl %eax, %eax\n  callq printf\n"),
+        Type::String => output.push_str("  movq %rax, %rdi\n  callq cerune_print_string\n"),
+        Type::Bool => output.push_str("  testq %rax, %rax\n  leaq .Lcerune_bool_false(%rip), %rdi\n  leaq .Lcerune_bool_true(%rip), %rsi\n  cmovne %rsi, %rdi\n  callq puts\n"),
+        Type::I64 => output.push_str("  movq %rax, %rsi\n  leaq .Lcerune_fmt_i64(%rip), %rdi\n  xorl %eax, %eax\n  callq printf\n"),
         Type::F32 | Type::F64 => {
             if ty == Type::F32 { output.push_str("  cvtss2sd %xmm0, %xmm0\n"); }
             let format = if ty == Type::F32 { "f32" } else { "f64" };
             // SysVの可変長呼び出しはALに使ったXMM引数レジスタ数を渡します。
-            output.push_str(&format!("  leaq .Lprimer_fmt_{format}(%rip), %rdi\n  movl $1, %eax\n  callq printf\n"));
+            output.push_str(&format!("  leaq .Lcerune_fmt_{format}(%rip), %rdi\n  movl $1, %eax\n  callq printf\n"));
         }
     }
 }
@@ -822,29 +822,29 @@ fn initial_data(include_bool_text: bool, target: super::Target) -> String {
         ".section .rdata,\"dr\"\n"
     });
 
-    output.push_str(".Lprimer_fmt_i64:\n");
+    output.push_str(".Lcerune_fmt_i64:\n");
 
     output.push_str("  .asciz \"%lld\\n\"\n");
 
-    output.push_str(".Lprimer_fmt_f32:\n");
+    output.push_str(".Lcerune_fmt_f32:\n");
 
     output.push_str("  .asciz \"%.9g\\n\"\n");
 
-    output.push_str(".Lprimer_fmt_f64:\n");
+    output.push_str(".Lcerune_fmt_f64:\n");
 
     output.push_str("  .asciz \"%.17g\\n\"\n");
 
     if include_bool_text {
-        output.push_str(".Lprimer_bool_false:\n");
+        output.push_str(".Lcerune_bool_false:\n");
         output.push_str("  .asciz \"false\"\n");
-        output.push_str(".Lprimer_bool_true:\n");
+        output.push_str(".Lcerune_bool_true:\n");
         output.push_str("  .asciz \"true\"\n");
     }
 
     // Unary minus masks.
     output.push_str(".p2align 4\n");
 
-    output.push_str(".Lprimer_sign_f32:\n");
+    output.push_str(".Lcerune_sign_f32:\n");
 
     output.push_str("  .long 0x80000000\n");
 
@@ -856,7 +856,7 @@ fn initial_data(include_bool_text: bool, target: super::Target) -> String {
 
     output.push_str(".p2align 4\n");
 
-    output.push_str(".Lprimer_sign_f64:\n");
+    output.push_str(".Lcerune_sign_f64:\n");
 
     output.push_str("  .quad 0x8000000000000000\n");
 
@@ -934,10 +934,10 @@ fn emit_origin(
         return;
     }
     match origin {
-        super::ir::Origin::Synthetic => output.push_str("# primer-origin: synthetic\n"),
+        super::ir::Origin::Synthetic => output.push_str("# cerune-origin: synthetic\n"),
         super::ir::Origin::Source { node_id, span } => {
             output.push_str(&format!(
-                "# primer-origin: #{}{} bytes {}..{}\nprimer_origin_n{}_{prefix}_{index}:\n",
+                "# cerune-origin: #{}{} bytes {}..{}\ncerune_origin_n{}_{prefix}_{index}:\n",
                 node_id.0,
                 span.source_id().record_field(),
                 span.start(),

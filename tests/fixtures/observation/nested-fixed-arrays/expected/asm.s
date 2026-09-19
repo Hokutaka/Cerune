@@ -1,18 +1,18 @@
 .section .rdata,"dr"
-.Lprimer_fmt_i64:
+.Lcerune_fmt_i64:
   .asciz "%lld\n"
-.Lprimer_fmt_f32:
+.Lcerune_fmt_f32:
   .asciz "%.9g\n"
-.Lprimer_fmt_f64:
+.Lcerune_fmt_f64:
   .asciz "%.17g\n"
 .p2align 4
-.Lprimer_sign_f32:
+.Lcerune_sign_f32:
   .long 0x80000000
   .long 0
   .long 0
   .long 0
 .p2align 4
-.Lprimer_sign_f64:
+.Lcerune_sign_f64:
   .quad 0x8000000000000000
   .quad 0
 
@@ -109,9 +109,9 @@ main:
   movq %rax, -48(%rbp)
   movabsq $1, %rax
   testq %rax, %rax
-  js .Lprimer_main_array_oob_0
+  js .Lcerune_main_array_oob_0
   cmpq $2, %rax
-  jge .Lprimer_main_array_oob_0
+  jge .Lcerune_main_array_oob_0
   imulq $-3, %rax
   movq -56(%rbp,%rax,8), %rcx
   movq %rcx, -528(%rbp)
@@ -119,41 +119,41 @@ main:
   movq %rcx, -536(%rbp)
   movq -72(%rbp,%rax,8), %rcx
   movq %rcx, -544(%rbp)
-  jmp .Lprimer_main_array_done_0
-.Lprimer_main_array_oob_0:
+  jmp .Lcerune_main_array_done_0
+.Lcerune_main_array_oob_0:
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
-  leaq .Lprimer_failure_0(%rip), %rdx
+  leaq .Lcerune_failure_0(%rip), %rdx
   movl $73, %r8d
   callq _write
   ud2
-.Lprimer_main_array_done_0:
+.Lcerune_main_array_done_0:
   movabsq $2, %rax
   testq %rax, %rax
-  js .Lprimer_main_array_oob_1
+  js .Lcerune_main_array_oob_1
   cmpq $3, %rax
-  jge .Lprimer_main_array_oob_1
+  jge .Lcerune_main_array_oob_1
   negq %rax
   movq -528(%rbp,%rax,8), %rax
-  jmp .Lprimer_main_array_done_1
-.Lprimer_main_array_oob_1:
+  jmp .Lcerune_main_array_done_1
+.Lcerune_main_array_oob_1:
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
-  leaq .Lprimer_failure_1(%rip), %rdx
+  leaq .Lcerune_failure_1(%rip), %rdx
   movl $73, %r8d
   callq _write
   ud2
-.Lprimer_main_array_done_1:
+.Lcerune_main_array_done_1:
   movq %rax, %rdx
-  leaq .Lprimer_fmt_i64(%rip), %rcx
+  leaq .Lcerune_fmt_i64(%rip), %rcx
   callq printf
   movabsq $0, %rax
   testq %rax, %rax
-  js .Lprimer_main_array_oob_2
+  js .Lcerune_main_array_oob_2
   cmpq $2, %rax
-  jge .Lprimer_main_array_oob_2
+  jge .Lcerune_main_array_oob_2
   imulq $-3, %rax
   movq -8(%rbp,%rax,8), %rcx
   movq %rcx, -552(%rbp)
@@ -161,35 +161,35 @@ main:
   movq %rcx, -560(%rbp)
   movq -24(%rbp,%rax,8), %rcx
   movq %rcx, -568(%rbp)
-  jmp .Lprimer_main_array_done_2
-.Lprimer_main_array_oob_2:
+  jmp .Lcerune_main_array_done_2
+.Lcerune_main_array_oob_2:
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
-  leaq .Lprimer_failure_2(%rip), %rdx
+  leaq .Lcerune_failure_2(%rip), %rdx
   movl $73, %r8d
   callq _write
   ud2
-.Lprimer_main_array_done_2:
+.Lcerune_main_array_done_2:
   movabsq $1, %rax
   testq %rax, %rax
-  js .Lprimer_main_array_oob_3
+  js .Lcerune_main_array_oob_3
   cmpq $3, %rax
-  jge .Lprimer_main_array_oob_3
+  jge .Lcerune_main_array_oob_3
   negq %rax
   movq -552(%rbp,%rax,8), %rax
-  jmp .Lprimer_main_array_done_3
-.Lprimer_main_array_oob_3:
+  jmp .Lcerune_main_array_done_3
+.Lcerune_main_array_oob_3:
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
-  leaq .Lprimer_failure_3(%rip), %rdx
+  leaq .Lcerune_failure_3(%rip), %rdx
   movl $73, %r8d
   callq _write
   ud2
-.Lprimer_main_array_done_3:
+.Lcerune_main_array_done_3:
   movq %rax, %rdx
-  leaq .Lprimer_fmt_i64(%rip), %rcx
+  leaq .Lcerune_fmt_i64(%rip), %rcx
   callq printf
   xorl %eax, %eax
   addq $608, %rsp
@@ -197,11 +197,11 @@ main:
   retq
 
 .section .rdata,"dr"
-.Lprimer_failure_0:
-  .asciz "primer: runtime-v1 code=array-index-out-of-bounds node=24 bytes=125..132\n"
-.Lprimer_failure_1:
-  .asciz "primer: runtime-v1 code=array-index-out-of-bounds node=23 bytes=125..135\n"
-.Lprimer_failure_2:
-  .asciz "primer: runtime-v1 code=array-index-out-of-bounds node=30 bytes=144..153\n"
-.Lprimer_failure_3:
-  .asciz "primer: runtime-v1 code=array-index-out-of-bounds node=29 bytes=144..156\n"
+.Lcerune_failure_0:
+  .asciz "cerune: runtime-v1 code=array-index-out-of-bounds node=24 bytes=125..132\n"
+.Lcerune_failure_1:
+  .asciz "cerune: runtime-v1 code=array-index-out-of-bounds node=23 bytes=125..135\n"
+.Lcerune_failure_2:
+  .asciz "cerune: runtime-v1 code=array-index-out-of-bounds node=30 bytes=144..153\n"
+.Lcerune_failure_3:
+  .asciz "cerune: runtime-v1 code=array-index-out-of-bounds node=29 bytes=144..156\n"

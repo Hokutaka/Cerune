@@ -1,6 +1,6 @@
 use super::ir::{BinaryOp, Expr, ExprKind, Module, Statement, Type, UnaryOp};
 
-/// Cが順序を保証しない場所で、作用や失敗の順番をPrimerに合わせます。
+/// Cが順序を保証しない場所で、作用や失敗の順番をCeruneに合わせます。
 pub(super) fn lower(module: &mut Module) {
     for function in &mut module.functions {
         statements(&mut function.body, &mut function.temporaries);

@@ -1,20 +1,20 @@
 (module
-  (import "primer" "write_error_byte" (func $write_error_byte (param i32)))
-  (import "primer" "print_bool" (func $print_bool (param i32)))
-  (import "primer" "print_i64" (func $print_i64 (param i64)))
-  (import "primer" "print_f32" (func $print_f32 (param f32)))
-  (import "primer" "print_f64" (func $print_f64 (param f64)))
+  (import "cerune" "write_error_byte" (func $write_error_byte (param i32)))
+  (import "cerune" "print_bool" (func $print_bool (param i32)))
+  (import "cerune" "print_i64" (func $print_i64 (param i64)))
+  (import "cerune" "print_f32" (func $print_f32 (param f32)))
+  (import "cerune" "print_f64" (func $print_f64 (param f64)))
 
   (memory 1)
 
-  (func $primer_fn_report_0 (param $primer_value i32) (result i32)
-    local.get $primer_value
+  (func $cerune_fn_report_0 (param $cerune_value i32) (result i32)
+    local.get $cerune_value
     call $print_bool
-    local.get $primer_value
+    local.get $cerune_value
     return
   )
   (func $main
-    (local $primer_index i64)
+    (local $cerune_index i64)
 
     i32.const 16
     i64.const 4
@@ -31,31 +31,31 @@
     i64.load
     i64.store
     i64.const 2
-    local.set $primer_index
-    local.get $primer_index
+    local.set $cerune_index
+    local.get $cerune_index
     i64.const 2
     i64.lt_s
     if (result i32)
       i32.const 32
-      local.get $primer_index
+      local.get $cerune_index
       i64.store
       i32.const 32
       i64.load
       i64.const 0
       i64.lt_s
       if
-        ;; primer: runtime-v1 code=array-index-out-of-bounds node=16 bytes=134..147
-        i32.const 112
-        call $write_error_byte
-        i32.const 114
-        call $write_error_byte
-        i32.const 105
-        call $write_error_byte
-        i32.const 109
+        ;; cerune: runtime-v1 code=array-index-out-of-bounds node=16 bytes=134..147
+        i32.const 99
         call $write_error_byte
         i32.const 101
         call $write_error_byte
         i32.const 114
+        call $write_error_byte
+        i32.const 117
+        call $write_error_byte
+        i32.const 110
+        call $write_error_byte
+        i32.const 101
         call $write_error_byte
         i32.const 58
         call $write_error_byte
@@ -198,18 +198,18 @@
       i64.const 2
       i64.ge_s
       if
-        ;; primer: runtime-v1 code=array-index-out-of-bounds node=16 bytes=134..147
-        i32.const 112
-        call $write_error_byte
-        i32.const 114
-        call $write_error_byte
-        i32.const 105
-        call $write_error_byte
-        i32.const 109
+        ;; cerune: runtime-v1 code=array-index-out-of-bounds node=16 bytes=134..147
+        i32.const 99
         call $write_error_byte
         i32.const 101
         call $write_error_byte
         i32.const 114
+        call $write_error_byte
+        i32.const 117
+        call $write_error_byte
+        i32.const 110
+        call $write_error_byte
+        i32.const 101
         call $write_error_byte
         i32.const 58
         call $write_error_byte
@@ -361,14 +361,14 @@
       i32.const 0
     end
     call $print_bool
-    local.get $primer_index
+    local.get $cerune_index
     i64.const 2
     i64.eq
     if (result i32)
       i32.const 1
     else
       i32.const 0
-      call $primer_fn_report_0
+      call $cerune_fn_report_0
     end
     call $print_bool
     i32.const 0
@@ -376,16 +376,16 @@
       i32.const 1
     else
       i32.const 1
-      call $primer_fn_report_0
+      call $cerune_fn_report_0
       if (result i32)
-        local.get $primer_index
+        local.get $cerune_index
         i64.const 0
         i64.gt_s
         if (result i32)
           i32.const 1
         else
           i32.const 0
-          call $primer_fn_report_0
+          call $cerune_fn_report_0
         end
       else
         i32.const 0

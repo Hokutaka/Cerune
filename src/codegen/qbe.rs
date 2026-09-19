@@ -10,7 +10,7 @@ mod unsigned;
 pub use emit::emit;
 use lower::lower;
 
-use crate::{diagnostic::Diagnostic, ir as primer_ir};
+use crate::{diagnostic::Diagnostic, ir as cerune_ir};
 
 /// QBEの文字列出力で検証する実行環境です。ホストOSからは選びません。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -27,12 +27,12 @@ impl Target {
     }
 }
 
-pub fn emit_qbe(program: &primer_ir::Program) -> Result<String, Diagnostic> {
+pub fn emit_qbe(program: &cerune_ir::Program) -> Result<String, Diagnostic> {
     emit_qbe_with_target(program, None)
 }
 
 pub fn emit_qbe_with_target(
-    program: &primer_ir::Program,
+    program: &cerune_ir::Program,
     target: Option<Target>,
 ) -> Result<String, Diagnostic> {
     if let Some(span) = super::support::first_string_span(program)
@@ -76,8 +76,8 @@ mod tests {
         let program = compile_to_ir("x: i64 = 1 + 2; print(x);").unwrap();
         let qbe = emit_qbe(&program).unwrap();
 
-        assert!(qbe.contains("function l $primer_i64_add"));
-        assert!(qbe.contains("=l call $primer_i64_add(l 1, l 2, l $primer_origin_"));
+        assert!(qbe.contains("function l $cerune_i64_add"));
+        assert!(qbe.contains("=l call $cerune_i64_add(l 1, l 2, l $cerune_origin_"));
         assert!(qbe.contains("jnz %overflow, @trap, @ok"));
         assert!(qbe.contains("storel %tmp0, %slot_x"));
         assert!(qbe.contains("call $printf(l $fmt_i64"));
@@ -97,11 +97,11 @@ mod tests {
         let qbe = emit_qbe(&program).unwrap();
 
         for helper in [
-            "$primer_i64_add",
-            "$primer_i64_sub",
-            "$primer_i64_mul",
-            "$primer_i64_div",
-            "$primer_i64_neg",
+            "$cerune_i64_add",
+            "$cerune_i64_sub",
+            "$cerune_i64_mul",
+            "$cerune_i64_div",
+            "$cerune_i64_neg",
         ] {
             assert!(qbe.contains(helper));
         }
@@ -175,9 +175,9 @@ mod tests {
         .unwrap();
         let qbe = emit_qbe(&program).unwrap();
 
-        assert!(qbe.contains("function l $primer_fn_add_0(l %arg0, l %arg1)"));
+        assert!(qbe.contains("function l $cerune_fn_add_0(l %arg0, l %arg1)"));
         assert!(qbe.contains("storel %arg0, %slot_left"));
-        assert!(qbe.contains("call $primer_fn_add_0(l 20, l 22)"));
+        assert!(qbe.contains("call $cerune_fn_add_0(l 20, l 22)"));
         assert!(qbe.contains("ret %tmp"));
     }
 }

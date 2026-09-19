@@ -7,7 +7,7 @@ use super::{
 
 pub fn emit(program: &Program) -> String {
     let mut output = String::new();
-    writeln!(output, "; Primer IR v0.2").unwrap();
+    writeln!(output, "; Cerune IR v0.2").unwrap();
     writeln!(
         output,
         "; #N identifies one statement or expression in this compilation"
@@ -515,7 +515,7 @@ mod tests {
         assert_eq!(
             text,
             concat!(
-                "; Primer IR v0.2\n",
+                "; Cerune IR v0.2\n",
                 "; #N identifies one statement or expression in this compilation\n\n",
                 "#0 %x@0: f32 = #1 add.f32(#2 0.1f32, #3 0.2f32)\n",
                 "#4 print.f32 #5 %x@0:f32\n",

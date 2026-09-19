@@ -108,7 +108,7 @@ pub(super) fn assemble(assembly: &str) -> Result<Object, String> {
                     .copy_from_slice(&displacement.to_le_bytes());
                 continue;
             }
-        } else if fixup.symbol.starts_with(".L") || fixup.symbol.starts_with("primer_") {
+        } else if fixup.symbol.starts_with(".L") || fixup.symbol.starts_with("cerune_") {
             return Err(format!("unresolved internal label {}", fixup.symbol));
         }
         relocations.push(fixup);

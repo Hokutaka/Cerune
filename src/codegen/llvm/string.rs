@@ -3,11 +3,11 @@ use std::fmt::Write;
 use super::{Target, ir::Module};
 
 pub(super) fn emit_data(module: &Module, output: &mut String) {
-    output.push_str("%primer.string = type { ptr, i64 }\n");
+    output.push_str("%cerune.string = type { ptr, i64 }\n");
     for (id, value) in module.strings.iter().enumerate() {
         write!(
             output,
-            "@primer.string.{id} = private unnamed_addr constant [{} x i8] c\"",
+            "@cerune.string.{id} = private unnamed_addr constant [{} x i8] c\"",
             value.len()
         )
         .unwrap();
@@ -31,12 +31,12 @@ pub(super) fn emit_support(module: &Module, output: &mut String) {
 // putcharはprintf/putsと同じ標準出力を使うため、混在時にも出力順を保てます。
 const SUPPORT: &str = r#"declare i32 @putchar(i32)
 
-define internal i1 @primer.string.equal(%primer.string %left, %primer.string %right) {
+define internal i1 @cerune.string.equal(%cerune.string %left, %cerune.string %right) {
 entry:
-  %left.data = extractvalue %primer.string %left, 0
-  %left.length = extractvalue %primer.string %left, 1
-  %right.data = extractvalue %primer.string %right, 0
-  %right.length = extractvalue %primer.string %right, 1
+  %left.data = extractvalue %cerune.string %left, 0
+  %left.length = extractvalue %cerune.string %left, 1
+  %right.data = extractvalue %cerune.string %right, 0
+  %right.length = extractvalue %cerune.string %right, 1
   %same.length = icmp eq i64 %left.length, %right.length
   br i1 %same.length, label %condition, label %different
 condition:
@@ -59,10 +59,10 @@ different:
   ret i1 false
 }
 
-define internal void @primer.print.string(%primer.string %value) {
+define internal void @cerune.print.string(%cerune.string %value) {
 entry:
-  %data = extractvalue %primer.string %value, 0
-  %length = extractvalue %primer.string %value, 1
+  %data = extractvalue %cerune.string %value, 0
+  %length = extractvalue %cerune.string %value, 1
   br label %condition
 condition:
   %index = phi i64 [ 0, %entry ], [ %next, %write ]

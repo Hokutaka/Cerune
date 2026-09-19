@@ -1,4 +1,4 @@
-use primer_lang::{
+use cerune_lang::{
     compile, compile_to_ir,
     ir::{self, ExprKind, StatementKind},
     semantic,

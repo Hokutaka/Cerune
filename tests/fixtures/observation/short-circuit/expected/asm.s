@@ -1,36 +1,36 @@
 .section .rdata,"dr"
-.Lprimer_fmt_i64:
+.Lcerune_fmt_i64:
   .asciz "%lld\n"
-.Lprimer_fmt_f32:
+.Lcerune_fmt_f32:
   .asciz "%.9g\n"
-.Lprimer_fmt_f64:
+.Lcerune_fmt_f64:
   .asciz "%.17g\n"
-.Lprimer_bool_false:
+.Lcerune_bool_false:
   .asciz "false"
-.Lprimer_bool_true:
+.Lcerune_bool_true:
   .asciz "true"
 .p2align 4
-.Lprimer_sign_f32:
+.Lcerune_sign_f32:
   .long 0x80000000
   .long 0
   .long 0
   .long 0
 .p2align 4
-.Lprimer_sign_f64:
+.Lcerune_sign_f64:
   .quad 0x8000000000000000
   .quad 0
 
 .text
 .p2align 4
-primer_fn_report_0:
+cerune_fn_report_0:
   pushq %rbp
   movq %rsp, %rbp
   subq $64, %rsp
   movq %rcx, -8(%rbp)
   movq -8(%rbp), %rax
   testq %rax, %rax
-  leaq .Lprimer_bool_false(%rip), %rcx
-  leaq .Lprimer_bool_true(%rip), %rdx
+  leaq .Lcerune_bool_false(%rip), %rcx
+  leaq .Lcerune_bool_true(%rip), %rdx
   cmovne %rdx, %rcx
   callq puts
   movq -8(%rbp), %rax
@@ -63,24 +63,24 @@ main:
   setl %al
   movzbq %al, %rax
   testq %rax, %rax
-  je .Lprimer_block_0
+  je .Lcerune_block_0
   movq -24(%rbp), %rax
   testq %rax, %rax
-  js .Lprimer_main_array_oob_2
+  js .Lcerune_main_array_oob_2
   cmpq $2, %rax
-  jge .Lprimer_main_array_oob_2
+  jge .Lcerune_main_array_oob_2
   negq %rax
   movq -8(%rbp,%rax,8), %rax
-  jmp .Lprimer_main_array_done_2
-.Lprimer_main_array_oob_2:
+  jmp .Lcerune_main_array_done_2
+.Lcerune_main_array_oob_2:
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
-  leaq .Lprimer_failure_0(%rip), %rdx
+  leaq .Lcerune_failure_0(%rip), %rdx
   movl $73, %r8d
   callq _write
   ud2
-.Lprimer_main_array_done_2:
+.Lcerune_main_array_done_2:
   movq %rax, -32(%rbp)
   movabsq $0, %rax
   movq %rax, %rcx
@@ -88,12 +88,12 @@ main:
   cmpq %rcx, %rax
   setg %al
   movzbq %al, %rax
-  jmp .Lprimer_block_1
-.Lprimer_block_0: # logical_false
-.Lprimer_block_1: # logical_end
+  jmp .Lcerune_block_1
+.Lcerune_block_0: # logical_false
+.Lcerune_block_1: # logical_end
   testq %rax, %rax
-  leaq .Lprimer_bool_false(%rip), %rcx
-  leaq .Lprimer_bool_true(%rip), %rdx
+  leaq .Lcerune_bool_false(%rip), %rcx
+  leaq .Lcerune_bool_true(%rip), %rdx
   cmovne %rdx, %rcx
   callq puts
   movq -24(%rbp), %rax
@@ -105,30 +105,30 @@ main:
   sete %al
   movzbq %al, %rax
   testq %rax, %rax
-  je .Lprimer_block_3
-  jmp .Lprimer_block_4
-.Lprimer_block_3: # logical_false
+  je .Lcerune_block_3
+  jmp .Lcerune_block_4
+.Lcerune_block_3: # logical_false
   movabsq $0, %rax
   movq %rax, -32(%rbp)
   movq -32(%rbp), %rcx
-  callq primer_fn_report_0
-.Lprimer_block_4: # logical_end
+  callq cerune_fn_report_0
+.Lcerune_block_4: # logical_end
   testq %rax, %rax
-  leaq .Lprimer_bool_false(%rip), %rcx
-  leaq .Lprimer_bool_true(%rip), %rdx
+  leaq .Lcerune_bool_false(%rip), %rcx
+  leaq .Lcerune_bool_true(%rip), %rdx
   cmovne %rdx, %rcx
   callq puts
   movabsq $0, %rax
   testq %rax, %rax
-  je .Lprimer_block_5
-  jmp .Lprimer_block_6
-.Lprimer_block_5: # logical_false
+  je .Lcerune_block_5
+  jmp .Lcerune_block_6
+.Lcerune_block_5: # logical_false
   movabsq $1, %rax
   movq %rax, -32(%rbp)
   movq -32(%rbp), %rcx
-  callq primer_fn_report_0
+  callq cerune_fn_report_0
   testq %rax, %rax
-  je .Lprimer_block_7
+  je .Lcerune_block_7
   movq -24(%rbp), %rax
   movq %rax, -32(%rbp)
   movabsq $0, %rax
@@ -138,21 +138,21 @@ main:
   setg %al
   movzbq %al, %rax
   testq %rax, %rax
-  je .Lprimer_block_9
-  jmp .Lprimer_block_10
-.Lprimer_block_9: # logical_false
+  je .Lcerune_block_9
+  jmp .Lcerune_block_10
+.Lcerune_block_9: # logical_false
   movabsq $0, %rax
   movq %rax, -32(%rbp)
   movq -32(%rbp), %rcx
-  callq primer_fn_report_0
-.Lprimer_block_10: # logical_end
-  jmp .Lprimer_block_8
-.Lprimer_block_7: # logical_false
-.Lprimer_block_8: # logical_end
-.Lprimer_block_6: # logical_end
+  callq cerune_fn_report_0
+.Lcerune_block_10: # logical_end
+  jmp .Lcerune_block_8
+.Lcerune_block_7: # logical_false
+.Lcerune_block_8: # logical_end
+.Lcerune_block_6: # logical_end
   testq %rax, %rax
-  leaq .Lprimer_bool_false(%rip), %rcx
-  leaq .Lprimer_bool_true(%rip), %rdx
+  leaq .Lcerune_bool_false(%rip), %rcx
+  leaq .Lcerune_bool_true(%rip), %rdx
   cmovne %rdx, %rcx
   callq puts
   xorl %eax, %eax
@@ -161,5 +161,5 @@ main:
   retq
 
 .section .rdata,"dr"
-.Lprimer_failure_0:
-  .asciz "primer: runtime-v1 code=array-index-out-of-bounds node=16 bytes=134..147\n"
+.Lcerune_failure_0:
+  .asciz "cerune: runtime-v1 code=array-index-out-of-bounds node=16 bytes=134..147\n"

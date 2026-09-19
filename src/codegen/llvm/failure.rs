@@ -97,7 +97,7 @@ fn table_name(origin: Origin) -> String {
         panic!("language failures require a source origin")
     };
     format!(
-        "@primer.failure.{}.{}.{}",
+        "@cerune.failure.{}.{}.{}",
         node_id.0,
         span.start(),
         span.end()
@@ -138,7 +138,7 @@ pub(super) fn emit_data(module: &Module, output: &mut String) {
         for code in required {
             let id = index(code);
             let record = format!(
-                "primer: {}\n",
+                "cerune: {}\n",
                 RuntimeFailure {
                     code,
                     node_id,
@@ -186,7 +186,7 @@ pub(super) fn emit_support(module: &Module, output: &mut String) {
             output.push_str("declare i32 @_write(i32, ptr, i32)\n")
         }
     }
-    output.push_str("\ndefine internal void @primer.runtime.fail(ptr %failure, i64 %code) {\nentry:\n  call i32 @fflush(ptr null)\n  %slot = getelementptr inbounds { ptr, i64 }, ptr %failure, i64 %code\n  %record = load { ptr, i64 }, ptr %slot\n  %data = extractvalue { ptr, i64 } %record, 0\n  %length = extractvalue { ptr, i64 } %record, 1\n");
+    output.push_str("\ndefine internal void @cerune.runtime.fail(ptr %failure, i64 %code) {\nentry:\n  call i32 @fflush(ptr null)\n  %slot = getelementptr inbounds { ptr, i64 }, ptr %failure, i64 %code\n  %record = load { ptr, i64 }, ptr %slot\n  %data = extractvalue { ptr, i64 } %record, 0\n  %length = extractvalue { ptr, i64 } %record, 1\n");
     match module.target.unwrap() {
         super::Target::X86_64UnknownLinuxGnu => output.push_str("  call i64 @write(i32 2, ptr %data, i64 %length)\n"),
         super::Target::X86_64PcWindowsMsvc => output.push_str("  %count = trunc i64 %length to i32\n  call i32 @_write(i32 2, ptr %data, i32 %count)\n"),
@@ -197,7 +197,7 @@ pub(super) fn emit_support(module: &Module, output: &mut String) {
 pub(super) fn emit_trap(code: Code, output: &mut String) {
     writeln!(
         output,
-        "  call void @primer.runtime.fail(ptr %failure, i64 {})\n  unreachable",
+        "  call void @cerune.runtime.fail(ptr %failure, i64 {})\n  unreachable",
         index(code)
     )
     .unwrap();

@@ -1,4 +1,4 @@
-use primer_lang::{RunError, compile_to_bytecode_text, compile_to_ir, compile_to_ir_text, run_vm};
+use cerune_lang::{RunError, compile_to_bytecode_text, compile_to_ir, compile_to_ir_text, run_vm};
 
 #[test]
 fn u64_literals_preserve_values_and_observable_types() {

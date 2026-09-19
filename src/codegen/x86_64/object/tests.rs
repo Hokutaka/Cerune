@@ -89,7 +89,7 @@ fn branches_resolve_both_directions_and_rip_addends_include_trailing_immediates(
 fn origins_preserve_encoded_sections_and_relocations_for_all_examples() {
     for entry in std::fs::read_dir(concat!(env!("CARGO_MANIFEST_DIR"), "/examples")).unwrap() {
         let path = entry.unwrap().path();
-        if path.extension().is_none_or(|ext| ext != "prim") {
+        if path.extension().is_none_or(|ext| ext != "ceru") {
             continue;
         }
         let source = std::fs::read_to_string(path).unwrap();
@@ -107,7 +107,7 @@ fn origins_preserve_encoded_sections_and_relocations_for_all_examples() {
                 annotated
                     .symbols
                     .iter()
-                    .any(|symbol| symbol.name.starts_with("primer_origin_n"))
+                    .any(|symbol| symbol.name.starts_with("cerune_origin_n"))
             );
         }
     }

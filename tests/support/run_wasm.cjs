@@ -4,7 +4,7 @@ const { parseRuntimeFailure } = require('../../scripts/observe-native.cjs');
 const output = [];
 const diagnostics = [];
 const writeText = value => output.push(Buffer.from(`${value}\n`, 'utf8'));
-const imports = { primer: {
+const imports = { cerune: {
   write_error_byte(value) {
     if (!Number.isInteger(value) || value < 0 || value > 127) throw new Error('invalid diagnostic byte');
     diagnostics.push(Buffer.from([value]));

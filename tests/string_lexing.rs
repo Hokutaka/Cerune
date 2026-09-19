@@ -1,4 +1,4 @@
-use primer_lang::{
+use cerune_lang::{
     lexer::{TokenKind, lex},
     source::Span,
 };
@@ -15,7 +15,7 @@ fn assert_literal(source: &str, expected: &str) {
 #[test]
 fn reads_empty_ascii_and_unicode_strings() {
     assert_literal(r#""""#, "");
-    assert_literal(r#""hello, Primer""#, "hello, Primer");
+    assert_literal(r#""hello, Cerune""#, "hello, Cerune");
     assert_literal("\"日本語と文字列\"", "日本語と文字列");
     assert_literal("\"\u{1f600}\"", "\u{1f600}");
 }
@@ -176,13 +176,13 @@ fn all_truncated_utf8_prefixes_produce_valid_tokens_or_diagnostics() {
 #[test]
 fn parser_retains_the_decoded_string_and_original_span() {
     let source = "print(\"日本語\\n\");";
-    let program = primer_lang::compile(source).unwrap();
-    let primer_lang::ast::StmtKind::Print { value } = &program.statement(0).kind else {
+    let program = cerune_lang::compile(source).unwrap();
+    let cerune_lang::ast::StmtKind::Print { value } = &program.statement(0).kind else {
         panic!("expected print");
     };
     assert_eq!(
         value.kind,
-        primer_lang::ast::ExprKind::String("日本語\n".into())
+        cerune_lang::ast::ExprKind::String("日本語\n".into())
     );
     assert_eq!(value.span, Span::new(6, source.len() - 2));
 }

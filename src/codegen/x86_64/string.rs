@@ -3,7 +3,7 @@ use std::fmt::Write;
 
 pub(super) const LINUX_SUPPORT: &str = r#"
 .p2align 4
-primer_string_equal:
+cerune_string_equal:
   movq (%rdi), %rdx
   cmpq (%rsi), %rdx
   jne .Lstring_different
@@ -24,7 +24,7 @@ primer_string_equal:
   retq
 
 .p2align 4
-primer_print_string:
+cerune_print_string:
   subq $24, %rsp
   movq %rdi, (%rsp)
   movq $0, 8(%rsp)
@@ -49,7 +49,7 @@ pub(super) fn emit_data(module: &Module, output: &mut String) {
     for (id, value) in module.strings.iter().enumerate() {
         writeln!(
             output,
-            ".p2align 3\n.Lprimer_string_{id}:\n  .quad {}",
+            ".p2align 3\n.Lcerune_string_{id}:\n  .quad {}",
             value.len()
         )
         .unwrap();
@@ -62,7 +62,7 @@ pub(super) fn emit_data(module: &Module, output: &mut String) {
 // 比較は揮発レジスタだけで行い、出力はshadow spaceと16バイト境界を守ります。
 pub(super) const SUPPORT: &str = r#"
 .p2align 4
-primer_string_equal:
+cerune_string_equal:
   movq (%rcx), %r8
   cmpq (%rdx), %r8
   jne .Lstring_different
@@ -83,7 +83,7 @@ primer_string_equal:
   retq
 
 .p2align 4
-primer_print_string:
+cerune_print_string:
   subq $56, %rsp
   movq %rcx, 32(%rsp)
   movq $0, 40(%rsp)

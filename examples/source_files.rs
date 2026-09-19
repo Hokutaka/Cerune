@@ -1,16 +1,16 @@
 //! ファイル別の解析と出自を観測します。import構文の代わりとなるAPIではありません。
-use primer_lang::{ast, bytecode, ir, lexer, parser, run_bytecode, source::SourceMap};
+use cerune_lang::{ast, bytecode, ir, lexer, parser, run_bytecode, source::SourceMap};
 
 fn main() {
     let failing = std::env::args().nth(1).as_deref() == Some("failure");
     let mut sources = SourceMap::new();
-    let library = sources.add("values.prim", include_str!("source_files/values.prim"));
+    let library = sources.add("values.ceru", include_str!("source_files/values.ceru"));
     let entry = sources.add(
-        if failing { "failure.prim" } else { "main.prim" },
+        if failing { "failure.ceru" } else { "main.ceru" },
         if failing {
-            include_str!("source_files/failure.prim")
+            include_str!("source_files/failure.ceru")
         } else {
-            include_str!("source_files/main.prim")
+            include_str!("source_files/main.ceru")
         },
     );
     let mut program = ast::Program { items: Vec::new() };
@@ -29,10 +29,10 @@ fn main() {
         Err(error) => {
             print!("{}", error.vm_error().output());
             let failure = error.runtime_failure().unwrap();
-            eprintln!("primer: {}", failure.record());
+            eprintln!("cerune: {}", failure.record());
             eprintln!(
                 "{}",
-                primer_lang::vm::render::render_compact_with_sources(
+                cerune_lang::vm::render::render_compact_with_sources(
                     error.vm_error(),
                     &sources,
                     failure.span

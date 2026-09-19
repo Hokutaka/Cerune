@@ -36,7 +36,7 @@ fn suffix(origin: FailureOrigin) -> String {
 
 fn symbol(origin: FailureOrigin) -> String {
     format!(
-        "primer_origin_{}_{}_{}",
+        "cerune_origin_{}_{}_{}",
         origin.node.0,
         origin.span.start(),
         origin.span.end()
@@ -49,20 +49,20 @@ pub(super) fn arguments(origin: FailureOrigin) -> String {
 
 pub(super) fn code_arguments(code: FailureCode) -> String {
     format!(
-        "l $primer_code_{}, l {}",
+        "l $cerune_code_{}, l {}",
         code.name().replace('-', "_"),
         prefix(code).len()
     )
 }
 
 fn prefix(code: FailureCode) -> String {
-    format!("primer: runtime-v1 code={}", code.name())
+    format!("cerune: runtime-v1 code={}", code.name())
 }
 
 pub(super) fn call(code: FailureCode, output: &mut String) {
     writeln!(
         output,
-        "  call $primer_runtime_failure({}, l %origin, l %origin_len)\n  hlt",
+        "  call $cerune_runtime_failure({}, l %origin, l %origin_len)\n  hlt",
         code_arguments(code)
     )
     .unwrap();
@@ -107,13 +107,13 @@ pub(super) fn emit(module: &Module, output: &mut String) {
         ArrayIndexOutOfBounds,
     ] {
         data(
-            &format!("primer_code_{}", code.name().replace('-', "_")),
+            &format!("cerune_code_{}", code.name().replace('-', "_")),
             &prefix(code),
             output,
         );
         writeln!(
             output,
-            "function $primer_fail_{}(l %origin, l %origin_len) {{\n@start",
+            "function $cerune_fail_{}(l %origin, l %origin_len) {{\n@start",
             code.name().replace('-', "_")
         )
         .unwrap();
@@ -121,7 +121,7 @@ pub(super) fn emit(module: &Module, output: &mut String) {
         output.push_str("}\n\n");
     }
     // QBEの既存のLinux/SysV ABI。失敗時だけstdoutをflushし、不変の二片を出力します。
-    output.push_str("function $primer_runtime_failure(l %code, l %code_len, l %origin, l %origin_len) {\n@start\n  call $fflush(l 0)\n  call $write(w 2, l %code, l %code_len)\n  call $write(w 2, l %origin, l %origin_len)\n  call $abort()\n  hlt\n}\n\n");
+    output.push_str("function $cerune_runtime_failure(l %code, l %code_len, l %origin, l %origin_len) {\n@start\n  call $fflush(l 0)\n  call $write(w 2, l %code, l %code_len)\n  call $write(w 2, l %origin, l %origin_len)\n  call $abort()\n  hlt\n}\n\n");
 }
 
 fn data(name: &str, text: &str, output: &mut String) {

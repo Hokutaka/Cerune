@@ -16,7 +16,7 @@ pub enum IntegerOperation {
     ShiftLeft,
 }
 
-/// Primer VMの実行中に発生した問題の種類を表します。
+/// Cerune VMの実行中に発生した問題の種類を表します。
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum VmErrorKind {
     /// 変換前後の型と、値を保てなかった理由を保持します。
@@ -134,7 +134,7 @@ pub enum VmErrorKind {
     },
 }
 
-/// Primer VMの実行エラーと発生したbytecode命令位置を表します。
+/// Cerune VMの実行エラーと発生したbytecode命令位置を表します。
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct VmError {
     kind: VmErrorKind,

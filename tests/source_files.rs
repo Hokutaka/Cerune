@@ -3,7 +3,7 @@ mod crash_dialogs;
 #[path = "support/process.rs"]
 mod process;
 
-use primer_lang::{
+use cerune_lang::{
     ast, bytecode, codegen,
     diagnostic::{Diagnostic, render},
     ir, lexer, parser, run_bytecode,
@@ -17,14 +17,14 @@ use std::{
     time::Duration,
 };
 
-const LIBRARY: &str = include_str!("../examples/source_files/values.prim");
-const MAIN: &str = include_str!("../examples/source_files/main.prim");
-const FAILURE: &str = include_str!("../examples/source_files/failure.prim");
+const LIBRARY: &str = include_str!("../examples/source_files/values.ceru");
+const MAIN: &str = include_str!("../examples/source_files/main.ceru");
+const FAILURE: &str = include_str!("../examples/source_files/failure.ceru");
 
 fn split(entry: &str) -> (SourceMap, ir::Program) {
     let mut sources = SourceMap::new();
-    let library = sources.add("values.prim", LIBRARY);
-    let entry = sources.add("entry.prim", entry);
+    let library = sources.add("values.ceru", LIBRARY);
+    let entry = sources.add("entry.ceru", entry);
     let mut ast = ast::Program { items: Vec::new() };
     for id in [library, entry] {
         ast.items.extend(
@@ -39,8 +39,8 @@ fn split(entry: &str) -> (SourceMap, ir::Program) {
 #[test]
 fn file_positions_preserve_bytes_and_do_not_alias_equal_offsets_or_names() {
     let mut sources = SourceMap::new();
-    let a = sources.add("same.prim", "// 日本語\r\nprint(\"e\u{301}\0\r\n\");");
-    let b = sources.add("same.prim", "// 日本語\r\nprint(\"é\0\r\n\");");
+    let a = sources.add("same.ceru", "// 日本語\r\nprint(\"e\u{301}\0\r\n\");");
+    let b = sources.add("same.ceru", "// 日本語\r\nprint(\"é\0\r\n\");");
     assert_ne!(a, b);
     assert_eq!(sources.files().count(), 2);
     let offset = sources.get(a).unwrap().text().find("print").unwrap();
@@ -63,13 +63,13 @@ fn file_positions_preserve_bytes_and_do_not_alias_equal_offsets_or_names() {
 fn lex_parse_and_semantic_errors_identify_the_right_file() {
     for text in ["print(\"\\q\");", "print(1 + );", "print(unknown);"] {
         let mut sources = SourceMap::new();
-        sources.add("decoy.prim", "print(0);");
-        let id = sources.add("計算\n\u{1b}.prim", format!("// 日本語\r\n{text}"));
-        let error = primer_lang::compile_source(sources.get(id).unwrap()).unwrap_err();
+        sources.add("decoy.ceru", "print(0);");
+        let id = sources.add("計算\n\u{1b}.ceru", format!("// 日本語\r\n{text}"));
+        let error = cerune_lang::compile_source(sources.get(id).unwrap()).unwrap_err();
         let span = error.primary_span().unwrap();
         assert_eq!(span.source_id(), id);
         let rendered = render::render_compact_with_sources(&error, &sources);
-        assert!(rendered.contains(r"計算\n\u{1b}.prim:2:"), "{rendered}");
+        assert!(rendered.contains(r"計算\n\u{1b}.ceru:2:"), "{rendered}");
         assert!(!rendered.contains("decoy"));
         // 単一ソース用rendererへ別の本文を渡しても、それを位置解決には使いません。
         assert!(render::render_compact(&error, "wrong").contains("file=2 byte"));
@@ -101,27 +101,27 @@ fn runtime_origin_points_into_the_function_definition_and_keeps_prior_output() {
     assert_eq!(sources.slice(failure.span), Some("value / divisor"));
     assert_eq!(
         sources.resolve(failure.span).unwrap().0.name(),
-        "values.prim"
+        "values.ceru"
     );
     assert!(failure.record().contains(" file=1 bytes="));
-    assert!(!failure.record().contains("values.prim"));
-    let text = primer_lang::vm::render::render_compact_with_sources(
+    assert!(!failure.record().contains("values.ceru"));
+    let text = cerune_lang::vm::render::render_compact_with_sources(
         error.vm_error(),
         &sources,
         failure.span,
     );
-    assert!(text.contains("values.prim:13:12"), "{text}");
+    assert!(text.contains("values.ceru:13:12"), "{text}");
     let diagnostic = Diagnostic::new("test", failure.span);
     assert!(
-        render::render_compact_with_sources(&diagnostic, &sources).contains("values.prim:13:12")
+        render::render_compact_with_sources(&diagnostic, &sources).contains("values.ceru:13:12")
     );
 }
 
 #[test]
 fn named_ir_and_annotations_keep_file_ids_without_embedding_paths() {
     let mut sources = SourceMap::new();
-    let id = sources.add("private/path.prim", "print(1 / 0);");
-    let program = primer_lang::compile_source_to_ir(sources.get(id).unwrap()).unwrap();
+    let id = sources.add("private/path.ceru", "print(1 / 0);");
+    let program = cerune_lang::compile_source_to_ir(sources.get(id).unwrap()).unwrap();
     assert_eq!(program.statements[0].span.source_id(), id);
     let llvm = codegen::llvm::emit_llvm_with_options(
         &program,
@@ -189,7 +189,7 @@ impl Workspace {
         loop {
             let id = NEXT.fetch_add(1, Ordering::Relaxed);
             let path = std::env::temp_dir().join(format!(
-                "primer-source-files-{}-{stamp}-{id}",
+                "cerune-source-files-{}-{stamp}-{id}",
                 std::process::id()
             ));
             match fs::create_dir(&path) {
@@ -259,7 +259,7 @@ fn check_execution(program: &ir::Program, output: Output, route: &str) {
                 String::from_utf8(output.stderr)
                     .unwrap()
                     .replace("\r\n", "\n"),
-                format!("primer: {}\n", error.runtime_failure().unwrap().record()),
+                format!("cerune: {}\n", error.runtime_failure().unwrap().record()),
                 "{route}"
             );
             if matches!(route, "wat" | "vm") {
@@ -301,12 +301,12 @@ fn split_and_single_file_examples_execute_identically_on_available_routes() {
         (
             FAILURE,
             "開始\n計算\n5\n計算\n",
-            Some(("division-by-zero", "value / divisor", "values.prim")),
+            Some(("division-by-zero", "value / divisor", "values.ceru")),
         ),
         (
             "print(\"添字\"); mut a: [u64; 1] = [0]; a[1] = divide(10, 0);",
             "添字\n",
-            Some(("array-index-out-of-bounds", "[1]", "entry.prim")),
+            Some(("array-index-out-of-bounds", "[1]", "entry.ceru")),
         ),
     ];
     for (case, (entry, expected, failure)) in cases.into_iter().enumerate() {
@@ -323,7 +323,7 @@ fn split_and_single_file_examples_execute_identically_on_available_routes() {
         } else {
             assert_eq!(vm.unwrap(), expected);
         }
-        let single = primer_lang::compile_to_ir(&format!("{LIBRARY}\n{entry}")).unwrap();
+        let single = cerune_lang::compile_to_ir(&format!("{LIBRARY}\n{entry}")).unwrap();
         let single_vm = run_bytecode(&bytecode::lower(&single).unwrap());
         match single_vm {
             Ok(text) => {
@@ -345,19 +345,19 @@ fn split_and_single_file_examples_execute_identically_on_available_routes() {
 }
 
 fn compare_routes(w: &Workspace, program: &ir::Program, entry: Option<&Path>, label: &str) {
-    let cc = w.tool("PRIMER_TEST_CC", "clang", "--version");
-    let llvm = w.tool("PRIMER_TEST_LLVM_CLANG", "clang", "--version");
-    let node = w.tool("PRIMER_TEST_NODE", "node", "--version");
+    let cc = w.tool("CERUNE_TEST_CC", "clang", "--version");
+    let llvm = w.tool("CERUNE_TEST_LLVM_CLANG", "clang", "--version");
+    let node = w.tool("CERUNE_TEST_NODE", "node", "--version");
     let qbe = if cfg!(target_os = "linux") {
-        w.tool("PRIMER_TEST_QBE", "qbe", "-h")
+        w.tool("CERUNE_TEST_QBE", "qbe", "-h")
     } else {
         None
     };
-    let wat = std::env::var_os("PRIMER_TEST_WAT2WASM_JS");
+    let wat = std::env::var_os("CERUNE_TEST_WAT2WASM_JS");
     if let Some(wat) = &wat {
         assert!(Path::new(wat).is_file());
     } else {
-        eprintln!("source-file WAT execution skipped: PRIMER_TEST_WAT2WASM_JS not configured");
+        eprintln!("source-file WAT execution skipped: CERUNE_TEST_WAT2WASM_JS not configured");
     }
     let target = if cfg!(windows) {
         codegen::x86_64::Target::X86_64PcWindowsMsvc
@@ -464,7 +464,7 @@ fn artifact(
 ) -> Vec<u8> {
     if let Some(entry) = entry {
         let output = w.0.join("cli-artifact");
-        let mut command = Command::new(env!("CARGO_BIN_EXE_primer"));
+        let mut command = Command::new(env!("CARGO_BIN_EXE_cerune"));
         command
             .arg(if route == "object" {
                 "emit-obj".into()
@@ -512,28 +512,28 @@ fn module_cli_artifacts_execute_with_the_same_values_order_and_failure_origins()
     let root = Path::new(env!("CARGO_MANIFEST_DIR")).join("examples/modules");
     for (file, expected, failure) in [
         (
-            "main.prim",
+            "main.ceru",
             "18446744073709551615\n2\n観測\0\r\n\ntrue\nfalse\n計算\n5\n",
             None,
         ),
         (
-            "single.prim",
+            "single.ceru",
             "18446744073709551615\n2\n観測\0\r\n\ntrue\nfalse\n計算\n5\n",
             None,
         ),
         (
-            "failure.prim",
+            "failure.ceru",
             "開始\n計算\n5\n計算\n",
             Some(("division-by-zero", 2, "value / divisor")),
         ),
         (
-            "array_update.prim",
+            "array_update.ceru",
             "添字\n",
             Some(("array-index-out-of-bounds", 1, "[1]")),
         ),
     ] {
         let entry = root.join(file);
-        let compilation = primer_lang::modules::load(&entry).unwrap();
+        let compilation = cerune_lang::modules::load(&entry).unwrap();
         let program = compilation.to_ir().unwrap();
         let result = run_bytecode(&bytecode::lower(&program).unwrap());
         if let Some((code, file_id, expression)) = failure {
@@ -549,7 +549,7 @@ fn module_cli_artifacts_execute_with_the_same_values_order_and_failure_origins()
         check_execution(
             &program,
             w.run(
-                Command::new(env!("CARGO_BIN_EXE_primer"))
+                Command::new(env!("CARGO_BIN_EXE_cerune"))
                     .arg("run")
                     .arg(&entry)
                     .args(["--diagnostic-format", "runtime-v1"]),
@@ -564,14 +564,14 @@ fn module_cli_artifacts_execute_with_the_same_values_order_and_failure_origins()
 #[test]
 fn module_observation_keeps_dependency_sources_for_both_encoders() {
     let w = Workspace::new();
-    let Some(node) = w.tool("PRIMER_TEST_NODE", "node", "--version") else {
+    let Some(node) = w.tool("CERUNE_TEST_NODE", "node", "--version") else {
         return;
     };
-    let Some(cc) = w.tool("PRIMER_TEST_CC", "clang", "--version") else {
+    let Some(cc) = w.tool("CERUNE_TEST_CC", "clang", "--version") else {
         return;
     };
     let Some(objdump) = w.tool(
-        "PRIMER_TEST_OBJDUMP",
+        "CERUNE_TEST_OBJDUMP",
         if cfg!(windows) {
             "llvm-objdump"
         } else {
@@ -587,14 +587,14 @@ fn module_observation_keeps_dependency_sources_for_both_encoders() {
     } else {
         "x86_64-unknown-linux-gnu"
     };
-    for encoder in ["external", "primer"] {
+    for encoder in ["external", "cerune"] {
         let directory = w.0.join(encoder);
         w.success(
             Command::new(&node)
                 .arg(root.join("scripts/observe-native.cjs"))
                 .arg("--source")
-                .arg(root.join("examples/modules/failure.prim"))
-                .args(["--target", target, "--primer", env!("CARGO_BIN_EXE_primer")])
+                .arg(root.join("examples/modules/failure.ceru"))
+                .args(["--target", target, "--cerune", env!("CARGO_BIN_EXE_cerune")])
                 .arg("--cc")
                 .arg(&cc)
                 .arg("--objdump")
@@ -605,7 +605,7 @@ fn module_observation_keeps_dependency_sources_for_both_encoders() {
             "module-observer",
         );
         let sources = fs::read_to_string(directory.join("sources.json")).unwrap();
-        assert!(sources.contains("values.prim"));
+        assert!(sources.contains("values.ceru"));
         assert!(sources.contains("pub fn divide"));
         let manifest = fs::read_to_string(directory.join("manifest.json")).unwrap();
         assert!(manifest.contains("expected-failure-confirmed"));
@@ -616,8 +616,8 @@ fn module_observation_keeps_dependency_sources_for_both_encoders() {
 #[test]
 fn many_argument_cli_examples_preserve_order_copies_and_stack_values() {
     let w = Workspace::new();
-    let entry = Path::new(env!("CARGO_MANIFEST_DIR")).join("examples/function_arguments.prim");
-    let program = primer_lang::modules::load(&entry).unwrap().to_ir().unwrap();
+    let entry = Path::new(env!("CARGO_MANIFEST_DIR")).join("examples/function_arguments.ceru");
+    let program = cerune_lang::modules::load(&entry).unwrap().to_ir().unwrap();
     compare_routes(&w, &program, Some(&entry), "argument-example");
 
     // 両レジスタ群を別々に使い切り、もう一方の空きとスタック順序を確認します。
@@ -687,7 +687,7 @@ fn many_argument_cli_examples_preserve_order_copies_and_stack_values() {
             result: Row = take({arguments}, original, data);
             print(result.value); print(result.label); print(data[599]);"
         );
-        let program = primer_lang::compile_to_ir(&source).unwrap();
+        let program = cerune_lang::compile_to_ir(&source).unwrap();
         assert_eq!(
             run_bytecode(&bytecode::lower(&program).unwrap()).unwrap(),
             format!(
@@ -711,9 +711,9 @@ fn many_argument_failure_preserves_prior_output_and_skips_later_arguments() {
         print(false && take(seen(1), 2, 3, 4, 5, 1 / 0, seen(7)));
         print(take(seen(1), seen(2), seen(3), seen(4), seen(5), 1 / 0, seen(7)));
     "#;
-    let entry = w.0.join("arguments.prim");
+    let entry = w.0.join("arguments.ceru");
     fs::write(&entry, source).unwrap();
-    let program = primer_lang::modules::load(&entry).unwrap().to_ir().unwrap();
+    let program = cerune_lang::modules::load(&entry).unwrap().to_ir().unwrap();
     let error = run_bytecode(&bytecode::lower(&program).unwrap()).unwrap_err();
     assert_eq!(error.vm_error().output(), "開始\nfalse\n1\n2\n3\n4\n5\n");
     let failure = error.runtime_failure().unwrap();

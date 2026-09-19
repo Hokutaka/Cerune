@@ -1,11 +1,11 @@
-use crate::ir as primer_ir;
+use crate::ir as cerune_ir;
 
 use super::ir::{
     ArrayProjection, AssignmentTarget, BinaryOp, Expr, ExprKind, FieldDefinition, FieldValue,
     Function, Module, Parameter, PrintFormat, Statement, Type, TypeDefinition, UnaryOp,
 };
 
-pub fn lower(program: &primer_ir::Program) -> Module {
+pub fn lower(program: &cerune_ir::Program) -> Module {
     let mut module = Module {
         uses_strings: crate::codegen::support::first_string_span(program).is_some(),
         temporaries: Vec::new(),
@@ -28,8 +28,8 @@ pub fn lower(program: &primer_ir::Program) -> Module {
                     })
                     .collect(),
                 return_type: match &function.return_type {
-                    primer_ir::ReturnType::Void => None,
-                    primer_ir::ReturnType::Value(ty) => Some(ty.clone().into()),
+                    cerune_ir::ReturnType::Void => None,
+                    cerune_ir::ReturnType::Value(ty) => Some(ty.clone().into()),
                 },
                 body: function.body.iter().map(lower_statement).collect(),
             })
@@ -45,13 +45,13 @@ pub fn lower(program: &primer_ir::Program) -> Module {
     module
 }
 
-fn collect_array_assignment_types(program: &primer_ir::Program) -> Vec<Type> {
-    fn visit(statements: &[primer_ir::Statement], result: &mut Vec<Type>) {
+fn collect_array_assignment_types(program: &cerune_ir::Program) -> Vec<Type> {
+    fn visit(statements: &[cerune_ir::Statement], result: &mut Vec<Type>) {
         for statement in statements {
             match &statement.kind {
-                primer_ir::StatementKind::Assignment { target, .. } => {
+                cerune_ir::StatementKind::Assignment { target, .. } => {
                     for projection in &target.projections {
-                        let primer_ir::AssignmentProjection::Index {
+                        let cerune_ir::AssignmentProjection::Index {
                             element, length, ..
                         } = projection;
                         let ty = Type::Array {
@@ -63,7 +63,7 @@ fn collect_array_assignment_types(program: &primer_ir::Program) -> Vec<Type> {
                         }
                     }
                 }
-                primer_ir::StatementKind::If {
+                cerune_ir::StatementKind::If {
                     then_body,
                     else_body,
                     ..
@@ -71,8 +71,8 @@ fn collect_array_assignment_types(program: &primer_ir::Program) -> Vec<Type> {
                     visit(then_body, result);
                     visit(else_body, result);
                 }
-                primer_ir::StatementKind::While { body, .. } => visit(body, result),
-                primer_ir::StatementKind::For {
+                cerune_ir::StatementKind::While { body, .. } => visit(body, result),
+                cerune_ir::StatementKind::For {
                     initializer,
                     update,
                     body,
@@ -82,12 +82,12 @@ fn collect_array_assignment_types(program: &primer_ir::Program) -> Vec<Type> {
                     visit(std::slice::from_ref(update), result);
                     visit(body, result);
                 }
-                primer_ir::StatementKind::Binding { .. }
-                | primer_ir::StatementKind::Print { .. }
-                | primer_ir::StatementKind::Call { .. }
-                | primer_ir::StatementKind::Return { .. }
-                | primer_ir::StatementKind::Break
-                | primer_ir::StatementKind::Continue => {}
+                cerune_ir::StatementKind::Binding { .. }
+                | cerune_ir::StatementKind::Print { .. }
+                | cerune_ir::StatementKind::Call { .. }
+                | cerune_ir::StatementKind::Return { .. }
+                | cerune_ir::StatementKind::Break
+                | cerune_ir::StatementKind::Continue => {}
             }
         }
     }
@@ -100,10 +100,10 @@ fn collect_array_assignment_types(program: &primer_ir::Program) -> Vec<Type> {
     result
 }
 
-fn lower_type_definitions(program: &primer_ir::Program) -> Vec<TypeDefinition> {
+fn lower_type_definitions(program: &cerune_ir::Program) -> Vec<TypeDefinition> {
     fn visit(
         id: usize,
-        program: &primer_ir::Program,
+        program: &cerune_ir::Program,
         visited: &mut [bool],
         definitions: &mut Vec<TypeDefinition>,
     ) {
@@ -139,21 +139,21 @@ fn lower_type_definitions(program: &primer_ir::Program) -> Vec<TypeDefinition> {
     definitions
 }
 
-fn named_type_dependency(ty: &primer_ir::Type) -> Option<primer_ir::TypeId> {
+fn named_type_dependency(ty: &cerune_ir::Type) -> Option<cerune_ir::TypeId> {
     match ty {
-        primer_ir::Type::String => None,
-        primer_ir::Type::Named(id) => Some(*id),
-        primer_ir::Type::Array { element, .. } => named_type_dependency(element),
-        primer_ir::Type::Bool
-        | primer_ir::Type::Integer(_)
-        | primer_ir::Type::F32
-        | primer_ir::Type::F64 => None,
+        cerune_ir::Type::String => None,
+        cerune_ir::Type::Named(id) => Some(*id),
+        cerune_ir::Type::Array { element, .. } => named_type_dependency(element),
+        cerune_ir::Type::Bool
+        | cerune_ir::Type::Integer(_)
+        | cerune_ir::Type::F32
+        | cerune_ir::Type::F64 => None,
     }
 }
 
-fn lower_statement(statement: &primer_ir::Statement) -> Statement {
+fn lower_statement(statement: &cerune_ir::Statement) -> Statement {
     match &statement.kind {
-        primer_ir::StatementKind::Binding {
+        cerune_ir::StatementKind::Binding {
             id,
             name,
             ty,
@@ -165,14 +165,14 @@ fn lower_statement(statement: &primer_ir::Statement) -> Statement {
             value: lower_expr(value),
         },
 
-        primer_ir::StatementKind::Assignment { target, value } => Statement::Assignment {
+        cerune_ir::StatementKind::Assignment { target, value } => Statement::Assignment {
             target: AssignmentTarget {
                 name: binding_name(target.id, &target.name),
                 projections: target
                     .projections
                     .iter()
                     .map(|projection| {
-                        let primer_ir::AssignmentProjection::Index {
+                        let cerune_ir::AssignmentProjection::Index {
                             index,
                             element,
                             length,
@@ -194,12 +194,12 @@ fn lower_statement(statement: &primer_ir::Statement) -> Statement {
             value: lower_expr(value),
         },
 
-        primer_ir::StatementKind::Print { value } => Statement::Print {
+        cerune_ir::StatementKind::Print { value } => Statement::Print {
             format: print_format(&value.ty),
             value: lower_expr(value),
         },
 
-        primer_ir::StatementKind::Call {
+        cerune_ir::StatementKind::Call {
             function_id,
             function_name,
             arguments,
@@ -210,11 +210,11 @@ fn lower_statement(statement: &primer_ir::Statement) -> Statement {
             arguments: arguments.iter().map(lower_expr).collect(),
         },
 
-        primer_ir::StatementKind::Return { value } => {
+        cerune_ir::StatementKind::Return { value } => {
             Statement::Return(value.as_ref().map(lower_expr))
         }
 
-        primer_ir::StatementKind::If {
+        cerune_ir::StatementKind::If {
             condition,
             then_body,
             else_body,
@@ -224,12 +224,12 @@ fn lower_statement(statement: &primer_ir::Statement) -> Statement {
             else_body: else_body.iter().map(lower_statement).collect(),
         },
 
-        primer_ir::StatementKind::While { condition, body } => Statement::While {
+        cerune_ir::StatementKind::While { condition, body } => Statement::While {
             condition: lower_expr(condition),
             body: body.iter().map(lower_statement).collect(),
         },
 
-        primer_ir::StatementKind::For {
+        cerune_ir::StatementKind::For {
             initializer,
             condition,
             update,
@@ -241,17 +241,17 @@ fn lower_statement(statement: &primer_ir::Statement) -> Statement {
             body: body.iter().map(lower_statement).collect(),
         },
 
-        primer_ir::StatementKind::Break => Statement::Break,
-        primer_ir::StatementKind::Continue => Statement::Continue,
+        cerune_ir::StatementKind::Break => Statement::Break,
+        cerune_ir::StatementKind::Continue => Statement::Continue,
     }
 }
 
 // Cの宣言スコープや補助関数名に影響されず、解決済みの束縛を参照します。
-fn binding_name(id: primer_ir::BindingId, name: &str) -> String {
+fn binding_name(id: cerune_ir::BindingId, name: &str) -> String {
     format!("binding_{}_{name}", id.0)
 }
 
-fn lower_expr(expr: &primer_ir::Expr) -> Expr {
+fn lower_expr(expr: &cerune_ir::Expr) -> Expr {
     let value = lower_expr_unchecked(expr);
     if let Some(ty) = super::super::integer_range_check(expr) {
         Expr {
@@ -261,11 +261,11 @@ fn lower_expr(expr: &primer_ir::Expr) -> Expr {
                 value: Box::new(value),
                 ty,
                 code: match expr.kind {
-                    primer_ir::ExprKind::ConvertInteger { .. } => {
+                    cerune_ir::ExprKind::ConvertInteger { .. } => {
                         crate::runtime::FailureCode::IntegerConversionOutOfRange
                     }
-                    primer_ir::ExprKind::Binary {
-                        op: primer_ir::BinaryOp::Divide,
+                    cerune_ir::ExprKind::Binary {
+                        op: cerune_ir::BinaryOp::Divide,
                         ..
                     } => crate::runtime::FailureCode::DivisionOverflow,
                     _ => crate::runtime::FailureCode::IntegerOverflow,
@@ -277,7 +277,7 @@ fn lower_expr(expr: &primer_ir::Expr) -> Expr {
     }
 }
 
-fn lower_expr_unchecked(expr: &primer_ir::Expr) -> Expr {
+fn lower_expr_unchecked(expr: &cerune_ir::Expr) -> Expr {
     if let Some((value, conversion)) = crate::codegen::u64_integer_conversion(expr) {
         return Expr {
             origin: expr.into(),
@@ -290,19 +290,19 @@ fn lower_expr_unchecked(expr: &primer_ir::Expr) -> Expr {
     }
 
     let kind = match &expr.kind {
-        primer_ir::ExprKind::StringByteLength { value } => ExprKind::StringByteLength {
+        cerune_ir::ExprKind::StringByteLength { value } => ExprKind::StringByteLength {
             value: Box::new(lower_expr(value)),
         },
-        primer_ir::ExprKind::String(value) => ExprKind::String(value.clone()),
-        primer_ir::ExprKind::Logical { op, left, right } => ExprKind::Logical {
+        cerune_ir::ExprKind::String(value) => ExprKind::String(value.clone()),
+        cerune_ir::ExprKind::Logical { op, left, right } => ExprKind::Logical {
             op: match op {
-                primer_ir::LogicalOp::And => super::ir::LogicalOp::And,
-                primer_ir::LogicalOp::Or => super::ir::LogicalOp::Or,
+                cerune_ir::LogicalOp::And => super::ir::LogicalOp::And,
+                cerune_ir::LogicalOp::Or => super::ir::LogicalOp::Or,
             },
             left: Box::new(lower_expr(left)),
             right: Box::new(lower_expr(right)),
         },
-        primer_ir::ExprKind::ConvertNumeric {
+        cerune_ir::ExprKind::ConvertNumeric {
             value, from, to, ..
         } => {
             if from == to {
@@ -316,20 +316,20 @@ fn lower_expr_unchecked(expr: &primer_ir::Expr) -> Expr {
                 },
             }
         }
-        primer_ir::ExprKind::ConvertInteger { value, .. } => return lower_expr(value),
-        primer_ir::ExprKind::Boolean(value) => ExprKind::Boolean(*value),
+        cerune_ir::ExprKind::ConvertInteger { value, .. } => return lower_expr(value),
+        cerune_ir::ExprKind::Boolean(value) => ExprKind::Boolean(*value),
 
-        primer_ir::ExprKind::Integer(value) => ExprKind::Integer(*value),
+        cerune_ir::ExprKind::Integer(value) => ExprKind::Integer(*value),
 
-        primer_ir::ExprKind::Float { text } => ExprKind::Float {
+        cerune_ir::ExprKind::Float { text } => ExprKind::Float {
             text: text.clone(),
-            suffix_f32: expr.ty == primer_ir::Type::F32,
+            suffix_f32: expr.ty == cerune_ir::Type::F32,
         },
 
-        primer_ir::ExprKind::Variable { id, name } => ExprKind::Variable(binding_name(*id, name)),
+        cerune_ir::ExprKind::Variable { id, name } => ExprKind::Variable(binding_name(*id, name)),
 
-        primer_ir::ExprKind::Unary {
-            op: primer_ir::UnaryOp::BitNot,
+        cerune_ir::ExprKind::Unary {
+            op: cerune_ir::UnaryOp::BitNot,
             value,
         } => ExprKind::IntegerBinary {
             scratch: expr.id.0,
@@ -342,12 +342,12 @@ fn lower_expr_unchecked(expr: &primer_ir::Expr) -> Expr {
                 kind: ExprKind::Integer(crate::codegen::complement_mask(&expr.ty) as i128),
             }),
         },
-        primer_ir::ExprKind::Unary { op, value } => ExprKind::Unary {
+        cerune_ir::ExprKind::Unary { op, value } => ExprKind::Unary {
             op: lower_unary_op(*op, &expr.ty),
             value: Box::new(lower_expr(value)),
         },
 
-        primer_ir::ExprKind::Binary { op, left, right }
+        cerune_ir::ExprKind::Binary { op, left, right }
             if crate::codegen::integer_binary_op(*op, &left.ty).is_some() =>
         {
             ExprKind::IntegerBinary {
@@ -358,13 +358,13 @@ fn lower_expr_unchecked(expr: &primer_ir::Expr) -> Expr {
                 right: Box::new(lower_expr(right)),
             }
         }
-        primer_ir::ExprKind::Binary { op, left, right } => ExprKind::Binary {
+        cerune_ir::ExprKind::Binary { op, left, right } => ExprKind::Binary {
             op: lower_binary_op(*op, &left.ty),
             left: Box::new(lower_expr(left)),
             right: Box::new(lower_expr(right)),
         },
 
-        primer_ir::ExprKind::Construct {
+        cerune_ir::ExprKind::Construct {
             type_id, fields, ..
         } => ExprKind::Construct {
             type_id: type_id.0,
@@ -377,20 +377,20 @@ fn lower_expr_unchecked(expr: &primer_ir::Expr) -> Expr {
                 .collect(),
         },
 
-        primer_ir::ExprKind::FieldAccess {
+        cerune_ir::ExprKind::FieldAccess {
             field_name, base, ..
         } => ExprKind::FieldAccess {
             field_name: field_name.clone(),
             base: Box::new(lower_expr(base)),
         },
-        primer_ir::ExprKind::Array(values) => {
+        cerune_ir::ExprKind::Array(values) => {
             ExprKind::Array(values.iter().map(lower_expr).collect())
         }
-        primer_ir::ExprKind::Index { base, index } => ExprKind::Index {
+        cerune_ir::ExprKind::Index { base, index } => ExprKind::Index {
             base: Box::new(lower_expr(base)),
             index: Box::new(lower_expr(index)),
         },
-        primer_ir::ExprKind::Call {
+        cerune_ir::ExprKind::Call {
             function_id,
             function_name,
             arguments,
@@ -408,31 +408,31 @@ fn lower_expr_unchecked(expr: &primer_ir::Expr) -> Expr {
     }
 }
 
-fn print_format(ty: &primer_ir::Type) -> PrintFormat {
+fn print_format(ty: &cerune_ir::Type) -> PrintFormat {
     match ty {
-        primer_ir::Type::String => PrintFormat::String,
-        primer_ir::Type::Bool => PrintFormat::Bool,
-        primer_ir::Type::Integer(crate::types::IntegerType::U64) => PrintFormat::U64,
-        primer_ir::Type::Integer(_) => PrintFormat::I64,
-        primer_ir::Type::F32 => PrintFormat::F32,
-        primer_ir::Type::F64 => PrintFormat::F64,
-        primer_ir::Type::Named(_) | primer_ir::Type::Array { .. } => {
+        cerune_ir::Type::String => PrintFormat::String,
+        cerune_ir::Type::Bool => PrintFormat::Bool,
+        cerune_ir::Type::Integer(crate::types::IntegerType::U64) => PrintFormat::U64,
+        cerune_ir::Type::Integer(_) => PrintFormat::I64,
+        cerune_ir::Type::F32 => PrintFormat::F32,
+        cerune_ir::Type::F64 => PrintFormat::F64,
+        cerune_ir::Type::Named(_) | cerune_ir::Type::Array { .. } => {
             unreachable!("semantic analysis rejects aggregate printing")
         }
     }
 }
 
-impl From<primer_ir::Type> for Type {
-    fn from(value: primer_ir::Type) -> Self {
+impl From<cerune_ir::Type> for Type {
+    fn from(value: cerune_ir::Type) -> Self {
         match value {
-            primer_ir::Type::String => Self::String,
-            primer_ir::Type::Bool => Self::Bool,
-            primer_ir::Type::Integer(crate::types::IntegerType::U64) => Self::U64,
-            primer_ir::Type::Integer(_) => Self::I64,
-            primer_ir::Type::F32 => Self::Float,
-            primer_ir::Type::F64 => Self::Double,
-            primer_ir::Type::Named(id) => Self::Named(id.0),
-            primer_ir::Type::Array { element, length } => Self::Array {
+            cerune_ir::Type::String => Self::String,
+            cerune_ir::Type::Bool => Self::Bool,
+            cerune_ir::Type::Integer(crate::types::IntegerType::U64) => Self::U64,
+            cerune_ir::Type::Integer(_) => Self::I64,
+            cerune_ir::Type::F32 => Self::Float,
+            cerune_ir::Type::F64 => Self::Double,
+            cerune_ir::Type::Named(id) => Self::Named(id.0),
+            cerune_ir::Type::Array { element, length } => Self::Array {
                 element: Box::new((*element).into()),
                 length,
             },
@@ -440,9 +440,9 @@ impl From<primer_ir::Type> for Type {
     }
 }
 
-fn collect_array_types(program: &primer_ir::Program) -> Vec<Type> {
-    fn add(ty: &primer_ir::Type, types: &mut Vec<Type>) {
-        if let primer_ir::Type::Array { element, .. } = ty {
+fn collect_array_types(program: &cerune_ir::Program) -> Vec<Type> {
+    fn add(ty: &cerune_ir::Type, types: &mut Vec<Type>) {
+        if let cerune_ir::Type::Array { element, .. } = ty {
             add(element, types);
             let ty = ty.clone().into();
             if !types.contains(&ty) {
@@ -451,23 +451,23 @@ fn collect_array_types(program: &primer_ir::Program) -> Vec<Type> {
         }
     }
 
-    fn visit_expr(expr: &primer_ir::Expr, types: &mut Vec<Type>) {
+    fn visit_expr(expr: &cerune_ir::Expr, types: &mut Vec<Type>) {
         add(&expr.ty, types);
         match &expr.kind {
-            primer_ir::ExprKind::StringByteLength { value } => visit_expr(value, types),
-            primer_ir::ExprKind::String(_) => {}
-            primer_ir::ExprKind::Array(values) => {
+            cerune_ir::ExprKind::StringByteLength { value } => visit_expr(value, types),
+            cerune_ir::ExprKind::String(_) => {}
+            cerune_ir::ExprKind::Array(values) => {
                 for value in values {
                     visit_expr(value, types);
                 }
             }
-            primer_ir::ExprKind::Index { base, index }
-            | primer_ir::ExprKind::Logical {
+            cerune_ir::ExprKind::Index { base, index }
+            | cerune_ir::ExprKind::Logical {
                 left: base,
                 right: index,
                 ..
             }
-            | primer_ir::ExprKind::Binary {
+            | cerune_ir::ExprKind::Binary {
                 left: base,
                 right: index,
                 ..
@@ -475,49 +475,49 @@ fn collect_array_types(program: &primer_ir::Program) -> Vec<Type> {
                 visit_expr(base, types);
                 visit_expr(index, types);
             }
-            primer_ir::ExprKind::Construct { fields, .. } => {
+            cerune_ir::ExprKind::Construct { fields, .. } => {
                 for field in fields {
                     visit_expr(&field.value, types);
                 }
             }
-            primer_ir::ExprKind::FieldAccess { base, .. }
-            | primer_ir::ExprKind::ConvertNumeric { value: base, .. }
-            | primer_ir::ExprKind::ConvertInteger { value: base, .. }
-            | primer_ir::ExprKind::Unary { value: base, .. } => visit_expr(base, types),
-            primer_ir::ExprKind::Call { arguments, .. } => {
+            cerune_ir::ExprKind::FieldAccess { base, .. }
+            | cerune_ir::ExprKind::ConvertNumeric { value: base, .. }
+            | cerune_ir::ExprKind::ConvertInteger { value: base, .. }
+            | cerune_ir::ExprKind::Unary { value: base, .. } => visit_expr(base, types),
+            cerune_ir::ExprKind::Call { arguments, .. } => {
                 for argument in arguments {
                     visit_expr(argument, types);
                 }
             }
-            primer_ir::ExprKind::Boolean(_)
-            | primer_ir::ExprKind::Integer(_)
-            | primer_ir::ExprKind::Float { .. }
-            | primer_ir::ExprKind::Variable { .. } => {}
+            cerune_ir::ExprKind::Boolean(_)
+            | cerune_ir::ExprKind::Integer(_)
+            | cerune_ir::ExprKind::Float { .. }
+            | cerune_ir::ExprKind::Variable { .. } => {}
         }
     }
 
-    fn visit_statement(statement: &primer_ir::Statement, types: &mut Vec<Type>) {
+    fn visit_statement(statement: &cerune_ir::Statement, types: &mut Vec<Type>) {
         match &statement.kind {
-            primer_ir::StatementKind::Binding { ty, value, .. } => {
+            cerune_ir::StatementKind::Binding { ty, value, .. } => {
                 add(ty, types);
                 visit_expr(value, types);
             }
-            primer_ir::StatementKind::Assignment { target, value } => {
+            cerune_ir::StatementKind::Assignment { target, value } => {
                 add(&target.root_ty, types);
                 for projection in &target.projections {
-                    let primer_ir::AssignmentProjection::Index { index, .. } = projection;
+                    let cerune_ir::AssignmentProjection::Index { index, .. } = projection;
                     visit_expr(index, types);
                 }
                 visit_expr(value, types);
             }
-            primer_ir::StatementKind::Print { value }
-            | primer_ir::StatementKind::Return { value: Some(value) } => visit_expr(value, types),
-            primer_ir::StatementKind::Call { arguments, .. } => {
+            cerune_ir::StatementKind::Print { value }
+            | cerune_ir::StatementKind::Return { value: Some(value) } => visit_expr(value, types),
+            cerune_ir::StatementKind::Call { arguments, .. } => {
                 for argument in arguments {
                     visit_expr(argument, types);
                 }
             }
-            primer_ir::StatementKind::If {
+            cerune_ir::StatementKind::If {
                 condition,
                 then_body,
                 else_body,
@@ -527,13 +527,13 @@ fn collect_array_types(program: &primer_ir::Program) -> Vec<Type> {
                     visit_statement(statement, types);
                 }
             }
-            primer_ir::StatementKind::While { condition, body } => {
+            cerune_ir::StatementKind::While { condition, body } => {
                 visit_expr(condition, types);
                 for statement in body {
                     visit_statement(statement, types);
                 }
             }
-            primer_ir::StatementKind::For {
+            cerune_ir::StatementKind::For {
                 initializer,
                 condition,
                 update,
@@ -546,9 +546,9 @@ fn collect_array_types(program: &primer_ir::Program) -> Vec<Type> {
                     visit_statement(statement, types);
                 }
             }
-            primer_ir::StatementKind::Return { value: None }
-            | primer_ir::StatementKind::Break
-            | primer_ir::StatementKind::Continue => {}
+            cerune_ir::StatementKind::Return { value: None }
+            | cerune_ir::StatementKind::Break
+            | cerune_ir::StatementKind::Continue => {}
         }
     }
 
@@ -569,43 +569,43 @@ fn collect_array_types(program: &primer_ir::Program) -> Vec<Type> {
     types
 }
 
-fn lower_unary_op(op: primer_ir::UnaryOp, ty: &primer_ir::Type) -> UnaryOp {
+fn lower_unary_op(op: cerune_ir::UnaryOp, ty: &cerune_ir::Type) -> UnaryOp {
     match (op, ty) {
-        (primer_ir::UnaryOp::BitNot, _) => unreachable!("bit complement uses integer lowering"),
-        (primer_ir::UnaryOp::Negate, primer_ir::Type::Integer(_)) => UnaryOp::CheckedI64Negate,
-        (primer_ir::UnaryOp::Negate, _) => UnaryOp::Negate,
-        (primer_ir::UnaryOp::Not, _) => UnaryOp::Not,
+        (cerune_ir::UnaryOp::BitNot, _) => unreachable!("bit complement uses integer lowering"),
+        (cerune_ir::UnaryOp::Negate, cerune_ir::Type::Integer(_)) => UnaryOp::CheckedI64Negate,
+        (cerune_ir::UnaryOp::Negate, _) => UnaryOp::Negate,
+        (cerune_ir::UnaryOp::Not, _) => UnaryOp::Not,
     }
 }
 
-fn lower_binary_op(op: primer_ir::BinaryOp, operand_ty: &primer_ir::Type) -> BinaryOp {
+fn lower_binary_op(op: cerune_ir::BinaryOp, operand_ty: &cerune_ir::Type) -> BinaryOp {
     match (op, operand_ty) {
         (
-            primer_ir::BinaryOp::Remainder
-            | primer_ir::BinaryOp::BitAnd
-            | primer_ir::BinaryOp::BitOr
-            | primer_ir::BinaryOp::BitXor
-            | primer_ir::BinaryOp::ShiftLeft
-            | primer_ir::BinaryOp::ShiftRight,
+            cerune_ir::BinaryOp::Remainder
+            | cerune_ir::BinaryOp::BitAnd
+            | cerune_ir::BinaryOp::BitOr
+            | cerune_ir::BinaryOp::BitXor
+            | cerune_ir::BinaryOp::ShiftLeft
+            | cerune_ir::BinaryOp::ShiftRight,
             _,
         ) => unreachable!("integer operation uses separate lowering"),
-        (primer_ir::BinaryOp::Add, primer_ir::Type::Integer(_)) => BinaryOp::CheckedI64Add,
-        (primer_ir::BinaryOp::Subtract, primer_ir::Type::Integer(_)) => {
+        (cerune_ir::BinaryOp::Add, cerune_ir::Type::Integer(_)) => BinaryOp::CheckedI64Add,
+        (cerune_ir::BinaryOp::Subtract, cerune_ir::Type::Integer(_)) => {
             BinaryOp::CheckedI64Subtract
         }
-        (primer_ir::BinaryOp::Multiply, primer_ir::Type::Integer(_)) => {
+        (cerune_ir::BinaryOp::Multiply, cerune_ir::Type::Integer(_)) => {
             BinaryOp::CheckedI64Multiply
         }
-        (primer_ir::BinaryOp::Divide, primer_ir::Type::Integer(_)) => BinaryOp::CheckedI64Divide,
-        (primer_ir::BinaryOp::Add, _) => BinaryOp::Add,
-        (primer_ir::BinaryOp::Subtract, _) => BinaryOp::Subtract,
-        (primer_ir::BinaryOp::Multiply, _) => BinaryOp::Multiply,
-        (primer_ir::BinaryOp::Divide, _) => BinaryOp::Divide,
-        (primer_ir::BinaryOp::Equal, _) => BinaryOp::Equal,
-        (primer_ir::BinaryOp::NotEqual, _) => BinaryOp::NotEqual,
-        (primer_ir::BinaryOp::Less, _) => BinaryOp::Less,
-        (primer_ir::BinaryOp::LessEqual, _) => BinaryOp::LessEqual,
-        (primer_ir::BinaryOp::Greater, _) => BinaryOp::Greater,
-        (primer_ir::BinaryOp::GreaterEqual, _) => BinaryOp::GreaterEqual,
+        (cerune_ir::BinaryOp::Divide, cerune_ir::Type::Integer(_)) => BinaryOp::CheckedI64Divide,
+        (cerune_ir::BinaryOp::Add, _) => BinaryOp::Add,
+        (cerune_ir::BinaryOp::Subtract, _) => BinaryOp::Subtract,
+        (cerune_ir::BinaryOp::Multiply, _) => BinaryOp::Multiply,
+        (cerune_ir::BinaryOp::Divide, _) => BinaryOp::Divide,
+        (cerune_ir::BinaryOp::Equal, _) => BinaryOp::Equal,
+        (cerune_ir::BinaryOp::NotEqual, _) => BinaryOp::NotEqual,
+        (cerune_ir::BinaryOp::Less, _) => BinaryOp::Less,
+        (cerune_ir::BinaryOp::LessEqual, _) => BinaryOp::LessEqual,
+        (cerune_ir::BinaryOp::Greater, _) => BinaryOp::Greater,
+        (cerune_ir::BinaryOp::GreaterEqual, _) => BinaryOp::GreaterEqual,
     }
 }

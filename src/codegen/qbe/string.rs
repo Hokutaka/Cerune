@@ -5,7 +5,7 @@ pub(super) fn emit(module: &Module, output: &mut String) {
     for (id, value) in module.strings.iter().enumerate() {
         write!(
             output,
-            "section \".rodata\" data $primer_string_{id} = align 8 {{ l {}",
+            "section \".rodata\" data $cerune_string_{id} = align 8 {{ l {}",
             value.len()
         )
         .unwrap();
@@ -19,7 +19,7 @@ pub(super) fn emit(module: &Module, output: &mut String) {
 
 // 長さを先に確認し、NULを含む全バイトを比較します。アドレス同士は比較しません。
 const SUPPORT: &str = r#"
-function w $primer_string_equal(l %left, l %right) {
+function w $cerune_string_equal(l %left, l %right) {
 @start
   %length =l loadl %left
   %right_length =l loadl %right
@@ -46,7 +46,7 @@ function w $primer_string_equal(l %left, l %right) {
   ret 0
 }
 
-function $primer_print_string(l %value) {
+function $cerune_print_string(l %value) {
 @start
   %length =l loadl %value
   jmp @condition

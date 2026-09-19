@@ -4,7 +4,7 @@
 
 **状態: 実装済み**
 
-この文書は、Primerへ最初に導入したユーザー定義型として、名前付きproduct typeの意味、構文、可観測性、実装境界を整理します。
+この文書は、Ceruneへ最初に導入したユーザー定義型として、名前付きproduct typeの意味、構文、可観測性、実装境界を整理します。
 
 言語として利用するための規則は[言語リファレンス](../reference/language.ja.md)で定義します。この文書では、その規則を選んだ理由と生成物への変換も説明します。
 
@@ -14,14 +14,14 @@
 
 product typeは、複数の値を名前付きのfieldへまとめ、一つの意味を持つ値として扱うための型です。
 
-```primer
+```cerune
 type Point {
     x: f64,
     y: f64,
 }
 ```
 
-Primerでは、単に値をまとめられることに加えて、次を観測できる必要があります。
+Ceruneでは、単に値をまとめられることに加えて、次を観測できる必要があります。
 
 - ソース上でどの型とfieldが定義されたか
 - 構築時にどのfieldが明示され、どのfieldへ既定値が使われたか
@@ -44,7 +44,7 @@ Primerでは、単に値をまとめられることに加えて、次を観測�
 - 物理的なコピー、共有、分解方法は言語仕様で固定しない
 - 型名は同じファイルのtop-level全体から参照できる
 - 型名と値名は別のnamespaceで管理し、field名は型ごとに管理する
-- backendに依存しない型とfieldの意味はPrimer IRより前に解決する
+- backendに依存しない型とfieldの意味はCerune IRより前に解決する
 - aggregate literalの明示値はソース記述順、省略されたfieldの既定値はその後に型定義順で評価する
 - memory layoutとABIはbackend lowering以降で決定する
 
@@ -79,7 +79,7 @@ field_access :=
 
 fieldの型は型定義で指定します。
 
-```primer
+```cerune
 type Point {
     x: f64,
     y: f64,
@@ -88,7 +88,7 @@ type Point {
 
 値を作るたびにfieldの型を繰り返しません。
 
-```primer
+```cerune
 point: Point = Point {
     x: 1.0,
     y: 2.0,
@@ -97,7 +97,7 @@ point: Point = Point {
 
 型定義内のfieldには、組み込み型、固定長配列、ユーザー定義型を指定できます。
 
-```primer
+```cerune
 type Line {
     start: Point,
     end: Point,
@@ -110,7 +110,7 @@ type Path {
 
 fieldの型には`infer`を使用しません。型定義は値の使用場所に関係なく、確定した形を持つ必要があります。
 
-```primer
+```cerune
 type Point {
     x: infer, // エラー
 }
@@ -118,7 +118,7 @@ type Point {
 
 一方、aggregate literal自体から束縛の型を推論できます。
 
-```primer
+```cerune
 point: infer = Point {
     x: 1.0,
     y: 2.0,
@@ -129,7 +129,7 @@ point: infer = Point {
 
 同じfieldを持つ型でも、名前が異なれば別の型です。
 
-```primer
+```cerune
 type Point {
     x: f64,
     y: f64,
@@ -153,7 +153,7 @@ Program
 
 型名は宣言順に依存せず、同じファイルのtop-level全体から参照できます。
 
-```primer
+```cerune
 type Line {
     start: Point,
     end: Point,
@@ -183,7 +183,7 @@ type Point {
 
 コンパイラは名前が書かれた場所から、どのnamespaceを探すか判断します。型指定の`Point`とaggregate literalを始める`Point`は型namespaceを探し、式の中の`point`は値namespaceを探します。
 
-```primer
+```cerune
 type Point {
     x: f64,
 }
@@ -209,7 +209,7 @@ field-ref x -> FieldId 0
 
 値を直接含み続けるためサイズを決定できない型は、意味解析で診断します。
 
-```primer
+```cerune
 type A {
     b: B,
 }
@@ -225,7 +225,7 @@ type B {
 
 型の作者は、fieldへ明示的な既定値を定義できます。
 
-```primer
+```cerune
 type Options {
     retries: i64 = 3,
     verbose: bool = false,
@@ -235,7 +235,7 @@ type Options {
 
 既定値のないfieldはaggregate literalで必ず指定します。
 
-```primer
+```cerune
 options: Options = Options {
     timeout: 10.0,
 };
@@ -248,7 +248,7 @@ options: Options = Options {
 - fieldの型と一致する必要がある
 - aggregateを構築するたびに適用する
 - 明示された値があれば、そのfieldの既定値を使用しない
-- 既定値の使用をPrimer IRで構造化して記録する
+- 既定値の使用をCerune IRで構造化して記録する
 - 最初の実装では、実行時の束縛や同じaggregateの別fieldへ依存しない式を扱う
 
 最後の項目は最初の実装範囲です。将来扱える式を永久に制限する決定ではありません。
@@ -257,7 +257,7 @@ options: Options = Options {
 
 fieldは名前で指定するため、aggregate literalでの記述順は型定義順と一致しなくても構いません。
 
-```primer
+```cerune
 point: Point = Point {
     y: 2.0,
     x: 1.0,
@@ -274,15 +274,15 @@ point: Point = Point {
 
 aggregate literalで明示されたfieldの式は、ソースに書かれた順番で評価します。その後、省略されたfieldの既定値を型定義に書かれた順番で評価します。明示されたfieldの既定値は評価しません。
 
-評価結果は、名前解決済みの`FieldId`によって対応するfieldへ関連付けます。そのため、評価順、Primer IRでfieldを決定的に表示する順序、backendが決める物理的な配置順は別の情報です。
+評価結果は、名前解決済みの`FieldId`によって対応するfieldへ関連付けます。そのため、評価順、Cerune IRでfieldを決定的に表示する順序、backendが決める物理的な配置順は別の情報です。
 
-Primer IRは、実際の評価順と`FieldId`への対応を構造化して保持します。fieldの一覧は型定義順で決定的に表示できますが、その表示順へ式の評価を並べ替えてはいけません。これにより、将来、関数呼び出しや実行時エラーを含む式が追加されても、挙動が偶然のbackend実装へ依存しません。
+Cerune IRは、実際の評価順と`FieldId`への対応を構造化して保持します。fieldの一覧は型定義順で決定的に表示できますが、その表示順へ式の評価を並べ替えてはいけません。これにより、将来、関数呼び出しや実行時エラーを含む式が追加されても、挙動が偶然のbackend実装へ依存しません。
 
 ## field access
 
 field accessには`.`を使用し、入れ子にできます。
 
-```primer
+```cerune
 print(point.x);
 print(line.start.y);
 ```
@@ -291,7 +291,7 @@ field accessは、意味解析で型とfieldへ解決します。文字列とし
 
 `if`と`while`では、条件の直後の`{`を本文の開始として読みます。構築直後のfieldを条件に使う場合は、構築式を丸括弧で囲みます。
 
-```primer
+```cerune
 if (Flags { enabled: true, }).enabled {
     print(true);
 }
@@ -301,13 +301,13 @@ if (Flags { enabled: true, }).enabled {
 
 aggregateのfieldは作成後に直接書き換えません。
 
-```primer
+```cerune
 point.x = 3.0; // エラー
 ```
 
 `mut`な束縛は、aggregate全体を新しい値へ再代入できます。
 
-```primer
+```cerune
 mut point: Point = Point {
     x: 1.0,
     y: 2.0,
@@ -325,7 +325,7 @@ point = Point {
 
 aggregateを別の束縛へ渡しても、プログラムから見える共有された可変状態を作りません。
 
-```primer
+```cerune
 mut a: Point = Point {
     x: 1.0,
     y: 2.0,
@@ -343,9 +343,9 @@ print(b.x); // 1.0
 
 この意味を保てる限り、backendやruntimeは値を物理的にコピー、共有、分解できます。copy、move、borrow、参照同一性の具体的な仕組みは、必要な型と操作を設計するときに決めます。
 
-## Primer IR
+## Cerune IR
 
-Primer IRは、少なくとも次の意味を保持します。
+Cerune IRは、少なくとも次の意味を保持します。
 
 ```text
 TypeId
@@ -380,7 +380,7 @@ print.f64 field %point@0.%x@0
 
 ## backend lowering
 
-Primer IRでは、型名、field名、型、構築、field accessを保持します。次はbackend lowering以降で決定します。
+Cerune IRでは、型名、field名、型、構築、field accessを保持します。次はbackend lowering以降で決定します。
 
 - aggregate全体のサイズ
 - fieldのoffsetとalignment
@@ -389,11 +389,11 @@ Primer IRでは、型名、field名、型、構築、field accessを保持しま
 - 値のコピーまたは共有方法
 - ABI上の受け渡し方法
 
-現在は、C struct、LLVMの名前付きaggregate、QBEの`alloc8`領域、WATのlinear memory、x86-64のstack、Primer VMの構造化された値へ変換します。QBEでは`blit`、WATとx86-64ではfieldごとのload/storeにより値をコピーします。その違いは出力成果物で観測できます。
+現在は、C struct、LLVMの名前付きaggregate、QBEの`alloc8`領域、WATのlinear memory、x86-64のstack、Cerune VMの構造化された値へ変換します。QBEでは`blit`、WATとx86-64ではfieldごとのload/storeにより値をコピーします。その違いは出力成果物で観測できます。
 
 WAT、QBE、x86-64の現在の内部layoutでは、各scalar fieldへ8バイトの場所を割り当てます。これは外部ABIや将来のlayoutを固定する言語仕様ではありません。
 
-Primerソースから物理layoutを固定する構文と、外部ABI互換性は今回の設計範囲に含めません。
+Ceruneソースから物理layoutを固定する構文と、外部ABI互換性は今回の設計範囲に含めません。
 
 ## Secretとの関係
 
@@ -420,12 +420,12 @@ aggregateを実装することと、`Secret`の最終的な構文や解除方法
 - 関数のparameterと戻り値としての値受け渡し
 - 型名のfile-wideな解決
 - 値として無限サイズになる型循環の診断
-- Primer IRでの型、field、構築、field access、値の出自
+- Cerune IRでの型、field、構築、field access、値の出自
 - bytecode、VM、すべてのbackendへのlowering
 - 正常系、診断、各観測成果物のsnapshot
 - 日本語と英語の仕様同期
 
-`check`、Primer IR、bytecode、VM、C、LLVM、WAT、QBE、Windows x86-64のすべてで同じ言語上の意味を扱います。正常系、診断、八つの観測成果物をtestで固定しています。
+`check`、Cerune IR、bytecode、VM、C、LLVM、WAT、QBE、Windows x86-64のすべてで同じ言語上の意味を扱います。正常系、診断、八つの観測成果物をtestで固定しています。
 
 ## 後続で検討する機能
 

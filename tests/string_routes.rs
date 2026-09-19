@@ -8,7 +8,7 @@ mod u64_cases;
 #[path = "support/string_cases.rs"]
 mod string_cases;
 
-use primer_lang::{
+use cerune_lang::{
     codegen::qbe::Target, compile_to_qbe, compile_to_qbe_with_target, compile_to_wat,
     compile_to_x86_64_win_asm, run_vm,
 };
@@ -23,7 +23,7 @@ impl Workspace {
             .unwrap()
             .as_nanos();
         let path = std::env::temp_dir().join(format!(
-            "primer-string-routes-{}-{stamp}",
+            "cerune-string-routes-{}-{stamp}",
             std::process::id()
         ));
         fs::create_dir(&path).unwrap();
@@ -81,14 +81,14 @@ fn cases() -> Vec<(&'static str, String)> {
         string_cases::BYTE_LENGTH.1.into(),
     ));
     cases.push((
-        include_str!("../examples/string_origins.prim"),
+        include_str!("../examples/string_origins.ceru"),
         "日本語\0\ntrue\nfalse\n".into(),
     ));
     for source in [
-        include_str!("../examples/string_values.prim"),
-        include_str!("../examples/string_lookup.prim"),
-        include_str!("../examples/native_values.prim"),
-        include_str!("../examples/packet_counter.prim"),
+        include_str!("../examples/string_values.ceru"),
+        include_str!("../examples/string_lookup.ceru"),
+        include_str!("../examples/native_values.ceru"),
+        include_str!("../examples/packet_counter.ceru"),
     ] {
         cases.push((source, run_vm(source).unwrap()));
     }
@@ -114,7 +114,7 @@ fn every_route_generates_deterministic_artifacts() {
         let wat = compile_to_wat(source).unwrap();
         assert!(wat.contains("\"write_byte\"") && wat.contains("i32.load8_u"));
         assert!(
-            !wat.contains("(export \"memory\"") && !wat.contains("(import \"primer\" \"memory\"")
+            !wat.contains("(export \"memory\"") && !wat.contains("(import \"cerune\" \"memory\"")
         );
         let asm = compile_to_x86_64_win_asm(source).unwrap();
         assert!(asm.contains("callq _setmode") && asm.contains("movzbl"));
@@ -136,7 +136,7 @@ fn qbe_requires_an_explicit_runtime_target() {
         assert!(compile_to_x86_64_win_asm(source).is_ok());
     }
     let workspace = Workspace::new();
-    let input = workspace.0.join("input.prim");
+    let input = workspace.0.join("input.ceru");
     let output = workspace.0.join("output.ssa");
     fs::write(&input, "print(\"x\");").unwrap();
     for options in [
@@ -146,7 +146,7 @@ fn qbe_requires_an_explicit_runtime_target() {
         vec!["--target", "unknown"],
     ] {
         fs::write(&output, b"existing artifact").unwrap();
-        let result = Command::new(env!("CARGO_BIN_EXE_primer"))
+        let result = Command::new(env!("CARGO_BIN_EXE_cerune"))
             .arg("emit-qbe")
             .arg(&input)
             .arg("-o")
@@ -170,7 +170,7 @@ fn direct_assembly_matches_known_bytes_and_vm_on_windows() {
         eprintln!("direct assembly execution skipped: requires Windows x64 with MSVC CRT");
         return;
     }
-    let Some(clang) = tool("PRIMER_TEST_ASM_CLANG", "clang", "--version") else {
+    let Some(clang) = tool("CERUNE_TEST_ASM_CLANG", "clang", "--version") else {
         return;
     };
     let workspace = Workspace::new();
@@ -223,10 +223,10 @@ fn qbe_matches_known_bytes_and_vm_on_linux() {
         eprintln!("QBE execution skipped: requires Linux x86-64");
         return;
     }
-    let Some(qbe) = tool("PRIMER_TEST_QBE", "qbe", "-h") else {
+    let Some(qbe) = tool("CERUNE_TEST_QBE", "qbe", "-h") else {
         return;
     };
-    let Some(cc) = tool("PRIMER_TEST_CC", "cc", "--version") else {
+    let Some(cc) = tool("CERUNE_TEST_CC", "cc", "--version") else {
         return;
     };
     let workspace = Workspace::new();
@@ -282,11 +282,11 @@ fn qbe_matches_known_bytes_and_vm_on_linux() {
 
 #[test]
 fn wat_matches_known_bytes_and_vm_without_exposing_memory() {
-    let Some(node) = tool("PRIMER_TEST_NODE", "node", "--version") else {
+    let Some(node) = tool("CERUNE_TEST_NODE", "node", "--version") else {
         return;
     };
     // WABTのJS版をNodeで呼び、Windowsでも同じ変換ツールを使います。
-    let wabt = std::env::var_os("PRIMER_TEST_WAT2WASM_JS")
+    let wabt = std::env::var_os("CERUNE_TEST_WAT2WASM_JS")
         .map(PathBuf::from)
         .unwrap_or_else(|| {
             PathBuf::from(env!("CARGO_MANIFEST_DIR"))
@@ -294,10 +294,10 @@ fn wat_matches_known_bytes_and_vm_without_exposing_memory() {
         });
     if !wabt.is_file() {
         assert!(
-            std::env::var_os("PRIMER_TEST_WAT2WASM_JS").is_none(),
+            std::env::var_os("CERUNE_TEST_WAT2WASM_JS").is_none(),
             "configured WABT is unavailable"
         );
-        eprintln!("WAT execution skipped: set PRIMER_TEST_WAT2WASM_JS to WABT's bin/wat2wasm");
+        eprintln!("WAT execution skipped: set CERUNE_TEST_WAT2WASM_JS to WABT's bin/wat2wasm");
         return;
     }
     let workspace = Workspace::new();
@@ -333,14 +333,14 @@ fn wat_matches_known_bytes_and_vm_without_exposing_memory() {
                 .arg(&wasm),
         );
         let failed = Command::new(&node).arg(&host).arg(&wasm).output().unwrap();
-        let primer_lang::RunError::Execution(expected) = run_vm(source).unwrap_err() else {
+        let cerune_lang::RunError::Execution(expected) = run_vm(source).unwrap_err() else {
             panic!("expected a runtime failure");
         };
         assert!(!failed.status.success());
         assert!(failed.stdout.is_empty());
         assert_eq!(
             String::from_utf8_lossy(&failed.stderr),
-            format!("primer: {}\n", expected.runtime_failure().unwrap().record())
+            format!("cerune: {}\n", expected.runtime_failure().unwrap().record())
         );
     }
 }

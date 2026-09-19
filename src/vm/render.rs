@@ -84,52 +84,52 @@ fn render_message(error: &VmError) -> String {
             to.name()
         ),
         VmErrorKind::InvalidIntegerValue { ty } => {
-            format!("Primer VM found a value outside the {} range", ty.name())
+            format!("Cerune VM found a value outside the {} range", ty.name())
         }
         VmErrorKind::InvalidNegationType { ty } => format!("cannot apply `-` to {}", ty.name()),
         VmErrorKind::InstructionOutOfBounds => {
-            "Primer VM reached an instruction outside the bytecode program".to_owned()
+            "Cerune VM reached an instruction outside the bytecode program".to_owned()
         }
         VmErrorKind::InvalidSlot { slot } => {
-            format!("Primer VM tried to access slot {slot}, but that slot does not exist")
+            format!("Cerune VM tried to access slot {slot}, but that slot does not exist")
         }
         VmErrorKind::InvalidType { type_id } => {
-            format!("Primer VM tried to use product type {type_id}, but that type does not exist")
+            format!("Cerune VM tried to use product type {type_id}, but that type does not exist")
         }
         VmErrorKind::InvalidField { type_id, field_id } => format!(
-            "Primer VM tried to use field {field_id} of product type {type_id}, but that field does not exist"
+            "Cerune VM tried to use field {field_id} of product type {type_id}, but that field does not exist"
         ),
         VmErrorKind::InvalidFunction { function_id } => format!(
-            "Primer VM tried to call function {function_id}, but that function does not exist"
+            "Cerune VM tried to call function {function_id}, but that function does not exist"
         ),
         VmErrorKind::InvalidArgumentCount { expected, actual } => {
-            format!("Primer VM expected {expected} function arguments, but found {actual}")
+            format!("Cerune VM expected {expected} function arguments, but found {actual}")
         }
         VmErrorKind::InvalidReturn => {
-            "Primer VM found a return instruction that does not match the function".to_owned()
+            "Cerune VM found a return instruction that does not match the function".to_owned()
         }
         VmErrorKind::UninitializedSlot { slot } => {
-            format!("Primer VM tried to read slot {slot} before it was initialized")
+            format!("Cerune VM tried to read slot {slot} before it was initialized")
         }
         VmErrorKind::SlotAlreadyInitialized { slot } => {
-            format!("Primer VM tried to initialize slot {slot} more than once")
+            format!("Cerune VM tried to initialize slot {slot} more than once")
         }
         VmErrorKind::AssignmentToUninitializedSlot { slot } => {
-            format!("Primer VM tried to assign slot {slot} before it was initialized")
+            format!("Cerune VM tried to assign slot {slot} before it was initialized")
         }
         VmErrorKind::AssignmentToImmutableSlot { slot } => {
-            format!("Primer VM tried to assign immutable slot {slot}")
+            format!("Cerune VM tried to assign immutable slot {slot}")
         }
         VmErrorKind::StackUnderflow => {
-            "Primer VM needed another value, but the stack was empty".to_owned()
+            "Cerune VM needed another value, but the stack was empty".to_owned()
         }
         VmErrorKind::TypeMismatch { expected, actual } => format!(
-            "Primer VM expected an {} value, but found an {} value",
+            "Cerune VM expected an {} value, but found an {} value",
             type_name(expected),
             type_name(actual)
         ),
         VmErrorKind::InvalidComparisonType { ty } => format!(
-            "Primer VM cannot use this comparison with {} values",
+            "Cerune VM cannot use this comparison with {} values",
             type_name(ty)
         ),
         VmErrorKind::DivisionByZero => "cannot divide an integer by zero".to_owned(),
@@ -145,10 +145,10 @@ fn render_message(error: &VmError) -> String {
             format!("array index {index} is outside an array of length {length}")
         }
         VmErrorKind::UnusedStackValues { count: 1 } => {
-            "Primer VM stopped with 1 unused value on the stack".to_owned()
+            "Cerune VM stopped with 1 unused value on the stack".to_owned()
         }
         VmErrorKind::UnusedStackValues { count } => {
-            format!("Primer VM stopped with {count} unused values on the stack")
+            format!("Cerune VM stopped with {count} unused values on the stack")
         }
     }
 }
@@ -215,7 +215,7 @@ mod tests {
 
         assert_eq!(
             render_compact(&error),
-            "Primer VM tried to access slot 7, but that slot does not exist at bytecode instruction 0012"
+            "Cerune VM tried to access slot 7, but that slot does not exist at bytecode instruction 0012"
         );
     }
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 'use strict';
 
-// 明示した外部ツールでASMから機械語までを観測します。Primerのemit APIは起動処理を持ちません。
+// 明示した外部ツールでASMから機械語までを観測します。Ceruneのemit APIは起動処理を持ちません。
 const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
@@ -14,20 +14,20 @@ function parse(args) {
     if (key === '--run' || key === '--expect-trap') {
       if (options[key]) throw new Error('duplicate option: ' + key);
       options[key] = true;
-    } else if (['--source', '--target', '--primer', '--cc', '--objdump', '--output-dir', '--encoder'].includes(key)) {
+    } else if (['--source', '--target', '--cerune', '--cc', '--objdump', '--output-dir', '--encoder'].includes(key)) {
       if (options[key] || !args[index + 1] || args[index + 1].startsWith('--')) throw new Error('missing or duplicate value: ' + key);
       options[key] = args[++index];
     } else {
       throw new Error('unknown option: ' + key);
     }
   }
-  for (const key of ['--source', '--target', '--primer', '--cc', '--objdump', '--output-dir']) {
+  for (const key of ['--source', '--target', '--cerune', '--cc', '--objdump', '--output-dir']) {
     if (!options[key]) throw new Error('required option: ' + key);
   }
   if (!['x86_64-unknown-linux-gnu', 'x86_64-pc-windows-msvc'].includes(options['--target'])) throw new Error('unsupported target');
   if (options['--expect-trap'] && !options['--run']) throw new Error('--expect-trap requires --run');
   options['--encoder'] ||= 'external';
-  if (!['external', 'primer'].includes(options['--encoder'])) throw new Error('unsupported encoder');
+  if (!['external', 'cerune'].includes(options['--encoder'])) throw new Error('unsupported encoder');
   return options;
 }
 
@@ -42,10 +42,10 @@ function observe(options) {
   if (fs.existsSync(directory)) throw new Error('output directory already exists: ' + directory);
   const sourceBytes = fs.readFileSync(source);
   const resolveTool = value => /[\\/]/.test(value) ? path.resolve(value) : value;
-  const primer = resolveTool(options['--primer']);
+  const cerune = resolveTool(options['--cerune']);
   const cc = resolveTool(options['--cc']);
   const objdump = resolveTool(options['--objdump']);
-  const report = { schema: 'primer-native-observation-v1', target, encoder: options['--encoder'] || 'external', sourceSha256: hash(sourceBytes), tools: {}, steps: [], artifacts: {}, status: 'building' };
+  const report = { schema: 'cerune-native-observation-v1', target, encoder: options['--encoder'] || 'external', sourceSha256: hash(sourceBytes), tools: {}, steps: [], artifacts: {}, status: 'building' };
   let created = false;
   const save = () => { if (created) fs.writeFileSync(path.join(directory, 'manifest.json'), JSON.stringify(report, null, 2) + '\n'); };
   const run = (stage, tool, args, allowFailure = false) => {
@@ -65,27 +65,27 @@ function observe(options) {
     report.artifacts[name] = { sha256: hash(bytes), bytes: bytes.length };
   };
   try {
-    for (const [name, tool] of [['primer', primer], ['cc', cc], ['objdump', objdump]]) {
+    for (const [name, tool] of [['cerune', cerune], ['cc', cc], ['objdump', objdump]]) {
       const version = run('version:' + name, tool, ['--version']);
       report.tools[name] = { command: tool, version: version.stdout.toString('utf8').trim() };
     }
     // 新規ディレクトリのみを使い、既存の成果物や失敗記録を上書きしません。
     fs.mkdirSync(directory);
     created = true;
-    write('source.prim', sourceBytes);
+    write('source.ceru', sourceBytes);
     // 元の入口から依存を読み、別ディレクトリへのコピーでimportの意味を変えません。
-    const sourceManifest = run('sources', primer, ['emit-sources', source]).stdout;
+    const sourceManifest = run('sources', cerune, ['emit-sources', source]).stdout;
     if (!Buffer.from(JSON.parse(sourceManifest).files[0].text, 'utf8').equals(sourceBytes)) {
       throw new Error('entry source changed before observation');
     }
     write('sources.json', sourceManifest);
-    write('program.pir', run('primer-ir', primer, ['emit-ir', source]).stdout);
-    write('program.s', run('assembly', primer, ['emit-asm', source, '--target', target, '--annotate-origins']).stdout);
+    write('program.ceir', run('cerune-ir', cerune, ['emit-ir', source]).stdout);
+    write('program.s', run('assembly', cerune, ['emit-asm', source, '--target', target, '--annotate-origins']).stdout);
     const object = windows ? 'program.obj' : 'program.o';
     const executable = windows ? 'program.exe' : 'program';
     const flags = windows ? ['--target=' + target] : ['-m64'];
-    if (report.encoder === 'primer') {
-      run('encode-object', primer, ['emit-obj', source, '--target', target, '--annotate-origins', '-o', object]);
+    if (report.encoder === 'cerune') {
+      run('encode-object', cerune, ['emit-obj', source, '--target', target, '--annotate-origins', '-o', object]);
     } else {
       run('assemble', cc, [...flags, '-c', 'program.s', '-o', object]);
     }
@@ -101,7 +101,7 @@ function observe(options) {
       report.artifacts[name] = { sha256: hash(bytes), bytes: bytes.length };
     }
     if (options['--run']) {
-      const vm = run('vm', primer, ['run', source, '--diagnostic-format', 'runtime-v1'], true);
+      const vm = run('vm', cerune, ['run', source, '--diagnostic-format', 'runtime-v1'], true);
       const native = run('native', path.join(directory, executable), [], true);
       write('vm.stdout', vm.stdout);
       write('vm.stderr', vm.stderr);
@@ -132,7 +132,7 @@ function observe(options) {
       report.status = 'generated-not-executed';
     }
     // 生成と実行の間に依存本文が変わった観測は、同じコンパイルとして合格にしません。
-    if (!sourceManifest.equals(run('verify-sources', primer, ['emit-sources', source]).stdout)) {
+    if (!sourceManifest.equals(run('verify-sources', cerune, ['emit-sources', source]).stdout)) {
       throw new Error('source files changed during observation');
     }
     save();
@@ -150,7 +150,7 @@ function hash(bytes) { return crypto.createHash('sha256').update(bytes).digest('
 // 完全な1レコードだけを受け付け、別のクラッシュや追加のエラーを合格にしません。
 function parseRuntimeFailure(bytes) {
   const text = bytes.toString('utf8').replace(/\r\n/g, '\n');
-  const match = /^primer: runtime-v1 code=([a-z-]+) node=(0|[1-9][0-9]*)(?: file=([1-9][0-9]*))? bytes=(0|[1-9][0-9]*)\.\.(0|[1-9][0-9]*)\n$/.exec(text);
+  const match = /^cerune: runtime-v1 code=([a-z-]+) node=(0|[1-9][0-9]*)(?: file=([1-9][0-9]*))? bytes=(0|[1-9][0-9]*)\.\.(0|[1-9][0-9]*)\n$/.exec(text);
   if (!match || match[0].length !== text.length) return null;
   const codes = ['integer-overflow', 'division-by-zero', 'division-overflow', 'remainder-by-zero',
     'invalid-shift-count', 'integer-conversion-out-of-range', 'conversion-out-of-range',
@@ -162,7 +162,7 @@ function parseRuntimeFailure(bytes) {
 
 if (require.main === module) {
   if (process.argv.length === 3 && process.argv[2] === '--help') {
-    console.log('Usage: node scripts/observe-native.cjs --source <file> --target <triple> --primer <tool> --cc <tool> --objdump <tool> --output-dir <new-directory> [--encoder external|primer] [--run [--expect-trap]]');
+    console.log('Usage: node scripts/observe-native.cjs --source <file> --target <triple> --cerune <tool> --cc <tool> --objdump <tool> --output-dir <new-directory> [--encoder external|cerune] [--run [--expect-trap]]');
     process.exit(0);
   }
   try {

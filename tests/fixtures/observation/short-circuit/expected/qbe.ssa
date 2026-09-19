@@ -1,89 +1,89 @@
-section ".rodata" data $primer_origin_16_134_147 = { b 32, b 110, b 111, b 100, b 101, b 61, b 49, b 54, b 32, b 98, b 121, b 116, b 101, b 115, b 61, b 49, b 51, b 52, b 46, b 46, b 49, b 52, b 55, b 10 }
-section ".rodata" data $primer_code_integer_overflow = { b 112, b 114, b 105, b 109, b 101, b 114, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 105, b 110, b 116, b 101, b 103, b 101, b 114, b 45, b 111, b 118, b 101, b 114, b 102, b 108, b 111, b 119 }
-function $primer_fail_integer_overflow(l %origin, l %origin_len) {
+section ".rodata" data $cerune_origin_16_134_147 = { b 32, b 110, b 111, b 100, b 101, b 61, b 49, b 54, b 32, b 98, b 121, b 116, b 101, b 115, b 61, b 49, b 51, b 52, b 46, b 46, b 49, b 52, b 55, b 10 }
+section ".rodata" data $cerune_code_integer_overflow = { b 99, b 101, b 114, b 117, b 110, b 101, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 105, b 110, b 116, b 101, b 103, b 101, b 114, b 45, b 111, b 118, b 101, b 114, b 102, b 108, b 111, b 119 }
+function $cerune_fail_integer_overflow(l %origin, l %origin_len) {
 @start
-  call $primer_runtime_failure(l $primer_code_integer_overflow, l 40, l %origin, l %origin_len)
+  call $cerune_runtime_failure(l $cerune_code_integer_overflow, l 40, l %origin, l %origin_len)
   hlt
 }
 
-section ".rodata" data $primer_code_division_by_zero = { b 112, b 114, b 105, b 109, b 101, b 114, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 100, b 105, b 118, b 105, b 115, b 105, b 111, b 110, b 45, b 98, b 121, b 45, b 122, b 101, b 114, b 111 }
-function $primer_fail_division_by_zero(l %origin, l %origin_len) {
+section ".rodata" data $cerune_code_division_by_zero = { b 99, b 101, b 114, b 117, b 110, b 101, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 100, b 105, b 118, b 105, b 115, b 105, b 111, b 110, b 45, b 98, b 121, b 45, b 122, b 101, b 114, b 111 }
+function $cerune_fail_division_by_zero(l %origin, l %origin_len) {
 @start
-  call $primer_runtime_failure(l $primer_code_division_by_zero, l 40, l %origin, l %origin_len)
+  call $cerune_runtime_failure(l $cerune_code_division_by_zero, l 40, l %origin, l %origin_len)
   hlt
 }
 
-section ".rodata" data $primer_code_division_overflow = { b 112, b 114, b 105, b 109, b 101, b 114, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 100, b 105, b 118, b 105, b 115, b 105, b 111, b 110, b 45, b 111, b 118, b 101, b 114, b 102, b 108, b 111, b 119 }
-function $primer_fail_division_overflow(l %origin, l %origin_len) {
+section ".rodata" data $cerune_code_division_overflow = { b 99, b 101, b 114, b 117, b 110, b 101, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 100, b 105, b 118, b 105, b 115, b 105, b 111, b 110, b 45, b 111, b 118, b 101, b 114, b 102, b 108, b 111, b 119 }
+function $cerune_fail_division_overflow(l %origin, l %origin_len) {
 @start
-  call $primer_runtime_failure(l $primer_code_division_overflow, l 41, l %origin, l %origin_len)
+  call $cerune_runtime_failure(l $cerune_code_division_overflow, l 41, l %origin, l %origin_len)
   hlt
 }
 
-section ".rodata" data $primer_code_remainder_by_zero = { b 112, b 114, b 105, b 109, b 101, b 114, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 114, b 101, b 109, b 97, b 105, b 110, b 100, b 101, b 114, b 45, b 98, b 121, b 45, b 122, b 101, b 114, b 111 }
-function $primer_fail_remainder_by_zero(l %origin, l %origin_len) {
+section ".rodata" data $cerune_code_remainder_by_zero = { b 99, b 101, b 114, b 117, b 110, b 101, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 114, b 101, b 109, b 97, b 105, b 110, b 100, b 101, b 114, b 45, b 98, b 121, b 45, b 122, b 101, b 114, b 111 }
+function $cerune_fail_remainder_by_zero(l %origin, l %origin_len) {
 @start
-  call $primer_runtime_failure(l $primer_code_remainder_by_zero, l 41, l %origin, l %origin_len)
+  call $cerune_runtime_failure(l $cerune_code_remainder_by_zero, l 41, l %origin, l %origin_len)
   hlt
 }
 
-section ".rodata" data $primer_code_invalid_shift_count = { b 112, b 114, b 105, b 109, b 101, b 114, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 105, b 110, b 118, b 97, b 108, b 105, b 100, b 45, b 115, b 104, b 105, b 102, b 116, b 45, b 99, b 111, b 117, b 110, b 116 }
-function $primer_fail_invalid_shift_count(l %origin, l %origin_len) {
+section ".rodata" data $cerune_code_invalid_shift_count = { b 99, b 101, b 114, b 117, b 110, b 101, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 105, b 110, b 118, b 97, b 108, b 105, b 100, b 45, b 115, b 104, b 105, b 102, b 116, b 45, b 99, b 111, b 117, b 110, b 116 }
+function $cerune_fail_invalid_shift_count(l %origin, l %origin_len) {
 @start
-  call $primer_runtime_failure(l $primer_code_invalid_shift_count, l 43, l %origin, l %origin_len)
+  call $cerune_runtime_failure(l $cerune_code_invalid_shift_count, l 43, l %origin, l %origin_len)
   hlt
 }
 
-section ".rodata" data $primer_code_integer_conversion_out_of_range = { b 112, b 114, b 105, b 109, b 101, b 114, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 105, b 110, b 116, b 101, b 103, b 101, b 114, b 45, b 99, b 111, b 110, b 118, b 101, b 114, b 115, b 105, b 111, b 110, b 45, b 111, b 117, b 116, b 45, b 111, b 102, b 45, b 114, b 97, b 110, b 103, b 101 }
-function $primer_fail_integer_conversion_out_of_range(l %origin, l %origin_len) {
+section ".rodata" data $cerune_code_integer_conversion_out_of_range = { b 99, b 101, b 114, b 117, b 110, b 101, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 105, b 110, b 116, b 101, b 103, b 101, b 114, b 45, b 99, b 111, b 110, b 118, b 101, b 114, b 115, b 105, b 111, b 110, b 45, b 111, b 117, b 116, b 45, b 111, b 102, b 45, b 114, b 97, b 110, b 103, b 101 }
+function $cerune_fail_integer_conversion_out_of_range(l %origin, l %origin_len) {
 @start
-  call $primer_runtime_failure(l $primer_code_integer_conversion_out_of_range, l 55, l %origin, l %origin_len)
+  call $cerune_runtime_failure(l $cerune_code_integer_conversion_out_of_range, l 55, l %origin, l %origin_len)
   hlt
 }
 
-section ".rodata" data $primer_code_conversion_out_of_range = { b 112, b 114, b 105, b 109, b 101, b 114, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 99, b 111, b 110, b 118, b 101, b 114, b 115, b 105, b 111, b 110, b 45, b 111, b 117, b 116, b 45, b 111, b 102, b 45, b 114, b 97, b 110, b 103, b 101 }
-function $primer_fail_conversion_out_of_range(l %origin, l %origin_len) {
+section ".rodata" data $cerune_code_conversion_out_of_range = { b 99, b 101, b 114, b 117, b 110, b 101, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 99, b 111, b 110, b 118, b 101, b 114, b 115, b 105, b 111, b 110, b 45, b 111, b 117, b 116, b 45, b 111, b 102, b 45, b 114, b 97, b 110, b 103, b 101 }
+function $cerune_fail_conversion_out_of_range(l %origin, l %origin_len) {
 @start
-  call $primer_runtime_failure(l $primer_code_conversion_out_of_range, l 47, l %origin, l %origin_len)
+  call $cerune_runtime_failure(l $cerune_code_conversion_out_of_range, l 47, l %origin, l %origin_len)
   hlt
 }
 
-section ".rodata" data $primer_code_conversion_inexact = { b 112, b 114, b 105, b 109, b 101, b 114, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 99, b 111, b 110, b 118, b 101, b 114, b 115, b 105, b 111, b 110, b 45, b 105, b 110, b 101, b 120, b 97, b 99, b 116 }
-function $primer_fail_conversion_inexact(l %origin, l %origin_len) {
+section ".rodata" data $cerune_code_conversion_inexact = { b 99, b 101, b 114, b 117, b 110, b 101, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 99, b 111, b 110, b 118, b 101, b 114, b 115, b 105, b 111, b 110, b 45, b 105, b 110, b 101, b 120, b 97, b 99, b 116 }
+function $cerune_fail_conversion_inexact(l %origin, l %origin_len) {
 @start
-  call $primer_runtime_failure(l $primer_code_conversion_inexact, l 42, l %origin, l %origin_len)
+  call $cerune_runtime_failure(l $cerune_code_conversion_inexact, l 42, l %origin, l %origin_len)
   hlt
 }
 
-section ".rodata" data $primer_code_conversion_not_finite = { b 112, b 114, b 105, b 109, b 101, b 114, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 99, b 111, b 110, b 118, b 101, b 114, b 115, b 105, b 111, b 110, b 45, b 110, b 111, b 116, b 45, b 102, b 105, b 110, b 105, b 116, b 101 }
-function $primer_fail_conversion_not_finite(l %origin, l %origin_len) {
+section ".rodata" data $cerune_code_conversion_not_finite = { b 99, b 101, b 114, b 117, b 110, b 101, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 99, b 111, b 110, b 118, b 101, b 114, b 115, b 105, b 111, b 110, b 45, b 110, b 111, b 116, b 45, b 102, b 105, b 110, b 105, b 116, b 101 }
+function $cerune_fail_conversion_not_finite(l %origin, l %origin_len) {
 @start
-  call $primer_runtime_failure(l $primer_code_conversion_not_finite, l 45, l %origin, l %origin_len)
+  call $cerune_runtime_failure(l $cerune_code_conversion_not_finite, l 45, l %origin, l %origin_len)
   hlt
 }
 
-section ".rodata" data $primer_code_conversion_nan = { b 112, b 114, b 105, b 109, b 101, b 114, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 99, b 111, b 110, b 118, b 101, b 114, b 115, b 105, b 111, b 110, b 45, b 110, b 97, b 110 }
-function $primer_fail_conversion_nan(l %origin, l %origin_len) {
+section ".rodata" data $cerune_code_conversion_nan = { b 99, b 101, b 114, b 117, b 110, b 101, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 99, b 111, b 110, b 118, b 101, b 114, b 115, b 105, b 111, b 110, b 45, b 110, b 97, b 110 }
+function $cerune_fail_conversion_nan(l %origin, l %origin_len) {
 @start
-  call $primer_runtime_failure(l $primer_code_conversion_nan, l 38, l %origin, l %origin_len)
+  call $cerune_runtime_failure(l $cerune_code_conversion_nan, l 38, l %origin, l %origin_len)
   hlt
 }
 
-section ".rodata" data $primer_code_conversion_negative_zero = { b 112, b 114, b 105, b 109, b 101, b 114, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 99, b 111, b 110, b 118, b 101, b 114, b 115, b 105, b 111, b 110, b 45, b 110, b 101, b 103, b 97, b 116, b 105, b 118, b 101, b 45, b 122, b 101, b 114, b 111 }
-function $primer_fail_conversion_negative_zero(l %origin, l %origin_len) {
+section ".rodata" data $cerune_code_conversion_negative_zero = { b 99, b 101, b 114, b 117, b 110, b 101, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 99, b 111, b 110, b 118, b 101, b 114, b 115, b 105, b 111, b 110, b 45, b 110, b 101, b 103, b 97, b 116, b 105, b 118, b 101, b 45, b 122, b 101, b 114, b 111 }
+function $cerune_fail_conversion_negative_zero(l %origin, l %origin_len) {
 @start
-  call $primer_runtime_failure(l $primer_code_conversion_negative_zero, l 48, l %origin, l %origin_len)
+  call $cerune_runtime_failure(l $cerune_code_conversion_negative_zero, l 48, l %origin, l %origin_len)
   hlt
 }
 
-section ".rodata" data $primer_code_array_index_out_of_bounds = { b 112, b 114, b 105, b 109, b 101, b 114, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 97, b 114, b 114, b 97, b 121, b 45, b 105, b 110, b 100, b 101, b 120, b 45, b 111, b 117, b 116, b 45, b 111, b 102, b 45, b 98, b 111, b 117, b 110, b 100, b 115 }
-function $primer_fail_array_index_out_of_bounds(l %origin, l %origin_len) {
+section ".rodata" data $cerune_code_array_index_out_of_bounds = { b 99, b 101, b 114, b 117, b 110, b 101, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 97, b 114, b 114, b 97, b 121, b 45, b 105, b 110, b 100, b 101, b 120, b 45, b 111, b 117, b 116, b 45, b 111, b 102, b 45, b 98, b 111, b 117, b 110, b 100, b 115 }
+function $cerune_fail_array_index_out_of_bounds(l %origin, l %origin_len) {
 @start
-  call $primer_runtime_failure(l $primer_code_array_index_out_of_bounds, l 49, l %origin, l %origin_len)
+  call $cerune_runtime_failure(l $cerune_code_array_index_out_of_bounds, l 49, l %origin, l %origin_len)
   hlt
 }
 
-function $primer_runtime_failure(l %code, l %code_len, l %origin, l %origin_len) {
+function $cerune_runtime_failure(l %code, l %code_len, l %origin, l %origin_len) {
 @start
   call $fflush(l 0)
   call $write(w 2, l %code, l %code_len)
@@ -99,7 +99,7 @@ data $bool_false = { b "false", b 0 }
 data $bool_true = { b "true", b 0 }
 data $bool_texts = align 8 { l $bool_false, l $bool_true }
 
-function w $primer_fn_report_0(w %arg0) {
+function w $cerune_fn_report_0(w %arg0) {
 @start
   %slot_value =l alloc8 8
   storew %arg0, %slot_value
@@ -140,7 +140,7 @@ export function w $main() {
   %tmp5 =w csgel %tmp3, 2
   jnz %tmp5, @block4, @block3
 @block4 # array_index_out_of_bounds
-  call $primer_runtime_failure(l $primer_code_array_index_out_of_bounds, l 49, l $primer_origin_16_134_147, l 24)
+  call $cerune_runtime_failure(l $cerune_code_array_index_out_of_bounds, l 49, l $cerune_origin_16_134_147, l 24)
   hlt
 @block3 # array_index_in_bounds
   %tmp6 =l mul %tmp3, 8
@@ -161,7 +161,7 @@ export function w $main() {
   storew %tmp17, %slot_logical_result4
   jnz %tmp17, @block6, @block5
 @block5 # logical_rhs
-  %tmp18 =w call $primer_fn_report_0(w 0)
+  %tmp18 =w call $cerune_fn_report_0(w 0)
   storew %tmp18, %slot_logical_result4
   jmp @block6
 @block6 # logical_end
@@ -174,7 +174,7 @@ export function w $main() {
   storew 0, %slot_logical_result5
   jnz 0, @block8, @block7
 @block7 # logical_rhs
-  %tmp25 =w call $primer_fn_report_0(w 1)
+  %tmp25 =w call $cerune_fn_report_0(w 1)
   storew %tmp25, %slot_logical_result6
   jnz %tmp25, @block9, @block10
 @block9 # logical_rhs
@@ -183,7 +183,7 @@ export function w $main() {
   storew %tmp27, %slot_logical_result7
   jnz %tmp27, @block12, @block11
 @block11 # logical_rhs
-  %tmp28 =w call $primer_fn_report_0(w 0)
+  %tmp28 =w call $cerune_fn_report_0(w 0)
   storew %tmp28, %slot_logical_result7
   jmp @block12
 @block12 # logical_end

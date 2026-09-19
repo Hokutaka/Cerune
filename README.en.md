@@ -1,143 +1,107 @@
-[![CI](https://github.com/Hokutaka/Primer/actions/workflows/ci.yml/badge.svg)](https://github.com/Hokutaka/Primer/actions/workflows/ci.yml)
+[![CI](https://github.com/Hokutaka/Cerune/actions/workflows/ci.yml/badge.svg)](https://github.com/Hokutaka/Cerune/actions/workflows/ci.yml)
 
-# Primer
+# Cerune
 
 [日本語](README.md) | English
 
-Primer is an experimental programming language designed to make compiler transformations observable.
+Cerune is an experimental programming language with static typing, VM execution, and code generation in multiple formats.
 
-Beyond the result, Primer makes it possible to inspect which types a computation uses and how it becomes generated code. A shared Primer IR (intermediate representation) holds the resolved meaning and types before lowering to each output target. Primer aims to combine sophisticated implementation with observability, while keeping inspection separate from mutation of compiler internals.
+## Try It
 
-## Run Your First Example
-
-You need a Rust development environment with rustup and Cargo. Clone the repository and install the CLI from its root:
+Requires Rust (rustup and Cargo).
 
 ```sh
-git clone https://github.com/Hokutaka/Primer.git
-cd Primer
+git clone https://github.com/Hokutaka/Cerune.git
+cd Cerune
 cargo install --path .
+cerune run examples/floating_point.ceru
 ```
 
-[examples/floating_point.prim](examples/floating_point.prim) performs the same addition with different types:
+The same addition produces different results depending on the type. Comments show the output.
 
-```primer
+```cerune
 a: f32 = 0.1 + 0.2;
 b: f64 = 0.1 + 0.2;
 c: infer = 0.1 + 0.2;
 
-print(a);
-print(b);
-print(c);
+print(a); // 0.300000012
+print(b); // 0.30000000000000004
+print(c); // 0.30000000000000004 (infer resolves to f64)
 ```
 
 ```sh
-primer run examples/floating_point.prim
+cerune emit-ir examples/floating_point.ceru
+cerune emit-c examples/floating_point.ceru -o floating_point.c
 ```
 
-Primer VM output:
+During development, replace `cerune` with `cargo run --quiet --`.
 
-```text
-0.300000012
-0.30000000000000004
-0.30000000000000004
-```
+## Capabilities
 
-`f32` and `f64` represent numbers with different precision. `infer` explicitly requests type inference; `c` resolves to `f64` in this example.
+### Types
 
-During development, replace `primer` with `cargo run --quiet --` to run the updated code without reinstalling the CLI.
-
-## Observe Computation and Transformation
-
-[Modules](docs/design/modules.en.md) split types and functions across files with explicit imports, namespaces, and visibility. Compare the [modular and single-file examples](examples/modules/README.en.md).
-
-Language check failures expose comparable reasons, source locations, and prior output across every route. See [runtime diagnostics](docs/design/runtime-diagnostics.en.md) and the [four expected-failure examples](examples/runtime_failures/README.en.md). Checked numeric LLVM programs require an explicit target, and WAT hosts must implement `primer.write_error_byte` for diagnostic output.
-
-The same source can be inspected as an intermediate representation or generated code, not just executed:
-
-```sh
-primer emit-ir examples/floating_point.prim
-primer emit-c examples/floating_point.prim
-```
-
-`emit-ir` shows resolved types and operations; `emit-c` shows how they are represented in C. Backends consume the shared Primer IR instead of interpreting the source semantics again.
-
-Text-producing `emit-*` commands write to standard output. To keep an artifact, use, for example, `primer emit-c examples/floating_point.prim -o floating_point.c`. Binary `emit-obj` requires both `--target` and `-o`. To check syntax and types without running, use `primer check examples/floating_point.prim`.
-
-The public observation points are Primer IR and emitted artifacts. Backend-specific Rust IR remains an internal lowering boundary. See the [compiler design](docs/design/architecture.en.md) and [observability contract](docs/design/observability.en.md) for details.
-
-## Current Capabilities
-
-- **Types and variables:** static typing; `bool`; `i8`, `u8`, `i16`, `u16`, `i32`, `u32`, `i64`, `u64`; `f32`, `f64`; `string`. Type declarations, `infer`, immutable bindings, and mutable bindings with `mut`.
-- **Data structures:** named structs (product types), default field values and field access, and nestable fixed arrays. Value copies and array-element updates.
-- **Functions and control flow:** typed functions, `void`, and explicit `return`. Top-level executable statements or `fn main() -> void`. `if` / `else`, `while`, `for`, and `break` / `continue`.
-- **Operators:** arithmetic, integer remainder and bit operations, comparisons, `!`, and short-circuiting `&&` and `||`.
-- **Explicit conversion:** equivalent spellings such as `f64(value)` and `convert<f64>(value)`. Conversion between implemented numeric types succeeds only when it preserves the value.
-- **Output and execution:** `print(expr);`, Primer IR and backend artifact emission, and Primer VM execution.
-
-Integer overflow, invalid integer division, out-of-bounds array access, and conversions that cannot preserve the value stop execution. There are no implicit numeric conversions. Ordinary floating-point arithmetic still rounds.
-
-Strings are immutable UTF-8 values, supporting printing, equality, UTF-8 byte-length queries, and use in functions and data structures. They work through every output route. LLVM and QBE require an explicit runtime `--target`. [LLVM target selection](docs/reference/cli.en.md#llvm-target-selection) supports Windows x64 and Linux x86-64. QBE targets Linux x86-64, direct assembly targets Windows x64 / Linux x86-64, and WAT uses a WebAssembly output host function. See [string design](docs/design/strings.en.md) for representation differences. Concatenation and string indexing are not implemented.
-
-Dynamically sized arrays, recursion, failure recovery, and explicit rounding/truncation operations are not implemented. Current generated targets store even small integer types in 64-bit storage and check their value ranges.
-
-`u64` covers 0 through 18446744073709551615. See the [design and target representations](docs/design/u64.en.md) and [example](examples/u64_values.prim).
-
-### Output Targets
-
-| Command | Artifact | Next step |
-| --- | --- | --- |
-| `emit-c` | C (`.c`) | Compile with GCC, Clang, or another C compiler |
-| `emit-llvm` | LLVM IR (`.ll`) | Compile with LLVM / Clang |
-| `emit-qbe` | QBE IR (`.ssa`) | Process with QBE |
-| `emit-wat` | WebAssembly Text (`.wat`) | Run using WebAssembly tools and a host |
-| `emit-asm` | Windows/Linux x86-64 assembly (`.s`) | Assemble and link |
-| `emit-obj` | Primer-encoded ELF/COFF (`.o` / `.obj`) | Link externally; `--target` and `-o` are required |
-| `emit-bytecode` | Primer bytecode (`.pbc`) | Inspect instructions; use `run` on source for VM execution |
-
-Primer handles artifact generation. External tool selection, CPU targets, optimization settings, and measurement policy belong to the caller. See [output routes and targets](docs/design/targets.en.md) for details.
-
-Linux ASM and machine-code observation are described in [native-code design and execution](docs/design/native-code.en.md).
-
-## Examples and Documentation
-
-| Category | Examples |
+| Category | Types / operations |
 | --- | --- |
-| Basics | [Small-value output](examples/small_values.prim), [short-circuit evaluation](examples/short_circuit.prim) |
-| Data structures | [Ring buffer](examples/ring_buffer.prim), [passing structs and arrays](examples/function_values.prim) |
-| Numerical computation | [Sample mean and variance](examples/measurement_statistics.prim), [learning a line](examples/linear_regression.prim) |
-| Algorithms | [Shortest paths](examples/shortest_paths.prim), [bitset subset sum](examples/subset_sum_bits.prim) |
+| Signed integers | `i8`, `i16`, `i32`, `i64` |
+| Unsigned integers | `u8`, `u16`, `u32`, `u64` |
+| Floating point | `f32`, `f64` |
+| Boolean | `bool` (`true` / `false`) |
+| Strings | Immutable UTF-8 `string`; printing, equality, byte count with `byte_len` |
 
-Find more in the [examples index](examples/README.en.md). Run all examples from the repository root.
+### Syntax and Operations
 
-PowerShell:
+| Feature | Support |
+| --- | --- |
+| Variables | Explicit types or inference with `infer`; immutable by default, reassignable with `mut` |
+| Operators | Arithmetic, remainder, comparisons, bit operations, logical negation, short-circuit evaluation |
+| Numeric conversion | Explicit value-preserving conversions such as `f64(x)` / `convert<f64>(x)` |
+| Structs | Named types, field access and defaults, nesting, value copies |
+| Arrays | Fixed length, nesting, element access and updates, value copies |
+| Functions | Typed parameters and returns, `void`, `return`; strings, structs, and arrays can also be passed and returned |
+| Entry point | Top-level statements or `fn main() -> void` (not both) |
+| Control flow | `if` / `else`, `while`, `for`, `break` / `continue` |
+| Modules | Explicit imports, namespaces, `pub` visibility |
+| Output and diagnostics | `print(expr);`, error reasons, source locations, output produced before failure |
 
-```powershell
-.\scripts\run-examples.ps1
-```
+**Arithmetic rules:** No implicit numeric conversions. Integer overflow, invalid integer division, out-of-bounds access, and conversions that cannot preserve the value stop execution. Floating-point arithmetic rounds.
 
-WSL / Bash (WSL also needs its own Rust development environment):
+**Not implemented:** Recursion, dynamic arrays, string concatenation/indexing, failure recovery, explicit rounding/truncation.
 
-```bash
-bash scripts/run-examples.sh
-bash scripts/test.sh
-```
+## Execution and Output
 
-`run-examples` displays sample output. Select examples with `-Pattern "matrix*.prim"` in PowerShell or `--pattern 'matrix*.prim'` in Bash. `test.sh` runs fmt, Clippy, and all test targets, including expected-output checks. Use `cargo test --test examples` for sample tests alone.
+| Command | Result / artifact | Use / target |
+| --- | --- | --- |
+| `check` | Syntax and type checking | Validate Cerune source (`.ceru`) |
+| `run` | VM execution | Run Cerune source (`.ceru`) |
+| `emit-sources` | Source manifest (JSON) | Export loaded file names and contents |
+| `emit-ir` | Cerune IR (`.ceir`) | Inspect types and operations |
+| `emit-bytecode` | Bytecode text (`.cebc`) | Inspect instructions |
+| `emit-c` | C (`.c`) | GCC, Clang, or another C compiler |
+| `emit-llvm` | LLVM IR (`.ll`) | LLVM / Clang; Windows / Linux x86-64 |
+| `emit-qbe` | QBE IR (`.ssa`) | QBE; Linux x86-64 |
+| `emit-wat` | WebAssembly Text (`.wat`) | WebAssembly tools and a host |
+| `emit-asm` | Assembly (`.s`) | Windows / Linux x86-64 |
+| `emit-obj` | ELF / COFF object (`.o` / `.obj`) | External linker; requires `--target` and `-o` |
 
-The `.sh` scripts default to `target/unix`, keeping Linux build output separate from Windows artifacts. They respect an existing `CARGO_TARGET_DIR` setting.
+Text goes to stdout; use `-o` to save it. LLVM / QBE string output and LLVM checked numeric operations require `--target`. WAT uses host functions for output and diagnostics.
 
-- [Language reference](docs/reference/language.en.md): current syntax, types, operators, and conversion rules.
-- [Language capabilities and roadmap](docs/design/language-roadmap.en.md): implemented features, proposed additions, and contracts for exploring GPU computation.
-- [CLI reference](docs/reference/cli.en.md): commands and options.
-- [Documentation index](docs/README.md): Japanese and English guides, with design decisions in `docs/design/` and current specifications in `docs/reference/`.
+## Examples and Development
 
-## Related Tools
+| Task | Command |
+| --- | --- |
+| Run all examples (PowerShell) | `.\scripts\run-examples.ps1` |
+| Run all examples (WSL / Bash) | `bash scripts/run-examples.sh` |
+| Filter examples | PowerShell: `-Pattern "matrix*.ceru"`; Bash: `--pattern 'matrix*.ceru'` |
+| Check expected example output | `cargo test --test examples` |
+| Run fmt, Clippy, and all tests (WSL / Bash) | `bash scripts/test.sh` |
 
-- [Tint\*](https://github.com/Hokutaka/Tint-St.): a development and inspection environment that presents source and generated representations side by side.
-- [Whitebase](https://github.com/Hokutaka/Whitebase): an experiment environment that runs, measures, and compares built-in Rust, C++, and Assembly operations. Integration with Primer artifacts is not implemented yet.
+WSL needs its own Rust installation. Shell scripts default to `target/unix` for builds.
 
-Primer owns language semantics and compilation. The intended Whitebase integration keeps experiments using emitted artifacts on the consumer side. See [Tool responsibilities](docs/design/architecture.en.md#tool-responsibilities) for the current implementation and integration boundary.
+## Documentation and Related Tools
 
-## License
+- [Examples by type and purpose](examples/README.en.md) · [Language](docs/reference/language.en.md) · [CLI](docs/reference/cli.en.md)
+- [Design docs](docs/README.md) · [Roadmap](docs/design/language-roadmap.en.md) · [Migrating from Primer](docs/design/naming.en.md)
+- [Tint\*](https://github.com/Hokutaka/Tint-St.): inspect source and generated representations side by side.
+- [Whitebase](https://github.com/Hokutaka/Whitebase): measure and compare Rust, C++, and Assembly operations. Cerune integration is not implemented.
 
-Licensed under the [MIT License](LICENSE).
+[MIT License](LICENSE)

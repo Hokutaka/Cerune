@@ -147,7 +147,7 @@ fn emit_i64_operation_support(operations: I64Operations, output: &mut String) {
         super::integer::emit_support(op, ty, output);
     }
     for ty in &operations.range_checks {
-        output.push_str(&format!("function l $primer_check_{}(l %value, l %code, l %code_len, l %origin, l %origin_len) {{\n@start\n  %below =w csltl %value, {}\n  %above =w csgtl %value, {}\n  %bad =w or %below, %above\n  jnz %bad, @trap, @ok\n@trap\n  call $primer_runtime_failure(l %code, l %code_len, l %origin, l %origin_len)\n  hlt\n@ok\n  ret %value\n}}\n\n", ty.name(), ty.minimum(), ty.maximum()));
+        output.push_str(&format!("function l $cerune_check_{}(l %value, l %code, l %code_len, l %origin, l %origin_len) {{\n@start\n  %below =w csltl %value, {}\n  %above =w csgtl %value, {}\n  %bad =w or %below, %above\n  jnz %bad, @trap, @ok\n@trap\n  call $cerune_runtime_failure(l %code, l %code_len, l %origin, l %origin_len)\n  hlt\n@ok\n  ret %value\n}}\n\n", ty.name(), ty.minimum(), ty.maximum()));
     }
 
     for (enabled, name, operation, check) in [
@@ -169,7 +169,7 @@ fn emit_i64_operation_support(operations: I64Operations, output: &mut String) {
         }
         writeln!(
             output,
-            "function l $primer_i64_{name}(l %left, l %right, l %origin, l %origin_len) {{"
+            "function l $cerune_i64_{name}(l %left, l %right, l %origin, l %origin_len) {{"
         )
         .unwrap();
         output.push_str("@start\n");
@@ -177,12 +177,12 @@ fn emit_i64_operation_support(operations: I64Operations, output: &mut String) {
         output.push_str(check);
         output.push_str("  %overflow =w csltl %sign_changed, 0\n");
         output.push_str("  jnz %overflow, @trap, @ok\n@trap\n");
-        output.push_str("  call $primer_fail_integer_overflow(l %origin, l %origin_len)\n  hlt\n@ok\n  ret %result\n}\n\n");
+        output.push_str("  call $cerune_fail_integer_overflow(l %origin, l %origin_len)\n  hlt\n@ok\n  ret %result\n}\n\n");
     }
 
     if operations.multiply {
         output.push_str(
-            "function l $primer_i64_mul(l %left, l %right, l %origin, l %origin_len) {\n\
+            "function l $cerune_i64_mul(l %left, l %right, l %origin, l %origin_len) {\n\
              @start\n\
              \x20 %left_zero =w ceql %left, 0\n\
              \x20 jnz %left_zero, @zero, @special\n\
@@ -203,7 +203,7 @@ fn emit_i64_operation_support(operations: I64Operations, output: &mut String) {
              @zero\n\
              \x20 ret 0\n\
              @trap\n\
-             \x20 call $primer_fail_integer_overflow(l %origin, l %origin_len)\n\
+             \x20 call $cerune_fail_integer_overflow(l %origin, l %origin_len)\n\
              \x20 hlt\n\
              @ok\n\
              \x20 ret %result\n\
@@ -212,7 +212,7 @@ fn emit_i64_operation_support(operations: I64Operations, output: &mut String) {
     }
 
     if operations.divide {
-        output.push_str("function l $primer_i64_div(l %left, l %right, l %origin, l %origin_len) {\n@start\n  %is_zero =w ceql %right, 0\n  jnz %is_zero, @zero, @bounds\n@bounds\n  %is_min =w ceql %left, -9223372036854775808\n  %is_negative_one =w ceql %right, -1\n  %overflows =w and %is_min, %is_negative_one\n  jnz %overflows, @overflow, @ok\n");
+        output.push_str("function l $cerune_i64_div(l %left, l %right, l %origin, l %origin_len) {\n@start\n  %is_zero =w ceql %right, 0\n  jnz %is_zero, @zero, @bounds\n@bounds\n  %is_min =w ceql %left, -9223372036854775808\n  %is_negative_one =w ceql %right, -1\n  %overflows =w and %is_min, %is_negative_one\n  jnz %overflows, @overflow, @ok\n");
         super::failure::block("zero", crate::runtime::FailureCode::DivisionByZero, output);
         super::failure::block(
             "overflow",
@@ -224,12 +224,12 @@ fn emit_i64_operation_support(operations: I64Operations, output: &mut String) {
 
     if operations.negate {
         output.push_str(
-            "function l $primer_i64_neg(l %value, l %origin, l %origin_len) {\n\
+            "function l $cerune_i64_neg(l %value, l %origin, l %origin_len) {\n\
              @start\n\
              \x20 %overflow =w ceql %value, -9223372036854775808\n\
              \x20 jnz %overflow, @trap, @ok\n\
              @trap\n\
-             \x20 call $primer_fail_integer_overflow(l %origin, l %origin_len)\n\
+             \x20 call $cerune_fail_integer_overflow(l %origin, l %origin_len)\n\
              \x20 hlt\n\
              @ok\n\
              \x20 %result =l neg %value\n\
@@ -294,7 +294,7 @@ fn emit_function(function: &Function, module: &Module, output: &mut String) {
 }
 
 fn function_name(function: &Function) -> String {
-    format!("primer_fn_{}_{}", function.name, function.id)
+    format!("cerune_fn_{}_{}", function.name, function.id)
 }
 
 fn emit_instruction(
@@ -307,7 +307,7 @@ fn emit_instruction(
         Instruction::PrintString { value } => {
             writeln!(
                 output,
-                "  call $primer_print_string(l {})",
+                "  call $cerune_print_string(l {})",
                 operand(value, slots)
             )
             .unwrap();
@@ -358,7 +358,7 @@ fn emit_instruction(
         } => {
             writeln!(
                 output,
-                "  {} =l call $primer_check_{}(l {}, {}, {})",
+                "  {} =l call $cerune_check_{}(l {}, {}, {})",
                 temp(*dest),
                 ty.name(),
                 operand(value, slots),
@@ -439,7 +439,7 @@ fn emit_instruction(
         Instruction::Abort { origin } => {
             writeln!(
                 output,
-                "  call $primer_runtime_failure({}, {})\n  hlt",
+                "  call $cerune_runtime_failure({}, {})\n  hlt",
                 super::failure::code_arguments(crate::runtime::FailureCode::ArrayIndexOutOfBounds),
                 super::failure::arguments(*origin)
             )
@@ -496,7 +496,7 @@ fn emit_instruction(
         } => {
             writeln!(
                 output,
-                "  {} =l call $primer_i64_neg(l {}, {})",
+                "  {} =l call $cerune_i64_neg(l {}, {})",
                 temp(*dest),
                 operand(value, slots),
                 super::failure::arguments(*origin)
@@ -564,7 +564,7 @@ fn emit_instruction(
                 };
                 writeln!(
                     output,
-                    "  {result} =w call $primer_string_equal(l {}, l {})",
+                    "  {result} =w call $cerune_string_equal(l {}, l {})",
                     operand(left, slots),
                     operand(right, slots)
                 )
@@ -740,10 +740,10 @@ fn binary_name(op: BinaryOp) -> &'static str {
 
 fn checked_i64_helper(op: BinaryOp) -> Option<&'static str> {
     match op {
-        BinaryOp::CheckedI64Add => Some("primer_i64_add"),
-        BinaryOp::CheckedI64Subtract => Some("primer_i64_sub"),
-        BinaryOp::CheckedI64Multiply => Some("primer_i64_mul"),
-        BinaryOp::CheckedI64Divide => Some("primer_i64_div"),
+        BinaryOp::CheckedI64Add => Some("cerune_i64_add"),
+        BinaryOp::CheckedI64Subtract => Some("cerune_i64_sub"),
+        BinaryOp::CheckedI64Multiply => Some("cerune_i64_mul"),
+        BinaryOp::CheckedI64Divide => Some("cerune_i64_div"),
         BinaryOp::Add | BinaryOp::Subtract | BinaryOp::Multiply | BinaryOp::Divide => None,
     }
 }
@@ -759,7 +759,7 @@ fn format_name(format: PrintFormat) -> &'static str {
 
 fn operand(value: &Operand, slots: &[Slot]) -> String {
     match value {
-        Operand::String(id) => format!("$primer_string_{id}"),
+        Operand::String(id) => format!("$cerune_string_{id}"),
         Operand::Boolean(value) => i32::from(*value).to_string(),
         Operand::Integer(value) => value.to_string(),
         Operand::Float32(text) => format!("s_{text}"),

@@ -11,7 +11,7 @@ mod unsigned;
 pub use emit::emit;
 use lower::lower;
 
-use crate::{diagnostic::Diagnostic, ir as primer_ir};
+use crate::{diagnostic::Diagnostic, ir as cerune_ir};
 
 /// 実行中のOSから補わず、呼び出し側が生成先を選びます。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -41,13 +41,13 @@ impl Target {
     }
 }
 
-pub fn emit_asm(program: &primer_ir::Program, target: Target) -> Result<String, Diagnostic> {
+pub fn emit_asm(program: &cerune_ir::Program, target: Target) -> Result<String, Diagnostic> {
     Ok(emit(&lower::lower_with_target(program, target)))
 }
 
 /// 自前の符号化・オブジェクト生成です。リンクや外部プロセス起動は行いません。
 pub fn emit_object(
-    program: &primer_ir::Program,
+    program: &cerune_ir::Program,
     target: Target,
     annotate_origins: bool,
 ) -> Result<Vec<u8>, Diagnostic> {
@@ -57,7 +57,7 @@ pub fn emit_object(
 }
 
 pub fn emit_asm_with_origins(
-    program: &primer_ir::Program,
+    program: &cerune_ir::Program,
     target: Target,
 ) -> Result<String, Diagnostic> {
     Ok(emit::emit_with_origins(
@@ -66,7 +66,7 @@ pub fn emit_asm_with_origins(
     ))
 }
 
-pub fn emit_x86_64_win_asm(program: &primer_ir::Program) -> Result<String, Diagnostic> {
+pub fn emit_x86_64_win_asm(program: &cerune_ir::Program) -> Result<String, Diagnostic> {
     let module = lower(program);
 
     Ok(emit(&module))
@@ -144,7 +144,7 @@ mod tests {
         let asm = emit_x86_64_win_asm(&program).unwrap();
 
         assert!(asm.contains("addq %rcx, %rax"));
-        assert!(asm.contains("jno .Lprimer_main_integer_ok_"));
+        assert!(asm.contains("jno .Lcerune_main_integer_ok_"));
         assert!(asm.contains("ud2"));
 
         assert!(asm.contains("callq printf"));
@@ -163,8 +163,8 @@ mod tests {
         .unwrap();
         let asm = emit_x86_64_win_asm(&program).unwrap();
 
-        assert!(asm.contains("jno .Lprimer_main_integer_ok_"));
-        assert!(asm.contains("je .Lprimer_main_division_trap_"));
+        assert!(asm.contains("jno .Lcerune_main_integer_ok_"));
+        assert!(asm.contains("je .Lcerune_main_division_trap_"));
         assert!(asm.contains("movabsq $-9223372036854775808, %rdx"));
         assert!(asm.contains("ud2"));
     }
@@ -246,10 +246,10 @@ mod tests {
         .unwrap();
         let asm = emit_x86_64_win_asm(&program).unwrap();
 
-        assert!(asm.contains("primer_fn_add_0:"));
+        assert!(asm.contains("cerune_fn_add_0:"));
         assert!(asm.contains("movq %rcx, -8(%rbp)"));
         assert!(asm.contains("movq %rdx, -16(%rbp)"));
-        assert!(asm.contains("callq primer_fn_add_0"));
+        assert!(asm.contains("callq cerune_fn_add_0"));
     }
 
     #[test]
@@ -263,7 +263,7 @@ mod tests {
         .unwrap();
         let asm = emit_x86_64_win_asm(&program).unwrap();
 
-        assert_eq!(asm.matches("callq primer_fn_twice_0").count(), 2);
+        assert_eq!(asm.matches("callq cerune_fn_twice_0").count(), 2);
         assert!(asm.contains("%rcx"));
         assert!(asm.contains("%xmm1"));
         assert!(asm.contains("%r8"));

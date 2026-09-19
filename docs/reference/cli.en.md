@@ -1,26 +1,26 @@
-# Primer CLI reference
+# Cerune CLI reference
 
 [日本語](cli.ja.md)
 
-This document defines the command-line interface of Primer v0.1.
+This document defines the command-line interface of Cerune v0.1.
 
 ## Commands
 
 The current CLI provides the following commands:
 
 ```text
-primer check <file>
-primer emit-sources <file> [-o <sources.json>]
-primer emit-ir <file> [-o <output.pir>]
-primer emit-c <file> [-o <output.c>]
-primer emit-llvm <file> [--target <triple>] [-o <output.ll>]
-primer emit-wat <file> [-o <output.wat>]
-primer emit-qbe <file> [--target <triple>] [-o <output.ssa>]
-primer emit-asm <file> [--target <triple>] [--annotate-origins] [-o <output.s>]
-primer emit-obj <file> --target <triple> [--annotate-origins] -o <output.o>
-primer emit-bytecode <file> [-o <output.pbc>]
-primer run <file> [--diagnostic-format runtime-v1]
-primer --version
+cerune check <file>
+cerune emit-sources <file> [-o <sources.json>]
+cerune emit-ir <file> [-o <output.ceir>]
+cerune emit-c <file> [-o <output.c>]
+cerune emit-llvm <file> [--target <triple>] [-o <output.ll>]
+cerune emit-wat <file> [-o <output.wat>]
+cerune emit-qbe <file> [--target <triple>] [-o <output.ssa>]
+cerune emit-asm <file> [--target <triple>] [--annotate-origins] [-o <output.s>]
+cerune emit-obj <file> --target <triple> [--annotate-origins] -o <output.o>
+cerune emit-bytecode <file> [-o <output.cebc>]
+cerune run <file> [--diagnostic-format runtime-v1]
+cerune --version
 ```
 
 ## Validation
@@ -30,54 +30,54 @@ primer --version
 ### Observing dependency sources
 
 ```sh
-primer emit-sources examples/modules/main.prim -o sources.json
+cerune emit-sources examples/modules/main.ceru -o sources.json
 ```
 
-This explicitly outputs names and source contents. JSON schema `primer-sources-v1` contains a registration-ordered `files` array with `id`, `name`, and `text`. JSON escaping preserves the exact UTF-8 text without normalization. Inputs without import/pub retain anonymous source ID 0; module inputs start with entry ID 1. Resolve runtime `file` and file-local `bytes` against these contents. This does not embed source text in generated programs. Without `-o`, the JSON goes to stdout.
+This explicitly outputs names and source contents. JSON schema `cerune-sources-v1` contains a registration-ordered `files` array with `id`, `name`, and `text`. JSON escaping preserves the exact UTF-8 text without normalization. Inputs without import/pub retain anonymous source ID 0; module inputs start with entry ID 1. Resolve runtime `file` and file-local `bytes` against these contents. This does not embed source text in generated programs. Without `-o`, the JSON goes to stdout.
 
 Default `run` diagnostics show the dependency filename, line, and column. `--diagnostic-format runtime-v1` emits numeric file IDs. Compilation failures do not replace output artifacts.
 
 ### Syntax and type validation
 
 ```text
-primer check <file>
+cerune check <file>
 ```
 
-`primer check` parses the input source file and performs semantic validation and type checking.
+`cerune check` parses the input source file and performs semantic validation and type checking.
 
 A successful `check` does not guarantee that every output route supports the program. Strings work through every route. Omitting the LLVM or QBE target diagnoses string-containing type definitions or expressions at their source location without producing an artifact. This diagnostic also leaves an existing file specified by `-o` unchanged.
 
-## Primer IR emission
+## Cerune IR emission
 
 ```text
-primer emit-ir <file> [-o <output.pir>]
+cerune emit-ir <file> [-o <output.ceir>]
 ```
 
-`primer emit-ir` emits the backend-independent Primer IR after semantic and type resolution.
+`cerune emit-ir` emits the backend-independent Cerune IR after semantic and type resolution.
 
 ## Output artifact emission
 
 ```text
-primer emit-c <file> [-o <output.c>]
-primer emit-llvm <file> [--target <triple>] [-o <output.ll>]
-primer emit-qbe <file> [--target <triple>] [-o <output.ssa>]
-primer emit-wat <file> [-o <output.wat>]
-primer emit-asm <file> [--target <triple>] [--annotate-origins] [-o <output.s>]
-primer emit-obj <file> --target <triple> [--annotate-origins] -o <output.o>
-primer emit-bytecode <file> [-o <output.pbc>]
+cerune emit-c <file> [-o <output.c>]
+cerune emit-llvm <file> [--target <triple>] [-o <output.ll>]
+cerune emit-qbe <file> [--target <triple>] [-o <output.ssa>]
+cerune emit-wat <file> [-o <output.wat>]
+cerune emit-asm <file> [--target <triple>] [--annotate-origins] [-o <output.s>]
+cerune emit-obj <file> --target <triple> [--annotate-origins] -o <output.o>
+cerune emit-bytecode <file> [-o <output.cebc>]
 ```
 
 Each command emits the following artifact:
 
 | Command | Output route | Current target | Artifact |
 | --- | --- | --- | --- |
-| `emit-c` | C | not selected by Primer | `.c` |
+| `emit-c` | C | not selected by Cerune | `.c` |
 | `emit-llvm` | LLVM IR | unspecified, or explicit Windows x64 / Linux x86-64 | `.ll` |
 | `emit-qbe` | QBE IR | unspecified, or explicit Linux x86-64 | `.ssa` |
 | `emit-wat` | WebAssembly Text | WebAssembly | `.wat` |
 | `emit-asm` | native assembly | x86-64, Windows / Linux, respective calling conventions | `.s` |
-| `emit-obj` | Native object encoded by Primer | explicit Windows x64 / Linux x86-64 | `.obj` / `.o` |
-| `emit-bytecode` | Primer bytecode | Primer VM | `.pbc` |
+| `emit-obj` | Native object encoded by Cerune | explicit Windows x64 / Linux x86-64 | `.obj` / `.o` |
+| `emit-bytecode` | Cerune bytecode | Cerune VM | `.cebc` |
 
 Text-producing `emit-*` commands write their observations to standard output by default. With `-o`, the caller chooses the output path. Binary `emit-obj` requires `-o`.
 
@@ -90,7 +90,7 @@ Text-producing `emit-*` commands write their observations to standard output by 
 On Linux x86-64:
 
 ```sh
-primer emit-llvm examples/string_lookup.prim --target x86_64-unknown-linux-gnu -o target/string_lookup.ll
+cerune emit-llvm examples/string_lookup.ceru --target x86_64-unknown-linux-gnu -o target/string_lookup.ll
 clang --target=x86_64-unknown-linux-gnu target/string_lookup.ll -o target/string_lookup
 ./target/string_lookup
 ```
@@ -98,12 +98,12 @@ clang --target=x86_64-unknown-linux-gnu target/string_lookup.ll -o target/string
 On Windows x64 with the MSVC CRT and linker available:
 
 ```powershell
-primer emit-llvm examples/string_lookup.prim --target x86_64-pc-windows-msvc -o target/string_lookup.ll
+cerune emit-llvm examples/string_lookup.ceru --target x86_64-pc-windows-msvc -o target/string_lookup.ll
 clang --target=x86_64-pc-windows-msvc target/string_lookup.ll -o target/string_lookup.exe
 .\target\string_lookup.exe
 ```
 
-Primer only generates LLVM; it does not launch Clang or the executable. Selection is recorded in `target triple`. Pass the same target to downstream tools. Windows programs containing strings initialize standard output in binary mode to preserve NUL, CR, and LF. See [string design](../design/strings.en.md#llvm-representation-and-targets).
+Cerune only generates LLVM; it does not launch Clang or the executable. Selection is recorded in `target triple`. Pass the same target to downstream tools. Windows programs containing strings initialize standard output in binary mode to preserve NUL, CR, and LF. See [string design](../design/strings.en.md#llvm-representation-and-targets).
 
 Library callers can use `compile_to_llvm_with_target(source, Some(codegen::llvm::Target::X86_64UnknownLinuxGnu))`, or `X86_64PcWindowsMsvc`. Existing `compile_to_llvm(source)` remains the unspecified-target API.
 
@@ -112,7 +112,7 @@ Library callers can use `compile_to_llvm_with_target(source, Some(codegen::llvm:
 QBE output containing strings requires `--target x86_64-unknown-linux-gnu`. Missing or unsupported targets and duplicate options produce diagnostics without changing existing output files. Existing numeric-only invocations may omit the target.
 
 ```sh
-primer emit-qbe examples/string_lookup.prim --target x86_64-unknown-linux-gnu -o target/string_lookup.ssa
+cerune emit-qbe examples/string_lookup.ceru --target x86_64-unknown-linux-gnu -o target/string_lookup.ssa
 qbe -t amd64_sysv -o target/string_lookup.s target/string_lookup.ssa
 cc target/string_lookup.s -o target/string_lookup
 ./target/string_lookup
@@ -124,26 +124,26 @@ The artifact records the target in a comment. Invoking QBE and the C linker belo
 
 `emit-wat` remains fixed to WebAssembly. `emit-asm` accepts explicit Windows/Linux selection and preserves Windows as its default.
 
-WAT using strings imports `primer.write_byte(i32) -> void`, passing each byte and a trailing LF without exposing memory. Alongside the existing numeric and Boolean host functions, the host implements the [string output contract](../design/strings.en.md#wat-output-and-the-external-boundary). `emit-wat` does not launch a host.
+WAT using strings imports `cerune.write_byte(i32) -> void`, passing each byte and a trailing LF without exposing memory. Alongside the existing numeric and Boolean host functions, the host implements the [string output contract](../design/strings.en.md#wat-output-and-the-external-boundary). `emit-wat` does not launch a host.
 
-WAT with runtime checks also imports `primer.write_error_byte(i32) -> void`. Hosts write these ASCII diagnostics to stderr and preserve previous stdout when `unreachable` traps. See the [runtime diagnostic contract](../design/runtime-diagnostics.en.md).
+WAT with runtime checks also imports `cerune.write_error_byte(i32) -> void`. Hosts write these ASCII diagnostics to stderr and preserve previous stdout when `unreachable` traps. See the [runtime diagnostic contract](../design/runtime-diagnostics.en.md).
 
-Generate Windows x64 direct assembly with `primer emit-asm examples/string_lookup.prim -o target/string_lookup.s` and build it with `clang --target=x86_64-pc-windows-msvc target/string_lookup.s -o target/string_lookup.exe`. Programs using strings switch standard output to binary mode before output.
+Generate Windows x64 direct assembly with `cerune emit-asm examples/string_lookup.ceru -o target/string_lookup.s` and build it with `clang --target=x86_64-pc-windows-msvc target/string_lookup.s -o target/string_lookup.exe`. Programs using strings switch standard output to binary mode before output.
 
 ## Execution
 
 ```text
-primer run <file>
+cerune run <file>
 ```
 
-`primer run` lowers the program to Primer bytecode and executes the resulting `BytecodeProgram` in the Primer VM.
+`cerune run` lowers the program to Cerune bytecode and executes the resulting `BytecodeProgram` in the Cerune VM.
 
 Runtime output is useful for validation and experiments, but it is distinct from the two compiler observation boundaries defined in the [compiler design](../design/architecture.en.md).
 
 When a runtime error occurs in a bytecode instruction derived from source, the diagnostic includes both the source location and the bytecode instruction index:
 
 ```text
-primer: cannot divide an integer by zero at 1:7 (bytecode instruction 0002)
+cerune: cannot divide an integer by zero at 1:7 (bytecode instruction 0002)
 ```
 
 The bytecode instruction index is still displayed when no source location is available. Compact diagnostics do not include source text or the input file path.
@@ -153,14 +153,14 @@ The bytecode instruction index is still displayed when no source location is ava
 ## Version
 
 ```text
-primer --version
+cerune --version
 ```
 
-`primer --version` prints the Primer version.
+`cerune --version` prints the Cerune version.
 
-## External settings not controlled by Primer
+## External settings not controlled by Cerune
 
-Primer does not choose external experiment policy such as:
+Cerune does not choose external experiment policy such as:
 
 - GCC versus Clang;
 - optimization levels for external compilers;
@@ -173,14 +173,14 @@ Those choices belong to the caller and should be recorded when necessary.
 
 ## Following LLVM origins
 
-Run `cargo run -- emit-ir examples/string_origins.prim`, then `cargo run -- emit-llvm examples/string_origins.prim --target x86_64-unknown-linux-gnu --annotate-origins -o string-origins.ll`. Use `x86_64-pc-windows-msvc` for Windows. Run the example with `cargo run -- run examples/string_origins.prim`.
+Run `cargo run -- emit-ir examples/string_origins.ceru`, then `cargo run -- emit-llvm examples/string_origins.ceru --target x86_64-unknown-linux-gnu --annotate-origins -o string-origins.ll`. Use `x86_64-pc-windows-msvc` for Windows. Run the example with `cargo run -- run examples/string_origins.ceru`.
 
 `--annotate-origins` is optional and LLVM-only. Ordinary output is unchanged. The API is `compile_to_llvm_with_options(source, llvm::Options { target, annotate_origins: true })`. See the [annotation contract](../design/observability.en.md#llvm-origin-annotations).
 
 ## WAT u64 output
 
-Artifacts printing `u64` import `primer.print_u64(i64) -> void`. The host writes unsigned 64-bit decimal digits followed by LF. JavaScript hosts use `BigInt.asUintN(64, value).toString()`. See the [u64 design](../design/u64.en.md).
+Artifacts printing `u64` import `cerune.print_u64(i64) -> void`. The host writes unsigned 64-bit decimal digits followed by LF. JavaScript hosts use `BigInt.asUintN(64, value).toString()`. See the [u64 design](../design/u64.en.md).
 
-## Primer object generation
+## Cerune object generation
 
 `emit-obj` requires `--target x86_64-pc-windows-msvc` or `x86_64-unknown-linux-gnu` and `-o`. It generates COFF/ELF without external tools and never writes binary data to stdout. `--annotate-origins` retains origin labels. Invalid options and compilation diagnostics preserve existing output. Linking and execution remain separate explicit operations. See the [native encoder](../design/native-encoder.en.md). The library API `compile_to_native_object(source, target, annotate_origins)` returns `Vec<u8>`.

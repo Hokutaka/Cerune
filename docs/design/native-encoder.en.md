@@ -1,13 +1,13 @@
-# Primer's x86-64 encoder
+# Cerune's x86-64 encoder
 
 [日本語](native-encoder.ja.md)
 
 ## Scope
 
-`emit-obj` encodes x86-64 instructions and writes Linux ELF64 or Windows COFF objects entirely within Primer. It does not require an external assembler or launch a JIT or executable. Linking remains the responsibility of an explicitly selected external linker.
+`emit-obj` encodes x86-64 instructions and writes Linux ELF64 or Windows COFF objects entirely within Cerune. It does not require an external assembler or launch a JIT or executable. Linking remains the responsibility of an explicitly selected external linker.
 
 ```text
-Primer IR → shared x86-64 instructions → internally generated ASM
+Cerune IR → shared x86-64 instructions → internally generated ASM
                                           ├→ emit-asm → external assembler
                                           └→ restricted ASM reader → encoder → ELF/COFF
 ```
@@ -24,7 +24,7 @@ The encoder covers the forms needed by all current language features: eight inte
 - ELF includes an empty `.note.GNU-stack` and does not request executable stack memory. COFF timestamps are fixed at zero. Symbol and section ordering is deterministic.
 - COFF supports up to 65,535 relocations. Positions, values, and displacements are not silently truncated into narrower fields.
 
-Primer may use longer immediate/branch forms and single-byte NOP alignment. Instruction bytes and addresses can differ from external assemblers. Comparisons establish language behavior and execution results. Identical input, target, and options produce identical Primer objects.
+Cerune may use longer immediate/branch forms and single-byte NOP alignment. Instruction bytes and addresses can differ from external assemblers. Comparisons establish language behavior and execution results. Identical input, target, and options produce identical Cerune objects.
 
 `--annotate-origins` retains source-origin labels as symbols. It does not change `.text`, constant/string data, or relocation meaning. The symbol table itself changes. Generated objects are observations, not interfaces for external mutation of compiler state.
 
@@ -34,27 +34,27 @@ Both `--target` and `-o` are required so binary objects are never implicitly pri
 
 ```powershell
 cargo build
-target/debug/primer.exe emit-obj examples/packet_counter.prim --target x86_64-pc-windows-msvc --annotate-origins -o target/packet.obj
+target/debug/cerune.exe emit-obj examples/packet_counter.ceru --target x86_64-pc-windows-msvc --annotate-origins -o target/packet.obj
 clang target/packet.obj -o target/packet.exe
 target/packet.exe
 ```
 
 ```sh
 cargo build
-target/debug/primer emit-obj examples/packet_counter.prim --target x86_64-unknown-linux-gnu --annotate-origins -o target/packet.o
+target/debug/cerune emit-obj examples/packet_counter.ceru --target x86_64-unknown-linux-gnu --annotate-origins -o target/packet.o
 cc target/packet.o -o target/packet
 target/packet
 ```
 
-With `CARGO_TARGET_DIR=target/unix` in WSL, use `target/unix/debug/primer`. Encoding can target either OS from either host. Execution and linked libraries must match the chosen target.
+With `CARGO_TARGET_DIR=target/unix` in WSL, use `target/unix/debug/cerune`. Encoding can target either OS from either host. Execution and linked libraries must match the chosen target.
 
-Select `--encoder primer` in the observation script; the existing `external` default remains available for comparison.
+Select `--encoder cerune` in the observation script; the existing `external` default remains available for comparison.
 
 ```powershell
-node scripts/observe-native.cjs --source examples/packet_counter.prim --target x86_64-pc-windows-msvc --primer target/debug/primer.exe --cc clang --objdump llvm-objdump --output-dir target/packet-own-windows --encoder primer --run
+node scripts/observe-native.cjs --source examples/packet_counter.ceru --target x86_64-pc-windows-msvc --cerune target/debug/cerune.exe --cc clang --objdump llvm-objdump --output-dir target/packet-own-windows --encoder cerune --run
 ```
 
-`manifest.json` records `encoder: primer` and an `encode-object` stage. The C driver performs linking only. IR, corresponding ASM, the Primer object, disassembly, and VM output comparison are saved through the [native observation workflow](native-code.en.md).
+`manifest.json` records `encoder: cerune` and an `encode-object` stage. The C driver performs linking only. IR, corresponding ASM, the Cerune object, disassembly, and VM output comparison are saved through the [native observation workflow](native-code.en.md).
 
 ## Validation
 

@@ -28,7 +28,7 @@ pub(super) fn uses_type(module: &Module) -> bool {
 
 /// C文字列リテラルの静的な保存期間を使い、関数から返してもデータを失いません。
 pub(super) fn literal(value: &str, output: &mut String) {
-    output.push_str("(primer_string){ (const unsigned char *)\"");
+    output.push_str("(cerune_string){ (const unsigned char *)\"");
     // 全バイトを固定3桁の8進表記にし、Cの文字コード設定や後続文字に左右されません。
     for byte in value.bytes() {
         write!(output, "\\{byte:03o}").unwrap();
@@ -36,17 +36,17 @@ pub(super) fn literal(value: &str, output: &mut String) {
     write!(output, "\", {} }}", value.len()).unwrap();
 }
 
-pub(super) const SUPPORT: &str = r#"typedef struct primer_string {
+pub(super) const SUPPORT: &str = r#"typedef struct cerune_string {
     const unsigned char *data;
     size_t length;
-} primer_string;
+} cerune_string;
 
-static inline bool primer_string_equal(primer_string left, primer_string right) {
+static inline bool cerune_string_equal(cerune_string left, cerune_string right) {
     return left.length == right.length &&
         (left.length == 0 || memcmp(left.data, right.data, left.length) == 0);
 }
 
-static inline void primer_print_string(primer_string value) {
+static inline void cerune_print_string(cerune_string value) {
     fwrite(value.data, 1, value.length, stdout);
     fputc('\n', stdout);
 }

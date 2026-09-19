@@ -25,7 +25,7 @@ pub(super) fn emit_binary(op: Op, output: &mut String) {
             if op == Op::Divide { "udiv" } else { "urem" }
         }
         Op::ShiftLeft | Op::ShiftRight => {
-            output.push_str("  %wide =w cugel %right, 64\n  jnz %wide, @count, @bounds\n@count\n  call $primer_fail_invalid_shift_count(l %origin, l %origin_len)\n  hlt\n@bounds\n");
+            output.push_str("  %wide =w cugel %right, 64\n  jnz %wide, @count, @bounds\n@count\n  call $cerune_fail_invalid_shift_count(l %origin, l %origin_len)\n  hlt\n@bounds\n");
             if op == Op::ShiftLeft {
                 output.push_str("  %limit =l shr -1, %right\n  %bad =w cugtl %left, %limit\n");
                 "shl"

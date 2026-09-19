@@ -30,7 +30,7 @@ fn matches(output: &Output, expected: Expected) -> bool {
     };
     matches
         && (!matches!(expected, Expected::CheckedCFailure)
-            || output.stderr.starts_with(b"primer: "))
+            || output.stderr.starts_with(b"cerune: "))
 }
 
 pub fn assert_expected(output: &Output, expected: Expected, context: &str) {
@@ -46,13 +46,13 @@ pub fn assert_expected(output: &Output, expected: Expected, context: &str) {
         output.stdout
     );
     if matches!(expected, Expected::CheckedCFailure) {
-        let primer_lang::RunError::Execution(error) = primer_lang::run_vm(context).unwrap_err()
+        let cerune_lang::RunError::Execution(error) = cerune_lang::run_vm(context).unwrap_err()
         else {
             panic!("expected runtime failure")
         };
         assert_eq!(
             String::from_utf8_lossy(&output.stderr).replace("\r\n", "\n"),
-            format!("primer: {}\n", error.runtime_failure().unwrap().record()),
+            format!("cerune: {}\n", error.runtime_failure().unwrap().record()),
             "{context}"
         );
     }

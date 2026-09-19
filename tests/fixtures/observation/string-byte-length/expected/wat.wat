@@ -1,15 +1,15 @@
 (module
-  (import "primer" "write_byte" (func $write_byte (param i32)))
-  (import "primer" "print_i64" (func $print_i64 (param i64)))
-  (import "primer" "print_f32" (func $print_f32 (param f32)))
-  (import "primer" "print_f64" (func $print_f64 (param f64)))
+  (import "cerune" "write_byte" (func $write_byte (param i32)))
+  (import "cerune" "print_i64" (func $print_i64 (param i64)))
+  (import "cerune" "print_f32" (func $print_f32 (param f32)))
+  (import "cerune" "print_f64" (func $print_f64 (param f64)))
 
   (memory 1)
 
   (data (i32.const 0) "\04\00\00\00\00\00\00\00\e6\97\a5\00")
   (data (i32.const 12) "\00\00\00\00\00\00\00\00")
 
-  (func $primer_string_equal (param $left i32) (param $right i32) (result i32)
+  (func $cerune_string_equal (param $left i32) (param $right i32) (result i32)
     (local $length i32) (local $index i32)
     local.get $left
     i32.load
@@ -50,7 +50,7 @@
     i32.const 1
   )
 
-  (func $primer_print_string (param $value i32)
+  (func $cerune_print_string (param $value i32)
     (local $length i32) (local $index i32)
     local.get $value
     i32.load
@@ -78,11 +78,11 @@
   )
 
   (func $main
-    (local $primer_text i32)
+    (local $cerune_text i32)
 
     i32.const 0
-    local.set $primer_text
-    local.get $primer_text
+    local.set $cerune_text
+    local.get $cerune_text
     i64.load
     call $print_i64
     i32.const 12

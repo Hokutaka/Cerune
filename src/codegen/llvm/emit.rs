@@ -12,7 +12,7 @@ pub fn emit(module: &Module) -> String {
 pub fn emit_with_origins(module: &Module, annotate_origins: bool) -> String {
     let mut output = String::new();
     if annotate_origins {
-        output.push_str("; primer-origins v1: UTF-8 byte ranges, end exclusive\n");
+        output.push_str("; cerune-origins v1: UTF-8 byte ranges, end exclusive\n");
     }
     emit_origin(Origin::Synthetic, annotate_origins, &mut output);
     let i64_operations = i64_operations(module);
@@ -50,7 +50,7 @@ pub fn emit_with_origins(module: &Module, annotate_origins: bool) -> String {
     for definition in &module.type_definitions {
         write!(
             output,
-            "%primer.type.{}.{} = type {{ ",
+            "%cerune.type.{}.{} = type {{ ",
             definition.name, definition.id
         )
         .unwrap();
@@ -129,7 +129,7 @@ pub fn emit_with_origins(module: &Module, annotate_origins: bool) -> String {
     for slot in &module.slots {
         writeln!(
             output,
-            "  %primer_{} = alloca {}",
+            "  %cerune_{} = alloca {}",
             slot.name,
             type_name(&slot.ty, module),
         )
@@ -187,7 +187,7 @@ fn emit_function(
     for slot in &function.slots {
         writeln!(
             output,
-            "  %primer_{} = alloca {}",
+            "  %cerune_{} = alloca {}",
             slot.name,
             type_name(&slot.ty, module),
         )
@@ -196,7 +196,7 @@ fn emit_function(
     for (index, parameter) in function.parameters.iter().enumerate() {
         writeln!(
             output,
-            "  store {} %arg{index}, ptr %primer_{}",
+            "  store {} %arg{index}, ptr %cerune_{}",
             type_name(&parameter.ty, module),
             slot_by_id(&function.slots, parameter.slot).name,
         )
@@ -227,7 +227,7 @@ fn emit_instruction(
         Instruction::PrintString { value } => {
             writeln!(
                 output,
-                "  call void @primer.print.string(%primer.string {})",
+                "  call void @cerune.print.string(%cerune.string {})",
                 operand(*value)
             )
             .unwrap();
@@ -274,7 +274,7 @@ fn emit_instruction(
             let code = super::failure::index(*code);
             writeln!(
                 output,
-                "  {} = call i64 @primer_check_{}(i64 {}, ptr {failure}, i64 {code})",
+                "  {} = call i64 @cerune_check_{}(i64 {}, ptr {failure}, i64 {code})",
                 temp(*dest),
                 ty.name(),
                 operand(*value)
@@ -307,7 +307,7 @@ fn emit_instruction(
         Instruction::Store { ty, value, slot } => {
             writeln!(
                 output,
-                "  store {} {}, ptr %primer_{}",
+                "  store {} {}, ptr %cerune_{}",
                 type_name(ty, module),
                 operand(*value),
                 slot_by_id(slots, *slot).name,
@@ -318,7 +318,7 @@ fn emit_instruction(
         Instruction::Load { dest, ty, slot } => {
             writeln!(
                 output,
-                "  {} = load {}, ptr %primer_{}",
+                "  {} = load {}, ptr %cerune_{}",
                 temp(*dest),
                 type_name(ty, module),
                 slot_by_id(slots, *slot).name,
@@ -503,7 +503,7 @@ fn emit_instruction(
                     assert_eq!(*op, CompareOp::Equal);
                     name.clone()
                 };
-                writeln!(output, "  {result} = call i1 @primer.string.equal(%primer.string {}, %primer.string {})", operand(*left), operand(*right)).unwrap();
+                writeln!(output, "  {result} = call i1 @cerune.string.equal(%cerune.string {}, %cerune.string {})", operand(*left), operand(*right)).unwrap();
                 if *op == CompareOp::NotEqual {
                     writeln!(output, "  {name} = xor i1 {result}, true").unwrap();
                 }
@@ -582,7 +582,7 @@ fn slot_by_id(slots: &[Slot], id: SlotId) -> &Slot {
 }
 
 fn function_name(function: &Function) -> String {
-    format!("primer.fn.{}.{}", function.name, function.id)
+    format!("cerune.fn.{}.{}", function.name, function.id)
 }
 
 fn temp(temp: Temp) -> String {
@@ -595,14 +595,14 @@ fn label(label: Label) -> String {
 
 fn type_name(ty: &Type, module: &Module) -> String {
     match ty {
-        Type::String => "%primer.string".into(),
+        Type::String => "%cerune.string".into(),
         Type::Bool => "i1".into(),
         Type::I64 => "i64".into(),
         Type::Float => "float".into(),
         Type::Double => "double".into(),
         Type::Named(id) => {
             let definition = &module.type_definitions[*id];
-            format!("%primer.type.{}.{}", definition.name, id)
+            format!("%cerune.type.{}.{}", definition.name, id)
         }
         Type::Array { element, length } => {
             format!("[{length} x {}]", type_name(element, module))
@@ -628,10 +628,10 @@ fn binary_name(op: BinaryOp) -> &'static str {
 
 fn checked_i64_helper(op: BinaryOp) -> Option<&'static str> {
     match op {
-        BinaryOp::CheckedI64Add => Some("primer_i64_add"),
-        BinaryOp::CheckedI64Sub => Some("primer_i64_sub"),
-        BinaryOp::CheckedI64Mul => Some("primer_i64_mul"),
-        BinaryOp::CheckedI64Div => Some("primer_i64_div"),
+        BinaryOp::CheckedI64Add => Some("cerune_i64_add"),
+        BinaryOp::CheckedI64Sub => Some("cerune_i64_sub"),
+        BinaryOp::CheckedI64Mul => Some("cerune_i64_mul"),
+        BinaryOp::CheckedI64Div => Some("cerune_i64_div"),
         BinaryOp::FAdd | BinaryOp::FSub | BinaryOp::FMul | BinaryOp::FDiv | BinaryOp::Xor => None,
     }
 }
@@ -705,7 +705,7 @@ fn emit_i64_operation_support(operations: I64Operations, output: &mut String) {
         super::integer::emit_support(op, ty, output);
     }
     for ty in &operations.range_checks {
-        output.push_str(&format!("define internal i64 @primer_check_{}(i64 %value, ptr %failure, i64 %code) {{\nentry:\n  %below = icmp slt i64 %value, {}\n  %above = icmp sgt i64 %value, {}\n  %bad = or i1 %below, %above\n  br i1 %bad, label %trap, label %ok\ntrap:\n  call void @primer.runtime.fail(ptr %failure, i64 %code)\n  unreachable\nok:\n  ret i64 %value\n}}\n\n", ty.name(), ty.minimum(), ty.maximum()));
+        output.push_str(&format!("define internal i64 @cerune_check_{}(i64 %value, ptr %failure, i64 %code) {{\nentry:\n  %below = icmp slt i64 %value, {}\n  %above = icmp sgt i64 %value, {}\n  %bad = or i1 %below, %above\n  br i1 %bad, label %trap, label %ok\ntrap:\n  call void @cerune.runtime.fail(ptr %failure, i64 %code)\n  unreachable\nok:\n  ret i64 %value\n}}\n\n", ty.name(), ty.minimum(), ty.maximum()));
     }
 
     for (enabled, name, intrinsic) in [
@@ -718,7 +718,7 @@ fn emit_i64_operation_support(operations: I64Operations, output: &mut String) {
         }
         writeln!(
             output,
-            "define internal i64 @primer_i64_{name}(i64 %left, i64 %right, ptr %failure) {{"
+            "define internal i64 @cerune_i64_{name}(i64 %left, i64 %right, ptr %failure) {{"
         )
         .unwrap();
         output.push_str("entry:\n");
@@ -736,7 +736,7 @@ fn emit_i64_operation_support(operations: I64Operations, output: &mut String) {
     }
 
     if operations.divide {
-        output.push_str("define internal i64 @primer_i64_div(i64 %left, i64 %right, ptr %failure) {\nentry:\n  %is_zero = icmp eq i64 %right, 0\n  br i1 %is_zero, label %zero, label %bounds\nzero:\n");
+        output.push_str("define internal i64 @cerune_i64_div(i64 %left, i64 %right, ptr %failure) {\nentry:\n  %is_zero = icmp eq i64 %right, 0\n  br i1 %is_zero, label %zero, label %bounds\nzero:\n");
         super::failure::emit_trap(crate::runtime::FailureCode::DivisionByZero, output);
         output.push_str("bounds:\n  %is_min = icmp eq i64 %left, -9223372036854775808\n  %is_negative_one = icmp eq i64 %right, -1\n  %overflows = and i1 %is_min, %is_negative_one\n  br i1 %overflows, label %overflow, label %ok\noverflow:\n");
         super::failure::emit_trap(crate::runtime::FailureCode::DivisionOverflow, output);
@@ -784,7 +784,7 @@ fn format_name(format: PrintFormat) -> &'static str {
 
 fn operand(operand: Operand) -> String {
     match operand {
-        Operand::String { id, length } => format!("{{ ptr @primer.string.{id}, i64 {length} }}"),
+        Operand::String { id, length } => format!("{{ ptr @cerune.string.{id}, i64 {length} }}"),
         Operand::Boolean(value) => i32::from(value).to_string(),
 
         Operand::Integer(value) => value.to_string(),
@@ -948,14 +948,14 @@ fn emit_array_set(ty: &Type, module: &Module, output: &mut String) {
 
 fn array_get_name(element: &Type, length: usize, module: &Module) -> String {
     format!(
-        "primer.array.get.{}.{length}",
+        "cerune.array.get.{}.{length}",
         array_element_name(element, module)
     )
 }
 
 fn array_set_name(element: &Type, length: usize, module: &Module) -> String {
     format!(
-        "primer.array.set.{}.{length}",
+        "cerune.array.set.{}.{length}",
         array_element_name(element, module)
     )
 }
@@ -984,14 +984,14 @@ fn emit_origin(origin: Origin, enabled: bool, output: &mut String) {
     match origin {
         Origin::Source { node_id, span } => writeln!(
             output,
-            "; primer-origin: #{}{} bytes {}..{}",
+            "; cerune-origin: #{}{} bytes {}..{}",
             node_id.0,
             span.source_id().record_field(),
             span.start(),
             span.end()
         )
         .unwrap(),
-        Origin::Synthetic => output.push_str("; primer-origin: synthetic\n"),
+        Origin::Synthetic => output.push_str("; cerune-origin: synthetic\n"),
     }
 }
 

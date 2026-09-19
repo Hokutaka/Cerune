@@ -1,9 +1,9 @@
 target triple = "x86_64-unknown-linux-gnu"
 
-@primer.failure.9.67.78.0 = private unnamed_addr constant [61 x i8] c"\70\72\69\6D\65\72\3A\20\72\75\6E\74\69\6D\65\2D\76\31\20\63\6F\64\65\3D\69\6E\74\65\67\65\72\2D\6F\76\65\72\66\6C\6F\77\20\6E\6F\64\65\3D\39\20\62\79\74\65\73\3D\36\37\2E\2E\37\38\0A"
-@primer.failure.9.67.78 = private constant [12 x { ptr, i64 }] [{ ptr, i64 } { ptr @primer.failure.9.67.78.0, i64 61 }, { ptr, i64 } zeroinitializer, { ptr, i64 } zeroinitializer, { ptr, i64 } zeroinitializer, { ptr, i64 } zeroinitializer, { ptr, i64 } zeroinitializer, { ptr, i64 } zeroinitializer, { ptr, i64 } zeroinitializer, { ptr, i64 } zeroinitializer, { ptr, i64 } zeroinitializer, { ptr, i64 } zeroinitializer, { ptr, i64 } zeroinitializer]
-@primer.failure.21.172.181.0 = private unnamed_addr constant [64 x i8] c"\70\72\69\6D\65\72\3A\20\72\75\6E\74\69\6D\65\2D\76\31\20\63\6F\64\65\3D\69\6E\74\65\67\65\72\2D\6F\76\65\72\66\6C\6F\77\20\6E\6F\64\65\3D\32\31\20\62\79\74\65\73\3D\31\37\32\2E\2E\31\38\31\0A"
-@primer.failure.21.172.181 = private constant [12 x { ptr, i64 }] [{ ptr, i64 } { ptr @primer.failure.21.172.181.0, i64 64 }, { ptr, i64 } zeroinitializer, { ptr, i64 } zeroinitializer, { ptr, i64 } zeroinitializer, { ptr, i64 } zeroinitializer, { ptr, i64 } zeroinitializer, { ptr, i64 } zeroinitializer, { ptr, i64 } zeroinitializer, { ptr, i64 } zeroinitializer, { ptr, i64 } zeroinitializer, { ptr, i64 } zeroinitializer, { ptr, i64 } zeroinitializer]
+@cerune.failure.9.67.78.0 = private unnamed_addr constant [61 x i8] c"\63\65\72\75\6E\65\3A\20\72\75\6E\74\69\6D\65\2D\76\31\20\63\6F\64\65\3D\69\6E\74\65\67\65\72\2D\6F\76\65\72\66\6C\6F\77\20\6E\6F\64\65\3D\39\20\62\79\74\65\73\3D\36\37\2E\2E\37\38\0A"
+@cerune.failure.9.67.78 = private constant [12 x { ptr, i64 }] [{ ptr, i64 } { ptr @cerune.failure.9.67.78.0, i64 61 }, { ptr, i64 } zeroinitializer, { ptr, i64 } zeroinitializer, { ptr, i64 } zeroinitializer, { ptr, i64 } zeroinitializer, { ptr, i64 } zeroinitializer, { ptr, i64 } zeroinitializer, { ptr, i64 } zeroinitializer, { ptr, i64 } zeroinitializer, { ptr, i64 } zeroinitializer, { ptr, i64 } zeroinitializer, { ptr, i64 } zeroinitializer]
+@cerune.failure.21.172.181.0 = private unnamed_addr constant [64 x i8] c"\63\65\72\75\6E\65\3A\20\72\75\6E\74\69\6D\65\2D\76\31\20\63\6F\64\65\3D\69\6E\74\65\67\65\72\2D\6F\76\65\72\66\6C\6F\77\20\6E\6F\64\65\3D\32\31\20\62\79\74\65\73\3D\31\37\32\2E\2E\31\38\31\0A"
+@cerune.failure.21.172.181 = private constant [12 x { ptr, i64 }] [{ ptr, i64 } { ptr @cerune.failure.21.172.181.0, i64 64 }, { ptr, i64 } zeroinitializer, { ptr, i64 } zeroinitializer, { ptr, i64 } zeroinitializer, { ptr, i64 } zeroinitializer, { ptr, i64 } zeroinitializer, { ptr, i64 } zeroinitializer, { ptr, i64 } zeroinitializer, { ptr, i64 } zeroinitializer, { ptr, i64 } zeroinitializer, { ptr, i64 } zeroinitializer, { ptr, i64 } zeroinitializer]
 @.fmt_i64 = private unnamed_addr constant [6 x i8] c"%lld\0A\00"
 @.fmt_f32 = private unnamed_addr constant [6 x i8] c"%.9g\0A\00"
 @.fmt_f64 = private unnamed_addr constant [7 x i8] c"%.17g\0A\00"
@@ -18,7 +18,7 @@ declare { i64, i1 } @llvm.sadd.with.overflow.i64(i64, i64)
 declare i32 @fflush(ptr)
 declare i64 @write(i32, ptr, i64)
 
-define internal void @primer.runtime.fail(ptr %failure, i64 %code) {
+define internal void @cerune.runtime.fail(ptr %failure, i64 %code) {
 entry:
   call i32 @fflush(ptr null)
   %slot = getelementptr inbounds { ptr, i64 }, ptr %failure, i64 %code
@@ -30,7 +30,7 @@ entry:
   unreachable
 }
 
-define internal i64 @primer_i64_add(i64 %left, i64 %right, ptr %failure) {
+define internal i64 @cerune_i64_add(i64 %left, i64 %right, ptr %failure) {
 entry:
   %checked = call { i64, i1 } @llvm.sadd.with.overflow.i64(i64 %left, i64 %right)
   %result = extractvalue { i64, i1 } %checked, 0
@@ -38,7 +38,7 @@ entry:
   br i1 %overflow, label %trap, label %ok
 
 trap:
-  call void @primer.runtime.fail(ptr %failure, i64 0)
+  call void @cerune.runtime.fail(ptr %failure, i64 0)
   unreachable
 ok:
   ret i64 %result
@@ -46,37 +46,37 @@ ok:
 
 define i32 @main() {
 entry:
-  %primer_count = alloca i64
-  %primer_sum = alloca i64
-  %primer_marker = alloca i1
-  store i64 0, ptr %primer_count
-  store i64 0, ptr %primer_sum
+  %cerune_count = alloca i64
+  %cerune_sum = alloca i64
+  %cerune_marker = alloca i1
+  store i64 0, ptr %cerune_count
+  store i64 0, ptr %cerune_sum
   br label %block0
 block0: ; while_condition
-  %tmp0 = load i64, ptr %primer_count
+  %tmp0 = load i64, ptr %cerune_count
   %tmp1 = icmp slt i64 %tmp0, 4
   br i1 %tmp1, label %block1, label %block2
 block1: ; while_body
-  %tmp2 = load i64, ptr %primer_sum
-  %tmp3 = load i64, ptr %primer_count
-  %tmp4 = call i64 @primer_i64_add(i64 %tmp2, i64 %tmp3, ptr @primer.failure.9.67.78)
-  store i64 %tmp4, ptr %primer_sum
-  %tmp5 = load i64, ptr %primer_count
+  %tmp2 = load i64, ptr %cerune_sum
+  %tmp3 = load i64, ptr %cerune_count
+  %tmp4 = call i64 @cerune_i64_add(i64 %tmp2, i64 %tmp3, ptr @cerune.failure.9.67.78)
+  store i64 %tmp4, ptr %cerune_sum
+  %tmp5 = load i64, ptr %cerune_count
   %tmp6 = icmp eq i64 %tmp5, 2
   br i1 %tmp6, label %block3, label %block5
 block3: ; if_then
-  store i1 1, ptr %primer_marker
-  %tmp7 = load i1, ptr %primer_marker
+  store i1 1, ptr %cerune_marker
+  %tmp7 = load i1, ptr %cerune_marker
   %tmp8 = select i1 %tmp7, ptr @.bool_true, ptr @.bool_false
   call i32 @puts(ptr %tmp8)
   br label %block5
 block5: ; if_end
-  %tmp9 = load i64, ptr %primer_count
-  %tmp10 = call i64 @primer_i64_add(i64 %tmp9, i64 1, ptr @primer.failure.21.172.181)
-  store i64 %tmp10, ptr %primer_count
+  %tmp9 = load i64, ptr %cerune_count
+  %tmp10 = call i64 @cerune_i64_add(i64 %tmp9, i64 1, ptr @cerune.failure.21.172.181)
+  store i64 %tmp10, ptr %cerune_count
   br label %block0
 block2: ; while_end
-  %tmp11 = load i64, ptr %primer_sum
+  %tmp11 = load i64, ptr %cerune_sum
   call i32 (ptr, ...) @printf(ptr @.fmt_i64, i64 %tmp11)
   ret i32 0
 }

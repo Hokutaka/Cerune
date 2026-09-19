@@ -4,11 +4,11 @@
 
 Status: Implemented
 
-この文書は、Primerの固定長配列について、設計判断と観測できる情報を記録します。現在の構文は[言語リファレンス](../reference/language.ja.md)で定義します。
+この文書は、Ceruneの固定長配列について、設計判断と観測できる情報を記録します。現在の構文は[言語リファレンス](../reference/language.ja.md)で定義します。
 
 ## まず何ができるか
 
-```primer
+```cerune
 values: [i64; 4] = [2, 4, 6, 8];
 print(values[2]);
 ```
@@ -39,7 +39,7 @@ print(values[2]);
 
 配列を別の束縛へ入れると、配列全体がコピーされます。二つの束縛が、外から見えない同じ可変領域を共有することはありません。
 
-この規則は名前付きproduct typeと同じです。内部でどのような命令やmemory copyになるかはbackendごとに違いますが、Primerの意味は変わりません。
+この規則は名前付きproduct typeと同じです。内部でどのような命令やmemory copyになるかはbackendごとに違いますが、Ceruneの意味は変わりません。
 
 `mut`な配列の要素を更新した場合も、変更されるのはその束縛が持つ値だけです。更新前に別の束縛へコピーした配列は変わりません。共有された可変領域を作る機能ではありません。
 
@@ -47,7 +47,7 @@ print(values[2]);
 
 名前付きproduct typeを配列の要素にでき、固定長配列をproduct typeのfieldにできます。
 
-```primer
+```cerune
 type Point {
     x: i64,
     y: i64,
@@ -62,7 +62,7 @@ type Path {
 
 固定長配列は直接入れ子にもできます。
 
-```primer
+```cerune
 matrix: [[i64; 3]; 2] = [[1, 2, 3], [4, 5, 6]];
 print(matrix[1][2]);
 ```
@@ -73,7 +73,7 @@ print(matrix[1][2]);
 
 有効な添字は`0`から`length - 1`までです。負数や`length`以上の値は範囲外です。
 
-Primer VMだけでなく、C、LLVM IR、QBE IR、WebAssembly Text、Windows x86-64 assemblyの各経路も境界検査を生成します。最適化のためにこの検査を黙って消すことは、現在の言語の意味を変えるため認めません。
+Cerune VMだけでなく、C、LLVM IR、QBE IR、WebAssembly Text、Windows x86-64 assemblyの各経路も境界検査を生成します。最適化のためにこの検査を黙って消すことは、現在の言語の意味を変えるため認めません。
 
 要素代入では、添字を左から一つずつ評価し、評価した直後にその段の境界を検査します。すべての添字が有効だと確認してから右辺を評価し、最後に一度だけ書き込みます。検査に失敗した場合、右辺は評価せず、配列も変更しません。
 
@@ -82,9 +82,9 @@ Primer VMだけでなく、C、LLVM IR、QBE IR、WebAssembly Text、Windows x86
 | 段階 | 残る情報 |
 | --- | --- |
 | AST | 要素型の構文、長さ、各要素、添字式、代入先のrootと添字列、span |
-| Primer IR | 解決済みの`[element; length]`、`array[...]`、`index(...)`、型付きの代入先 |
+| Cerune IR | 解決済みの`[element; length]`、`array[...]`、`index(...)`、型付きの代入先 |
 | Bytecode | `array.new`、`array.get`、`array.check`、`array.assign`、命令の出自 |
-| Primer VM | 配列値、要素型、長さ、範囲外になった添字、失敗した命令位置 |
+| Cerune VM | 配列値、要素型、長さ、範囲外になった添字、失敗した命令位置 |
 | Backend IR | 再帰的な型、配置、コピー、各添字の検査、要素addressの計算、load、storeまたはaggregate copy |
 | 生成物 | backend固有の配列表現と、実際に実行される境界検査 |
 
@@ -94,14 +94,14 @@ Primer VMだけでなく、C、LLVM IR、QBE IR、WebAssembly Text、Windows x86
 
 | Backend | 配列 | 境界検査 |
 | --- | --- | --- |
-| C | 要素のC配列を持つ専用`struct` | 型と長さごとの`primer_array_get_*` / `primer_array_at_*` |
+| C | 要素のC配列を持つ専用`struct` | 型と長さごとの`cerune_array_get_*` / `cerune_array_at_*` |
 | LLVM IR | `[N x element]` | 型と長さごとのget/set内部関数、違反時は`llvm.trap` |
 | QBE IR | scalarは8 byte単位、product typeはfieldから求めたstrideのstack領域 | 比較と分岐、違反時は`abort` |
 | WebAssembly Text | scalarは8 byte単位、product typeはfieldから求めたstrideのlinear memory | `i64.lt_s` / `i64.ge_s`、違反時は`unreachable` |
 | Windows x86-64 | scalarは1 slot、product typeはfieldから求めた複数のstack slot | 負数と上限の比較、違反時は`ud2` |
-| Primer bytecode | 型付きの配列値 | `array.get`と`array.check`をVMが検査 |
+| Cerune bytecode | 型付きの配列値 | `array.get`と`array.check`をVMが検査 |
 
-scalarの大きさが4 byteでも、QBE、WebAssembly、Windows x86-64では現在8 byte単位の場所を使います。product typeや配列の要素は、その値全体が必要とする場所をstrideにします。これは単純で観測しやすい現在のlayoutであり、Primerの型の意味ではなくbackend loweringの判断です。
+scalarの大きさが4 byteでも、QBE、WebAssembly、Windows x86-64では現在8 byte単位の場所を使います。product typeや配列の要素は、その値全体が必要とする場所をstrideにします。これは単純で観測しやすい現在のlayoutであり、Ceruneの型の意味ではなくbackend loweringの判断です。
 
 ## セキュリティ境界
 

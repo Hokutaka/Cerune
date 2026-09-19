@@ -6,7 +6,7 @@ target triple = "x86_64-unknown-linux-gnu"
 
 declare i32 @printf(ptr, ...)
 
-define i64 @primer.fn.value.0() {
+define i64 @cerune.fn.value.0() {
 entry:
   call i32 (ptr, ...) @printf(ptr @.fmt_i64, i64 7)
   ret i64 42
@@ -14,13 +14,13 @@ entry:
 
 define i32 @main() {
 entry:
-  %primer_compact = alloca i64
-  %primer_explicit = alloca i64
-  %tmp0 = call i64 @primer.fn.value.0()
-  store i64 %tmp0, ptr %primer_compact
-  %tmp1 = load i64, ptr %primer_compact
-  store i64 %tmp1, ptr %primer_explicit
-  %tmp2 = load i64, ptr %primer_explicit
+  %cerune_compact = alloca i64
+  %cerune_explicit = alloca i64
+  %tmp0 = call i64 @cerune.fn.value.0()
+  store i64 %tmp0, ptr %cerune_compact
+  %tmp1 = load i64, ptr %cerune_compact
+  store i64 %tmp1, ptr %cerune_explicit
+  %tmp2 = load i64, ptr %cerune_explicit
   call i32 (ptr, ...) @printf(ptr @.fmt_i64, i64 %tmp2)
   ret i32 0
 }

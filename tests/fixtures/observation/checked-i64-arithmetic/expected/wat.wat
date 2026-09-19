@@ -1,10 +1,10 @@
 (module
-  (import "primer" "write_error_byte" (func $write_error_byte (param i32)))
-  (import "primer" "print_i64" (func $print_i64 (param i64)))
-  (import "primer" "print_f32" (func $print_f32 (param f32)))
-  (import "primer" "print_f64" (func $print_f64 (param f64)))
+  (import "cerune" "write_error_byte" (func $write_error_byte (param i32)))
+  (import "cerune" "print_i64" (func $print_i64 (param i64)))
+  (import "cerune" "print_f32" (func $print_f32 (param f32)))
+  (import "cerune" "print_f64" (func $print_f64 (param f64)))
 
-  (func $primer_i64_add_n3_b22_31 (param $left i64) (param $right i64) (result i64)
+  (func $cerune_i64_add_n3_b22_31 (param $left i64) (param $right i64) (result i64)
     (local $result i64)
     local.get $left
     local.get $right
@@ -20,18 +20,18 @@
     i64.const 0
     i64.lt_s
     if
-      ;; primer: runtime-v1 code=integer-overflow node=3 bytes=22..31
-      i32.const 112
-      call $write_error_byte
-      i32.const 114
-      call $write_error_byte
-      i32.const 105
-      call $write_error_byte
-      i32.const 109
+      ;; cerune: runtime-v1 code=integer-overflow node=3 bytes=22..31
+      i32.const 99
       call $write_error_byte
       i32.const 101
       call $write_error_byte
       i32.const 114
+      call $write_error_byte
+      i32.const 117
+      call $write_error_byte
+      i32.const 110
+      call $write_error_byte
+      i32.const 101
       call $write_error_byte
       i32.const 58
       call $write_error_byte
@@ -148,23 +148,23 @@
     local.get $result
   )
 
-  (func $primer_i64_div_n15_b76_85 (param $left i64) (param $right i64) (result i64)
+  (func $cerune_i64_div_n15_b76_85 (param $left i64) (param $right i64) (result i64)
     (local $result i64)
     local.get $right
     i64.eqz
     if
-      ;; primer: runtime-v1 code=division-by-zero node=15 bytes=76..85
-      i32.const 112
-      call $write_error_byte
-      i32.const 114
-      call $write_error_byte
-      i32.const 105
-      call $write_error_byte
-      i32.const 109
+      ;; cerune: runtime-v1 code=division-by-zero node=15 bytes=76..85
+      i32.const 99
       call $write_error_byte
       i32.const 101
       call $write_error_byte
       i32.const 114
+      call $write_error_byte
+      i32.const 117
+      call $write_error_byte
+      i32.const 110
+      call $write_error_byte
+      i32.const 101
       call $write_error_byte
       i32.const 58
       call $write_error_byte
@@ -288,18 +288,18 @@
     i64.eq
     i32.and
     if
-      ;; primer: runtime-v1 code=division-overflow node=15 bytes=76..85
-      i32.const 112
-      call $write_error_byte
-      i32.const 114
-      call $write_error_byte
-      i32.const 105
-      call $write_error_byte
-      i32.const 109
+      ;; cerune: runtime-v1 code=division-overflow node=15 bytes=76..85
+      i32.const 99
       call $write_error_byte
       i32.const 101
       call $write_error_byte
       i32.const 114
+      call $write_error_byte
+      i32.const 117
+      call $write_error_byte
+      i32.const 110
+      call $write_error_byte
+      i32.const 101
       call $write_error_byte
       i32.const 58
       call $write_error_byte
@@ -424,7 +424,7 @@
     local.get $result
   )
 
-  (func $primer_i64_mul_n11_b58_67 (param $left i64) (param $right i64) (result i64)
+  (func $cerune_i64_mul_n11_b58_67 (param $left i64) (param $right i64) (result i64)
     (local $result i64)
     local.get $left
     i64.eqz
@@ -448,18 +448,18 @@
     i32.and
     i32.or
     if
-      ;; primer: runtime-v1 code=integer-overflow node=11 bytes=58..67
-      i32.const 112
-      call $write_error_byte
-      i32.const 114
-      call $write_error_byte
-      i32.const 105
-      call $write_error_byte
-      i32.const 109
+      ;; cerune: runtime-v1 code=integer-overflow node=11 bytes=58..67
+      i32.const 99
       call $write_error_byte
       i32.const 101
       call $write_error_byte
       i32.const 114
+      call $write_error_byte
+      i32.const 117
+      call $write_error_byte
+      i32.const 110
+      call $write_error_byte
+      i32.const 101
       call $write_error_byte
       i32.const 58
       call $write_error_byte
@@ -585,18 +585,18 @@
     local.get $right
     i64.ne
     if
-      ;; primer: runtime-v1 code=integer-overflow node=11 bytes=58..67
-      i32.const 112
-      call $write_error_byte
-      i32.const 114
-      call $write_error_byte
-      i32.const 105
-      call $write_error_byte
-      i32.const 109
+      ;; cerune: runtime-v1 code=integer-overflow node=11 bytes=58..67
+      i32.const 99
       call $write_error_byte
       i32.const 101
       call $write_error_byte
       i32.const 114
+      call $write_error_byte
+      i32.const 117
+      call $write_error_byte
+      i32.const 110
+      call $write_error_byte
+      i32.const 101
       call $write_error_byte
       i32.const 58
       call $write_error_byte
@@ -715,7 +715,7 @@
     local.get $result
   )
 
-  (func $primer_i64_sub_n19_b94_100 (param $left i64) (param $right i64) (result i64)
+  (func $cerune_i64_sub_n19_b94_100 (param $left i64) (param $right i64) (result i64)
     (local $result i64)
     local.get $left
     local.get $right
@@ -731,18 +731,18 @@
     i64.const 0
     i64.lt_s
     if
-      ;; primer: runtime-v1 code=integer-overflow node=19 bytes=94..100
-      i32.const 112
-      call $write_error_byte
-      i32.const 114
-      call $write_error_byte
-      i32.const 105
-      call $write_error_byte
-      i32.const 109
+      ;; cerune: runtime-v1 code=integer-overflow node=19 bytes=94..100
+      i32.const 99
       call $write_error_byte
       i32.const 101
       call $write_error_byte
       i32.const 114
+      call $write_error_byte
+      i32.const 117
+      call $write_error_byte
+      i32.const 110
+      call $write_error_byte
+      i32.const 101
       call $write_error_byte
       i32.const 58
       call $write_error_byte
@@ -863,7 +863,7 @@
     local.get $result
   )
 
-  (func $primer_i64_sub_n7_b40_49 (param $left i64) (param $right i64) (result i64)
+  (func $cerune_i64_sub_n7_b40_49 (param $left i64) (param $right i64) (result i64)
     (local $result i64)
     local.get $left
     local.get $right
@@ -879,18 +879,18 @@
     i64.const 0
     i64.lt_s
     if
-      ;; primer: runtime-v1 code=integer-overflow node=7 bytes=40..49
-      i32.const 112
-      call $write_error_byte
-      i32.const 114
-      call $write_error_byte
-      i32.const 105
-      call $write_error_byte
-      i32.const 109
+      ;; cerune: runtime-v1 code=integer-overflow node=7 bytes=40..49
+      i32.const 99
       call $write_error_byte
       i32.const 101
       call $write_error_byte
       i32.const 114
+      call $write_error_byte
+      i32.const 117
+      call $write_error_byte
+      i32.const 110
+      call $write_error_byte
+      i32.const 101
       call $write_error_byte
       i32.const 58
       call $write_error_byte
@@ -1008,29 +1008,29 @@
   )
 
   (func $main
-    (local $primer_value i64)
+    (local $cerune_value i64)
 
     i64.const 8
-    local.set $primer_value
-    local.get $primer_value
+    local.set $cerune_value
+    local.get $cerune_value
     i64.const 1
-    call $primer_i64_add_n3_b22_31
+    call $cerune_i64_add_n3_b22_31
     call $print_i64
-    local.get $primer_value
+    local.get $cerune_value
     i64.const 1
-    call $primer_i64_sub_n7_b40_49
+    call $cerune_i64_sub_n7_b40_49
     call $print_i64
-    local.get $primer_value
+    local.get $cerune_value
     i64.const 2
-    call $primer_i64_mul_n11_b58_67
+    call $cerune_i64_mul_n11_b58_67
     call $print_i64
-    local.get $primer_value
+    local.get $cerune_value
     i64.const 2
-    call $primer_i64_div_n15_b76_85
+    call $cerune_i64_div_n15_b76_85
     call $print_i64
     i64.const 0
-    local.get $primer_value
-    call $primer_i64_sub_n19_b94_100
+    local.get $cerune_value
+    call $cerune_i64_sub_n19_b94_100
     call $print_i64
   )
   (export "main" (func $main))

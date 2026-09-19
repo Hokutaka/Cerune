@@ -1,4 +1,4 @@
-/// Primerの整数型です。出力先のレジスタ幅や格納方法とは区別します。
+/// Ceruneの整数型です。出力先のレジスタ幅や格納方法とは区別します。
 ///
 /// 実装済みの種類だけを列挙し、種類を増やしたときに各出力先の対応漏れを検出します。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -30,7 +30,7 @@ impl IntegerType {
         Self::ALL.into_iter().find(|ty| ty.name() == name)
     }
 
-    /// ソース、診断、Primer IRで共通の型名を返します。
+    /// ソース、診断、Cerune IRで共通の型名を返します。
     pub const fn name(self) -> &'static str {
         match self {
             Self::I8 => "i8",

@@ -52,10 +52,10 @@ impl ExecutionError {
 /// `run_vm`で発生したコンパイルエラーまたはVM実行エラーを表します。
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum RunError {
-    /// Primerソースからbytecodeを生成するまでに見つかった問題です。
+    /// Ceruneソースからbytecodeを生成するまでに見つかった問題です。
     Compilation(Diagnostic),
 
-    /// 生成されたbytecodeをPrimer VMで実行中に見つかった問題です。
+    /// 生成されたbytecodeをCerune VMで実行中に見つかった問題です。
     Execution(ExecutionError),
 }
 
@@ -229,13 +229,13 @@ mod tests {
     };
 
     #[test]
-    fn emits_primer_ir_with_resolved_types() {
+    fn emits_cerune_ir_with_resolved_types() {
         let ir = compile_to_ir_text("x: f32 = 0.1 + 0.2; print(x);").unwrap();
 
         assert_eq!(
             ir,
             concat!(
-                "; Primer IR v0.2\n",
+                "; Cerune IR v0.2\n",
                 "; #N identifies one statement or expression in this compilation\n\n",
                 "#0 %x@0: f32 = #1 add.f32(#2 0.1f32, #3 0.2f32)\n",
                 "#4 print.f32 #5 %x@0:f32\n",
@@ -269,7 +269,7 @@ mod tests {
     }
 
     #[test]
-    fn emits_product_types_and_field_origins_in_primer_ir() {
+    fn emits_product_types_and_field_origins_in_cerune_ir() {
         let source = "
             type Point { x: f64 = 0.0, y: f64, }
             point: Point = Point { y: 2.0, };
@@ -280,7 +280,7 @@ mod tests {
         assert_eq!(
             ir,
             concat!(
-                "; Primer IR v0.2\n",
+                "; Cerune IR v0.2\n",
                 "; #N identifies one statement or expression in this compilation\n\n",
                 "type %Point@0 {\n",
                 "  field %x@0: f64 = #0 0.0f64\n",
@@ -303,10 +303,10 @@ mod tests {
         ";
         let c = compile_to_c(source).unwrap();
 
-        assert!(c.contains("typedef struct primer_type_Point_0"));
-        assert!(c.contains("primer_type_Point_0 primer_binding_0_point"));
+        assert!(c.contains("typedef struct cerune_type_Point_0"));
+        assert!(c.contains("cerune_type_Point_0 cerune_binding_0_point"));
         assert!(c.contains(".y = 2.0, .x = 0.0"));
-        assert!(c.contains("(primer_binding_0_point).x"));
+        assert!(c.contains("(cerune_binding_0_point).x"));
     }
 
     #[test]
@@ -352,15 +352,15 @@ mod tests {
         assert!(bytecode.contains("array.get i64 4"));
 
         let c = compile_to_c(source).unwrap();
-        assert!(c.contains("primer_array_i64_4"));
-        assert!(c.contains("primer_array_get_i64_4"));
+        assert!(c.contains("cerune_array_i64_4"));
+        assert!(c.contains("cerune_array_get_i64_4"));
 
         let llvm = crate::compile_to_llvm_with_target(
             source,
             Some(crate::codegen::llvm::Target::X86_64UnknownLinuxGnu),
         )
         .unwrap();
-        assert!(llvm.contains("@primer.array.get.i64.4"));
+        assert!(llvm.contains("@cerune.array.get.i64.4"));
         assert!(llvm.contains("icmp sge i64 %index, 4"));
 
         let wat = compile_to_wat(source).unwrap();
@@ -597,8 +597,8 @@ mod tests {
     #[test]
     fn c_backend_declares_unused_array_field_types() {
         let c = compile_to_c("type Row { values: [i64; 3], }").unwrap();
-        let array = c.find("typedef struct primer_array_i64_3").unwrap();
-        let product = c.find("typedef struct primer_type_Row_0").unwrap();
+        let array = c.find("typedef struct cerune_array_i64_3").unwrap();
+        let product = c.find("typedef struct cerune_type_Row_0").unwrap();
 
         assert!(array < product);
     }
@@ -650,7 +650,7 @@ mod tests {
                 Some(crate::codegen::llvm::Target::X86_64UnknownLinuxGnu)
             )
             .unwrap()
-            .contains("define internal i64 @primer.array.get.i64.2")
+            .contains("define internal i64 @cerune.array.get.i64.2")
         );
     }
 

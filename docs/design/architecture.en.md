@@ -1,47 +1,47 @@
-# Primer compiler design
+# Cerune compiler design
 
 [日本語](architecture.ja.md)
 
-Primer is a statically typed experimental language designed to make compiler transformations observable. Its compiler architecture and transformation boundaries are explicit.
+Cerune is a statically typed experimental language designed to make compiler transformations observable. Its compiler architecture and transformation boundaries are explicit.
 
-The boundaries that Primer preserves for observability are defined in the [observability contract](observability.en.md). Terminology and conditions for generated output are defined in [output routes and targets](targets.en.md).
+The boundaries that Cerune preserves for observability are defined in the [observability contract](observability.en.md). Terminology and conditions for generated output are defined in [output routes and targets](targets.en.md).
 
 ## Principles
 
-Primer aims to combine sophisticated implementation with observability. As transformations become more advanced, their boundaries and results must remain observable.
+Cerune aims to combine sophisticated implementation with observability. As transformations become more advanced, their boundaries and results must remain observable.
 
 In particular:
 
 - type decisions should be visible and predictable;
 - backend-independent meaning should be resolved before backend lowering;
 - backend-specific decisions should happen behind an explicit lowering boundary;
-- emitters should format backend IR rather than reinterpret Primer semantics;
+- emitters should format backend IR rather than reinterpret Cerune semantics;
 - optimizations should be introduced as explicit, observable passes that can be examined as part of an experiment;
 - generated observations should avoid incidental nondeterminism such as timestamps or random identifiers.
 
-Primer v0.1 does not silently insert numeric conversions or hide transformations that are useful to observe.
+Cerune v0.1 does not silently insert numeric conversions or hide transformations that are useful to observe.
 
 ## Compiler architecture
 
 The compiler pipeline is:
 
 ```text
-Primer Source
+Cerune Source
       ↓
 Lexer / Parser
       ↓
 AST
       ↓
-Primer IR Builder
+Cerune IR Builder
   - semantic validation
   - type resolution
   - contextual float resolution
       ↓
-Primer IR
+Cerune IR
   - typed
   - backend independent
       │
-      ├── Observation 1: emit-ir / .pir
+      ├── Observation 1: emit-ir / .ceir
       │
       ↓
 Backend Lowering
@@ -55,29 +55,29 @@ Backend Artifact
       └── Observation 2
 ```
 
-The key architectural boundary is Primer IR.
+The key architectural boundary is Cerune IR.
 
-The frontend decides what the Primer program means. Backends decide how that already-resolved meaning is represented for a target.
+The frontend decides what the Cerune program means. Backends decide how that already-resolved meaning is represented for a target.
 
 ### Architectural invariants
 
 The following rules are part of the compiler design:
 
-1. Backend compilation starts from Primer IR, not directly from the AST.
+1. Backend compilation starts from Cerune IR, not directly from the AST.
 2. Semantic validation and type resolution happen before backend lowering.
-3. A backend lowerer may know both Primer IR and its own backend IR.
-4. A backend emitter must not depend on Primer IR, the AST, or semantic-analysis state.
+3. A backend lowerer may know both Cerune IR and its own backend IR.
+4. A backend emitter must not depend on Cerune IR, the AST, or semantic-analysis state.
 5. Backend-specific Rust IR is an internal implementation boundary.
-6. Public observations are Primer IR text and emitted backend artifacts.
+6. Public observations are Cerune IR text and emitted backend artifacts.
 7. Optimization is not implicit. A future optimization stage must be an explicit, observable pass.
-8. Primer IR gives each binding a deterministic compilation-local ID so references remain explicit across shadowing.
-9. Structured `if`, `while`, `for`, `break`, and `continue` statements remain in Primer IR. A `for` keeps its initializer, condition, body, and update distinct; branches, merge points, update paths, back edges, and loop exits are introduced during lowering into Bytecode and each backend IR.
-10. Every Primer IR statement and expression has a deterministic `NodeId` that is unique within one compilation. A `NodeId` identifies an element, while a `Span` locates source text; neither substitutes for the other.
+8. Cerune IR gives each binding a deterministic compilation-local ID so references remain explicit across shadowing.
+9. Structured `if`, `while`, `for`, `break`, and `continue` statements remain in Cerune IR. A `for` keeps its initializer, condition, body, and update distinct; branches, merge points, update paths, back edges, and loop exits are introduced during lowering into Bytecode and each backend IR.
+10. Every Cerune IR statement and expression has a deterministic `NodeId` that is unique within one compilation. A `NodeId` identifies an element, while a `Span` locates source text; neither substitutes for the other.
 
 Conceptually, every backend follows the same structure:
 
 ```text
-Primer IR
+Cerune IR
     ↓
 backend::lower()
     ↓
@@ -90,11 +90,11 @@ Artifact
 
 The physical Rust module layout may differ between backends, but the architectural boundary is the same.
 
-## Primer IR
+## Cerune IR
 
-Primer IR is the typed, backend-independent representation produced after parsing, semantic validation, and type resolution.
+Cerune IR is the typed, backend-independent representation produced after parsing, semantic validation, and type resolution.
 
-Every Primer IR expression has a resolved concrete type:
+Every Cerune IR expression has a resolved concrete type:
 
 ```text
 bool
@@ -112,31 +112,31 @@ named product types
 fixed arrays
 ```
 
-`infer` is resolved before Primer IR is produced and therefore does not appear as a runtime or backend type.
+`infer` is resolved before Cerune IR is produced and therefore does not appear as a runtime or backend type.
 
-The AST, semantic model, Primer IR, and bytecode share `IntegerType`, with `I8`, `U8`, `I16`, `U16`, `I32`, `U32`, and `I64` kinds exposing names, signedness, bit widths, and bounds. VM values retain their integer kind; instructions check type agreement and result ranges.
+The AST, semantic model, Cerune IR, and bytecode share `IntegerType`, with `I8`, `U8`, `I16`, `U16`, `I32`, `U32`, and `I64` kinds exposing names, signedness, bit widths, and bounds. VM values retain their integer kind; instructions check type agreement and result ranges.
 
 Unsuffixed floating-point literals are also resolved before backend lowering. A backend does not need to repeat contextual type inference.
 
-Integer literals retain their decimal digits in lexer tokens and the AST. Semantic analysis checks the range against the expected integer type, and construction of Primer IR converts the literal into a resolved value. This prevents the lexer's `i64` range from constraining future integer types.
+Integer literals retain their decimal digits in lexer tokens and the AST. Semantic analysis checks the range against the expected integer type, and construction of Cerune IR converts the literal into a resolved value. This prevents the lexer's `i64` range from constraining future integer types.
 
 The integer conversion spellings `i32(value)` and `convert<i32>(value)` resolve to the same `ConvertInteger`, with original spelling retained as `ConversionSyntax`. The destination does not retype the input, which is evaluated once. All pairs of the eight implemented integer types are supported. Out-of-range conversion is a distinct VM error from arithmetic overflow. Bytecode conversion instructions retain both integer kinds and source origin.
 
-Explicit conversions involving floats resolve to `ConvertNumeric`. Shared `NumericType` distinguishes integer kinds, `f32`, and `f64`; Primer IR and bytecode retain both source and destination types. Backend IR retains both in `NumericConversion`, so emitters do not infer input types again. Existing integer-only observation forms are unchanged.
+Explicit conversions involving floats resolve to `ConvertNumeric`. Shared `NumericType` distinguishes integer kinds, `f32`, and `f64`; Cerune IR and bytecode retain both source and destination types. Backend IR retains both in `NumericConversion`, so emitters do not infer input types again. Existing integer-only observation forms are unchanged.
 
 Conversion succeeds only if it preserves the already evaluated input exactly. Range checks and round-trip comparisons detect lost fractional parts or precision. Backends such as C and LLVM check bounds before converting a floating-point value to an integer. Since the floating-point representation of `i64` maximum rounds up to 2^63, the upper bound is checked as strictly less than the exactly representable maximum-plus-one, not less than or equal to a rounded maximum.
 
-Float width changes preserve infinity and zero signs and reject NaN. Conversion to integers rejects infinity, NaN, and negative zero. Same-type conversion returns the original value, including NaN payloads, unchanged. Lowering omits the execution operation in this case while retaining explicit conversion in Primer IR and bytecode. These conversion rules do not prohibit rounding in ordinary floating-point arithmetic.
+Float width changes preserve infinity and zero signs and reject NaN. Conversion to integers rejects infinity, NaN, and negative zero. Same-type conversion returns the original value, including NaN payloads, unchanged. Lowering omits the execution operation in this case while retaining explicit conversion in Cerune IR and bytecode. These conversion rules do not prohibit rounding in ordinary floating-point arithmetic.
 
 Current code generation backends store all eight integer kinds in 64-bit values. For `u64`, the high bit is part of the positive value: lowering selects unsigned comparison, division, and right shift. C uses `uint64_t`; other targets use 64-bit storage with unsigned instructions. Arithmetic and integer-to-integer conversion results of 8-, 16-, and 32-bit integers retain explicit `CheckIntegerRange` operations in backend IR. Float-to-integer range checks are part of `ConvertNumeric`. The existing overflow checks also apply to the underlying 64-bit arithmetic.
 
-This implements numerical ranges and failure conditions, not packed 8-, 16-, or 32-bit storage or external ABI support. Arrays and products also use 64-bit locations, so memory use does not yet decrease. Keep the semantic type in Primer IR distinct from the backend's chosen storage type.
+This implements numerical ranges and failure conditions, not packed 8-, 16-, or 32-bit storage or external ABI support. Arrays and products also use 64-bit locations, so memory use does not yet decrease. Keep the semantic type in Cerune IR distinct from the backend's chosen storage type.
 
-Primer IR deliberately does not attempt to be a universal machine IR or prematurely impose SSA form. It represents Primer semantics closely enough to keep the frontend/backend boundary visible.
+Cerune IR deliberately does not attempt to be a universal machine IR or prematurely impose SSA form. It represents Cerune semantics closely enough to keep the frontend/backend boundary visible.
 
-Primer IR statements and expressions share one sequence of `NodeId` values. `emit-ir` renders them as `#0`, `#1`, and so on. IDs are allocated deterministically, with a parent before its children and in textual IR order, so the same Primer version and input produce the same IDs.
+Cerune IR statements and expressions share one sequence of `NodeId` values. `emit-ir` renders them as `#0`, `#1`, and so on. IDs are allocated deterministically, with a parent before its children and in textual IR order, so the same Cerune version and input produce the same IDs.
 
-A `NodeId` refers to an element within one compilation result. It is not stable across source edits or Primer versions. Multiple IR elements with the same `Span` can still have different `NodeId` values. This distinction provides a foundation for recording how one expression is later split into multiple backend instructions without relying on source locations as identity.
+A `NodeId` refers to an element within one compilation result. It is not stable across source edits or Cerune versions. Multiple IR elements with the same `Span` can still have different `NodeId` values. This distinction provides a foundation for recording how one expression is later split into multiple backend instructions without relying on source locations as identity.
 
 Type names and suffixes resolve through `IntegerType::ALL`. C, LLVM, QBE, and WAT collect required range checks in an ordered set of integer kinds and emit each helper once. This reduces registration omissions when adding types and keeps artifact ordering deterministic.
 
@@ -144,7 +144,7 @@ Type names and suffixes resolve through `IntegerType::ALL`. C, LLVM, QBE, and WA
 
 ### Short-circuit logical expressions
 
-The AST and Primer IR retain `&&` and `||` as `Logical`, separate from eager binary operations. The frontend checks that both operands are `bool` and resolves the condition for executing the right operand as Primer semantics. A constant left operand that allows skipping does not bypass name resolution, type checking, or IR construction for the right operand.
+The AST and Cerune IR retain `&&` and `||` as `Logical`, separate from eager binary operations. The frontend checks that both operands are `bool` and resolves the condition for executing the right operand as Cerune semantics. A constant left operand that allows skipping does not bypass name resolution, type checking, or IR construction for the right operand.
 
 Bytecode lowering uses a conditional jump consuming the left value and a jump to the merge point. The branch carries the logical expression's `NodeId` and the left operand's `Span`; right-operand instructions retain their own origins. A failure in an evaluated right operand therefore points to the failed operation, not merely the containing logical expression.
 
@@ -154,9 +154,9 @@ These transformations can be inspected through existing observation boundaries. 
 
 ### Remainder and bit operations
 
-The AST and Primer IR distinguish remainder, AND, OR, XOR, left/right shifts, and unary complement, retaining the original integer kind. Bytecode preserves typed instructions and the expression's `NodeId` and `Span`. The VM calculates left shifts in a wider integer before checking the original range, with separate errors for invalid shift counts and zero remainder divisors.
+The AST and Cerune IR distinguish remainder, AND, OR, XOR, left/right shifts, and unary complement, retaining the original integer kind. Bytecode preserves typed instructions and the expression's `NodeId` and `Span`. The VM calculates left shifts in a wider integer before checking the original range, with separate errors for invalid shift counts and zero remainder divisors.
 
-Code generation passes an integer-only `IntegerBinaryOp` and the original `IntegerType` into each backend IR's `IntegerBinary`. Unary `~` lowers to XOR with `-1` for signed types or the original type's maximum for unsigned types. Thus `~0u8` remains 255 even with 64-bit storage. Emitters do not reinterpret Primer IR or repeat type inference.
+Code generation passes an integer-only `IntegerBinaryOp` and the original `IntegerType` into each backend IR's `IntegerBinary`. Unary `~` lowers to XOR with `-1` for signed types or the original type's maximum for unsigned types. Thus `~0u8` remains 255 even with 64-bit storage. Emitters do not reinterpret Cerune IR or repeat type inference.
 
 C, LLVM, QBE, and WAT collect required operation/type pairs in an ordered set and emit each helper once. C uses per-expression local temporaries and the comma operator to sequence operands, without moving expressions outside short-circuit branches or loops. Windows/Linux x86-64 lowers to register operations and explicit checking branches.
 
@@ -164,9 +164,9 @@ Shift counts are checked against the original width first. Left shift then check
 
 ### Target-specific lowering
 
-Each backend lowers Primer IR into a backend-specific Rust representation before emission.
+Each backend lowers Cerune IR into a backend-specific Rust representation before emission.
 
-An expression represented as one integer operation in Primer IR may become the operation plus an overflow check during backend lowering. The check is not left to accidental behavior in an external tool. Backend IR retains it as a checked integer operation or an explicit trap condition. The generated artifact exposes the target-appropriate result, such as a helper call, an overflow-flag branch, or `unreachable`.
+An expression represented as one integer operation in Cerune IR may become the operation plus an overflow check during backend lowering. The check is not left to accidental behavior in an external tool. Backend IR retains it as a checked integer operation or an explicit trap condition. The generated artifact exposes the target-appropriate result, such as a helper call, an overflow-flag branch, or `unreachable`.
 
 The current output routes and implementation boundaries are:
 
@@ -178,9 +178,9 @@ The current output routes and implementation boundaries are:
 | WebAssembly | WAT-oriented instruction IR | `.wat` |
 | Direct x86-64 Windows/Linux assembly | assembly IR | `.s` |
 | Native object | shared ASM reader, instruction encoding, ELF/COFF writer | `.o` / `.obj` |
-| Primer bytecode | `BytecodeProgram` | `.pbc` |
+| Cerune bytecode | `BytecodeProgram` | `.cebc` |
 
-Backend IR is allowed to encode decisions that do not belong in Primer IR.
+Backend IR is allowed to encode decisions that do not belong in Cerune IR.
 
 Examples include:
 
@@ -194,34 +194,34 @@ These representations are not currently public serialization formats and are not
 
 ### Source locations and bytecode instruction provenance
 
-Primer IR statements and expressions retain their corresponding UTF-8 byte ranges in the source. A range includes its start and excludes its end. Line and column numbers are derived from this range when displayed.
+Cerune IR statements and expressions retain their corresponding UTF-8 byte ranges in the source. A range includes its start and excludes its end. Line and column numbers are derived from this range when displayed.
 
 Each bytecode instruction stores one of the following origins separately from the instruction itself:
 
-- `Source { node_id, span }`: the instruction was lowered from a Primer IR statement or expression;
+- `Source { node_id, span }`: the instruction was lowered from a Cerune IR statement or expression;
 - `Synthetic`: the compiler generated the instruction without a directly corresponding source range.
 
 `Synthetic` does not mean that provenance was lost. It explicitly identifies compiler-generated instructions.
 
-The `node_id` identifies the Primer IR element that produced an instruction. When one IR element lowers into several instructions, those instructions may share the same `node_id`. The `span` is the focused source range used for diagnostics and does not have to cover the whole IR element. For example, bounds checks produced by a nested array-element assignment share the assignment statement's `node_id` while retaining a different index `span` for each check.
+The `node_id` identifies the Cerune IR element that produced an instruction. When one IR element lowers into several instructions, those instructions may share the same `node_id`. The `span` is the focused source range used for diagnostics and does not have to cover the whole IR element. For example, bounds checks produced by a nested array-element assignment share the assignment statement's `node_id` while retaining a different index `span` for each check.
 
-The VM reports an execution error using its bytecode instruction index. `run_vm` resolves that instruction's origin and associates the Primer IR `NodeId` and, when available, a source location with the execution error. This provenance is currently an internal representation and is not included in the `emit-bytecode` text format.
+The VM reports an execution error using its bytecode instruction index. `run_vm` resolves that instruction's origin and associates the Cerune IR `NodeId` and, when available, a source location with the execution error. This provenance is currently an internal representation and is not included in the `emit-bytecode` text format.
 
 ## Observation boundaries
 
-Primer exposes two primary observation boundaries.
+Cerune exposes two primary observation boundaries.
 
-### Observation 1: resolved Primer meaning
+### Observation 1: resolved Cerune meaning
 
 ```text
-primer emit-ir <file> [-o <output.pir>]
+cerune emit-ir <file> [-o <output.ceir>]
 ```
 
-The `.pir` observation is produced after frontend semantic and type resolution but before backend lowering.
+The `.ceir` observation is produced after frontend semantic and type resolution but before backend lowering.
 
 It is intended to answer:
 
-> What does Primer consider this source program to mean?
+> What does Cerune consider this source program to mean?
 
 An `emit-ir` result guarantees that:
 
@@ -238,20 +238,20 @@ Backend allocation, ABI, stack-machine, or target-instruction decisions do not b
 Emit commands for each output route expose the result after backend lowering and emission:
 
 ```text
-primer emit-c <file> [-o <output.c>]
-primer emit-llvm <file> [--target <triple>] [-o <output.ll>]
-primer emit-qbe <file> [--target <triple>] [-o <output.ssa>]
-primer emit-wat <file> [-o <output.wat>]
-primer emit-asm <file> [--target <triple>] [--annotate-origins] [-o <output.s>]
-primer emit-obj <file> --target <triple> [--annotate-origins] -o <output.o>
-primer emit-bytecode <file> [-o <output.pbc>]
+cerune emit-c <file> [-o <output.c>]
+cerune emit-llvm <file> [--target <triple>] [-o <output.ll>]
+cerune emit-qbe <file> [--target <triple>] [-o <output.ssa>]
+cerune emit-wat <file> [-o <output.wat>]
+cerune emit-asm <file> [--target <triple>] [--annotate-origins] [-o <output.s>]
+cerune emit-obj <file> --target <triple> [--annotate-origins] -o <output.o>
+cerune emit-bytecode <file> [-o <output.cebc>]
 ```
 
 These observations are intended to answer:
 
-> How did the selected output route and target represent the resolved Primer program?
+> How did the selected output route and target represent the resolved Cerune program?
 
-The existing `emit-*` commands are the observation API. Primer does not currently need a second `observe` command that duplicates them.
+The existing `emit-*` commands are the observation API. Cerune does not currently need a second `observe` command that duplicates them.
 
 ### Internal backend IR is not an observation contract
 
@@ -263,34 +263,34 @@ A future explicit backend-IR observation point may be added only if there is a c
 
 ## Code generation
 
-Primer avoids unobservable, implicit source-level optimization rather than optimization itself.
+Cerune avoids unobservable, implicit source-level optimization rather than optimization itself.
 
 Backend lowering may perform advanced transformations as well as the mechanical transformations required by its target representation. If a transformation removes structure that is useful to observe, it must be treated as an explicit, observable pass.
 
 Examples of legitimate backend lowering include:
 
 - selecting typed LLVM or QBE instructions;
-- converting a Primer expression into WebAssembly stack instructions;
-- mapping Primer values to C types and expressions;
+- converting a Cerune expression into WebAssembly stack instructions;
+- mapping Cerune values to C types and expressions;
 - allocating Direct ASM stack slots and materializing constants;
-- lowering Primer operations into bytecode instructions.
+- lowering Cerune operations into bytecode instructions.
 
 If optimization is introduced later, it should appear as a named pass with an explicit boundary rather than being hidden inside emission.
 
 ## Tool responsibilities
 
-Primer, Tint*, and Whitebase have different responsibilities.
+Cerune, Tint*, and Whitebase have different responsibilities.
 
-### Primer
+### Cerune
 
-Primer owns compiler transformation and emission:
+Cerune owns compiler transformation and emission:
 
 ```text
 Parse
   ↓
 Resolve
   ↓
-Primer IR
+Cerune IR
   ↓
 Lower
   ↓
@@ -299,24 +299,24 @@ Backend IR
 Emit
 ```
 
-Primer defines and produces the observable compiler artifacts.
+Cerune defines and produces the observable compiler artifacts.
 
 ### Tint*
 
-Tint* is a visual development and inspection environment for Primer.
+Tint* is a visual development and inspection environment for Cerune.
 
-It should consume Primer's public CLI observations rather than duplicate compiler semantics. Its role is to make source and generated representations easy to inspect and compare interactively.
+It should consume Cerune's public CLI observations rather than duplicate compiler semantics. Its role is to make source and generated representations easy to inspect and compare interactively.
 
 ### Whitebase
 
-Whitebase currently runs, measures, and compares built-in Rust, C++, and Assembly operations. It does not yet accept Primer source or artifacts and build and run them through external compilers.
+Whitebase currently runs, measures, and compares built-in Rust, C++, and Assembly operations. It does not yet accept Cerune source or artifacts and build and run them through external compilers.
 
 The intended integration lets Whitebase consume emitted artifacts as experiment inputs, select build routes, build, run, measure, and compare them while recording the external choices that affect the experiment. The following diagram describes that responsibility boundary, not an existing implementation.
 
 ```text
-Primer source
+Cerune source
       ↓
-Primer
+Cerune
       ↓
 Observation artifact
       ↓
@@ -328,9 +328,9 @@ Whitebase
   - compare
 ```
 
-Whitebase should treat Primer as an external tool boundary rather than depending on Primer's internal Rust IR.
+Whitebase should treat Cerune as an external tool boundary rather than depending on Cerune's internal Rust IR.
 
-Primer's regression tests verify that types, diagnostics, artifacts, and execution results follow language rules. Development tests using external compilers to check emitted code can belong to Primer for that purpose. User-facing selection of toolchains and conditions, experiment storage, and comparison belong to the consumer. This does not prescribe a single test storage format or comparison method.
+Cerune's regression tests verify that types, diagnostics, artifacts, and execution results follow language rules. Development tests using external compilers to check emitted code can belong to Cerune for that purpose. User-facing selection of toolchains and conditions, experiment storage, and comparison belong to the consumer. This does not prescribe a single test storage format or comparison method.
 
 Generation support, build readiness, execution readiness, and permission to execute are separate. See [Artifact consumer boundary](targets.en.md#artifact-consumer-boundary). Clarifying this boundary does not require a new public API or make language features such as strings wait for integration to be completed.
 
@@ -338,9 +338,9 @@ Generation support, build readiness, execution readiness, and permission to exec
 
 Observation artifacts are most useful when they can be compared directly.
 
-For the same Primer version, source input, output route, target, target features, and explicit options, Primer should produce deterministic textual observations whenever practical.
+For the same Cerune version, source input, output route, target, target features, and explicit options, Cerune should produce deterministic textual observations whenever practical.
 
-Primer-generated observations should therefore avoid incidental values such as timestamps, random identifiers, or environment-dependent metadata unless such data is itself the subject of an experiment.
+Cerune-generated observations should therefore avoid incidental values such as timestamps, random identifiers, or environment-dependent metadata unless such data is itself the subject of an experiment.
 
 External toolchain output is outside this guarantee and should be recorded by the consumer, such as Whitebase.
 
@@ -352,16 +352,16 @@ The current design intentionally does not require:
 - a generic `observe` command duplicating the existing `emit-*` commands;
 - a universal SSA representation shared by all backends;
 - implicit optimization;
-- build orchestration inside Primer;
-- benchmarking or performance measurement inside Primer.
+- build orchestration inside Cerune;
+- benchmarking or performance measurement inside Cerune.
 
 Possible future work includes:
 
 - an explicit optimization pipeline with additional observation boundaries;
 - optional backend-IR inspection when a concrete use case requires it;
-- an Observation Bundle that collects source, Primer IR, emitted artifacts, and metadata together;
-- consuming serialized Primer IR as an explicit compiler input if experiments require replaying the backend half of the pipeline.
+- an Observation Bundle that collects source, Cerune IR, emitted artifacts, and metadata together;
+- consuming serialized Cerune IR as an explicit compiler input if experiments require replaying the backend half of the pipeline.
 
 Those features should be added only when they preserve the central rule:
 
-> Primer should make transformations easier to observe and easier to explain.
+> Cerune should make transformations easier to observe and easier to explain.

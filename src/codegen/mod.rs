@@ -31,7 +31,7 @@ impl NumericConversion {
     }
 
     pub fn helper(self) -> String {
-        format!("primer_convert_{}_{}", self.from.name(), self.to.name())
+        format!("cerune_convert_{}_{}", self.from.name(), self.to.name())
     }
 }
 
@@ -93,7 +93,7 @@ impl IntegerBinaryOp {
         }
     }
     pub fn helper(self, ty: crate::types::IntegerType) -> String {
-        format!("primer_{}_{}", ty.name(), self.name())
+        format!("cerune_{}_{}", ty.name(), self.name())
     }
 }
 

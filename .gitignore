@@ -3,11 +3,11 @@
 *.exe
 *.out
 *.ll
-*.pir
+*.ceir
 *.ssa
 *.wat
 *.s
-*.pbc
+*.cebc
 
 # 観察テストの期待値は生成物の拡張子でも追跡する
 !tests/fixtures/observation/**/expected/**

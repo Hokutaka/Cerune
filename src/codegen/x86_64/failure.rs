@@ -24,7 +24,7 @@ impl Reporter {
             panic!("language failure requires a source origin");
         };
         let record = format!(
-            "primer: {}\n",
+            "cerune: {}\n",
             RuntimeFailure {
                 code,
                 node_id,
@@ -32,7 +32,7 @@ impl Reporter {
             }
             .record()
         );
-        let label = format!(".Lprimer_failure_{}", self.count);
+        let label = format!(".Lcerune_failure_{}", self.count);
         self.count += 1;
         self.data.push_str(&format!(
             "{label}:\n  .asciz \"{}\"\n",

@@ -1,9 +1,9 @@
 # target: x86_64-unknown-linux-gnu (qbe -t amd64_sysv)
 
-section ".rodata" data $primer_string_0 = align 8 { l 4, b 230, b 151, b 165, b 0 }
-section ".rodata" data $primer_string_1 = align 8 { l 0 }
+section ".rodata" data $cerune_string_0 = align 8 { l 4, b 230, b 151, b 165, b 0 }
+section ".rodata" data $cerune_string_1 = align 8 { l 0 }
 
-function w $primer_string_equal(l %left, l %right) {
+function w $cerune_string_equal(l %left, l %right) {
 @start
   %length =l loadl %left
   %right_length =l loadl %right
@@ -30,7 +30,7 @@ function w $primer_string_equal(l %left, l %right) {
   ret 0
 }
 
-function $primer_print_string(l %value) {
+function $cerune_print_string(l %value) {
 @start
   %length =l loadl %value
   jmp @condition
@@ -57,11 +57,11 @@ data $fmt_f64 = { b "%.17g", b 10, b 0 }
 export function w $main() {
 @start
   %slot_text =l alloc8 8
-  storel $primer_string_0, %slot_text
+  storel $cerune_string_0, %slot_text
   %tmp0 =l loadl %slot_text
   %tmp1 =l loadl %tmp0
   %tmp2 =w call $printf(l $fmt_i64, ..., l %tmp1)
-  %tmp3 =l loadl $primer_string_1
+  %tmp3 =l loadl $cerune_string_1
   %tmp4 =w call $printf(l $fmt_i64, ..., l %tmp3)
   ret 0
 }

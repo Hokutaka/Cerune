@@ -9,12 +9,12 @@ pub(super) fn helper_name(instruction: &Instruction, origin: Origin) -> String {
         Instruction::ConvertNumeric { conversion } => conversion.helper(),
         Instruction::IntegerBinary { op, ty } => op.helper(*ty),
         Instruction::CheckIntegerRange { ty, failure } => {
-            format!("primer_check_{}_{}", ty.name(), failure.name())
+            format!("cerune_check_{}_{}", ty.name(), failure.name())
         }
-        Instruction::CheckedI64Add => "primer_i64_add".into(),
-        Instruction::CheckedI64Sub => "primer_i64_sub".into(),
-        Instruction::CheckedI64Mul => "primer_i64_mul".into(),
-        Instruction::CheckedI64DivS => "primer_i64_div".into(),
+        Instruction::CheckedI64Add => "cerune_i64_add".into(),
+        Instruction::CheckedI64Sub => "cerune_i64_sub".into(),
+        Instruction::CheckedI64Mul => "cerune_i64_mul".into(),
+        Instruction::CheckedI64DivS => "cerune_i64_div".into(),
         _ => unreachable!("only checked operations have specialized helpers"),
     };
     format!(
@@ -29,8 +29,8 @@ pub(super) fn helper_name(instruction: &Instruction, origin: Origin) -> String {
 /// 線形メモリ、現在位置の可変変数、診断用の公開状態は追加しません。
 pub(super) fn emit(record: RuntimeFailure, prefix: &str, output: &mut String) {
     // バイト定数を手で復号せず、生成物から理由とソース位置を読めるようにします。
-    writeln!(output, "{prefix};; primer: {}", record.record()).unwrap();
-    for byte in format!("primer: {}\n", record.record()).bytes() {
+    writeln!(output, "{prefix};; cerune: {}", record.record()).unwrap();
+    for byte in format!("cerune: {}\n", record.record()).bytes() {
         writeln!(
             output,
             "{prefix}i32.const {byte}\n{prefix}call $write_error_byte"

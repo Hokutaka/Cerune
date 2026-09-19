@@ -8,7 +8,7 @@ use std::{
     sync::atomic::{AtomicUsize, Ordering},
 };
 
-use primer_lang::{compile_to_c, run_vm};
+use cerune_lang::{compile_to_c, run_vm};
 #[path = "support/crash_dialogs.rs"]
 mod crash_dialogs;
 #[path = "support/u64_cases.rs"]
@@ -22,7 +22,7 @@ struct NativeC {
 impl NativeC {
     fn new() -> Option<Self> {
         crash_dialogs::suppress();
-        let configured = std::env::var_os("PRIMER_TEST_CC");
+        let configured = std::env::var_os("CERUNE_TEST_CC");
         let compiler = configured
             .clone()
             .unwrap_or_else(|| if cfg!(windows) { "clang" } else { "cc" }.into());
@@ -33,10 +33,10 @@ impl NativeC {
         if !available {
             assert!(
                 configured.is_none(),
-                "PRIMER_TEST_CC compiler is unavailable: {compiler:?}"
+                "CERUNE_TEST_CC compiler is unavailable: {compiler:?}"
             );
             eprintln!(
-                "native C execution skipped: {compiler:?} unavailable; set PRIMER_TEST_CC to require it"
+                "native C execution skipped: {compiler:?} unavailable; set CERUNE_TEST_CC to require it"
             );
             return None;
         }
@@ -46,7 +46,7 @@ impl NativeC {
             .unwrap()
             .as_nanos();
         let directory = std::env::temp_dir().join(format!(
-            "primer-c-{}-{stamp}-{}",
+            "cerune-c-{}-{stamp}-{}",
             std::process::id(),
             NEXT.fetch_add(1, Ordering::Relaxed)
         ));
@@ -67,7 +67,7 @@ impl NativeC {
         fs::write(&c, compile_to_c(source).unwrap()).unwrap();
         let mut command = Command::new(&self.compiler);
         command.args(["-std=c11", "-pedantic-errors", optimization]);
-        if std::env::var_os("PRIMER_TEST_SANITIZE").is_some() {
+        if std::env::var_os("CERUNE_TEST_SANITIZE").is_some() {
             command.args(["-fsanitize=address,undefined", "-fno-omit-frame-pointer"]);
         }
         command.arg(&c).arg("-o").arg(&exe);
@@ -161,8 +161,8 @@ fn literals_emit_ascii_c_and_explicit_utf8_lengths() {
 fn strings_and_examples_match_vm_as_exact_bytes() {
     let Some(c) = NativeC::new() else { return };
     for source in [
-        include_str!("../examples/string_values.prim"),
-        include_str!("../examples/string_lookup.prim"),
+        include_str!("../examples/string_values.ceru"),
+        include_str!("../examples/string_lookup.ceru"),
         r#"print(""); print("a\0b\n\r\t\"\\??/9\u{1f600}");
             print("\u{e9}" == "e\u{301}"); print("a\0x" != "a\0y");
             print("a\0" == "a"); print("" == ""); print("日本語" == "\u{65e5}本語");
@@ -290,7 +290,7 @@ fn all_current_examples_run_as_generated_c() {
             .map(|entry| entry.unwrap().path())
             .filter(|path| {
                 path.extension()
-                    .is_some_and(|extension| extension == "prim")
+                    .is_some_and(|extension| extension == "ceru")
             })
             .collect();
     paths.sort();
@@ -300,7 +300,7 @@ fn all_current_examples_run_as_generated_c() {
         let expected = run_vm(&source).unwrap();
         let uses_strings = compile_to_c(&source)
             .unwrap()
-            .contains("typedef struct primer_string {");
+            .contains("typedef struct cerune_string {");
         for optimization in ["-O0", "-O2"] {
             let actual = c.run(&source, optimization);
             assert!(

@@ -37,7 +37,7 @@ fn fixture_path(case_name: &str) -> PathBuf {
 }
 
 fn source_path(case_name: &str) -> PathBuf {
-    fixture_path(case_name).join("source.prim")
+    fixture_path(case_name).join("source.ceru")
 }
 
 fn expected_output(case_name: &str, file_name: &str) -> String {
@@ -48,7 +48,7 @@ fn expected_output(case_name: &str, file_name: &str) -> String {
 }
 
 fn assert_observation(case_name: &str, command: &str, expected_file: &str) {
-    let mut process = Command::new(env!("CARGO_BIN_EXE_primer"));
+    let mut process = Command::new(env!("CARGO_BIN_EXE_cerune"));
     process.arg(command).arg(source_path(case_name));
     if command == "emit-llvm"
         || (command == "emit-qbe" && matches!(case_name, "string-values" | "string-byte-length"))
@@ -57,22 +57,22 @@ fn assert_observation(case_name: &str, command: &str, expected_file: &str) {
     }
     let output = process
         .output()
-        .unwrap_or_else(|error| panic!("failed to run primer {command}: {error}"));
+        .unwrap_or_else(|error| panic!("failed to run cerune {command}: {error}"));
 
     assert!(
         output.status.success(),
-        "primer {command} failed:\n{}",
+        "cerune {command} failed:\n{}",
         String::from_utf8_lossy(&output.stderr)
     );
 
     assert!(
         output.stderr.is_empty(),
-        "primer {command} wrote to stderr:\n{}",
+        "cerune {command} wrote to stderr:\n{}",
         String::from_utf8_lossy(&output.stderr)
     );
 
     let actual = String::from_utf8(output.stdout)
-        .unwrap_or_else(|error| panic!("primer {command} emitted non-UTF-8 output: {error}"));
+        .unwrap_or_else(|error| panic!("cerune {command} emitted non-UTF-8 output: {error}"));
 
     let expected = expected_output(case_name, expected_file);
 
@@ -81,7 +81,7 @@ fn assert_observation(case_name: &str, command: &str, expected_file: &str) {
 
     assert_eq!(
         actual, expected,
-        "unexpected output from primer {command} for case `{case_name}`"
+        "unexpected output from cerune {command} for case `{case_name}`"
     );
 }
 
@@ -95,13 +95,13 @@ fn assert_observation_cases(command: &str, expected_file: &str) {
 fn string_observations_match_ir_bytecode_and_vm_output() {
     // 同じ文字列ソースから全経路の変換結果を固定します。
     for (command, file) in [
-        ("emit-ir", "ir.pir"),
+        ("emit-ir", "ir.ceir"),
         ("emit-c", "c.c"),
         ("emit-llvm", "llvm.ll"),
         ("emit-qbe", "qbe.ssa"),
         ("emit-wat", "wat.wat"),
         ("emit-asm", "asm.s"),
-        ("emit-bytecode", "bytecode.pbc"),
+        ("emit-bytecode", "bytecode.cebc"),
         ("run", "run.stdout"),
     ] {
         assert_observation("string-values", command, file);
@@ -116,7 +116,7 @@ fn missing_string_targets_fail_without_overwriting_an_artifact() {
         .unwrap()
         .as_nanos();
     let path = std::env::temp_dir().join(format!(
-        "primer-string-output-{}-{id}.tmp",
+        "cerune-string-output-{}-{id}.tmp",
         std::process::id()
     ));
     let mut file = fs::OpenOptions::new()
@@ -128,7 +128,7 @@ fn missing_string_targets_fail_without_overwriting_an_artifact() {
     file.write_all(b"existing artifact").unwrap();
     drop(file);
     for command in ["emit-llvm", "emit-qbe"] {
-        let output = Command::new(env!("CARGO_BIN_EXE_primer"))
+        let output = Command::new(env!("CARGO_BIN_EXE_cerune"))
             .arg(command)
             .arg(source_path("string-values"))
             .arg("-o")
@@ -149,12 +149,12 @@ fn missing_string_targets_fail_without_overwriting_an_artifact() {
 
 #[test]
 fn native_origins_match_ir_and_both_target_assemblies() {
-    assert_observation("native-values", "emit-ir", "ir.pir");
+    assert_observation("native-values", "emit-ir", "ir.ceir");
     for (target, file) in [
         ("x86_64-pc-windows-msvc", "windows.s"),
         ("x86_64-unknown-linux-gnu", "linux.s"),
     ] {
-        let output = Command::new(env!("CARGO_BIN_EXE_primer"))
+        let output = Command::new(env!("CARGO_BIN_EXE_cerune"))
             .arg("emit-asm")
             .arg(source_path("native-values"))
             .args(["--target", target, "--annotate-origins"])
@@ -171,7 +171,7 @@ fn native_origins_match_ir_and_both_target_assemblies() {
 
 #[test]
 fn emit_ir_matches_expected_output() {
-    assert_observation_cases("emit-ir", "ir.pir");
+    assert_observation_cases("emit-ir", "ir.ceir");
 }
 
 #[test]
@@ -201,7 +201,7 @@ fn emit_asm_matches_expected_output() {
 
 #[test]
 fn emit_bytecode_matches_expected_output() {
-    assert_observation_cases("emit-bytecode", "bytecode.pbc");
+    assert_observation_cases("emit-bytecode", "bytecode.cebc");
 }
 
 #[test]

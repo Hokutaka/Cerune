@@ -10,7 +10,7 @@ mod unsigned;
 pub use emit::emit;
 use lower::lower;
 
-use crate::{diagnostic::Diagnostic, ir as primer_ir};
+use crate::{diagnostic::Diagnostic, ir as cerune_ir};
 
 /// 出力の実行環境を明示します。コンパイラを動かすOSからは選びません。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -36,12 +36,12 @@ impl Target {
     }
 }
 
-pub fn emit_llvm(program: &primer_ir::Program) -> Result<String, Diagnostic> {
+pub fn emit_llvm(program: &cerune_ir::Program) -> Result<String, Diagnostic> {
     emit_llvm_with_target(program, None)
 }
 
 pub fn emit_llvm_with_target(
-    program: &primer_ir::Program,
+    program: &cerune_ir::Program,
     target: Option<Target>,
 ) -> Result<String, Diagnostic> {
     emit_llvm_with_options(
@@ -61,7 +61,7 @@ pub struct Options {
 }
 
 pub fn emit_llvm_with_options(
-    program: &primer_ir::Program,
+    program: &cerune_ir::Program,
     options: Options,
 ) -> Result<String, Diagnostic> {
     let target = options.target;
@@ -184,7 +184,7 @@ mod tests {
         let llvm = emit_llvm(&program).unwrap();
 
         assert!(llvm.contains("@llvm.sadd.with.overflow.i64"));
-        assert!(llvm.contains("call i64 @primer_i64_add(i64 1, i64 2, ptr @primer.failure."));
+        assert!(llvm.contains("call i64 @cerune_i64_add(i64 1, i64 2, ptr @cerune.failure."));
         assert!(llvm.contains("br i1 %overflow, label %trap, label %ok"));
     }
 
@@ -202,10 +202,10 @@ mod tests {
         let llvm = emit_llvm(&program).unwrap();
 
         for helper in [
-            "@primer_i64_add",
-            "@primer_i64_sub",
-            "@primer_i64_mul",
-            "@primer_i64_div",
+            "@cerune_i64_add",
+            "@cerune_i64_sub",
+            "@cerune_i64_mul",
+            "@cerune_i64_div",
         ] {
             assert!(llvm.contains(helper));
         }
@@ -271,9 +271,9 @@ mod tests {
         .unwrap();
         let llvm = emit_llvm(&program).unwrap();
 
-        assert!(llvm.contains("%primer.type.Point.0 = type { double, double }"));
-        assert!(llvm.contains("insertvalue %primer.type.Point.0 poison, double"));
-        assert!(llvm.contains("extractvalue %primer.type.Point.0"));
+        assert!(llvm.contains("%cerune.type.Point.0 = type { double, double }"));
+        assert!(llvm.contains("insertvalue %cerune.type.Point.0 poison, double"));
+        assert!(llvm.contains("extractvalue %cerune.type.Point.0"));
     }
 
     #[test]
@@ -289,9 +289,9 @@ mod tests {
         .unwrap();
         let llvm = emit_llvm(&program).unwrap();
 
-        assert_eq!(llvm.matches("%primer_marker = alloca i1").count(), 1);
+        assert_eq!(llvm.matches("%cerune_marker = alloca i1").count(), 1);
         assert!(
-            llvm.find("%primer_marker = alloca i1").unwrap()
+            llvm.find("%cerune_marker = alloca i1").unwrap()
                 < llvm.find("while_condition").unwrap()
         );
     }
@@ -306,9 +306,9 @@ mod tests {
         .unwrap();
         let llvm = emit_llvm(&program).unwrap();
 
-        assert!(llvm.contains("define i64 @primer.fn.add.0(i64 %arg0, i64 %arg1)"));
-        assert!(llvm.contains("store i64 %arg0, ptr %primer_left"));
-        assert!(llvm.contains("call i64 @primer.fn.add.0(i64 20, i64 22)"));
+        assert!(llvm.contains("define i64 @cerune.fn.add.0(i64 %arg0, i64 %arg1)"));
+        assert!(llvm.contains("store i64 %arg0, ptr %cerune_left"));
+        assert!(llvm.contains("call i64 @cerune.fn.add.0(i64 20, i64 22)"));
         assert!(llvm.contains("ret i64"));
     }
 }

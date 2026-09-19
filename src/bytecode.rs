@@ -102,7 +102,7 @@ impl Instruction {
 pub enum InstructionOrigin {
     /// ソースコード中の構文要素から生成された命令です。
     Source {
-        /// 命令を生成したPrimer IRの文または式です。
+        /// 命令を生成したCerune IRの文または式です。
         node_id: NodeId,
 
         /// 実行時診断で強調するソース範囲です。
@@ -313,7 +313,7 @@ pub fn lower(program: &Program) -> Result<BytecodeProgram, Diagnostic> {
 pub fn format_program(program: &BytecodeProgram) -> String {
     let mut output = String::new();
 
-    writeln!(output, "; Primer bytecode v0.1").unwrap();
+    writeln!(output, "; Cerune bytecode v0.1").unwrap();
 
     for (type_id, definition) in program.type_definitions.iter().enumerate() {
         writeln!(output, "\n.type {type_id} {}", definition.name).unwrap();

@@ -1,8 +1,8 @@
 target triple = "x86_64-unknown-linux-gnu"
 
-%primer.string = type { ptr, i64 }
-@primer.string.0 = private unnamed_addr constant [4 x i8] c"\E6\97\A5\00"
-@primer.string.1 = private unnamed_addr constant [0 x i8] c""
+%cerune.string = type { ptr, i64 }
+@cerune.string.0 = private unnamed_addr constant [4 x i8] c"\E6\97\A5\00"
+@cerune.string.1 = private unnamed_addr constant [0 x i8] c""
 
 @.fmt_i64 = private unnamed_addr constant [6 x i8] c"%lld\0A\00"
 @.fmt_f32 = private unnamed_addr constant [6 x i8] c"%.9g\0A\00"
@@ -12,12 +12,12 @@ declare i32 @printf(ptr, ...)
 
 declare i32 @putchar(i32)
 
-define internal i1 @primer.string.equal(%primer.string %left, %primer.string %right) {
+define internal i1 @cerune.string.equal(%cerune.string %left, %cerune.string %right) {
 entry:
-  %left.data = extractvalue %primer.string %left, 0
-  %left.length = extractvalue %primer.string %left, 1
-  %right.data = extractvalue %primer.string %right, 0
-  %right.length = extractvalue %primer.string %right, 1
+  %left.data = extractvalue %cerune.string %left, 0
+  %left.length = extractvalue %cerune.string %left, 1
+  %right.data = extractvalue %cerune.string %right, 0
+  %right.length = extractvalue %cerune.string %right, 1
   %same.length = icmp eq i64 %left.length, %right.length
   br i1 %same.length, label %condition, label %different
 condition:
@@ -40,10 +40,10 @@ different:
   ret i1 false
 }
 
-define internal void @primer.print.string(%primer.string %value) {
+define internal void @cerune.print.string(%cerune.string %value) {
 entry:
-  %data = extractvalue %primer.string %value, 0
-  %length = extractvalue %primer.string %value, 1
+  %data = extractvalue %cerune.string %value, 0
+  %length = extractvalue %cerune.string %value, 1
   br label %condition
 condition:
   %index = phi i64 [ 0, %entry ], [ %next, %write ]
@@ -63,12 +63,12 @@ newline:
 
 define i32 @main() {
 entry:
-  %primer_text = alloca %primer.string
-  store %primer.string { ptr @primer.string.0, i64 4 }, ptr %primer_text
-  %tmp0 = load %primer.string, ptr %primer_text
-  %tmp1 = extractvalue %primer.string %tmp0, 1
+  %cerune_text = alloca %cerune.string
+  store %cerune.string { ptr @cerune.string.0, i64 4 }, ptr %cerune_text
+  %tmp0 = load %cerune.string, ptr %cerune_text
+  %tmp1 = extractvalue %cerune.string %tmp0, 1
   call i32 (ptr, ...) @printf(ptr @.fmt_i64, i64 %tmp1)
-  %tmp2 = extractvalue %primer.string { ptr @primer.string.1, i64 0 }, 1
+  %tmp2 = extractvalue %cerune.string { ptr @cerune.string.1, i64 0 }, 1
   call i32 (ptr, ...) @printf(ptr @.fmt_i64, i64 %tmp2)
   ret i32 0
 }

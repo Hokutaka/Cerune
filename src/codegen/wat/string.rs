@@ -18,7 +18,7 @@ pub(super) fn emit(module: &Module, output: &mut String) {
 
 // メモリはexportせず、出力先には読み出したバイト値だけを渡します。
 const SUPPORT: &str = r#"
-  (func $primer_string_equal (param $left i32) (param $right i32) (result i32)
+  (func $cerune_string_equal (param $left i32) (param $right i32) (result i32)
     (local $length i32) (local $index i32)
     local.get $left
     i32.load
@@ -59,7 +59,7 @@ const SUPPORT: &str = r#"
     i32.const 1
   )
 
-  (func $primer_print_string (param $value i32)
+  (func $cerune_print_string (param $value i32)
     (local $length i32) (local $index i32)
     local.get $value
     i32.load

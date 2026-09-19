@@ -4,29 +4,29 @@
 
 2026-09-12時点、PR #50の統合と実行時診断の全経路への展開を反映しています。「現在」は実装済み、「候補」は設計・実装前の提案です。候補の構文や採用を確定する文書ではありません。現在の正確な仕様は[言語リファレンス](../reference/language.ja.md)を参照してください。
 
-## Primerが持つべき性質
+## Ceruneが持つべき性質
 
-Primerでは、書いた計算の意味と、それが実行される表現へ変わる過程を説明できることを優先します。機能を増やす際も、次を維持します。
+Ceruneでは、書いた計算の意味と、それが実行される表現へ変わる過程を説明できることを優先します。機能を増やす際も、次を維持します。
 
 - 型、評価順、短絡評価、異常停止の条件を明示する。暗黙の数値変換で値を失わない。
 - 値をコピーした後の独立性を保つ。`mut`による更新と、別の値への隠れた変更を混同しない。
 - 文字列は不変なUTF-8の値とし、日本語・NUL・CR/LFを保持する。Unicodeを正規化しない。
-- ソース、Primer IR、生成物の対応を観測できるようにする。観測のために実行中の状態を書き換える窓口は作らない。
+- ソース、Cerune IR、生成物の対応を観測できるようにする。観測のために実行中の状態を書き換える窓口は作らない。
 - ターゲット、生成物を処理する外部ツール、対応機能を明示する。実行中のOSから仕様を黙って選ばない。
 
 ## 現在の言語機能
 
 | 項目 | 現在持っているもの | 制限・境界 | 実行できる例 |
 | --- | --- | --- | --- |
-| 符号付き整数 | `i8`、`i16`、`i32`、`i64`、算術・比較・ビット演算 | 範囲外演算は停止。小さい型も現在の格納領域は64ビット | [sensor_calibration](../../examples/sensor_calibration.prim)、[integer_limits](../../examples/integer_limits.prim) |
-| 符号なし整数 | `u8`、`u16`、`u32`、`u64` | `u64`は0〜18446744073709551615。暗黙の符号変換や折り返しなし | [u64_values](../../examples/u64_values.prim)、[packet_counter](../../examples/packet_counter.prim) |
-| 浮動小数点 | `f32`、`f64` | 演算には各精度の丸めがある。整数との明示変換は値を保てる場合のみ | [floating_point](../../examples/floating_point.prim) |
-| 真偽値 | `bool`、比較、`!`、短絡評価する`&&`・`||` | 数値との暗黙変換なし | [short_circuit](../../examples/short_circuit.prim) |
-| 文字列 | `string`、表示、`==`・`!=`、`byte_len` | 連結・添字参照・文字数・数値変換は未実装 | [string_byte_length](../../examples/string_byte_length.prim)、[string_lookup](../../examples/string_lookup.prim) |
-| 固定長配列 | `[T; N]`、入れ子、値渡し、`mut`な要素の更新 | 長さは型の一部。添字は`i64`。動的長・スライスなし | [fixed_arrays](../../examples/fixed_arrays.prim)、[heat_diffusion](../../examples/heat_diffusion.prim) |
-| 名前付きproduct type | フィールド、既定値、入れ子、値渡し | フィールドの直接代入なし。新しい値を構築して全体を再代入 | [product-point](../../examples/product-point.prim)、[packet_counter](../../examples/packet_counter.prim) |
-| 関数と制御構文 | 型付き引数・戻り値、`void`、`if`・`else`、`while`・`for`、`break`・`continue`・`return` | 引数数の固定上限なし。再帰なし | [function_values](../../examples/function_values.prim)、[loop_control](../../examples/loop_control.prim) |
-| 束縛と変換 | 既定で不変、`mut`、明示的な`infer`、`T(value)`と`convert<T>(value)` | `infer`は実行時型ではない。変換は切り捨てや飽和の指定ではない | [integer_conversions](../../examples/integer_conversions.prim) |
+| 符号付き整数 | `i8`、`i16`、`i32`、`i64`、算術・比較・ビット演算 | 範囲外演算は停止。小さい型も現在の格納領域は64ビット | [sensor_calibration](../../examples/sensor_calibration.ceru)、[integer_limits](../../examples/integer_limits.ceru) |
+| 符号なし整数 | `u8`、`u16`、`u32`、`u64` | `u64`は0〜18446744073709551615。暗黙の符号変換や折り返しなし | [u64_values](../../examples/u64_values.ceru)、[packet_counter](../../examples/packet_counter.ceru) |
+| 浮動小数点 | `f32`、`f64` | 演算には各精度の丸めがある。整数との明示変換は値を保てる場合のみ | [floating_point](../../examples/floating_point.ceru) |
+| 真偽値 | `bool`、比較、`!`、短絡評価する`&&`・`||` | 数値との暗黙変換なし | [short_circuit](../../examples/short_circuit.ceru) |
+| 文字列 | `string`、表示、`==`・`!=`、`byte_len` | 連結・添字参照・文字数・数値変換は未実装 | [string_byte_length](../../examples/string_byte_length.ceru)、[string_lookup](../../examples/string_lookup.ceru) |
+| 固定長配列 | `[T; N]`、入れ子、値渡し、`mut`な要素の更新 | 長さは型の一部。添字は`i64`。動的長・スライスなし | [fixed_arrays](../../examples/fixed_arrays.ceru)、[heat_diffusion](../../examples/heat_diffusion.ceru) |
+| 名前付きproduct type | フィールド、既定値、入れ子、値渡し | フィールドの直接代入なし。新しい値を構築して全体を再代入 | [product-point](../../examples/product-point.ceru)、[packet_counter](../../examples/packet_counter.ceru) |
+| 関数と制御構文 | 型付き引数・戻り値、`void`、`if`・`else`、`while`・`for`、`break`・`continue`・`return` | 引数数の固定上限なし。再帰なし | [function_values](../../examples/function_values.ceru)、[loop_control](../../examples/loop_control.ceru) |
+| 束縛と変換 | 既定で不変、`mut`、明示的な`infer`、`T(value)`と`convert<T>(value)` | `infer`は実行時型ではない。変換は切り捨てや飽和の指定ではない | [integer_conversions](../../examples/integer_conversions.ceru) |
 | モジュール | 明示的なimport・名前空間・関数と型のpub指定 | 循環・非公開参照を診断。再export・モジュール変数・パッケージ配布なし | [modules](../../examples/modules/README.md) |
 
 型の数値範囲と用途別サンプルは[examplesの型別表](../../examples/README.md#型から探す)にまとめています。配列・product全体の表示や等値比較は未実装です。
@@ -55,13 +55,13 @@ Primerでは、書いた計算の意味と、それが実行される表現へ�
 
 優先1の最初の実装として、VMとWindows/LinuxのASM・自前オブジェクトに[実行時停止の共通記録](runtime-diagnostics.ja.md)を追加しました。停止前の出力も保持します。C・LLVM・QBE・WATへの展開も実装し、同じ停止理由・ソース位置・先行出力を比較します。
 
-[ファイルを識別できるソース位置](source-files.ja.md)に続き、[モジュール](modules.ja.md)の明示的なimport・名前空間・関数と型の公開範囲を実装しました。CLIから分割版と単一ファイル版を全経路で実行比較します。コンパイル時定数、再export、パッケージ配布は未実装です。関数の4引数制限も解消し、[混在引数の例](../../examples/function_arguments.prim)で評価順とコピーを比較しています。次はproductの一部を変えた新しい値を作る表現を、具体的なexampleから検討します。
+[ファイルを識別できるソース位置](source-files.ja.md)に続き、[モジュール](modules.ja.md)の明示的なimport・名前空間・関数と型の公開範囲を実装しました。CLIから分割版と単一ファイル版を全経路で実行比較します。コンパイル時定数、再export、パッケージ配布は未実装です。関数の4引数制限も解消し、[混在引数の例](../../examples/function_arguments.ceru)で評価順とコピーを比較しています。次はproductの一部を変えた新しい値を作る表現を、具体的なexampleから検討します。
 
 継承、暗黙の共有可変参照、自動GPU振り分け、汎用非同期処理、大規模なパッケージ機構は、現在の例から必要性が確認できていないため先行させません。
 
 ## GPUをどう扱うか
 
-GPUは将来の対象に含める価値があります。同じ計算がCPUの逐次実行から多数の要素の並列実行へどう変わるかを観測することは、Primerの目的に合います。ただし、現時点でGPU生成・実行は未実装です。ここでは計算用途を検討し、描画APIは対象に含めません。
+GPUは将来の対象に含める価値があります。同じ計算がCPUの逐次実行から多数の要素の並列実行へどう変わるかを観測することは、Ceruneの目的に合います。ただし、現時点でGPU生成・実行は未実装です。ここでは計算用途を検討し、描画APIは対象に含めません。
 
 ### 型と実行契約を先に決める
 
@@ -71,7 +71,7 @@ LLVMのGPU出力先を選ぶだけでは、現在のプログラムはそのま�
 
 | 候補 | 判断に必要な点 |
 | --- | --- |
-| WebGPU / WGSL | まず32ビット数値の限定実験を考えやすい。ただしWGSLの実行時scalar型には`u64`・`f64`がない。現在のPrimer全型に対応する経路とは扱えない |
+| WebGPU / WGSL | まず32ビット数値の限定実験を考えやすい。ただしWGSLの実行時scalar型には`u64`・`f64`がない。現在のCerune全型に対応する経路とは扱えない |
 | Vulkan / SPIR-V | `shaderInt64`・`shaderFloat64`などの機能を機器に問い合わせて選ぶ。64ビット対応を全機器へ仮定しない |
 | LLVM NVPTX / CUDA | NVIDIA向けの候補。kernelの呼出規約、メモリ、ホスト側の起動・回収処理を別に設計する |
 
@@ -93,7 +93,7 @@ GPU内の実行順全体をCPUの`print`順と同一視しません。最初はk
 2. 明示した型・機器・ツールで生成し、CPUの既知の答えと結果を比較する。未対応型や範囲不明の計算は明示的に拒否する。
 3. 一般の計算へ広げる前に、失敗情報の回収を実装する。複数要素の失敗は、例えば最小の論理要素番号を採用するなど、実行順に依存しない規則を設計する。
 4. 要素数が仕事のまとまりで割り切れない場合、境界外、桁あふれ、対応機能不足、転送失敗も区別して検証する。
-5. その後、行列計算や熱拡散へ広げる。[matrix_vector_product](../../examples/matrix_vector_product.prim)と[heat_diffusion](../../examples/heat_diffusion.prim)は現在のCPU比較例であり、GPU対応済みの例ではない。後者の`f64`を限定経路の`f32`へ変更するなら、別の型付き実験として扱う。
+5. その後、行列計算や熱拡散へ広げる。[matrix_vector_product](../../examples/matrix_vector_product.ceru)と[heat_diffusion](../../examples/heat_diffusion.ceru)は現在のCPU比較例であり、GPU対応済みの例ではない。後者の`f64`を限定経路の`f32`へ変更するなら、別の型付き実験として扱う。
 
 最初の実験では共有領域への競合書き込み、atomic、総和の並列集約、描画、自前GPU機械語エンコーダは扱いません。
 

@@ -46,7 +46,7 @@ pub fn emit(module: &Module) -> String {
         for field in &definition.fields {
             emit_array_support_recursive(&field.ty, module, &mut emitted_array_types, &mut output);
         }
-        output.push_str("typedef struct primer_type_");
+        output.push_str("typedef struct cerune_type_");
         output.push_str(&definition.name);
         output.push('_');
         output.push_str(&definition.id.to_string());
@@ -58,7 +58,7 @@ pub fn emit(module: &Module) -> String {
             output.push_str(&field.name);
             output.push_str(";\n");
         }
-        output.push_str("} primer_type_");
+        output.push_str("} cerune_type_");
         output.push_str(&definition.name);
         output.push('_');
         output.push_str(&definition.id.to_string());
@@ -91,7 +91,7 @@ pub fn emit(module: &Module) -> String {
     output.push_str("int main(void) {\n");
     if strings {
         // WindowsのテキストモードによるLFの書き換えを防ぎ、VMと同じバイトを出力します。
-        output.push_str("#ifdef _WIN32\n    if (_setmode(_fileno(stdout), _O_BINARY) == -1) {\n        fputs(\"primer: cannot set stdout to binary mode\\n\", stderr);\n        return 1;\n    }\n#endif\n");
+        output.push_str("#ifdef _WIN32\n    if (_setmode(_fileno(stdout), _O_BINARY) == -1) {\n        fputs(\"cerune: cannot set stdout to binary mode\\n\", stderr);\n        return 1;\n    }\n#endif\n");
     }
     emit_temporaries(&module.temporaries, module, &mut output);
     emit_integer_scratch(&module.statements, &mut output);
@@ -131,7 +131,7 @@ fn emit_function_signature(function: &super::ir::Function, module: &Module, outp
                 output.push_str(", ");
             }
             output.push_str(&c_type(&parameter.ty, module));
-            output.push_str(" primer_");
+            output.push_str(" cerune_");
             output.push_str(&parameter.name);
         }
     }
@@ -139,12 +139,12 @@ fn emit_function_signature(function: &super::ir::Function, module: &Module, outp
 }
 
 fn function_name(id: usize, name: &str) -> String {
-    format!("primer_fn_{name}_{id}")
+    format!("cerune_fn_{name}_{id}")
 }
 
 fn emit_temporaries(types: &[Type], module: &Module, output: &mut String) {
     for (id, ty) in types.iter().enumerate() {
-        output.push_str(&format!("    {} _primer_eval_{id};\n", c_type(ty, module)));
+        output.push_str(&format!("    {} _cerune_eval_{id};\n", c_type(ty, module)));
     }
 }
 
@@ -155,7 +155,7 @@ fn emit_statement(statement: &Statement, indent: usize, module: &Module, output:
         Statement::Binding { name, ty, value } => {
             output.push_str(&prefix);
             output.push_str(&c_type(ty, module));
-            output.push_str(" primer_");
+            output.push_str(" cerune_");
             output.push_str(name);
             output.push_str(" = ");
 
@@ -167,7 +167,7 @@ fn emit_statement(statement: &Statement, indent: usize, module: &Module, output:
         Statement::Assignment { target, value } => {
             if target.projections.is_empty() {
                 output.push_str(&prefix);
-                output.push_str("primer_");
+                output.push_str("cerune_");
                 output.push_str(&target.name);
                 output.push_str(" = ");
                 emit_expr(value, module, output);
@@ -179,7 +179,7 @@ fn emit_statement(statement: &Statement, indent: usize, module: &Module, output:
                     output.push_str(&prefix);
                     output.push_str("    ");
                     output.push_str(&c_type(&projection.element, module));
-                    output.push_str(" *primer_assignment_target_");
+                    output.push_str(" *cerune_assignment_target_");
                     output.push_str(&index.to_string());
                     output.push_str(" = ");
                     output.push_str(&array_at_name(
@@ -189,10 +189,10 @@ fn emit_statement(statement: &Statement, indent: usize, module: &Module, output:
                     ));
                     output.push('(');
                     if index == 0 {
-                        output.push_str("&primer_");
+                        output.push_str("&cerune_");
                         output.push_str(&target.name);
                     } else {
-                        output.push_str("primer_assignment_target_");
+                        output.push_str("cerune_assignment_target_");
                         output.push_str(&(index - 1).to_string());
                     }
                     output.push_str(", ");
@@ -204,13 +204,13 @@ fn emit_statement(statement: &Statement, indent: usize, module: &Module, output:
                 output.push_str(&prefix);
                 output.push_str("    ");
                 output.push_str(&c_type(&target.ty, module));
-                output.push_str(" primer_assignment_value = ");
+                output.push_str(" cerune_assignment_value = ");
                 emit_expr(value, module, output);
                 output.push_str(";\n");
                 output.push_str(&prefix);
-                output.push_str("    *primer_assignment_target_");
+                output.push_str("    *cerune_assignment_target_");
                 output.push_str(&(target.projections.len() - 1).to_string());
-                output.push_str(" = primer_assignment_value;\n");
+                output.push_str(" = cerune_assignment_value;\n");
                 output.push_str(&prefix);
                 output.push_str("}\n");
             }
@@ -227,7 +227,7 @@ fn emit_statement(statement: &Statement, indent: usize, module: &Module, output:
             arguments,
         } => {
             for (id, value) in evaluation {
-                output.push_str(&format!("{prefix}_primer_eval_{id} = "));
+                output.push_str(&format!("{prefix}_cerune_eval_{id} = "));
                 emit_expr(value, module, output);
                 output.push_str(";\n");
             }
@@ -328,14 +328,14 @@ fn emit_for_clause(statement: &Statement, module: &Module, output: &mut String) 
     match statement {
         Statement::Binding { name, ty, value } => {
             output.push_str(&c_type(ty, module));
-            output.push_str(" primer_");
+            output.push_str(" cerune_");
             output.push_str(name);
             output.push_str(" = ");
             emit_expr(value, module, output);
         }
         Statement::Assignment { target, value } => {
             debug_assert!(target.projections.is_empty());
-            output.push_str("primer_");
+            output.push_str("cerune_");
             output.push_str(&target.name);
             output.push_str(" = ");
             emit_expr(value, module, output);
@@ -347,7 +347,7 @@ fn emit_for_clause(statement: &Statement, module: &Module, output: &mut String) 
 fn c_type(ty: &Type, module: &Module) -> String {
     match ty {
         Type::Bool => "bool".into(),
-        Type::String => "primer_string".into(),
+        Type::String => "cerune_string".into(),
         Type::U64 => "uint64_t".into(),
         Type::I64 => "int64_t".into(),
         Type::Float => "float".into(),
@@ -358,7 +358,7 @@ fn c_type(ty: &Type, module: &Module) -> String {
                 .iter()
                 .find(|definition| definition.id == *id)
                 .expect("named C type must have a definition");
-            format!("primer_type_{}_{}", definition.name, id)
+            format!("cerune_type_{}_{}", definition.name, id)
         }
         Type::Array { element, length } => array_type_name(element, *length, module),
     }
@@ -374,7 +374,7 @@ fn emit_print(
     match format {
         PrintFormat::String => {
             output.push_str(prefix);
-            output.push_str("primer_print_string(");
+            output.push_str("cerune_print_string(");
             emit_expr(expr, module, output);
             output.push_str(");\n");
         }
@@ -430,11 +430,11 @@ fn emit_expr(expr: &Expr, module: &Module, output: &mut String) {
             output.push_str(").length)");
         }
         ExprKind::String(value) => super::string::literal(value, output),
-        ExprKind::Temporary(id) => output.push_str(&format!("_primer_eval_{id}")),
+        ExprKind::Temporary(id) => output.push_str(&format!("_cerune_eval_{id}")),
         ExprKind::Sequence { bindings, value } => {
             output.push('(');
             for (id, value) in bindings {
-                output.push_str(&format!("_primer_eval_{id} = "));
+                output.push_str(&format!("_cerune_eval_{id} = "));
                 emit_expr(value, module, output);
                 output.push_str(", ");
             }
@@ -455,19 +455,19 @@ fn emit_expr(expr: &Expr, module: &Module, output: &mut String) {
             left,
             right,
         } => {
-            output.push_str(&format!("(_primer_bit_left_{scratch} = "));
+            output.push_str(&format!("(_cerune_bit_left_{scratch} = "));
             emit_expr(left, module, output);
-            output.push_str(&format!(", _primer_bit_right_{scratch} = "));
+            output.push_str(&format!(", _cerune_bit_right_{scratch} = "));
             emit_expr(right, module, output);
             output.push_str(&format!(
-                ", {}(_primer_bit_left_{scratch}, _primer_bit_right_{scratch}",
+                ", {}(_cerune_bit_left_{scratch}, _cerune_bit_right_{scratch}",
                 op.helper(*ty)
             ));
             super::failure::argument(expr.origin, output);
             output.push_str("))");
         }
         ExprKind::CheckIntegerRange { value, ty, code } => {
-            output.push_str(&format!("primer_check_{}(", ty.name()));
+            output.push_str(&format!("cerune_check_{}(", ty.name()));
             emit_expr(value, module, output);
             write!(output, ", \"{}\"", code.name()).unwrap();
             super::failure::argument(expr.origin, output);
@@ -496,7 +496,7 @@ fn emit_expr(expr: &Expr, module: &Module, output: &mut String) {
         }
 
         ExprKind::Variable(name) => {
-            output.push_str("primer_");
+            output.push_str("cerune_");
             output.push_str(name);
         }
 
@@ -557,7 +557,7 @@ fn emit_expr(expr: &Expr, module: &Module, output: &mut String) {
 
         ExprKind::Unary { op, value } => {
             if *op == UnaryOp::CheckedI64Negate {
-                output.push_str("primer_i64_neg(");
+                output.push_str("cerune_i64_neg(");
                 emit_expr(value, module, output);
                 super::failure::argument(expr.origin, output);
                 output.push(')');
@@ -595,7 +595,7 @@ fn emit_expr(expr: &Expr, module: &Module, output: &mut String) {
                         "string ordering is rejected by semantics"
                     );
                 }
-                output.push_str("primer_string_equal(");
+                output.push_str("cerune_string_equal(");
                 emit_expr(left, module, output);
                 output.push_str(", ");
                 emit_expr(right, module, output);
@@ -603,10 +603,10 @@ fn emit_expr(expr: &Expr, module: &Module, output: &mut String) {
                 return;
             }
             let helper = match op {
-                BinaryOp::CheckedI64Add => Some("primer_i64_add"),
-                BinaryOp::CheckedI64Subtract => Some("primer_i64_sub"),
-                BinaryOp::CheckedI64Multiply => Some("primer_i64_mul"),
-                BinaryOp::CheckedI64Divide => Some("primer_i64_div"),
+                BinaryOp::CheckedI64Add => Some("cerune_i64_add"),
+                BinaryOp::CheckedI64Subtract => Some("cerune_i64_sub"),
+                BinaryOp::CheckedI64Multiply => Some("cerune_i64_mul"),
+                BinaryOp::CheckedI64Divide => Some("cerune_i64_div"),
                 BinaryOp::Add
                 | BinaryOp::Subtract
                 | BinaryOp::Multiply
@@ -850,7 +850,7 @@ fn emit_integer_scratch(statements: &[Statement], output: &mut String) {
     }
     for scratch in operations.scratch {
         output.push_str(&format!(
-            "    int64_t _primer_bit_left_{scratch}, _primer_bit_right_{scratch};\n"
+            "    int64_t _cerune_bit_left_{scratch}, _cerune_bit_right_{scratch};\n"
         ));
     }
 }
@@ -876,7 +876,7 @@ fn emit_i64_operation_support(operations: RuntimeSupport, output: &mut String) {
         super::integer::emit_support(op, ty, output);
     }
     for ty in &operations.range_checks {
-        output.push_str(&format!("static int64_t primer_check_{}(int64_t value, const char *code, const char *origin) {{\n    if (value < {}LL || value > {}LL) primer_runtime_fail(code, origin);\n    return value;\n}}\n\n", ty.name(), ty.minimum(), ty.maximum()));
+        output.push_str(&format!("static int64_t cerune_check_{}(int64_t value, const char *code, const char *origin) {{\n    if (value < {}LL || value > {}LL) cerune_runtime_fail(code, origin);\n    return value;\n}}\n\n", ty.name(), ty.minimum(), ty.maximum()));
     }
 
     if !operations.any_numeric() {
@@ -885,51 +885,51 @@ fn emit_i64_operation_support(operations: RuntimeSupport, output: &mut String) {
 
     if operations.add {
         output.push_str(
-            "static int64_t primer_i64_add(int64_t left, int64_t right, const char *origin) {\n",
+            "static int64_t cerune_i64_add(int64_t left, int64_t right, const char *origin) {\n",
         );
         output.push_str("    if ((right > 0 && left > INT64_MAX - right) ||\n");
         output.push_str("        (right < 0 && left < INT64_MIN - right)) {\n");
-        output.push_str("        primer_runtime_fail(\"integer-overflow\", origin);\n    }\n");
+        output.push_str("        cerune_runtime_fail(\"integer-overflow\", origin);\n    }\n");
         output.push_str("    return left + right;\n}\n\n");
     }
 
     if operations.subtract {
         output.push_str(
-            "static int64_t primer_i64_sub(int64_t left, int64_t right, const char *origin) {\n",
+            "static int64_t cerune_i64_sub(int64_t left, int64_t right, const char *origin) {\n",
         );
         output.push_str("    if ((right < 0 && left > INT64_MAX + right) ||\n");
         output.push_str("        (right > 0 && left < INT64_MIN + right)) {\n");
-        output.push_str("        primer_runtime_fail(\"integer-overflow\", origin);\n    }\n");
+        output.push_str("        cerune_runtime_fail(\"integer-overflow\", origin);\n    }\n");
         output.push_str("    return left - right;\n}\n\n");
     }
 
     if operations.multiply {
         output.push_str(
-            "static int64_t primer_i64_mul(int64_t left, int64_t right, const char *origin) {\n",
+            "static int64_t cerune_i64_mul(int64_t left, int64_t right, const char *origin) {\n",
         );
         output.push_str("    if ((left > 0 && right > 0 && left > INT64_MAX / right) ||\n");
         output.push_str("        (left > 0 && right < 0 && right < INT64_MIN / left) ||\n");
         output.push_str("        (left < 0 && right > 0 && left < INT64_MIN / right) ||\n");
         output.push_str("        (left < 0 && right < 0 && left < INT64_MAX / right)) {\n");
-        output.push_str("        primer_runtime_fail(\"integer-overflow\", origin);\n    }\n");
+        output.push_str("        cerune_runtime_fail(\"integer-overflow\", origin);\n    }\n");
         output.push_str("    return left * right;\n}\n\n");
     }
 
     if operations.divide {
         output.push_str(
-            "static int64_t primer_i64_div(int64_t left, int64_t right, const char *origin) {\n",
+            "static int64_t cerune_i64_div(int64_t left, int64_t right, const char *origin) {\n",
         );
         output.push_str("    if (right == 0) {\n");
-        output.push_str("        primer_runtime_fail(\"division-by-zero\", origin);\n    }\n");
+        output.push_str("        cerune_runtime_fail(\"division-by-zero\", origin);\n    }\n");
         output.push_str("    if (left == INT64_MIN && right == -1) {\n");
-        output.push_str("        primer_runtime_fail(\"division-overflow\", origin);\n    }\n");
+        output.push_str("        cerune_runtime_fail(\"division-overflow\", origin);\n    }\n");
         output.push_str("    return left / right;\n}\n\n");
     }
 
     if operations.negate {
-        output.push_str("static int64_t primer_i64_neg(int64_t value, const char *origin) {\n");
+        output.push_str("static int64_t cerune_i64_neg(int64_t value, const char *origin) {\n");
         output.push_str("    if (value == INT64_MIN) {\n");
-        output.push_str("        primer_runtime_fail(\"integer-overflow\", origin);\n    }\n");
+        output.push_str("        cerune_runtime_fail(\"integer-overflow\", origin);\n    }\n");
         output.push_str("    return -value;\n}\n\n");
     }
 }
@@ -1040,7 +1040,7 @@ fn emit_array_support(ty: &Type, module: &Module, output: &mut String) {
     output.push_str("    if (index < 0 || index >= ");
     output.push_str(&length.to_string());
     output.push_str(") {\n");
-    output.push_str("        primer_runtime_fail(\"array-index-out-of-bounds\", origin);\n    }\n");
+    output.push_str("        cerune_runtime_fail(\"array-index-out-of-bounds\", origin);\n    }\n");
     output.push_str("    return value.items[index];\n}\n\n");
 
     if module.array_assignment_types.contains(ty) {
@@ -1055,7 +1055,7 @@ fn emit_array_support(ty: &Type, module: &Module, output: &mut String) {
         output.push_str(&length.to_string());
         output.push_str(") {\n");
         output.push_str(
-            "        primer_runtime_fail(\"array-index-out-of-bounds\", origin);\n    }\n",
+            "        cerune_runtime_fail(\"array-index-out-of-bounds\", origin);\n    }\n",
         );
         output.push_str("    return &value->items[index];\n}\n\n");
     }
@@ -1063,7 +1063,7 @@ fn emit_array_support(ty: &Type, module: &Module, output: &mut String) {
 
 fn array_type_name(element: &Type, length: usize, module: &Module) -> String {
     format!(
-        "primer_array_{}_{}",
+        "cerune_array_{}_{}",
         array_element_name(element, module),
         length
     )
@@ -1071,7 +1071,7 @@ fn array_type_name(element: &Type, length: usize, module: &Module) -> String {
 
 fn array_get_name(element: &Type, length: usize, module: &Module) -> String {
     format!(
-        "primer_array_get_{}_{}",
+        "cerune_array_get_{}_{}",
         array_element_name(element, module),
         length
     )
@@ -1079,7 +1079,7 @@ fn array_get_name(element: &Type, length: usize, module: &Module) -> String {
 
 fn array_at_name(element: &Type, length: usize, module: &Module) -> String {
     format!(
-        "primer_array_at_{}_{}",
+        "cerune_array_at_{}_{}",
         array_element_name(element, module),
         length
     )
