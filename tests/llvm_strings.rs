@@ -312,6 +312,14 @@ fn effects_and_short_circuiting_keep_source_order() {
 }
 
 #[test]
+fn product_updates_keep_base_copies_and_evaluation_order() {
+    let Some(native) = Native::new() else { return };
+    for &(source, expected) in string_cases::PRODUCT_UPDATES {
+        native.matches(source, expected);
+    }
+}
+
+#[test]
 fn origin_example_executes_identically_with_and_without_annotations() {
     let Some(native) = Native::new() else { return };
     let source = include_str!("../examples/string_origins.ceru");

@@ -1,0 +1,35 @@
+// 評価順は元の値、続いて明示フィールドの記述順です。
+fn text(value: string) -> string { print(value); return value; }
+fn number(value: i64) -> i64 { print(value); return value; }
+
+type Reading {
+    value: i64,
+    label: string = text("default"),
+}
+fn source() -> Reading {
+    print("base");
+    return Reading { value: 1 };
+}
+
+changed: Reading = Reading {
+    ..source(),
+    label: text("replacement"),
+    value: number(2),
+};
+print(changed.value);
+print(changed.label);
+
+// 変更なしのコピーでも既定値を再実行しません。
+copy: Reading = Reading { ..changed, };
+print(copy.value);
+print(copy.label);
+
+// 短絡した式の中では、元の値もフィールドも評価しません。
+print(false && Reading { ..source(), value: number(999) }.value == 0);
+print(true || Reading { ..source(), value: number(999) }.value == 0);
+
+// 繰り返しの各回で元の値を一度だけ評価します。
+for (mut i: i64 = 0; i < 2; i = i + 1) {
+    next: Reading = Reading { ..source(), value: i };
+    print(next.value);
+}

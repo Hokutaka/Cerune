@@ -55,7 +55,7 @@ During development, replace `cerune` with `cargo run --quiet --`.
 | Variables | Explicit types or inference with `infer`; immutable by default, reassignable with `mut` |
 | Operators | Arithmetic, remainder, comparisons, bit operations, logical negation, short-circuit evaluation |
 | Numeric conversion | Explicit value-preserving conversions such as `f64(x)` / `convert<f64>(x)` |
-| Structs | Named types, field access and defaults, nesting, value copies |
+| Structs | Named types, field access and defaults, updates that create new values, nesting, value copies |
 | Arrays | Fixed length, nesting, element access and updates, value copies |
 | Functions | Typed parameters and returns, `void`, `return`; strings, structs, and arrays can also be passed and returned |
 | Entry point | Top-level statements or `fn main() -> void` (not both) |

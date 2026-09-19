@@ -61,6 +61,48 @@ pub const CASES: &[(&str, &str)] = &[
     "#,
         "left\nright\nfalse\narg1\narg2\narg2\nexplicit\ndefault\ndefault\nitem1\nitem2\nindex\nreplacement\nreplacement\nfalse\ntrue\ncondition1\ncondition2\nupdate1\nupdate2\n",
     ),
+    PRODUCT_UPDATES[0],
+    PRODUCT_UPDATES[1],
+    PRODUCT_UPDATES[2],
+    PRODUCT_UPDATES[3],
+];
+
+pub const PRODUCT_UPDATES: &[(&str, &str)] = &[
+    (
+        include_str!("../../examples/product_update.ceru"),
+        "9223372036854775808\n9223372036854775809\n1\n3\n10\n99\n20\nfalse\ntrue\ntrue\n受信\0\r\n\n",
+    ),
+    (
+        include_str!("../../examples/product_update_order.ceru"),
+        "base\ndefault\nreplacement\n2\n2\nreplacement\n2\nreplacement\nfalse\ntrue\nbase\ndefault\n0\nbase\ndefault\n1\n",
+    ),
+    (
+        r#"
+        type Inner { value: f64, flag: bool, }
+        type Row { items: [i64; 2], inner: Inner, label: string, }
+        fn make(a: i64, b: i64, c: i64, d: i64, e: i64, f: i64, g: i64) -> Row {
+            print(a);
+            return Row { items: [a, g], inner: Inner { value: f64(g), flag: true }, label: "保管\0\r\n" };
+        }
+        row: Row = Row {
+            ..make(1, 2, 3, 4, 5, 6, 7),
+            inner: make(10, 20, 30, 40, 50, 60, 70).inner,
+        };
+        print(row.items[0]); print(row.items[1]);
+        print(row.inner.value == 70.0); print(row.inner.flag); print(row.label);
+     "#,
+        "1\n10\n1\n7\ntrue\ntrue\n保管\0\r\n\n",
+    ),
+    (
+        r#"
+        type P { x: i64 = 1 / 0, y: [i64; 1], }
+        fn base() -> P { print("base"); return P { x: 1, y: [2] }; }
+        a: P = P { ..base() };
+        b: P = P { ..base(), x: 3, y: [4] };
+        print(a.x); print(a.y[0]); print(b.x); print(b.y[0]);
+     "#,
+        "base\nbase\n1\n2\n3\n4\n",
+    ),
 ];
 
 pub const UNUSED_DEFAULT: &str =

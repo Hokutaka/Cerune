@@ -43,6 +43,7 @@ pub enum TokenKind {
     Colon,
     Comma,
     Dot,
+    DotDot,
 
     Plus,
     Minus,
@@ -172,6 +173,10 @@ pub fn lex(source: &str) -> Result<Vec<Token>, Diagnostic> {
                 TokenKind::Comma
             }
 
+            b'.' if bytes.get(i + 1) == Some(&b'.') => {
+                i += 2;
+                TokenKind::DotDot
+            }
             b'.' => {
                 i += 1;
                 TokenKind::Dot

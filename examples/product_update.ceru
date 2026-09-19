@@ -1,0 +1,44 @@
+// 元の値を保ち、変更するフィールドだけを書きます。
+type Packet {
+    sequence: u64,
+    flags: u8,
+    payload: string,
+    samples: [i64; 2],
+}
+type Envelope { packet: Packet, accepted: bool, }
+
+fn acknowledge(packet: Packet) -> Packet {
+    return Packet {
+        ..packet,
+        sequence: packet.sequence + 1,
+        flags: packet.flags | 2,
+    };
+}
+
+original: Packet = Packet {
+    sequence: 9223372036854775808, flags: 1,
+    payload: "受信\0\r\n", samples: [10, 20],
+};
+mut packets: [Packet; 1] = [original];
+packets[0] = acknowledge(packets[0]);
+
+// 配列を取り出して更新しても、構造体に保存した値は変わりません。
+mut samples: [i64; 2] = packets[0].samples;
+samples[0] = 99;
+packets[0] = Packet { ..packets[0], samples: samples };
+samples[1] = 88;
+
+// 入れ子も、それぞれ新しい値として作ります。
+before: Envelope = Envelope { packet: original, accepted: false };
+after: Envelope = Envelope { ..before, packet: packets[0], accepted: true };
+print(original.sequence);
+print(after.packet.sequence);
+print(original.flags);
+print(after.packet.flags);
+print(original.samples[0]);
+print(after.packet.samples[0]);
+print(after.packet.samples[1]);
+print(before.accepted);
+print(after.accepted);
+print(original.payload == after.packet.payload);
+print(after.packet.payload);

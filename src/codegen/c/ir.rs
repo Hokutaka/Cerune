@@ -182,6 +182,8 @@ pub enum ExprKind {
     Construct {
         type_id: usize,
         fields: Vec<FieldValue>,
+        base: Option<Box<Expr>>,
+        copy_temp: Option<usize>,
     },
     FieldAccess {
         field_name: String,

@@ -722,9 +722,21 @@ impl LoweringContext<'_> {
                 },
             },
             cerune_ir::ExprKind::Construct {
-                type_id, fields, ..
+                type_id,
+                base,
+                fields,
+                ..
             } => {
                 let address = self.allocate(type_size(self.program, &expr.ty));
+                if let Some(base) = base {
+                    let Value::Aggregate {
+                        address: source, ..
+                    } = self.lower_expr(base, instructions)
+                    else {
+                        unreachable!("update base has the same aggregate type")
+                    };
+                    self.copy_aggregate(type_id.0, source, Address::Static(address), instructions);
+                }
                 for field in fields {
                     let field_definition =
                         &self.program.type_definitions[type_id.0].fields[field.id.0];

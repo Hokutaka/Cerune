@@ -365,9 +365,14 @@ fn lower_expr_unchecked(expr: &cerune_ir::Expr) -> Expr {
         },
 
         cerune_ir::ExprKind::Construct {
-            type_id, fields, ..
+            type_id,
+            base,
+            fields,
+            ..
         } => ExprKind::Construct {
             type_id: type_id.0,
+            base: base.as_ref().map(|base| Box::new(lower_expr(base))),
+            copy_temp: None,
             fields: fields
                 .iter()
                 .map(|field| FieldValue {
@@ -475,7 +480,10 @@ fn collect_array_types(program: &cerune_ir::Program) -> Vec<Type> {
                 visit_expr(base, types);
                 visit_expr(index, types);
             }
-            cerune_ir::ExprKind::Construct { fields, .. } => {
+            cerune_ir::ExprKind::Construct { base, fields, .. } => {
+                if let Some(base) = base {
+                    visit_expr(base, types);
+                }
                 for field in fields {
                     visit_expr(&field.value, types);
                 }

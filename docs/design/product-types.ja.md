@@ -48,6 +48,8 @@ Ceruneでは、単に値をまとめられることに加えて、次を観測�
 - aggregate literalの明示値はソース記述順、省略されたfieldの既定値はその後に型定義順で評価する
 - memory layoutとABIはbackend lowering以降で決定する
 
+構造体の一部を変えた新しい値を作る[更新式](product-updates.ja.md)も使えます。以下の通常の構築における既定値の規則は、元の値を指定しない場合に適用します。
+
 ## 構文
 
 ```text
@@ -431,7 +433,6 @@ aggregateを実装することと、`Secret`の最終的な構文や解除方法
 
 次は今回の仕様から排除せず、別の設計判断として後続へ分けます。
 
-- `with`による一部fieldを置き換えた新しい値の作成
 - aggregate全体の`==`と`!=`
 - `print(aggregate)`と安定したformat
 - type aliasとnewtype

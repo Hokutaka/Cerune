@@ -500,7 +500,23 @@ fn emit_expr(expr: &Expr, module: &Module, output: &mut String) {
             output.push_str(name);
         }
 
-        ExprKind::Construct { type_id, fields } => {
+        ExprKind::Construct {
+            type_id,
+            base,
+            fields,
+            copy_temp,
+        } => {
+            if let Some(base) = base {
+                let temp = copy_temp.expect("update has a C sequencing temporary");
+                write!(output, "(_cerune_eval_{temp} = ").unwrap();
+                emit_expr(base, module, output);
+                for field in fields {
+                    write!(output, ", _cerune_eval_{temp}.{} = ", field.name).unwrap();
+                    emit_expr(&field.value, module, output);
+                }
+                write!(output, ", _cerune_eval_{temp})").unwrap();
+                return;
+            }
             output.push('(');
             output.push_str(&c_type(&Type::Named(*type_id), module));
             output.push_str("){ ");
@@ -746,7 +762,10 @@ impl RuntimeSupport {
                     | BinaryOp::GreaterEqual => {}
                 }
             }
-            ExprKind::Construct { fields, .. } => {
+            ExprKind::Construct { base, fields, .. } => {
+                if let Some(base) = base {
+                    self.include_expr(base);
+                }
                 for field in fields {
                     self.include_expr(&field.value);
                 }

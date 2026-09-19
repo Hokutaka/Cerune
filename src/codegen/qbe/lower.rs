@@ -725,9 +725,22 @@ impl Lowerer<'_> {
                 }
             }
             cerune_ir::ExprKind::Construct {
-                type_id, fields, ..
+                type_id,
+                base,
+                fields,
+                ..
             } => {
                 let slot = self.allocate_aggregate(type_size(self.program, &expr.ty));
+                if let Some(base) = base {
+                    let Value::Aggregate { address, .. } = self.lower_expr(base) else {
+                        unreachable!("update base has the same aggregate type")
+                    };
+                    self.instructions.push(Instruction::Blit {
+                        source: address,
+                        destination: Operand::Slot(slot),
+                        size: type_size(self.program, &expr.ty),
+                    });
+                }
                 for field in fields {
                     let definition = &self.program.type_definitions[type_id.0].fields[field.id.0];
                     let value = self.lower_expr(&field.value);

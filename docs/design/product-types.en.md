@@ -48,6 +48,8 @@ The first product type has the following properties:
 - explicit aggregate literal values are evaluated in source order, followed by omitted defaults in type-definition order;
 - memory layout and ABI decisions happen during or after backend lowering.
 
+[Update expressions](product-updates.en.md) can also construct a new value with selected fields replaced. The ordinary construction/default rules below apply when no base is supplied.
+
 ## Syntax
 
 ```text
@@ -431,7 +433,6 @@ The following scope is implemented:
 
 The following are not rejected. They are separated into later design decisions:
 
-- `with` expressions that produce a new value with selected fields replaced;
 - aggregate `==` and `!=`;
 - `print(aggregate)` and stable formatting;
 - type aliases and newtypes;

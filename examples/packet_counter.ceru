@@ -8,9 +8,9 @@ type Packet {
 
 fn acknowledge(packet: Packet) -> Packet {
     return Packet {
+        ..packet,
         sequence: packet.sequence + 1,
         flags: packet.flags | 2,
-        payload: packet.payload,
     };
 }
 

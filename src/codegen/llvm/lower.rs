@@ -812,10 +812,15 @@ impl Lowerer<'_> {
                 }
             }
             cerune_ir::ExprKind::Construct {
-                type_id, fields, ..
+                type_id,
+                base,
+                fields,
+                ..
             } => {
                 let ty = Type::Named(type_id.0);
-                let mut aggregate = Operand::Poison;
+                let mut aggregate = base
+                    .as_ref()
+                    .map_or(Operand::Poison, |base| self.lower_expr(base).operand);
                 for field in fields {
                     let value = self.lower_expr(&field.value);
                     let dest = self.next_temp();

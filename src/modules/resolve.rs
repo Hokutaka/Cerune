@@ -250,9 +250,13 @@ impl Resolver<'_> {
             ExprKind::Construct {
                 type_name,
                 type_name_span,
+                base,
                 fields,
             } => {
                 *type_name = self.name(type_name, *type_name_span, false, false)?;
+                if let Some(base) = base {
+                    self.expr(base)?;
+                }
                 for field in fields {
                     self.expr(&mut field.value)?;
                 }
