@@ -551,6 +551,7 @@ impl Lowerer<'_> {
         }
 
         match &expr.kind {
+            cerune_ir::ExprKind::Constant { value, .. } => self.lower_expr(value, depth),
             cerune_ir::ExprKind::StringByteLength { value } => {
                 self.lower_expr(value, depth);
                 self.push(Instruction::LoadStringLength);
@@ -1356,6 +1357,7 @@ fn count_statements_expr_nodes(statements: &[cerune_ir::Statement]) -> usize {
 
 fn count_expr_nodes(expr: &cerune_ir::Expr) -> usize {
     match &expr.kind {
+        cerune_ir::ExprKind::Constant { value, .. } => 1 + count_expr_nodes(value),
         cerune_ir::ExprKind::String(_)
         | cerune_ir::ExprKind::Boolean(_)
         | cerune_ir::ExprKind::Integer(_)
@@ -1432,6 +1434,7 @@ fn required_scratch_slots(statements: &[cerune_ir::Statement]) -> usize {
 
 fn required_expr_scratch(expr: &cerune_ir::Expr, depth: usize) -> usize {
     match &expr.kind {
+        cerune_ir::ExprKind::Constant { value, .. } => required_expr_scratch(value, depth),
         cerune_ir::ExprKind::String(_)
         | cerune_ir::ExprKind::Boolean(_)
         | cerune_ir::ExprKind::Integer(_)

@@ -1,3 +1,6 @@
+#[path = "constant_cases.rs"]
+pub mod constant_cases;
+
 // 全経路に同じ入力と既知の期待バイト列を渡します。
 pub const CASES: &[(&str, &str)] = &[
     (
@@ -65,6 +68,8 @@ pub const CASES: &[(&str, &str)] = &[
     PRODUCT_UPDATES[1],
     PRODUCT_UPDATES[2],
     PRODUCT_UPDATES[3],
+    constant_cases::CASES[0],
+    constant_cases::CASES[1],
 ];
 
 pub const PRODUCT_UPDATES: &[(&str, &str)] = &[

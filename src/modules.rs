@@ -228,7 +228,7 @@ fn visit(
                 }
             }) {
                 return Err(Diagnostic::new(
-                    "imported files may contain only imports, types, and functions; call initialization explicitly",
+                    "imported files may contain only imports, types, functions, and constants; call initialization explicitly",
                     statement.span,
                 ));
             }

@@ -105,7 +105,7 @@ Development tools can be selected through `CERUNE_TEST_QBE`, `CERUNE_TEST_ASM_CL
 
 `byte_len(value) -> i64` reads the stored UTF-8 byte count. It does not scan or normalize contents or allocate memory. Values currently originate from static literals; representable lengths on supported 32/64-bit platforms fit in `i64`.
 
-The frontend resolves arity, input type, and result type into a dedicated Cerune IR `StringByteLength` operation. Even literal lengths remain observable operations without implicit constant folding in Cerune. IR renders `byte_len.string(...)`; bytecode uses `byte_len.string`.
+The frontend resolves arity, input type, and result type into a dedicated Cerune IR `StringByteLength` operation. In ordinary expressions, even literal lengths remain observable operations without implicit constant folding. An explicit const evaluates the operation during compilation and retains its initializer and result in IR. IR renders `byte_len.string(...)`; bytecode uses `byte_len.string`.
 
 | Route | Length access |
 | --- | --- |

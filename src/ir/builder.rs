@@ -1,4 +1,9 @@
-use std::{cell::Cell, collections::HashMap};
+use std::{
+    cell::{Cell, RefCell},
+    collections::HashMap,
+};
+
+mod constants;
 
 use crate::{
     ast,
@@ -15,15 +20,42 @@ use super::{
 
 pub fn build(program: &ast::Program) -> Result<Program, Diagnostic> {
     let model = semantic::analyze(program)?;
+    build_with_model(program, &model)
+}
 
+pub(crate) fn build_with_model(
+    program: &ast::Program,
+    model: &SemanticModel,
+) -> Result<Program, Diagnostic> {
+    let sources: Vec<_> = program
+        .items
+        .iter()
+        .filter_map(|item| {
+            if let ast::Item::ConstantDefinition(d) = item {
+                Some(d)
+            } else {
+                None
+            }
+        })
+        .collect();
     let mut builder = Builder {
         scopes: vec![HashMap::new()],
         next_binding_id: 0,
         next_node_id: Cell::new(0),
         current_return_type: None,
-        model: &model,
+        model,
+        constant_cache: RefCell::new(vec![None; sources.len()]),
+        constant_stack: RefCell::new(Vec::new()),
+        constant_sources: sources,
     };
 
+    builder.prepare_constants()?;
+    let constant_definitions = builder
+        .constant_cache
+        .borrow()
+        .iter()
+        .map(|value| value.as_ref().unwrap().0.clone())
+        .collect();
     let type_definitions = model
         .type_definitions
         .iter()
@@ -35,7 +67,9 @@ pub fn build(program: &ast::Program) -> Result<Program, Diagnostic> {
         .iter()
         .filter_map(|item| match item {
             ast::Item::FunctionDefinition(function) => Some(builder.build_function(function)),
-            ast::Item::TypeDefinition(_) | ast::Item::Statement(_) => None,
+            ast::Item::TypeDefinition(_)
+            | ast::Item::Statement(_)
+            | ast::Item::ConstantDefinition(_) => None,
         })
         .collect::<Result<_, _>>()?;
 
@@ -43,12 +77,15 @@ pub fn build(program: &ast::Program) -> Result<Program, Diagnostic> {
         .items
         .iter()
         .filter_map(|item| match item {
-            ast::Item::TypeDefinition(_) | ast::Item::FunctionDefinition(_) => None,
+            ast::Item::TypeDefinition(_)
+            | ast::Item::FunctionDefinition(_)
+            | ast::Item::ConstantDefinition(_) => None,
             ast::Item::Statement(statement) => Some(builder.build_statement(statement)),
         })
         .collect::<Result<_, _>>()?;
 
     Ok(Program {
+        constant_definitions,
         type_definitions,
         function_definitions,
         statements,
@@ -62,6 +99,9 @@ struct ResolvedBinding {
 }
 
 struct Builder<'a> {
+    constant_sources: Vec<&'a ast::ConstantDefinition>,
+    constant_cache: RefCell<Vec<Option<(super::ConstantDefinition, crate::vm::Value)>>>,
+    constant_stack: RefCell<Vec<usize>>,
     scopes: Vec<HashMap<String, ResolvedBinding>>,
     next_binding_id: usize,
     next_node_id: Cell<usize>,
@@ -333,6 +373,14 @@ impl Builder<'_> {
         expected: Option<semantic::Type>,
         bindings: &Bindings,
     ) -> Result<Expr, Diagnostic> {
+        if !self.constant_stack.borrow().is_empty()
+            && matches!(&expr.kind, ast::ExprKind::Call { name, .. } if name != "byte_len")
+        {
+            return Err(Diagnostic::new(
+                "function calls are not allowed in constant expressions",
+                expr.span,
+            ));
+        }
         let id = self.allocate_node_id();
         let ty = self.model.type_of_expr_expected(expr, bindings, expected)?;
 
@@ -375,6 +423,14 @@ impl Builder<'_> {
                 )?)
             }
             ast::ExprKind::Float { text, .. } => ExprKind::Float { text: text.clone() },
+            ast::ExprKind::Variable(name) if self.model.constants.contains_key(name) => {
+                let constant_id = self.model.constants[name].0;
+                let value = self.build_constant(constant_id, expr.span)?;
+                ExprKind::Constant {
+                    id: constant_id,
+                    value: Box::new(self.freeze(value, &ir_type(ty.clone()), expr.span)),
+                }
+            }
             ast::ExprKind::Variable(name) => {
                 let binding = self.resolve(name).ok_or_else(|| {
                     Diagnostic::without_span(format!("missing resolved binding `{name}`"))

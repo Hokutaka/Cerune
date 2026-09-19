@@ -11,10 +11,13 @@ program     := item* EOF
 
 item        := type_definition
              | function_definition
+             | constant_definition
              | statement
 
 type_definition :=
     "type" IDENT "{" field_definition ("," field_definition)* ","? "}"
+
+constant_definition := "const" IDENT ":" type_ref "=" expression ";"
 
 field_definition := IDENT ":" type_ref ("=" expression)?
 
@@ -309,6 +312,14 @@ print(matrix[1][2]); // 6
 
 詳しい設計と各backendでの境界検査は[固定長配列の設計](../design/fixed-arrays.ja.md)で説明します。
 
+## コンパイル時定数
+
+`const LIMIT: u64 = 64 * 2;`は、型付きの式をコンパイル時に評価します。ファイル直下で宣言し、関数や既定値からも参照できます。前方参照は可能ですが、循環と128段を超える依存は診断します。
+
+数値・真偽値・文字列・配列・構造体を扱えます。定数式では実行時変数と通常の関数呼び出しを禁止します。短絡評価を保ちつつ、未使用の定数も型検査・評価します。失敗は実行前のコンパイルエラーです。
+
+定数への代入と同名のローカル束縛はできません。`pub const`で公開し、`alias::LIMIT`で使います。配列型の長さへの定数指定とブロック内宣言は未対応です。[評価と観測の契約](../design/constants.ja.md)、[example](../../examples/constants.ceru)を参照してください。
+
 ## モジュールと公開範囲
 
 ```cerune
@@ -317,9 +328,9 @@ item: values::Reading = values::reading(7);
 print(item.amount);
 ```
 
-別ファイルの型・関数を`別名::名前`で使います。importは定義・文より前に置きます。定義は既定でファイル内だけに公開し、外部へ出すものに`pub fn`・`pub type`を付けます。公開型は全フィールドを公開します。公開関数の引数・戻り値と公開型のフィールドには、非公開型を含めません。
+別ファイルの型・関数・定数を`別名::名前`で使います。importは定義・文より前に置きます。定義は既定でファイル内だけに公開し、外部へ出すものに`pub fn`・`pub type`・`pub const`を付けます。公開型は全フィールドを公開します。公開関数の引数・戻り値と公開型のフィールドには、非公開型を含めません。
 
-読み込まれるファイルのトップレベルにはimport・型・関数だけを許します。importしただけで初期化処理は走りません。依存側の`main`も自動実行しません。相対`.ceru`パスは宣言元のディレクトリ基準で、`/`を区切りに使います。循環、非公開参照、別名の重複や定義・変数との衝突は診断します。`import`・`as`・`pub`は予約語です。
+読み込まれるファイルのトップレベルにはimport・型・関数・定数だけを許します。importしただけで初期化処理は走りません。依存側の`main`も自動実行しません。相対`.ceru`パスは宣言元のディレクトリ基準で、`/`を区切りに使います。循環、非公開参照、別名の重複や定義・変数との衝突は診断します。`import`・`as`・`pub`・`const`は予約語です。
 
 再export、ワイルドカード、外部変数、可変なモジュール状態は未対応です。[規則と読み込みの上限](../design/modules.ja.md)、[動作するexample](../../examples/modules/README.md)を参照してください。
 

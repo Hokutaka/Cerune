@@ -516,6 +516,7 @@ fn module_cli_artifacts_execute_with_the_same_values_order_and_failure_origins()
             "18446744073709551615\n2\n観測\0\r\n\ntrue\nfalse\n計算\n5\n",
             None,
         ),
+        ("constants.ceru", "129\n12\n10\n99\n設定\0\r\n\n", None),
         ("product_update.ceru", "計算\n42\n5\n観測\0\r\n\n", None),
         (
             "product_update_failure.ceru",

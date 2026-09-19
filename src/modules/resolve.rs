@@ -1,5 +1,12 @@
 use super::*;
 
+#[derive(Clone, Copy, PartialEq, Eq)]
+enum Kind {
+    Type,
+    Function,
+    Constant,
+}
+
 #[derive(Clone)]
 struct Symbol {
     name: String,
@@ -9,6 +16,7 @@ struct Symbol {
 struct Names {
     functions: HashMap<String, Symbol>,
     types: HashMap<String, Symbol>,
+    constants: HashMap<String, Symbol>,
 }
 
 pub(super) fn resolve(units: &[Unit]) -> Result<Program, Diagnostic> {
@@ -16,12 +24,13 @@ pub(super) fn resolve(units: &[Unit]) -> Result<Program, Diagnostic> {
     for (index, unit) in units.iter().enumerate() {
         let mut scope = Names::default();
         for item in &unit.module.program.items {
-            let (name, span, functions) = match item {
-                Item::FunctionDefinition(d) => (&d.name, d.name_span, true),
-                Item::TypeDefinition(d) => (&d.name, d.name_span, false),
+            let (name, span, kind) = match item {
+                Item::FunctionDefinition(d) => (&d.name, d.name_span, Kind::Function),
+                Item::TypeDefinition(d) => (&d.name, d.name_span, Kind::Type),
+                Item::ConstantDefinition(d) => (&d.name, d.name_span, Kind::Constant),
                 _ => continue,
             };
-            if Type::from_name(name).is_some() || (functions && name == "byte_len") {
+            if Type::from_name(name).is_some() || (kind != Kind::Type && name == "byte_len") {
                 return Err(Diagnostic::new(
                     format!("definition name `{name}` is reserved"),
                     span,
@@ -33,13 +42,13 @@ pub(super) fn resolve(units: &[Unit]) -> Result<Program, Diagnostic> {
                     span,
                 ));
             }
-            let table = if functions {
-                &mut scope.functions
-            } else {
-                &mut scope.types
+            let table = match kind {
+                Kind::Function => &mut scope.functions,
+                Kind::Constant => &mut scope.constants,
+                Kind::Type => &mut scope.types,
             };
             let symbol = Symbol {
-                name: if index == 0 && functions && name == "main" {
+                name: if index == 0 && kind == Kind::Function && name == "main" {
                     name.clone()
                 } else {
                     format!("module_{}_{name}", unit.id.index())
@@ -54,7 +63,11 @@ pub(super) fn resolve(units: &[Unit]) -> Result<Program, Diagnostic> {
                 return Err(Diagnostic::new(
                     format!(
                         "duplicate {} `{name}`",
-                        if functions { "function" } else { "type" }
+                        match kind {
+                            Kind::Function => "function",
+                            Kind::Constant => "constant",
+                            Kind::Type => "type",
+                        }
                     ),
                     span,
                 ));
@@ -71,6 +84,12 @@ pub(super) fn resolve(units: &[Unit]) -> Result<Program, Diagnostic> {
         };
         for mut item in unit.module.program.items.clone() {
             match &mut item {
+                Item::ConstantDefinition(d) => {
+                    let symbol = &names[index].constants[&d.name];
+                    d.name = symbol.name.clone();
+                    resolver.ty(&mut d.type_ref, symbol.public)?;
+                    resolver.expr(&mut d.value)?;
+                }
                 Item::TypeDefinition(d) => {
                     let public = names[index].types[&d.name].public;
                     d.name = names[index].types[&d.name].name.clone();
@@ -107,13 +126,7 @@ struct Resolver<'a> {
     current: usize,
 }
 impl Resolver<'_> {
-    fn name(
-        &self,
-        name: &str,
-        span: Span,
-        functions: bool,
-        public: bool,
-    ) -> Result<String, Diagnostic> {
+    fn name(&self, name: &str, span: Span, kind: Kind, public: bool) -> Result<String, Diagnostic> {
         let (target, member, qualified) = if let Some((alias, member)) = name.split_once("::") {
             (
                 *self.units[self.current].imports.get(alias).ok_or_else(|| {
@@ -125,12 +138,16 @@ impl Resolver<'_> {
         } else {
             (self.current, name, false)
         };
-        let table = if functions {
-            &self.names[target].functions
-        } else {
-            &self.names[target].types
+        let table = match kind {
+            Kind::Function => &self.names[target].functions,
+            Kind::Constant => &self.names[target].constants,
+            Kind::Type => &self.names[target].types,
         };
-        let kind = if functions { "function" } else { "type" };
+        let kind = match kind {
+            Kind::Function => "function",
+            Kind::Constant => "constant",
+            Kind::Type => "type",
+        };
         let symbol = table
             .get(member)
             .ok_or_else(|| Diagnostic::new(format!("unknown {kind} `{name}`"), span))?;
@@ -153,7 +170,7 @@ impl Resolver<'_> {
     fn ty(&self, ty: &mut TypeRef, public: bool) -> Result<(), Diagnostic> {
         match &mut ty.kind {
             TypeRefKind::Named(name) if Type::from_name(name).is_none() && name != "infer" => {
-                *name = self.name(name, ty.span, false, public)?
+                *name = self.name(name, ty.span, Kind::Type, public)?
             }
             TypeRefKind::Array { element, .. } => self.ty(element, public)?,
             _ => {}
@@ -162,6 +179,12 @@ impl Resolver<'_> {
     }
 
     fn binding(&self, name: &str, span: Span) -> Result<(), Diagnostic> {
+        if self.names[self.current].constants.contains_key(name) {
+            return Err(Diagnostic::new(
+                format!("binding {name} conflicts with a constant"),
+                span,
+            ));
+        }
         if self.units[self.current].imports.contains_key(name) {
             return Err(Diagnostic::new(
                 format!("binding `{name}` conflicts with an import alias"),
@@ -193,6 +216,15 @@ impl Resolver<'_> {
                 self.expr(value)?;
             }
             StmtKind::Assignment { target, value } => {
+                if self.names[self.current]
+                    .constants
+                    .contains_key(&target.name)
+                {
+                    return Err(Diagnostic::new(
+                        "cannot assign to a constant",
+                        target.name_span,
+                    ));
+                }
                 for AssignmentProjection::Index { index, .. } in &mut target.projections {
                     self.expr(index)?;
                 }
@@ -241,7 +273,7 @@ impl Resolver<'_> {
                 arguments,
             } => {
                 if name != "byte_len" {
-                    *name = self.name(name, *name_span, true, false)?;
+                    *name = self.name(name, *name_span, Kind::Function, false)?;
                 }
                 for argument in arguments {
                     self.expr(argument)?;
@@ -253,7 +285,7 @@ impl Resolver<'_> {
                 base,
                 fields,
             } => {
-                *type_name = self.name(type_name, *type_name_span, false, false)?;
+                *type_name = self.name(type_name, *type_name_span, Kind::Type, false)?;
                 if let Some(base) = base {
                     self.expr(base)?;
                 }
@@ -281,11 +313,10 @@ impl Resolver<'_> {
                 self.expr(left)?;
                 self.expr(right)?;
             }
-            ExprKind::Variable(name) if name.contains("::") => {
-                return Err(Diagnostic::new(
-                    "modules expose functions and types, not variable values",
-                    expr.span,
-                ));
+            ExprKind::Variable(name)
+                if name.contains("::") || self.names[self.current].constants.contains_key(name) =>
+            {
+                *name = self.name(name, expr.span, Kind::Constant, false)?;
             }
             _ => {}
         }

@@ -85,6 +85,7 @@ pub struct FunctionDefinition {
 
 #[derive(Debug, Clone)]
 pub struct SemanticModel {
+    pub constants: HashMap<String, (usize, Type)>,
     pub bindings: Bindings,
     pub type_definitions: Vec<TypeDefinition>,
     pub function_definitions: Vec<FunctionDefinition>,
@@ -148,7 +149,11 @@ impl SemanticModel {
 }
 
 pub fn check(program: &Program) -> SemanticResult<Bindings> {
-    Ok(analyze(program)?.bindings)
+    let model = analyze(program)?;
+    if !model.constants.is_empty() {
+        crate::ir::builder::build_with_model(program, &model)?;
+    }
+    Ok(model.bindings)
 }
 
 pub fn analyze(program: &Program) -> SemanticResult<SemanticModel> {
@@ -157,6 +162,7 @@ pub fn analyze(program: &Program) -> SemanticResult<SemanticModel> {
     let function_names = register_function_names(program)?;
     let function_definitions = resolve_function_definitions(program, &type_names, &function_names)?;
     let mut model = SemanticModel {
+        constants: HashMap::new(),
         bindings: HashMap::new(),
         type_definitions,
         function_definitions,
@@ -164,7 +170,50 @@ pub fn analyze(program: &Program) -> SemanticResult<SemanticModel> {
         function_names,
     };
 
+    for item in &program.items {
+        if let Item::ConstantDefinition(d) = item {
+            if ast::Type::from_name(&d.name).is_some()
+                || d.name == "byte_len"
+                || model.function_names.contains_key(&d.name)
+                || model.type_names.contains_key(&d.name)
+            {
+                return Err(Diagnostic::new(
+                    format!(
+                        "constant name `{}` conflicts with a definition or built-in",
+                        d.name
+                    ),
+                    d.name_span,
+                ));
+            }
+            let ty = model.resolve_type_ref(&d.type_ref)?;
+            let id = model.constants.len();
+            if model.constants.insert(d.name.clone(), (id, ty)).is_some() {
+                return Err(Diagnostic::new(
+                    format!("duplicate constant `{}`", d.name),
+                    d.name_span,
+                ));
+            }
+        }
+    }
     reject_infinite_types(&model)?;
+    for item in &program.items {
+        if let Item::ConstantDefinition(d) = item {
+            let expected = model.constants[&d.name].1.clone();
+            let actual =
+                model.type_of_expr_expected(&d.value, &HashMap::new(), Some(expected.clone()))?;
+            if actual != expected {
+                return Err(Diagnostic::new(
+                    format!(
+                        "constant `{}` expects {}, found {}",
+                        d.name,
+                        model.type_name(expected),
+                        model.type_name(actual)
+                    ),
+                    d.value.span,
+                ));
+            }
+        }
+    }
     check_defaults(&model)?;
 
     let has_main = model.function_names.contains_key("main");
@@ -183,7 +232,7 @@ pub fn analyze(program: &Program) -> SemanticResult<SemanticModel> {
     let mut scopes = vec![HashMap::new()];
     for item in &program.items {
         match item {
-            Item::TypeDefinition(_) => {}
+            Item::TypeDefinition(_) | Item::ConstantDefinition(_) => {}
             Item::FunctionDefinition(function) => {
                 check_function(function, &model)?;
             }
@@ -201,6 +250,16 @@ pub fn analyze(program: &Program) -> SemanticResult<SemanticModel> {
     reject_recursive_functions(program, &model)?;
     model.bindings = scopes.pop().expect("top-level scope must exist");
     Ok(model)
+}
+
+fn reject_constant_shadow(name: &str, span: Span, model: &SemanticModel) -> SemanticResult<()> {
+    if model.constants.contains_key(name) {
+        return Err(Diagnostic::new(
+            format!("binding `{name}` conflicts with a constant"),
+            span,
+        ));
+    }
+    Ok(())
 }
 
 fn register_function_names(program: &Program) -> SemanticResult<HashMap<String, FunctionId>> {
@@ -293,6 +352,7 @@ fn check_function(function: &ast::FunctionDefinition, model: &SemanticModel) -> 
     let definition = model.function_definition(model.function_names[&function.name]);
     let mut parameter_scope = HashMap::new();
     for parameter in &definition.parameters {
+        reject_constant_shadow(&parameter.name, parameter.name_span, model)?;
         parameter_scope.insert(
             parameter.name.clone(),
             BindingInfo {
@@ -693,6 +753,7 @@ fn check_statements(
                 type_spec,
                 value,
             } => {
+                reject_constant_shadow(name, statement.span, model)?;
                 if scopes
                     .last()
                     .expect("current scope must exist")
@@ -744,6 +805,12 @@ fn check_statements(
             }
 
             StmtKind::Assignment { target, value } => {
+                if model.constants.contains_key(&target.name) {
+                    return Err(Diagnostic::new(
+                        "cannot assign to a constant",
+                        target.name_span,
+                    ));
+                }
                 let binding = bindings.get(&target.name).cloned().ok_or_else(|| {
                     Diagnostic::new(
                         format!("unknown binding `{}`", target.name),
@@ -1068,6 +1135,7 @@ fn type_of_expr_expected(
         ExprKind::Variable(name) => bindings
             .get(name)
             .map(|binding| binding.ty.clone())
+            .or_else(|| model.constants.get(name).map(|(_, ty)| ty.clone()))
             .ok_or_else(|| Diagnostic::new(format!("unknown binding `{name}`"), expr.span)),
 
         ExprKind::Array(values) => {

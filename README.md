@@ -60,6 +60,7 @@ cerune emit-c examples/floating_point.ceru -o floating_point.c
 | 関数 | 型付き引数・戻り値、`void`、`return`。文字列・構造体・配列も受け渡し可能 |
 | 実行開始 | トップレベル実行文、または`fn main() -> void`（併用不可） |
 | 制御構文 | `if` / `else`、`while`・`for`、`break` / `continue` |
+| 定数 | 型付き`const`、コンパイル時評価、`pub const`で共有 |
 | モジュール | 明示的なimport、名前空間、`pub`による公開範囲 |
 | 表示・診断 | `print(expr);`、エラーの理由・ソース位置・停止前の出力 |
 

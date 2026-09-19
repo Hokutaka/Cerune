@@ -105,7 +105,7 @@ QBEはLinux x86-64、ASMはWindows x64とLinux x86-64で実行します。WATは
 
 `byte_len(value) -> i64`は保持済みのUTF-8バイト数を読みます。内容を走査・正規化せず、動的確保もしません。現在は静的リテラル由来の値のみを扱い、対応する32/64ビット環境で表現可能な長さは`i64`の範囲内です。
 
-フロントエンドで引数の型・個数と戻り値を確定し、Cerune IRには専用の`StringByteLength`を残します。リテラルの長さでもCerune内で定数へ折り畳まず、操作を観測できます。表記は`byte_len.string(...)`、bytecodeは`byte_len.string`命令です。各lowererは次の読み出しへ変換します。
+フロントエンドで引数の型・個数と戻り値を確定し、Cerune IRには専用の`StringByteLength`を残します。通常の式では、リテラルの長さでもCerune内で定数へ折り畳まず、操作を観測できます。明示的なconstではコンパイル時に評価し、定義式と結果をIRに残します。表記は`byte_len.string(...)`、bytecodeは`byte_len.string`命令です。各lowererは次の読み出しへ変換します。
 
 | 経路 | 長さの取り出し |
 | --- | --- |

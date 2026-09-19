@@ -1,0 +1,13 @@
+import "constant_settings.ceru" as settings;
+
+const LOCAL: u64 = settings::LIMIT + 1;
+print(LOCAL);
+print(settings::scaled(4));
+mut samples: [i64; 2] = settings::DEFAULTS.samples;
+samples[0] = 99;
+changed: settings::Settings = settings::Settings {
+    ..settings::DEFAULTS, samples: samples,
+};
+print(settings::DEFAULTS.samples[0]);
+print(changed.samples[0]);
+print(changed.title);

@@ -652,6 +652,7 @@ impl LoweringContext<'_> {
             return Value::Scalar(Type::I64);
         }
         match &expr.kind {
+            cerune_ir::ExprKind::Constant { value, .. } => self.lower_expr(value, instructions),
             cerune_ir::ExprKind::StringByteLength { value } => {
                 self.lower_expr(value, instructions);
                 instructions.push(Instruction::I64Load { offset: 0 });

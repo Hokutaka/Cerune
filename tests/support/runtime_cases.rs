@@ -80,6 +80,18 @@ pub const FAILURES: &[(&str, &str)] = &[
         "type P { marker: bool, value: i64 = 1 / 0, } p: P = P { marker: true, };",
         "division-by-zero",
     ),
+    (
+        "const ZERO: i64 = 0; value: i64 = 1 / ZERO;",
+        "division-by-zero",
+    ),
+    (
+        "const ZERO: f64 = -0.0; value: i64 = i64(ZERO);",
+        "conversion-negative-zero",
+    ),
+    (
+        "const DATA: [i64; 1] = [7]; value: i64 = DATA[1];",
+        "array-index-out-of-bounds",
+    ),
     (UPDATE_FAILURES[0].0, UPDATE_FAILURES[0].1),
     (UPDATE_FAILURES[1].0, UPDATE_FAILURES[1].1),
     (UPDATE_FAILURES[2].0, UPDATE_FAILURES[2].1),

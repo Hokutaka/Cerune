@@ -5,7 +5,7 @@ pub fn emit(module: &Module) -> String {
     let mut output = String::new();
     let support = required_support(module);
     let strings = module.uses_strings || support.strings || super::string::uses_type(module);
-    if !support.conversions.is_empty() {
+    if !support.conversions.is_empty() || support.nonfinite {
         output.push_str("#include <math.h>\n#include <float.h>\n");
     }
 
@@ -488,6 +488,15 @@ fn emit_expr(expr: &Expr, module: &Module, output: &mut String) {
         }
 
         ExprKind::Float { text, suffix_f32 } => {
+            if let Some(special) = match text.as_str() {
+                "nan" => Some("NAN"),
+                "inf" => Some("INFINITY"),
+                "-inf" => Some("(-INFINITY)"),
+                _ => None,
+            } {
+                output.push_str(special);
+                return;
+            }
             output.push_str(text);
 
             if *suffix_f32 {
@@ -680,6 +689,7 @@ fn emit_expr(expr: &Expr, module: &Module, output: &mut String) {
 #[derive(Clone, Default)]
 struct RuntimeSupport {
     strings: bool,
+    nonfinite: bool,
     conversions: std::collections::BTreeSet<crate::codegen::NumericConversion>,
     scratch: std::collections::BTreeSet<usize>,
     integer_binary:
@@ -706,6 +716,7 @@ impl RuntimeSupport {
 
     fn include_expr(&mut self, expr: &Expr) {
         self.strings |= expr.ty == Type::String;
+        self.nonfinite |= matches!(&expr.kind, ExprKind::Float { text, .. } if matches!(text.as_str(), "nan" | "inf" | "-inf"));
         match &expr.kind {
             ExprKind::StringByteLength { value } => self.include_expr(value),
             ExprKind::Sequence { bindings, value } => {

@@ -671,6 +671,7 @@ impl Compiler {
 
     fn emit_expr(&mut self, expr: &Expr) {
         match &expr.kind {
+            ExprKind::Constant { value, .. } => self.emit_expr(value),
             ExprKind::StringByteLength { value } => {
                 self.emit_expr(value);
                 self.emit_source(InstructionKind::StringByteLength, expr.id, expr.span);

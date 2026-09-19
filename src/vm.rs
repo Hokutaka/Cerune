@@ -182,7 +182,7 @@ impl VmError {
 }
 
 #[derive(Debug, Clone)]
-enum Value {
+pub(crate) enum Value {
     Bool(bool),
     String(String),
     Integer(i128, IntegerType),
@@ -228,6 +228,12 @@ pub fn run(program: &BytecodeProgram) -> Result<String, VmError> {
         return Err(error);
     }
     Ok(output)
+}
+
+/// 定数式専用の引数なしフレーム。呼出し側が副作用を排除したIRだけを渡します。
+pub(crate) fn evaluate_constant(program: &BytecodeProgram) -> Result<Value, VmError> {
+    execute_frame(program, Frame::Function(0), Vec::new(), &mut String::new())
+        .map(|value| value.expect("constant evaluator returns a value"))
 }
 
 fn execute_frame(

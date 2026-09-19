@@ -89,6 +89,15 @@ cargo run -- run examples/u64_values.ceru
 
 `infer`は独立した値の型ではなく、型を推論する指定です。`void`は値を返さない関数の戻り方を表します。[floating_point.ceru](floating_point.ceru)と[functions.ceru](functions.ceru)で確認できます。
 
+### コンパイル時定数
+
+| サンプル | 確認すること |
+| --- | --- |
+| [constants.ceru](constants.ceru) | u64の上限、文字列、f32・構造体・配列の定数、コピーと短絡評価 |
+| [modules/constants.ceru](modules/constants.ceru) | 公開した設定値と非公開の補正定数をimportして利用 |
+
+`cargo run -- run examples/constants.ceru`の冒頭は`128`、最大u64、文字列のバイト数`9`です。コピーした配列を`99`に変えても、二つの構造体定数の値は`10`のままです。`cargo run -- emit-ir examples/constants.ceru`で定義式と評価済みの値を確認できます。
+
 ### 構造体の更新式
 
 | サンプル | 確認すること |
