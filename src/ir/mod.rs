@@ -74,6 +74,8 @@ pub struct Parameter {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TypeDefinition {
+    /// 宣言順の選択肢名です。添字が内部タグ値に対応します。
+    pub variants: Option<Vec<String>>,
     pub id: TypeId,
     pub name: String,
     pub fields: Vec<FieldDefinition>,
@@ -256,6 +258,7 @@ pub struct FieldValue {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FieldValueOrigin {
+    Generated { span: Span },
     Explicit { span: Span },
     Default { definition_span: Span },
 }

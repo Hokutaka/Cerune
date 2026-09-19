@@ -16,6 +16,7 @@ Cerune documentation is divided into `design`, which records design decisions, a
 | Language capabilities and roadmap / 言語機能と今後の順序 | [日本語](design/language-roadmap.ja.md) | [English](design/language-roadmap.en.md) |
 | Functions / 関数 | [日本語](design/functions.ja.md) | [English](design/functions.en.md) |
 | Named product types / 名前付きproduct type | [日本語](design/product-types.ja.md) | [English](design/product-types.en.md) |
+| Sum types and match / 直和型と分岐 | [日本語](design/sum-types.ja.md) | [English](design/sum-types.en.md) |
 | Compile-time constants / コンパイル時定数 | [日本語](design/constants.ja.md) | [English](design/constants.en.md) |
 | Product updates / 構造体の更新式 | [日本語](design/product-updates.ja.md) | [English](design/product-updates.en.md) |
 | Fixed arrays / 固定長配列 | [日本語](design/fixed-arrays.ja.md) | [English](design/fixed-arrays.en.md) |

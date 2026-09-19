@@ -4,6 +4,8 @@
 
 | File | Types and expressions | Checks |
 | --- | --- | --- |
+| [lookup_values.ceru](lookup_values.ceru) | `pub enum`, constants, functions | Return present/absent values |
+| [sum_lookup.ceru](sum_lookup.ceru) | `values::Lookup::Found` and `match` | Found bytes, missing entry, directly constructed text |
 | [constant_settings.ceru](constant_settings.ceru) | `pub const`, structs, private constants | Evaluate shared settings and calibration values at compilation |
 | [constants.ceru](constants.ceru) | Imported constants and copies | Print `129 → 12 → 10 → 99`, then `設定\0\r\n` |
 | [values.ceru](values.ceru) | `u64`, `string`, product, public functions | Public type defaults and private helpers called by public functions |

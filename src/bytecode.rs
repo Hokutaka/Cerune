@@ -210,6 +210,7 @@ pub struct ConstructField {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FieldOrigin {
+    Generated,
     Explicit,
     Default,
 }
@@ -788,6 +789,9 @@ impl Compiler {
                             .map(|field| ConstructField {
                                 field_id: field.id.0,
                                 origin: match field.origin {
+                                    ir::FieldValueOrigin::Generated { .. } => {
+                                        FieldOrigin::Generated
+                                    }
                                     ir::FieldValueOrigin::Explicit { .. } => FieldOrigin::Explicit,
                                     ir::FieldValueOrigin::Default { .. } => FieldOrigin::Default,
                                 },
@@ -1147,6 +1151,7 @@ fn format_instruction(
                 }
                 let definition = &program.type_definitions[*type_id];
                 let origin = match field.origin {
+                    FieldOrigin::Generated => "generated",
                     FieldOrigin::Explicit => "explicit",
                     FieldOrigin::Default => "default",
                 };

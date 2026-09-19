@@ -56,8 +56,9 @@ During development, replace `cerune` with `cargo run --quiet --`.
 | Operators | Arithmetic, remainder, comparisons, bit operations, logical negation, short-circuit evaluation |
 | Numeric conversion | Explicit value-preserving conversions such as `f64(x)` / `convert<f64>(x)` |
 | Structs | Named types, field access and defaults, updates that create new values, nesting, value copies |
+| Sum types | `enum` variants with payloads; exhaustive `match` statements |
 | Arrays | Fixed length, nesting, element access and updates, value copies |
-| Functions | Typed parameters and returns, `void`, `return`; strings, structs, and arrays can also be passed and returned |
+| Functions | Typed parameters and returns, `void`, `return`; strings, structs, arrays, and sums can also be passed and returned |
 | Entry point | Top-level statements or `fn main() -> void` (not both) |
 | Control flow | `if` / `else`, `while`, `for`, `break` / `continue` |
 | Constants | Typed `const`, compile-time evaluation, shared with `pub const` |
@@ -66,7 +67,7 @@ During development, replace `cerune` with `cargo run --quiet --`.
 
 **Arithmetic rules:** No implicit numeric conversions. Integer overflow, invalid integer division, out-of-bounds access, and conversions that cannot preserve the value stop execution. Floating-point arithmetic rounds.
 
-**Not implemented:** Recursion, dynamic arrays, string concatenation/indexing, failure recovery, explicit rounding/truncation.
+**Not implemented:** Recursion, dynamic arrays, string concatenation/indexing, catching runtime stops, explicit rounding/truncation.
 
 ## Execution and Output
 

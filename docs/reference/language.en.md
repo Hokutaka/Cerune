@@ -9,13 +9,22 @@ This document defines the syntax and semantics of Cerune v0.1.
 ```text
 program     := item* EOF
 
-item        := type_definition
+item        := enum_definition
+             | type_definition
              | function_definition
              | constant_definition
              | statement
 
 type_definition :=
     "type" IDENT "{" field_definition ("," field_definition)* ","? "}"
+
+enum_definition := "enum" IDENT "{" variant ("," variant)* ","? "}"
+variant     := IDENT ("{" payload_fields? "}")?
+payload_fields := (IDENT ":" type_ref) ("," IDENT ":" type_ref)* ","?
+variant_path := IDENT "::" IDENT | IDENT "::" IDENT "::" IDENT
+match_statement := "match" expression "{" match_arm ("," match_arm)* ","? "}"
+match_arm   := variant_path "{" pattern_fields? "}" "=>" block
+pattern_fields := (IDENT ":" IDENT) ("," IDENT ":" IDENT)* ","?
 
 constant_definition := "const" IDENT ":" type_ref "=" expression ";"
 
@@ -35,6 +44,7 @@ statement   := binding
              | "print" "(" expression ")" ";"
              | IDENT "(" arguments? ")" ";"
              | "return" expression? ";"
+             | match_statement
              | if_statement
              | while_statement
              | for_statement
@@ -118,6 +128,7 @@ primary     := "true"
              | "[" expression ("," expression)* ","? "]"
              | IDENT
              | IDENT "(" arguments? ")"
+             | variant_path "{" (field_value ("," field_value)* ","?)? "}"
              | IDENT "{" field_value ("," field_value)* ","? "}"
              | IDENT "{" ".." expression ("," field_value)* ","? "}"
              | "(" expression ")"
@@ -312,11 +323,28 @@ Updating one copy of an array does not change another copy. The assigned value m
 
 See [Fixed array design](../design/fixed-arrays.en.md) for the detailed design and bounds-check representation in each backend.
 
+## Sum types and match
+
+`enum Lookup { Found { text: string }, Missing }` declares a payload variant and an empty variant. Construct them with `Lookup::Found { text: "空" }` and `Lookup::Missing {}`. Types are nominal and can appear in bindings, arguments, returns, arrays, products, and constants.
+
+```cerune
+enum Lookup { Found { text: string }, Missing }
+value: Lookup = Lookup::Found { text: "空" };
+match value {
+    Lookup::Found { text: text } => { print(text); },
+    Lookup::Missing {} => { print("未登録"); },
+}
+```
+
+`match` is a statement. It evaluates and copies its subject once, then executes only the selected arm. List every variant exactly once. Bind each field as an immutable local with `field: binding` or discard it with `field: _`. Parenthesize constructors used directly as subjects. Constructor fields evaluate in source order; reassigning a copy does not alter other values.
+
+`enum` and `match` are keywords. `pub enum` exports all variants and fields; importers use `alias::Enum::Variant`. Enum payload defaults, recursive value types, whole-enum printing/equality, direct field access, product updates, guards, whole-arm wildcards, nested patterns, and match expressions are unsupported. Return, break, and continue retain their ordinary function/loop targets. Match does not catch runtime stops. See the [design and representation](../design/sum-types.en.md) and [example](../../examples/sum_lookup.ceru).
+
 ## Compile-time constants
 
 `const LIMIT: u64 = 64 * 2;` evaluates a typed expression during compilation. Declarations belong at file scope and can be used in functions and field defaults. Forward references are allowed; cycles and dependency depths beyond 128 are diagnosed.
 
-Numbers, booleans, strings, arrays, and structs are supported. Constant expressions cannot reference runtime variables or call ordinary functions. Short circuiting is preserved, while every constant is type-checked and evaluated even if unused. Evaluation failures are compilation errors.
+Numbers, booleans, strings, arrays, structs, and sums are supported. Constant expressions cannot reference runtime variables or call ordinary functions. Short circuiting is preserved, while every constant is type-checked and evaluated even if unused. Evaluation failures are compilation errors.
 
 Constants cannot be assigned or shadowed by local bindings. Export with `pub const` and access through `alias::LIMIT`. Constant names in array type lengths and block-local declarations are unsupported. See the [evaluation and observation contract](../design/constants.en.md) and [example](../../examples/constants.ceru).
 
@@ -328,7 +356,7 @@ item: values::Reading = values::reading(7);
 print(item.amount);
 ```
 
-Use external types, functions, and constants through `alias::name`. Imports precede definitions and statements. Definitions are private to their file unless marked `pub fn`, `pub type`, or `pub const`. Public types expose all fields; public parameter/result types and fields cannot contain private types.
+Use external types, functions, and constants through `alias::name`. Imports precede definitions and statements. Definitions are private to their file unless marked `pub fn`, `pub type`, `pub enum`, or `pub const`. Public types expose all fields; public parameter/result types and fields cannot contain private types.
 
 Imported files allow only imports, types, functions, and constants at top level. Loading executes no initialization and never invokes a dependency's `main`. Relative `.ceru` paths resolve against the declaring file's directory, using `/` separators. Cycles, private access, duplicate aliases, and alias collisions with definitions or bindings are diagnosed. `import`, `as`, `pub`, and `const` are keywords.
 

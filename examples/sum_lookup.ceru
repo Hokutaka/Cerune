@@ -1,0 +1,25 @@
+// 未登録を特別な文字列で代用せず、選択肢として返します。
+enum Lookup {
+    Found { text: string, bytes: u64 },
+    Missing,
+}
+const EMPTY: Lookup = Lookup::Missing {};
+
+fn lookup(key: string) -> Lookup {
+    if key == "sky" {
+        return Lookup::Found { text: "空\0\r\n", bytes: 6 };
+    }
+    return EMPTY;
+}
+fn show(result: Lookup) -> void {
+    match result {
+        Lookup::Found { text: text, bytes: count } => {
+            print(text);
+            print(count);
+        },
+        Lookup::Missing {} => { print("未登録"); },
+    }
+}
+results: [Lookup; 2] = [lookup("sky"), lookup("sea")];
+show(results[0]);
+show(results[1]);

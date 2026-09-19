@@ -117,10 +117,37 @@ pub enum ReturnTypeRef {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct TypeDefinition {
+    /// enumの選択肢です。通常の構造体ではNoneです。
+    pub variants: Option<Vec<VariantDefinition>>,
     pub name: String,
     pub name_span: Span,
     pub fields: Vec<FieldDefinition>,
     pub span: Span,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct VariantDefinition {
+    pub name: String,
+    pub name_span: Span,
+    pub fields: Vec<FieldDefinition>,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct MatchArm {
+    pub variant: String,
+    pub variant_span: Span,
+    pub fields: Vec<PatternField>,
+    pub body: Vec<Stmt>,
+    pub span: Span,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct PatternField {
+    pub name: String,
+    pub name_span: Span,
+    pub binding: String,
+    pub binding_span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -140,6 +167,12 @@ pub struct Stmt {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum StmtKind {
+    Match {
+        value: Expr,
+        arms: Vec<MatchArm>,
+    },
+    /// 共通フロントエンドが作る、束縛の範囲を保つブロックです。
+    Block(Vec<Stmt>),
     Binding {
         mutable: bool,
         name: String,
@@ -285,6 +318,8 @@ pub enum ExprKind {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FieldValue {
+    /// タグ・非選択領域など、共通フロントエンドが合成した値です。
+    pub generated: bool,
     pub name: String,
     pub name_span: Span,
     pub value: Expr,

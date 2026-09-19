@@ -4,6 +4,8 @@
 
 | ファイル | 型・表現 | 確認内容 |
 | --- | --- | --- |
+| [lookup_values.ceru](lookup_values.ceru) | `pub enum`・定数・関数 | 存在/不在を値で返す |
+| [sum_lookup.ceru](sum_lookup.ceru) | `values::Lookup::Found`と`match` | `空\0\r\n`、未登録、直接構築した文字列を表示 |
 | [constant_settings.ceru](constant_settings.ceru) | `pub const`・構造体・非公開定数 | 設定値と補正値をコンパイル時に評価 |
 | [constants.ceru](constants.ceru) | 定数のimportとコピー | `129 → 12 → 10 → 99`、最後に`設定\0\r\n`を表示 |
 | [values.ceru](values.ceru) | `u64`・`string`・product・公開関数 | 公開型の既定値と、公開関数から呼ぶ非公開補助関数 |

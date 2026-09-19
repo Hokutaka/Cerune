@@ -1,3 +1,6 @@
+#[path = "sum_cases.rs"]
+pub mod sum_cases;
+
 #[path = "constant_cases.rs"]
 pub mod constant_cases;
 
@@ -68,6 +71,11 @@ pub const CASES: &[(&str, &str)] = &[
     PRODUCT_UPDATES[1],
     PRODUCT_UPDATES[2],
     PRODUCT_UPDATES[3],
+    sum_cases::CASES[0],
+    sum_cases::CASES[1],
+    sum_cases::CASES[2],
+    sum_cases::CASES[3],
+    sum_cases::CASES[4],
     constant_cases::CASES[0],
     constant_cases::CASES[1],
 ];

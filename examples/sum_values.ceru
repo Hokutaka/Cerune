@@ -1,0 +1,42 @@
+// 配列・構造体・直和型を組み合わせても、コピーした値は独立です。
+fn default_value() -> i16 { print("default"); return 7; }
+type Packet { values: [i16; 2], marker: i16 = default_value(), }
+enum Reading {
+    Data { packet: Packet, limit: u64 },
+    Error { message: string },
+    Empty,
+}
+fn packet() -> Packet {
+    print("packet");
+    return Packet { values: [10, 20] };
+}
+fn limit() -> u64 { print("limit"); return 18446744073709551615; }
+fn original() -> Reading {
+    print("subject");
+    return Reading::Data { limit: limit(), packet: packet() };
+}
+fn describe(value: Reading) -> string {
+    match value {
+        Reading::Error { message: message } => { return message; },
+        Reading::Empty {} => { return "empty"; },
+        Reading::Data { packet: _, limit: _ } => { return "data"; },
+    }
+}
+mut result: Reading = original();
+saved: Reading = result;
+match result {
+    Reading::Empty {} => { print("unexpected"); },
+    Reading::Data { packet: data, limit: maximum } => {
+        mut values: [i16; 2] = data.values;
+        values[0] = 99;
+        result = Reading::Error { message: "changed" };
+        print(values[0]);
+        print(data.values[0]);
+        print(maximum);
+    },
+    Reading::Error { message: _ } => { print("unexpected"); },
+}
+print(describe(saved));
+print(describe(result));
+// 非選択のData領域の初期化ではdefault_value()を呼びません。
+print(describe(Reading::Empty {}));

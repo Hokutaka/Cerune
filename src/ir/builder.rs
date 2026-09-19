@@ -19,8 +19,9 @@ use super::{
 };
 
 pub fn build(program: &ast::Program) -> Result<Program, Diagnostic> {
-    let model = semantic::analyze(program)?;
-    build_with_model(program, &model)
+    let program = crate::sums::lower(program)?;
+    let model = semantic::analyze_lowered(&program)?;
+    build_with_model(&program, &model)
 }
 
 pub(crate) fn build_with_model(
@@ -80,10 +81,13 @@ pub(crate) fn build_with_model(
             ast::Item::TypeDefinition(_)
             | ast::Item::FunctionDefinition(_)
             | ast::Item::ConstantDefinition(_) => None,
-            ast::Item::Statement(statement) => Some(builder.build_statement(statement)),
+            ast::Item::Statement(statement) => {
+                Some(builder.build_statements(std::slice::from_ref(statement)))
+            }
         })
-        .collect::<Result<_, _>>()?;
+        .collect::<Result<Vec<_>, _>>()?;
 
+    let statements = statements.into_iter().flatten().collect();
     Ok(Program {
         constant_definitions,
         type_definitions,
@@ -187,6 +191,7 @@ impl Builder<'_> {
             .collect::<Result<_, Diagnostic>>()?;
 
         Ok(TypeDefinition {
+            variants: definition.variants.clone(),
             id: TypeId(definition.id.0),
             name: definition.name.clone(),
             fields,
@@ -195,10 +200,15 @@ impl Builder<'_> {
     }
 
     fn build_statements(&mut self, statements: &[ast::Stmt]) -> Result<Vec<Statement>, Diagnostic> {
-        statements
-            .iter()
-            .map(|statement| self.build_statement(statement))
-            .collect()
+        let mut result = Vec::new();
+        for statement in statements {
+            if let ast::StmtKind::Block(body) = &statement.kind {
+                result.extend(self.with_scope(|builder| builder.build_statements(body))?);
+            } else {
+                result.push(self.build_statement(statement)?);
+            }
+        }
+        Ok(result)
     }
 
     fn build_statement(&mut self, statement: &ast::Stmt) -> Result<Statement, Diagnostic> {
@@ -206,6 +216,9 @@ impl Builder<'_> {
         let bindings = self.visible_bindings();
 
         let kind = match &statement.kind {
+            ast::StmtKind::Block(_) | ast::StmtKind::Match { .. } => {
+                unreachable!("blocks and matches are expanded before building a single statement")
+            }
             ast::StmtKind::Binding {
                 mutable,
                 name,
@@ -471,8 +484,14 @@ impl Builder<'_> {
                             Some(field.ty.clone()),
                             bindings,
                         )?,
-                        origin: FieldValueOrigin::Explicit {
-                            span: field_value.span,
+                        origin: if field_value.generated {
+                            FieldValueOrigin::Generated {
+                                span: field_value.span,
+                            }
+                        } else {
+                            FieldValueOrigin::Explicit {
+                                span: field_value.span,
+                            }
                         },
                     });
                 }

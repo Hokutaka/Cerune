@@ -375,3 +375,11 @@ fn constants_match_known_values_across_optimized_c_and_llvm() {
         native.matches(source, expected);
     }
 }
+
+#[test]
+fn sums_preserve_choices_and_payloads_across_optimized_c_and_llvm() {
+    let Some(native) = Native::new() else { return };
+    for &(source, expected) in string_cases::sum_cases::CASES {
+        native.matches(source, expected);
+    }
+}

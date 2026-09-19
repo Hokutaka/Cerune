@@ -9,13 +9,22 @@
 ```text
 program     := item* EOF
 
-item        := type_definition
+item        := enum_definition
+             | type_definition
              | function_definition
              | constant_definition
              | statement
 
 type_definition :=
     "type" IDENT "{" field_definition ("," field_definition)* ","? "}"
+
+enum_definition := "enum" IDENT "{" variant ("," variant)* ","? "}"
+variant     := IDENT ("{" payload_fields? "}")?
+payload_fields := (IDENT ":" type_ref) ("," IDENT ":" type_ref)* ","?
+variant_path := IDENT "::" IDENT | IDENT "::" IDENT "::" IDENT
+match_statement := "match" expression "{" match_arm ("," match_arm)* ","? "}"
+match_arm   := variant_path "{" pattern_fields? "}" "=>" block
+pattern_fields := (IDENT ":" IDENT) ("," IDENT ":" IDENT)* ","?
 
 constant_definition := "const" IDENT ":" type_ref "=" expression ";"
 
@@ -35,6 +44,7 @@ statement   := binding
              | "print" "(" expression ")" ";"
              | IDENT "(" arguments? ")" ";"
              | "return" expression? ";"
+             | match_statement
              | if_statement
              | while_statement
              | for_statement
@@ -118,6 +128,7 @@ primary     := "true"
              | "[" expression ("," expression)* ","? "]"
              | IDENT
              | IDENT "(" arguments? ")"
+             | variant_path "{" (field_value ("," field_value)* ","?)? "}"
              | IDENT "{" field_value ("," field_value)* ","? "}"
              | IDENT "{" ".." expression ("," field_value)* ","? "}"
              | "(" expression ")"
@@ -312,11 +323,28 @@ print(matrix[1][2]); // 6
 
 詳しい設計と各backendでの境界検査は[固定長配列の設計](../design/fixed-arrays.ja.md)で説明します。
 
+## 直和型とmatch
+
+`enum Lookup { Found { text: string }, Missing }`は、値を持つ選択肢と値を持たない選択肢を定義します。構築は`Lookup::Found { text: "空" }`、`Lookup::Missing {}`です。型は名前で区別し、変数・引数・戻り値・配列・構造体・定数に使えます。
+
+```cerune
+enum Lookup { Found { text: string }, Missing }
+value: Lookup = Lookup::Found { text: "空" };
+match value {
+    Lookup::Found { text: text } => { print(text); },
+    Lookup::Missing {} => { print("未登録"); },
+}
+```
+
+`match`は文です。対象を一度だけ評価してコピーし、選んだ分岐だけ実行します。全選択肢を各一回列挙し、各フィールドは`field: binding`で不変なローカル値として取り出すか`field: _`で捨てます。構築式を対象へ直接書くときは括弧で囲みます。構築のフィールドはソース順に評価します。コピー後の再代入は他の値に影響しません。
+
+`enum`・`match`は予約語です。`pub enum`は全選択肢とフィールドを公開し、import側では`alias::Enum::Variant`を使います。enumのフィールドには既定値を書けません。再帰的な値型、全体の表示・等値比較、直接フィールド参照、構造体更新式、ガード、全体ワイルドカード、入れ子パターン、match式は未対応です。`return`・`break`・`continue`は通常の関数・ループへ作用します。実行時停止の捕捉は行いません。[設計と表現](../design/sum-types.ja.md)、[example](../../examples/sum_lookup.ceru)を参照してください。
+
 ## コンパイル時定数
 
 `const LIMIT: u64 = 64 * 2;`は、型付きの式をコンパイル時に評価します。ファイル直下で宣言し、関数や既定値からも参照できます。前方参照は可能ですが、循環と128段を超える依存は診断します。
 
-数値・真偽値・文字列・配列・構造体を扱えます。定数式では実行時変数と通常の関数呼び出しを禁止します。短絡評価を保ちつつ、未使用の定数も型検査・評価します。失敗は実行前のコンパイルエラーです。
+数値・真偽値・文字列・配列・構造体・直和型を扱えます。定数式では実行時変数と通常の関数呼び出しを禁止します。短絡評価を保ちつつ、未使用の定数も型検査・評価します。失敗は実行前のコンパイルエラーです。
 
 定数への代入と同名のローカル束縛はできません。`pub const`で公開し、`alias::LIMIT`で使います。配列型の長さへの定数指定とブロック内宣言は未対応です。[評価と観測の契約](../design/constants.ja.md)、[example](../../examples/constants.ceru)を参照してください。
 
@@ -328,7 +356,7 @@ item: values::Reading = values::reading(7);
 print(item.amount);
 ```
 
-別ファイルの型・関数・定数を`別名::名前`で使います。importは定義・文より前に置きます。定義は既定でファイル内だけに公開し、外部へ出すものに`pub fn`・`pub type`・`pub const`を付けます。公開型は全フィールドを公開します。公開関数の引数・戻り値と公開型のフィールドには、非公開型を含めません。
+別ファイルの型・関数・定数を`別名::名前`で使います。importは定義・文より前に置きます。定義は既定でファイル内だけに公開し、外部へ出すものに`pub fn`・`pub type`・`pub enum`・`pub const`を付けます。公開型は全フィールドを公開します。公開関数の引数・戻り値と公開型のフィールドには、非公開型を含めません。
 
 読み込まれるファイルのトップレベルにはimport・型・関数・定数だけを許します。importしただけで初期化処理は走りません。依存側の`main`も自動実行しません。相対`.ceru`パスは宣言元のディレクトリ基準で、`/`を区切りに使います。循環、非公開参照、別名の重複や定義・変数との衝突は診断します。`import`・`as`・`pub`・`const`は予約語です。
 

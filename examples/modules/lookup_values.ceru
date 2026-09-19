@@ -1,0 +1,6 @@
+pub enum Lookup { Found { text: string }, Missing, }
+pub const EMPTY: Lookup = Lookup::Missing {};
+pub fn lookup(key: string) -> Lookup {
+    if key == "sky" { return Lookup::Found { text: "空\0\r\n" }; }
+    return EMPTY;
+}
