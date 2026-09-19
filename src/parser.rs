@@ -109,17 +109,20 @@ impl Parser {
                 self.advance();
                 if !matches!(
                     self.peek().kind,
-                    TokenKind::Fn | TokenKind::Type | TokenKind::Const
+                    TokenKind::Fn | TokenKind::Type | TokenKind::Const | TokenKind::Enum
                 ) {
-                    return Err(self
-                        .error("pub is only supported on functions, types, and constants".into()));
+                    return Err(self.error(
+                        "pub is only supported on functions, types, enums, and constants".into(),
+                    ));
                 }
                 let token = self.peek_next().clone();
                 if let TokenKind::Identifier(name) = token.kind {
                     exports.push((name, token.span));
                 }
             }
-            if matches!(&self.peek().kind, TokenKind::Const) {
+            if matches!(&self.peek().kind, TokenKind::Enum) {
+                items.push(Item::TypeDefinition(self.parse_enum_definition()?));
+            } else if matches!(&self.peek().kind, TokenKind::Const) {
                 items.push(Item::ConstantDefinition(self.parse_constant_definition()?));
             } else if matches!(&self.peek().kind, TokenKind::Type) {
                 items.push(Item::TypeDefinition(self.parse_type_definition()?));
@@ -134,6 +137,114 @@ impl Parser {
             program: Program { items },
             imports,
             exports,
+        })
+    }
+
+    fn parse_enum_definition(&mut self) -> ParseResult<TypeDefinition> {
+        let start = self.advance().span.start();
+        let (name, name_span) = self.expect_identifier()?;
+        self.expect_simple(TokenKind::LeftBrace)?;
+        let mut variants = Vec::new();
+        while !matches!(self.peek().kind, TokenKind::RightBrace) {
+            let (variant, variant_span) = self.expect_identifier()?;
+            let mut fields = Vec::new();
+            let mut end = variant_span.end();
+            if matches!(self.peek().kind, TokenKind::LeftBrace) {
+                self.advance();
+                while !matches!(self.peek().kind, TokenKind::RightBrace) {
+                    let (field, span) = self.expect_identifier()?;
+                    self.expect_simple(TokenKind::Colon)?;
+                    let type_ref = self.parse_type_ref()?;
+                    if type_ref.is_named("infer") {
+                        return Err(Diagnostic::new(
+                            "variant fields require an explicit type",
+                            type_ref.span,
+                        ));
+                    }
+                    fields.push(FieldDefinition {
+                        name: field,
+                        name_span: span,
+                        span: self.span(span.start(), type_ref.span.end()),
+                        type_ref,
+                        default: None,
+                    });
+                    if !matches!(self.peek().kind, TokenKind::Comma) {
+                        break;
+                    }
+                    self.advance();
+                }
+                end = self.expect_simple(TokenKind::RightBrace)?.end();
+            }
+            variants.push(crate::ast::VariantDefinition {
+                name: variant,
+                name_span: variant_span,
+                fields,
+                span: self.span(variant_span.start(), end),
+            });
+            if !matches!(self.peek().kind, TokenKind::Comma) {
+                break;
+            }
+            self.advance();
+        }
+        let end = self.expect_simple(TokenKind::RightBrace)?.end();
+        if variants.is_empty() {
+            return Err(Diagnostic::new(
+                "enum must have at least one variant",
+                self.span(start, end),
+            ));
+        }
+        Ok(TypeDefinition {
+            name,
+            name_span,
+            fields: Vec::new(),
+            variants: Some(variants),
+            span: self.span(start, end),
+        })
+    }
+
+    fn parse_match(&mut self) -> ParseResult<Stmt> {
+        let start = self.advance().span.start();
+        let value = self.parse_block_condition()?;
+        self.expect_simple(TokenKind::LeftBrace)?;
+        let mut arms = Vec::new();
+        while !matches!(self.peek().kind, TokenKind::RightBrace) {
+            let (variant, variant_span) = self.expect_path()?;
+            self.expect_simple(TokenKind::LeftBrace)?;
+            let mut fields = Vec::new();
+            while !matches!(self.peek().kind, TokenKind::RightBrace) {
+                let (name, name_span) = self.expect_identifier()?;
+                self.expect_simple(TokenKind::Colon)?;
+                let (binding, binding_span) = self.expect_identifier()?;
+                fields.push(crate::ast::PatternField {
+                    name,
+                    name_span,
+                    binding,
+                    binding_span,
+                });
+                if !matches!(self.peek().kind, TokenKind::Comma) {
+                    break;
+                }
+                self.advance();
+            }
+            self.expect_simple(TokenKind::RightBrace)?;
+            self.expect_simple(TokenKind::FatArrow)?;
+            let (body, end) = self.parse_block()?;
+            arms.push(crate::ast::MatchArm {
+                variant,
+                variant_span,
+                fields,
+                body,
+                span: self.span(variant_span.start(), end),
+            });
+            if !matches!(self.peek().kind, TokenKind::Comma) {
+                break;
+            }
+            self.advance();
+        }
+        let end = self.expect_simple(TokenKind::RightBrace)?.end();
+        Ok(Stmt {
+            kind: StmtKind::Match { value, arms },
+            span: self.span(start, end),
         })
     }
 
@@ -218,6 +329,7 @@ impl Parser {
         let closing = self.expect_simple(TokenKind::RightBrace)?;
 
         Ok(TypeDefinition {
+            variants: None,
             name,
             name_span,
             fields,
@@ -286,6 +398,7 @@ impl Parser {
 
     fn parse_statement(&mut self) -> ParseResult<Stmt> {
         match &self.peek().kind {
+            TokenKind::Match => self.parse_match(),
             TokenKind::Mut => self.parse_binding(),
             TokenKind::Identifier(_) => match &self.peek_next().kind {
                 TokenKind::Colon => self.parse_binding(),
@@ -1105,7 +1218,7 @@ impl Parser {
     fn parse_construct(&mut self, type_name: String, type_name_span: Span) -> ParseResult<Expr> {
         let opening = self.expect_simple(TokenKind::LeftBrace)?;
 
-        if matches!(&self.peek().kind, TokenKind::RightBrace) {
+        if matches!(&self.peek().kind, TokenKind::RightBrace) && !type_name.contains("::") {
             let closing = self.advance().span;
             return Err(Diagnostic::new(
                 "aggregate literal must have at least one field",
@@ -1138,6 +1251,7 @@ impl Parser {
             let value = self.parse_expression()?;
             let span = self.span(name_span.start(), value.span.end());
             fields.push(FieldValue {
+                generated: false,
                 name,
                 name_span,
                 value,
@@ -1198,7 +1312,7 @@ impl Parser {
     }
 
     fn finish_path(&mut self, mut name: String, mut span: Span) -> ParseResult<(String, Span)> {
-        if matches!(self.peek().kind, TokenKind::ColonColon) {
+        while matches!(self.peek().kind, TokenKind::ColonColon) {
             self.advance();
             let (member, end) = self.expect_identifier()?;
             name.push_str("::");
@@ -1225,9 +1339,11 @@ impl Parser {
     fn starts_construct(&self) -> bool {
         self.allow_construct
             && matches!(&self.peek().kind, TokenKind::LeftBrace)
-            && (matches!(&self.peek_n(1).kind, TokenKind::DotDot)
-                || (matches!(&self.peek_n(1).kind, TokenKind::Identifier(_))
-                    && matches!(&self.peek_n(2).kind, TokenKind::Colon)))
+            && (matches!(
+                &self.peek_n(1).kind,
+                TokenKind::DotDot | TokenKind::RightBrace
+            ) || (matches!(&self.peek_n(1).kind, TokenKind::Identifier(_))
+                && matches!(&self.peek_n(2).kind, TokenKind::Colon)))
     }
 
     fn advance(&mut self) -> &Token {

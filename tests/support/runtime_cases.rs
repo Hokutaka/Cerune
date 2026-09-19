@@ -1,5 +1,17 @@
 // VMと各生成経路で照合する、理由が既知の失敗例です。
 pub const FAILURES: &[(&str, &str)] = &[
+    (
+        "enum E { Value { n: i64 }, Empty } x: E = E::Value { n: 1 / 0 };",
+        "division-by-zero",
+    ),
+    (
+        "enum E { Value { n: i64 }, Empty } fn make() -> E { return E::Value { n: 1 / 0 }; } match make() { E::Value { n: n } => { print(n); }, E::Empty {} => {} }",
+        "division-by-zero",
+    ),
+    (
+        "enum E { Value { n: i64 }, Empty } x: E = E::Value { n: 0 }; match x { E::Value { n: n } => { print(1 / n); }, E::Empty {} => {} }",
+        "division-by-zero",
+    ),
     ("print(9223372036854775807 + 1);", "integer-overflow"),
     ("print(-(-9223372036854775808));", "integer-overflow"),
     ("print(127i8 + 1);", "integer-overflow"),

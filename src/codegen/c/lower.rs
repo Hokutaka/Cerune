@@ -124,7 +124,7 @@ fn lower_type_definitions(program: &cerune_ir::Program) -> Vec<TypeDefinition> {
                 .fields
                 .iter()
                 .map(|field| FieldDefinition {
-                    name: field.name.clone(),
+                    name: storage_field_name(&field.name),
                     ty: field.ty.clone().into(),
                 })
                 .collect(),
@@ -248,7 +248,16 @@ fn lower_statement(statement: &cerune_ir::Statement) -> Statement {
 
 // Cの宣言スコープや補助関数名に影響されず、解決済みの束縛を参照します。
 fn binding_name(id: cerune_ir::BindingId, name: &str) -> String {
-    format!("binding_{}_{name}", id.0)
+    format!("binding_{}_{}", id.0, name.replace('$', "_"))
+}
+
+// enum内部名の区切りとソースのアンダースコアを、衝突しない形で区別します。
+fn storage_field_name(name: &str) -> String {
+    if name.starts_with('$') {
+        name.replace('_', "_u").replace('$', "_d")
+    } else {
+        name.into()
+    }
 }
 
 fn lower_expr(expr: &cerune_ir::Expr) -> Expr {
@@ -377,7 +386,7 @@ fn lower_expr_unchecked(expr: &cerune_ir::Expr) -> Expr {
             fields: fields
                 .iter()
                 .map(|field| FieldValue {
-                    name: field.name.clone(),
+                    name: storage_field_name(&field.name),
                     value: lower_expr(&field.value),
                 })
                 .collect(),
@@ -386,7 +395,7 @@ fn lower_expr_unchecked(expr: &cerune_ir::Expr) -> Expr {
         cerune_ir::ExprKind::FieldAccess {
             field_name, base, ..
         } => ExprKind::FieldAccess {
-            field_name: field_name.clone(),
+            field_name: storage_field_name(field_name),
             base: Box::new(lower_expr(base)),
         },
         cerune_ir::ExprKind::Array(values) => {

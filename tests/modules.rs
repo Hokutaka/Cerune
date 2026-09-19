@@ -522,3 +522,60 @@ fn invalid_imported_constants_fail_before_output_or_artifact_overwrite() {
         assert_eq!(fs::read_to_string(artifact).unwrap(), "keep");
     }
 }
+
+#[test]
+fn enum_exports_keep_variant_names_nominal_types_and_private_payloads() {
+    let w = Workspace::new();
+    w.put("lib.ceru", "pub enum E { A { value: string }, B }");
+    let entry = w.put(
+        "main.ceru",
+        r#"
+        import "lib.ceru" as lib;
+        import "./lib.ceru" as same;
+        x: lib::E = same::E::A { value: "shared" };
+        match x { same::E::A { value: text } => { print(text); }, lib::E::B {} => {} }
+    "#,
+    );
+    let compilation = modules::load(&entry).unwrap();
+    assert_eq!(
+        run_bytecode(&bytecode::lower(&compilation.to_ir().unwrap()).unwrap()).unwrap(),
+        "shared\n"
+    );
+    for (library, source, reason) in [
+        (
+            "enum Hidden { A }",
+            "x: infer = lib::Hidden::A {};",
+            "private type",
+        ),
+        (
+            "type Hidden { n: i64 } pub enum E { A { v: Hidden } }",
+            "",
+            "private type",
+        ),
+        (
+            "pub enum E { A }",
+            "x: infer = lib::E::Unknown {};",
+            "unknown variant",
+        ),
+        (
+            "pub enum E { A { n: i64 } }",
+            "match (lib::E::A { n: 1 }) { lib::E::A { n: lib } => {} }",
+            "import alias",
+        ),
+        (
+            "pub enum E { A }",
+            "print(lib::E::A());",
+            "unknown function",
+        ),
+    ] {
+        w.put("lib.ceru", library);
+        let entry = w.put(
+            "main.ceru",
+            &format!("import \"lib.ceru\" as lib; {source}"),
+        );
+        let result = w.cli("check", &entry, &[]);
+        assert!(!result.status.success());
+        let text = String::from_utf8_lossy(&result.stderr);
+        assert!(text.contains(reason), "{library}: {source}: {text}");
+    }
+}

@@ -24,13 +24,13 @@ pub fn reading(amount: u64) -> Reading {
 
 - Write `import "relative/path.ceru" as alias;` before definitions and statements. An alias is required. `import`, `as`, and `pub` are keywords.
 - Access external types, functions, and constants with `alias::name`. Local definitions use unqualified names. Definitions in separate files may have the same name.
-- Definitions are private to their file by default. Use `pub fn`, `pub type`, or `pub const` to expose each definition independently.
+- Definitions are private to their file by default. Use `pub fn`, `pub type`, `pub enum`, or `pub const` to expose each definition independently.
 - A public type exposes all its fields and defaults; field visibility and opaque types are unsupported. Public parameter/result types and public fields cannot refer to private types, including inside arrays.
 - Public function bodies may call private helpers in the same file. Importers cannot call those helpers directly.
 - Duplicate aliases and collisions between aliases and definitions, bindings, or parameters are diagnosed. Built-in type names, `infer`, `convert`, and `byte_len` cannot be aliases.
 - Multiple aliases may refer to one file. Diamond imports register that physical file once and preserve nominal type identity.
 
-Aliases belong only to their declaring file. Re-exports, wildcard imports, multi-level `a::b::name` paths, and imported variable values are unsupported. Every user of a dependency declares its own import.
+Aliases belong only to their declaring file. A `pub enum` exposes all variants and fields, which cannot contain private types. External variants use `alias::Enum::Variant`; this does not introduce nested module paths. Re-exports, wildcard imports, nested module paths, and imported variable values are unsupported. Every user of a dependency declares its own import.
 
 ## Loading and execution
 

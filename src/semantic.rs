@@ -52,6 +52,8 @@ pub struct FieldDefinition {
 
 #[derive(Debug, Clone)]
 pub struct TypeDefinition {
+    /// 共通の物理フィールドに展開した後も、選択肢とタグの対応を残します。
+    pub variants: Option<Vec<String>>,
     pub id: TypeId,
     pub name: String,
     pub name_span: Span,
@@ -149,14 +151,19 @@ impl SemanticModel {
 }
 
 pub fn check(program: &Program) -> SemanticResult<Bindings> {
-    let model = analyze(program)?;
+    let program = crate::sums::lower(program)?;
+    let model = analyze_lowered(&program)?;
     if !model.constants.is_empty() {
-        crate::ir::builder::build_with_model(program, &model)?;
+        crate::ir::builder::build_with_model(&program, &model)?;
     }
     Ok(model.bindings)
 }
 
 pub fn analyze(program: &Program) -> SemanticResult<SemanticModel> {
+    analyze_lowered(&crate::sums::lower(program)?)
+}
+
+pub(crate) fn analyze_lowered(program: &Program) -> SemanticResult<SemanticModel> {
     let type_names = register_type_names(program)?;
     let type_definitions = resolve_type_definitions(program, &type_names)?;
     let function_names = register_function_names(program)?;
@@ -436,6 +443,8 @@ fn collect_function_calls(
 ) {
     for statement in statements {
         match &statement.kind {
+            StmtKind::Block(body) => collect_function_calls(body, model, calls),
+            StmtKind::Match { .. } => unreachable!("match is elaborated before semantic analysis"),
             StmtKind::Binding { value, .. }
             | StmtKind::Print { value }
             | StmtKind::Call { value } => collect_calls_in_expr(value, model, calls),
@@ -531,6 +540,7 @@ fn collect_calls_in_expr(expr: &Expr, model: &SemanticModel, calls: &mut Vec<(Fu
 fn statements_guarantee_return(statements: &[Stmt]) -> bool {
     statements.iter().any(|statement| match &statement.kind {
         StmtKind::Return { .. } => true,
+        StmtKind::Block(body) => statements_guarantee_return(body),
         StmtKind::If {
             then_body,
             else_body,
@@ -613,6 +623,10 @@ fn resolve_type_definitions(
         }
 
         definitions.push(TypeDefinition {
+            variants: definition
+                .variants
+                .as_ref()
+                .map(|v| v.iter().map(|v| v.name.clone()).collect()),
             id,
             name: definition.name.clone(),
             name_span: definition.name_span,
@@ -680,7 +694,7 @@ fn reject_infinite_types(model: &SemanticModel) -> SemanticResult<()> {
                         format!(
                             "type `{}` has infinite size through field `{}`",
                             model.type_definition(id).name,
-                            field.name
+                            field.name.trim_start_matches('$').replace('$', ".")
                         ),
                         field.type_span,
                     ));
@@ -747,6 +761,12 @@ fn check_statements(
         let bindings = visible_bindings(scopes);
 
         match &statement.kind {
+            StmtKind::Block(body) => {
+                scopes.push(HashMap::new());
+                check_statements(body, scopes, loop_depth, return_type, model)?;
+                scopes.pop();
+            }
+            StmtKind::Match { .. } => unreachable!("match is elaborated before semantic analysis"),
             StmtKind::Binding {
                 mutable,
                 name,
@@ -778,7 +798,12 @@ fn check_statements(
                         if actual != expected {
                             return Err(Diagnostic::new(
                                 format!(
-                                    "type mismatch for `{name}`: expected {}, found {}",
+                                    "type mismatch for `{}`: expected {}, found {}",
+                                    if name.starts_with("$match") {
+                                        "match subject"
+                                    } else {
+                                        name
+                                    },
                                     model.type_name(expected),
                                     model.type_name(actual),
                                 ),
@@ -1255,7 +1280,7 @@ fn type_of_expr_expected(
                     return Err(Diagnostic::new(
                         format!(
                             "field `{}` expects {}, found {}",
-                            field.name,
+                            field.name.trim_start_matches('$').replace('$', "."),
                             model.type_name(field.ty.clone()),
                             model.type_name(actual)
                         ),

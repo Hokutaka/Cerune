@@ -8,6 +8,9 @@ pub enum TokenKind {
     As,
     Pub,
     Const,
+    Enum,
+    Match,
+    FatArrow,
     ColonColon,
     Type,
     Fn,
@@ -119,6 +122,10 @@ pub fn lex(source: &str) -> Result<Vec<Token>, Diagnostic> {
         let offset = i;
 
         let kind = match b {
+            b'=' if bytes.get(i + 1) == Some(&b'>') => {
+                i += 2;
+                TokenKind::FatArrow
+            }
             b'"' => {
                 let (value, end) = string::lex_string(source, offset)?;
                 i = end;
@@ -383,6 +390,8 @@ pub fn lex(source: &str) -> Result<Vec<Token>, Diagnostic> {
                     "as" => TokenKind::As,
                     "pub" => TokenKind::Pub,
                     "const" => TokenKind::Const,
+                    "enum" => TokenKind::Enum,
+                    "match" => TokenKind::Match,
                     "return" => TokenKind::Return,
                     "void" => TokenKind::Void,
                     "print" => TokenKind::Print,

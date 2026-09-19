@@ -89,6 +89,17 @@ Out-of-range integer arithmetic stops instead of wrapping. Types do not mix impl
 
 `infer` requests type inference; it is not a separate value type. `void` describes functions returning no value. See [floating_point.ceru](floating_point.ceru) and [functions.ceru](functions.ceru).
 
+### Sum types: values for each alternative
+
+| Example | Type and behavior |
+| --- | --- |
+| [sum_lookup.ceru](sum_lookup.ceru) | `enum Lookup`: found string/u64 payload or a missing entry |
+| [sum_divide.ceru](sum_divide.ceru) | `enum Division`: success/zero-divisor/overflow values allow processing to continue |
+| [sum_values.ceru](sum_values.ceru) | Array/product payloads, copies, construction order, reassignment inside an arm |
+| [modules/sum_lookup.ceru](modules/sum_lookup.ceru) | Imported public enum, construction, exhaustive branching |
+
+`cargo run -- run examples/sum_lookup.ceru` outputs `空\0\r\n\n6\n未登録\n`. Use `cargo run -- emit-ir examples/sum_lookup.ceru` to inspect variant tags, subject copies, and branches.
+
 ### Compile-time constants
 
 | Example | What it demonstrates |

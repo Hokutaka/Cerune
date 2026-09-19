@@ -37,6 +37,21 @@ pub fn emit(program: &Program) -> String {
         writeln!(output, " [compile-time]").unwrap();
     }
     for definition in &program.type_definitions {
+        if let Some(variants) = &definition.variants {
+            writeln!(
+                output,
+                "enum %{}@{} tags [{}]",
+                definition.name,
+                definition.id.0,
+                variants
+                    .iter()
+                    .enumerate()
+                    .map(|(id, name)| format!("{name}={id}"))
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            )
+            .unwrap();
+        }
         writeln!(output, "type %{}@{} {{", definition.name, definition.id.0).unwrap();
         for field in &definition.fields {
             write!(
@@ -328,6 +343,7 @@ fn emit_expr(expr: &Expr, program: &Program, output: &mut String) {
                 write!(output, " field %{}@{} = ", field.name, field.id.0).unwrap();
                 emit_expr(&field.value, program, output);
                 match field.origin {
+                    FieldValueOrigin::Generated { .. } => output.push_str(" [generated]"),
                     FieldValueOrigin::Explicit { .. } => output.push_str(" [explicit]"),
                     FieldValueOrigin::Default { .. } => output.push_str(" [default]"),
                 }

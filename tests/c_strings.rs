@@ -324,3 +324,14 @@ fn all_current_examples_run_as_generated_c() {
         }
     }
 }
+
+#[path = "support/sum_cases.rs"]
+mod sum_cases;
+#[test]
+fn enum_storage_is_initialized_and_copies_preserve_payloads() {
+    let Some(native) = NativeC::new() else { return };
+    for &(source, expected) in sum_cases::CASES {
+        assert_eq!(run_vm(source).unwrap(), expected);
+        native.matches_vm(source);
+    }
+}

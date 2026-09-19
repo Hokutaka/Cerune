@@ -11,6 +11,7 @@ enum Kind {
 struct Symbol {
     name: String,
     public: bool,
+    is_enum: bool,
 }
 #[derive(Default)]
 struct Names {
@@ -48,6 +49,7 @@ pub(super) fn resolve(units: &[Unit]) -> Result<Program, Diagnostic> {
                 Kind::Type => &mut scope.types,
             };
             let symbol = Symbol {
+                is_enum: matches!(item, Item::TypeDefinition(d) if d.variants.is_some()),
                 name: if index == 0 && kind == Kind::Function && name == "main" {
                     name.clone()
                 } else {
@@ -93,6 +95,13 @@ pub(super) fn resolve(units: &[Unit]) -> Result<Program, Diagnostic> {
                 Item::TypeDefinition(d) => {
                     let public = names[index].types[&d.name].public;
                     d.name = names[index].types[&d.name].name.clone();
+                    if let Some(variants) = &mut d.variants {
+                        for variant in variants {
+                            for field in &mut variant.fields {
+                                resolver.ty(&mut field.type_ref, public)?;
+                            }
+                        }
+                    }
                     for field in &mut d.fields {
                         resolver.ty(&mut field.type_ref, public)?;
                         if let Some(default) = &mut field.default {
@@ -167,6 +176,22 @@ impl Resolver<'_> {
         Ok(symbol.name.clone())
     }
 
+    fn constructor_name(&self, path: &str, span: Span) -> Result<String, Diagnostic> {
+        if let Some((prefix, variant)) = path.rsplit_once("::")
+            && (prefix.contains("::")
+                || self.names[self.current]
+                    .types
+                    .get(prefix)
+                    .is_some_and(|s| s.is_enum))
+        {
+            return Ok(format!(
+                "{}::{variant}",
+                self.name(prefix, span, Kind::Type, false)?
+            ));
+        }
+        self.name(path, span, Kind::Type, false)
+    }
+
     fn ty(&self, ty: &mut TypeRef, public: bool) -> Result<(), Diagnostic> {
         match &mut ty.kind {
             TypeRefKind::Named(name) if Type::from_name(name).is_none() && name != "infer" => {
@@ -203,6 +228,25 @@ impl Resolver<'_> {
 
     fn statement(&self, statement: &mut Stmt) -> Result<(), Diagnostic> {
         match &mut statement.kind {
+            StmtKind::Block(body) => self.statements(body)?,
+            StmtKind::Match { value, arms } => {
+                self.expr(value)?;
+                for arm in arms {
+                    let (name, variant) = arm.variant.rsplit_once("::").ok_or_else(|| {
+                        Diagnostic::new("a match arm requires Enum::Variant", arm.variant_span)
+                    })?;
+                    arm.variant = format!(
+                        "{}::{variant}",
+                        self.name(name, arm.variant_span, Kind::Type, false)?
+                    );
+                    for field in &arm.fields {
+                        if field.binding != "_" {
+                            self.binding(&field.binding, field.binding_span)?;
+                        }
+                    }
+                    self.statements(&mut arm.body)?;
+                }
+            }
             StmtKind::Binding {
                 name,
                 type_spec,
@@ -285,7 +329,7 @@ impl Resolver<'_> {
                 base,
                 fields,
             } => {
-                *type_name = self.name(type_name, *type_name_span, Kind::Type, false)?;
+                *type_name = self.constructor_name(type_name, *type_name_span)?;
                 if let Some(base) = base {
                     self.expr(base)?;
                 }

@@ -33,6 +33,7 @@ Lexer / Parser
 AST
       ↓
 Cerune IR Builder
+  - shared enum/match expansion
   - semantic validation
   - type resolution
   - contextual float resolution

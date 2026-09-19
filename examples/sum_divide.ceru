@@ -1,0 +1,24 @@
+// 回復できる条件は、演算を実行する前に値として返します。
+// 既存のゼロ除算・桁あふれによる実行時停止を捕捉する機能ではありません。
+enum Division {
+    Success { quotient: i64 },
+    ZeroDivisor,
+    Overflow,
+}
+fn divide(left: i64, right: i64) -> Division {
+    if right == 0 { return Division::ZeroDivisor {}; }
+    if left == -9223372036854775808 && right == -1 {
+        return Division::Overflow {};
+    }
+    return Division::Success { quotient: left / right };
+}
+fn show(value: Division) -> void {
+    match value {
+        Division::Success { quotient: n } => { print(n); },
+        Division::ZeroDivisor {} => { print("ゼロでは割れません"); },
+        Division::Overflow {} => { print("結果が範囲外です"); },
+    }
+}
+results: [Division; 3] = [divide(90, 2), divide(90, 0), divide(-9223372036854775808, -1)];
+for (mut i: i64 = 0; i < 3; i = i + 1) { show(results[i]); }
+print("処理を続行");

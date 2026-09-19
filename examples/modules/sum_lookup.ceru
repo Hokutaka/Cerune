@@ -1,0 +1,10 @@
+import "lookup_values.ceru" as values;
+fn show(result: values::Lookup) -> void {
+    match result {
+        values::Lookup::Found { text: text } => { print(text); },
+        values::Lookup::Missing {} => { print("未登録"); },
+    }
+}
+show(values::lookup("sky"));
+show(values::EMPTY);
+show(values::Lookup::Found { text: "直接" });

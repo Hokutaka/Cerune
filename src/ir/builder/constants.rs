@@ -151,6 +151,7 @@ impl Builder<'_> {
                 .type_definitions
                 .iter()
                 .map(|d| TypeDefinition {
+                    variants: d.variants.clone(),
                     id: TypeId(d.id.0),
                     name: d.name.clone(),
                     span: d.span,
@@ -255,7 +256,7 @@ impl Builder<'_> {
                         .map(|(f, v)| FieldValue {
                             id: FieldId(f.id.0),
                             name: f.name.clone(),
-                            origin: FieldValueOrigin::Explicit { span },
+                            origin: FieldValueOrigin::Generated { span },
                             value: self.freeze(v, &ir_type(f.ty.clone()), span),
                         })
                         .collect(),

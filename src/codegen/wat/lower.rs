@@ -197,10 +197,16 @@ fn lower_function(
         );
     }
     context.lower_statements(&function.body, &mut instructions);
-    if matches!(function.return_type, cerune_ir::ReturnType::Void)
-        && !matches!(instructions.last(), Some(Instruction::Return))
-    {
-        instructions.push(Instruction::Return);
+    if !matches!(instructions.last(), Some(Instruction::Return)) {
+        // 全分岐がreturnしても、Wasmの型検証ではifの後は到達可能です。
+        // 意味解析済みの値を返す関数に、末尾到達がないことを明示します。
+        instructions.push(
+            if matches!(function.return_type, cerune_ir::ReturnType::Void) {
+                Instruction::Return
+            } else {
+                Instruction::Unreachable
+            },
+        );
     }
     *next_address = context.next_address;
 

@@ -89,6 +89,17 @@ cargo run -- run examples/u64_values.ceru
 
 `infer`は独立した値の型ではなく、型を推論する指定です。`void`は値を返さない関数の戻り方を表します。[floating_point.ceru](floating_point.ceru)と[functions.ceru](functions.ceru)で確認できます。
 
+### 直和型：選択肢に応じた値
+
+| サンプル | 型・確認すること |
+| --- | --- |
+| [sum_lookup.ceru](sum_lookup.ceru) | `enum Lookup`：文字列とu64を持つ成功、値を持たない未登録 |
+| [sum_divide.ceru](sum_divide.ceru) | `enum Division`：成功値・ゼロ除算・範囲外を値で返して処理を続ける |
+| [sum_values.ceru](sum_values.ceru) | 配列・構造体を持つ選択肢、コピー、構築順と分岐内の再代入 |
+| [modules/sum_lookup.ceru](modules/sum_lookup.ceru) | 公開enumのimport・構築・網羅的な分岐 |
+
+`cargo run -- run examples/sum_lookup.ceru`は`空\0\r\n\n6\n未登録\n`を出力します。`cargo run -- emit-ir examples/sum_lookup.ceru`で選択肢とタグ、対象コピー、分岐を確認できます。
+
 ### コンパイル時定数
 
 | サンプル | 確認すること |

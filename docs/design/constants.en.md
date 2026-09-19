@@ -19,7 +19,7 @@ Export a constant with `pub const LIMIT: u64 = 128;` and refer to it as `setting
 
 | Area | Contract |
 | --- | --- |
-| Values | All integer types, f32/f64, bool, string, fixed arrays, structs, and nesting |
+| Values | All integer types, f32/f64, bool, string, fixed arrays, structs, sums, and nesting |
 | Expressions | Literals, constants, arithmetic/comparison/bitwise operations, explicit conversions, short circuiting, `byte_len`, arrays/indexing, struct construction/updates/field access |
 | Rejected | Runtime variable references, ordinary function calls, output and other effects |
 | Names | No assignment. Collisions with types, functions, aliases, variables, or parameters in the same file are diagnosed |
