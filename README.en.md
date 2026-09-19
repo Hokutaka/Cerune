@@ -4,7 +4,7 @@
 
 [日本語](README.md) | English
 
-Cerune is an experimental language for tracing computations through types, intermediate representations, and generated code. It prioritizes observability while keeping inspection separate from interference with compiler internals.
+Cerune is an experimental programming language with static typing, VM execution, and code generation in multiple formats.
 
 ## Try It
 
@@ -38,16 +38,30 @@ During development, replace `cerune` with `cargo run --quiet --`.
 
 ## Capabilities
 
-| Category | Support |
+### Types
+
+| Category | Types / operations |
 | --- | --- |
-| Integers | `i8`, `i16`, `i32`, `i64`; `u8`, `u16`, `u32`, `u64` |
-| Other types | `bool`, `f32`, `f64`, immutable UTF-8 `string` |
-| Variables and operators | Static typing, `infer`, `mut`, arithmetic, comparisons, bit operations, short-circuit evaluation, explicit numeric conversion |
-| Data structures | Structs, fixed arrays, nesting, value copies, array-element updates |
-| Functions and control flow | Typed functions, `return`, `if` / `else`, `while`, `for`, `break` / `continue` |
+| Signed integers | `i8`, `i16`, `i32`, `i64` |
+| Unsigned integers | `u8`, `u16`, `u32`, `u64` |
+| Floating point | `f32`, `f64` |
+| Boolean | `bool` (`true` / `false`) |
+| Strings | Immutable UTF-8 `string`; printing, equality, byte count with `byte_len` |
+
+### Syntax and Operations
+
+| Feature | Support |
+| --- | --- |
+| Variables | Explicit types or inference with `infer`; immutable by default, reassignable with `mut` |
+| Operators | Arithmetic, remainder, comparisons, bit operations, logical negation, short-circuit evaluation |
+| Numeric conversion | Explicit value-preserving conversions such as `f64(x)` / `convert<f64>(x)` |
+| Structs | Named types, field access and defaults, nesting, value copies |
+| Arrays | Fixed length, nesting, element access and updates, value copies |
+| Functions | Typed parameters and returns, `void`, `return`; strings, structs, and arrays can also be passed and returned |
+| Entry point | Top-level statements or `fn main() -> void` (not both) |
+| Control flow | `if` / `else`, `while`, `for`, `break` / `continue` |
 | Modules | Explicit imports, namespaces, `pub` visibility |
-| Strings | Printing, equality, UTF-8 byte length, use in functions, arrays, and structs |
-| Diagnostics | Compare failure reasons, source locations, and prior output across routes |
+| Output and diagnostics | `print(expr);`, error reasons, source locations, output produced before failure |
 
 **Arithmetic rules:** No implicit numeric conversions. Integer overflow, invalid integer division, out-of-bounds access, and conversions that cannot preserve the value stop execution. Floating-point arithmetic rounds.
 
@@ -55,11 +69,11 @@ During development, replace `cerune` with `cargo run --quiet --`.
 
 ## Execution and Output
 
-A shared Cerune IR feeds each output route. External compilers and linkers are selected by the caller.
-
 | Command | Result / artifact | Use / target |
 | --- | --- | --- |
-| `check` / `run` | Syntax and type checking / VM execution | Cerune source (`.ceru`) |
+| `check` | Syntax and type checking | Validate Cerune source (`.ceru`) |
+| `run` | VM execution | Run Cerune source (`.ceru`) |
+| `emit-sources` | Source manifest (JSON) | Export loaded file names and contents |
 | `emit-ir` | Cerune IR (`.ceir`) | Inspect types and operations |
 | `emit-bytecode` | Bytecode text (`.cebc`) | Inspect instructions |
 | `emit-c` | C (`.c`) | GCC, Clang, or another C compiler |
@@ -67,7 +81,7 @@ A shared Cerune IR feeds each output route. External compilers and linkers are s
 | `emit-qbe` | QBE IR (`.ssa`) | QBE; Linux x86-64 |
 | `emit-wat` | WebAssembly Text (`.wat`) | WebAssembly tools and a host |
 | `emit-asm` | Assembly (`.s`) | Windows / Linux x86-64 |
-| `emit-obj` | Cerune-encoded ELF / COFF (`.o` / `.obj`) | External linker; requires `--target` and `-o` |
+| `emit-obj` | ELF / COFF object (`.o` / `.obj`) | External linker; requires `--target` and `-o` |
 
 Text goes to stdout; use `-o` to save it. LLVM / QBE string output and LLVM checked numeric operations require `--target`. WAT uses host functions for output and diagnostics.
 
@@ -77,6 +91,7 @@ Text goes to stdout; use `-o` to save it. LLVM / QBE string output and LLVM chec
 | --- | --- |
 | Run all examples (PowerShell) | `.\scripts\run-examples.ps1` |
 | Run all examples (WSL / Bash) | `bash scripts/run-examples.sh` |
+| Filter examples | PowerShell: `-Pattern "matrix*.ceru"`; Bash: `--pattern 'matrix*.ceru'` |
 | Check expected example output | `cargo test --test examples` |
 | Run fmt, Clippy, and all tests (WSL / Bash) | `bash scripts/test.sh` |
 

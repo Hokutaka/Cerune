@@ -4,7 +4,7 @@
 
 日本語 | [English](README.en.md)
 
-Ceruneは、型・中間表現・生成コードまで計算の変換を追える実験用言語です。可観測性を重視し、観測と内部への干渉を区別します。
+Ceruneは、静的型付け・VM実行・複数形式へのコード生成に対応する実験用プログラミング言語です。
 
 ## まず試す
 
@@ -38,16 +38,30 @@ cerune emit-c examples/floating_point.ceru -o floating_point.c
 
 ## 機能
 
-| 分類 | 対応内容 |
+### 型
+
+| 分類 | 型・操作 |
 | --- | --- |
-| 整数 | `i8`・`i16`・`i32`・`i64`、`u8`・`u16`・`u32`・`u64` |
-| その他の型 | `bool`、`f32`・`f64`、不変なUTF-8の`string` |
-| 変数・演算 | 静的型付け、`infer`、`mut`、算術・比較・ビット演算、短絡評価、明示的な数値変換 |
-| データ構造 | 構造体、固定長配列、入れ子、値コピー、配列要素の更新 |
-| 関数・制御 | 型付き関数、`return`、`if` / `else`、`while`・`for`、`break` / `continue` |
+| 符号付き整数 | `i8`・`i16`・`i32`・`i64` |
+| 符号なし整数 | `u8`・`u16`・`u32`・`u64` |
+| 浮動小数点 | `f32`・`f64` |
+| 真偽値 | `bool`（`true` / `false`） |
+| 文字列 | 不変なUTF-8の`string`。表示、等値比較、`byte_len`でバイト数を取得 |
+
+### 構文・操作
+
+| 機能 | 対応内容 |
+| --- | --- |
+| 変数 | 型指定・`infer`による型推論。既定は再代入不可、`mut`で再代入可 |
+| 演算 | 算術・剰余・比較・ビット演算、論理否定、短絡評価 |
+| 数値変換 | `f64(x)` / `convert<f64>(x)`など、値を保つ明示変換 |
+| 構造体 | 名前付きの型、フィールド参照・既定値、入れ子、値コピー |
+| 配列 | 固定長配列、入れ子、要素の参照・更新、値コピー |
+| 関数 | 型付き引数・戻り値、`void`、`return`。文字列・構造体・配列も受け渡し可能 |
+| 実行開始 | トップレベル実行文、または`fn main() -> void`（併用不可） |
+| 制御構文 | `if` / `else`、`while`・`for`、`break` / `continue` |
 | モジュール | 明示的なimport、名前空間、`pub`による公開範囲 |
-| 文字列 | 表示、等値比較、UTF-8バイト数、関数・配列・構造体での受け渡し |
-| 診断 | 停止理由、ソース位置、停止前の出力を各経路で照合 |
+| 表示・診断 | `print(expr);`、エラーの理由・ソース位置・停止前の出力 |
 
 **計算の規則：** 暗黙の数値変換はありません。整数の桁あふれ、不正な整数除算、範囲外参照、値を保てない変換では停止します。浮動小数点計算には丸めがあります。
 
@@ -55,19 +69,19 @@ cerune emit-c examples/floating_point.ceru -o floating_point.c
 
 ## 実行と出力
 
-共通のCerune IRから各成果物を生成します。コンパイル・リンク用の外部ツールは利用側で選びます。
-
 | コマンド | 結果・成果物 | 用途・対象 |
 | --- | --- | --- |
-| `check` / `run` | 構文・型検査 / VM実行 | Ceruneソース（`.ceru`） |
-| `emit-ir` | Cerune IR（`.ceir`） | 型・演算の観測 |
-| `emit-bytecode` | bytecodeテキスト（`.cebc`） | 命令列の観測 |
+| `check` | 構文・型検査 | Ceruneソース（`.ceru`）を検証 |
+| `run` | VM実行 | Ceruneソース（`.ceru`）を実行 |
+| `emit-sources` | ソース一覧（JSON） | 読み込んだファイル名・本文を出力 |
+| `emit-ir` | Cerune IR（`.ceir`） | 型・演算を確認 |
+| `emit-bytecode` | bytecodeテキスト（`.cebc`） | 命令列を確認 |
 | `emit-c` | C（`.c`） | GCC / Clangなど |
 | `emit-llvm` | LLVM IR（`.ll`） | LLVM / Clang、Windows / Linux x86-64 |
 | `emit-qbe` | QBE IR（`.ssa`） | QBE、Linux x86-64 |
 | `emit-wat` | WebAssembly Text（`.wat`） | WebAssembly用ツールとホスト |
 | `emit-asm` | アセンブリ（`.s`） | Windows / Linux x86-64 |
-| `emit-obj` | 自前符号化したELF / COFF（`.o` / `.obj`） | 外部リンカ。`--target`・`-o`必須 |
+| `emit-obj` | ELF / COFFオブジェクト（`.o` / `.obj`） | 外部リンカ。`--target`・`-o`必須 |
 
 テキストは標準出力へ、`-o`でファイルへ保存します。LLVM・QBEの文字列出力とLLVMの検査付き数値演算には`--target`が必要です。WATは出力・診断用のホスト関数を使います。
 
@@ -77,6 +91,7 @@ cerune emit-c examples/floating_point.ceru -o floating_point.c
 | --- | --- |
 | サンプルを一括実行（PowerShell） | `.\scripts\run-examples.ps1` |
 | サンプルを一括実行（WSL / Bash） | `bash scripts/run-examples.sh` |
+| サンプルを絞り込む | PowerShell：`-Pattern "matrix*.ceru"`、Bash：`--pattern 'matrix*.ceru'` |
 | サンプルの期待値を検証 | `cargo test --test examples` |
 | fmt・Clippy・全テスト（WSL / Bash） | `bash scripts/test.sh` |
 
