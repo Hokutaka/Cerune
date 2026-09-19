@@ -116,6 +116,7 @@ primary     := "true"
              | IDENT
              | IDENT "(" arguments? ")"
              | IDENT "{" field_value ("," field_value)* ","? "}"
+             | IDENT "{" ".." expression ("," field_value)* ","? "}"
              | "(" expression ")"
 
 arguments   := expression ("," expression)*
@@ -210,7 +211,7 @@ print(point.x);
 
 Every field type is explicit and cannot use `infer`. A field without a default is required when constructing a value. Fields are named, so construction order may differ from definition order. Trailing commas are accepted.
 
-Explicit field expressions are evaluated in source order. Defaults for omitted fields are then evaluated in definition order. Cerune IR exposes this order and whether each value was explicit or came from a default.
+For construction without a base, explicit field expressions are evaluated in source order. Defaults for omitted fields are then evaluated in definition order. Cerune IR exposes this order and whether each value was explicit or came from a default.
 
 `.` accesses a field and may be chained as in `segment.start.x`. Fields cannot be assigned directly. To make a change, construct a new value and reassign the whole `mut` binding.
 
@@ -234,6 +235,18 @@ if (Flags { enabled: true, }).enabled {
 Empty product types, empty construction expressions, infinitely sized recursion by value, product comparisons, and printing a whole product value are not currently supported.
 
 See [Named product type design](../design/product-types.en.md) for the detailed design and backend representations.
+
+### Product update expressions
+
+`Point { ..original, x: 3 }` creates a new `Point` by replacing only `x` in `original`.
+
+- Specify exactly one base first. It is evaluated once and copied, and must have the specified nominal type.
+- Evaluate subsequent field expressions in source order. Inherit omitted fields from the base without re-evaluating defaults.
+- `Point { ..original }` and trailing commas are supported. The base is evaluated even when all fields are replaced.
+- Unknown/duplicate fields, type mismatches, and late/duplicate bases are diagnosed. Direct field assignment is not permitted.
+- The original and copied arrays remain independent. Failure skips subsequent expressions and assignment, retaining prior output and the failing expression's location.
+
+See the [syntax and evaluation design](../design/product-updates.en.md) and [example](../../examples/product_update.ceru).
 
 ## Fixed arrays
 

@@ -516,6 +516,12 @@ fn module_cli_artifacts_execute_with_the_same_values_order_and_failure_origins()
             "18446744073709551615\n2\n観測\0\r\n\ntrue\nfalse\n計算\n5\n",
             None,
         ),
+        ("product_update.ceru", "計算\n42\n5\n観測\0\r\n\n", None),
+        (
+            "product_update_failure.ceru",
+            "開始\n計算\n",
+            Some(("division-by-zero", 2, "value / divisor")),
+        ),
         (
             "single.ceru",
             "18446744073709551615\n2\n観測\0\r\n\ntrue\nfalse\n計算\n5\n",

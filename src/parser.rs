@@ -1084,9 +1084,26 @@ impl Parser {
             ));
         }
 
+        // 元の値を先頭に限定し、表記順と評価順を一致させます。
+        let base = if matches!(&self.peek().kind, TokenKind::DotDot) {
+            self.advance();
+            let value = self.parse_expression()?;
+            if !matches!(&self.peek().kind, TokenKind::RightBrace) {
+                self.expect_simple(TokenKind::Comma)?;
+            }
+            Some(Box::new(value))
+        } else {
+            None
+        };
         let mut fields = Vec::new();
 
-        loop {
+        while !matches!(&self.peek().kind, TokenKind::RightBrace) {
+            if matches!(&self.peek().kind, TokenKind::DotDot) {
+                return Err(Diagnostic::new(
+                    "update base must appear once, before all fields",
+                    self.peek().span,
+                ));
+            }
             let (name, name_span) = self.expect_identifier()?;
             self.expect_simple(TokenKind::Colon)?;
             let value = self.parse_expression()?;
@@ -1114,6 +1131,7 @@ impl Parser {
             kind: ExprKind::Construct {
                 type_name,
                 type_name_span,
+                base,
                 fields,
             },
             span: self.span(type_name_span.start(), closing.end()),
@@ -1178,8 +1196,9 @@ impl Parser {
     fn starts_construct(&self) -> bool {
         self.allow_construct
             && matches!(&self.peek().kind, TokenKind::LeftBrace)
-            && matches!(&self.peek_n(1).kind, TokenKind::Identifier(_))
-            && matches!(&self.peek_n(2).kind, TokenKind::Colon)
+            && (matches!(&self.peek_n(1).kind, TokenKind::DotDot)
+                || (matches!(&self.peek_n(1).kind, TokenKind::Identifier(_))
+                    && matches!(&self.peek_n(2).kind, TokenKind::Colon)))
     }
 
     fn advance(&mut self) -> &Token {

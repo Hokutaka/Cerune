@@ -387,12 +387,17 @@ impl Builder<'_> {
             ast::ExprKind::Construct {
                 type_name,
                 type_name_span,
+                base,
                 fields,
             } => {
                 let type_id = self.model.resolve_type_name(type_name, *type_name_span)?;
                 let definition = self.model.type_definition(type_id);
                 let mut supplied = vec![false; definition.fields.len()];
                 let mut values = Vec::with_capacity(definition.fields.len());
+                let base = base
+                    .as_ref()
+                    .map(|base| self.build_expr(base, None, bindings).map(Box::new))
+                    .transpose()?;
 
                 // 明示値は、ソースに書かれた順番のまま評価順として保存します。
                 for field_value in fields {
@@ -419,7 +424,7 @@ impl Builder<'_> {
                 // 省略された既定値は、その後に型定義順で評価します。
                 let default_bindings = HashMap::new();
                 for field in &definition.fields {
-                    if supplied[field.id.0] {
+                    if base.is_some() || supplied[field.id.0] {
                         continue;
                     }
                     let default = field
@@ -443,6 +448,7 @@ impl Builder<'_> {
                 ExprKind::Construct {
                     type_id: TypeId(type_id.0),
                     type_name: type_name.clone(),
+                    base,
                     fields: values,
                 }
             }

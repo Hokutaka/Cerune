@@ -65,6 +65,22 @@ fn statements(body: &mut [Statement], temporaries: &mut Vec<Type>) {
 }
 
 fn expression(expr: &mut Expr, temporaries: &mut Vec<Type>) {
+    if let ExprKind::Construct {
+        base: Some(base),
+        fields,
+        copy_temp,
+        ..
+    } = &mut expr.kind
+    {
+        expression(base, temporaries);
+        for field in fields {
+            expression(&mut field.value, temporaries);
+        }
+        // Cのカンマ式でコピー、明示フィールド、結果の順序を固定します。
+        *copy_temp = Some(temporaries.len());
+        temporaries.push(expr.ty.clone());
+        return;
+    }
     let mut children: Vec<&mut Expr> = match &mut expr.kind {
         ExprKind::Binary { left, right, .. }
         | ExprKind::Index {
@@ -164,7 +180,9 @@ fn observable(expr: &Expr) -> bool {
         ExprKind::StringByteLength { value: base } | ExprKind::FieldAccess { base, .. } => {
             observable(base)
         }
-        ExprKind::Construct { fields, .. } => fields.iter().any(|field| observable(&field.value)),
+        ExprKind::Construct { base, fields, .. } => {
+            base.is_some() || fields.iter().any(|field| observable(&field.value))
+        }
         ExprKind::Array(values) => values.iter().any(observable),
         ExprKind::Boolean(_)
         | ExprKind::String(_)

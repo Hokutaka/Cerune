@@ -1,0 +1,10 @@
+import "values.ceru" as values;
+
+original: values::Reading = values::reading(42);
+changed: values::Reading = values::Reading {
+    ..values::reading(original.amount),
+    amount: values::divide(10, 2),
+};
+print(original.amount);
+print(changed.amount);
+print(changed.label);

@@ -113,9 +113,10 @@ fn string_expr(expr: &Expr) -> Option<Span> {
             base: left,
             index: right,
         } => string_expr(left).or_else(|| string_expr(right)),
-        ExprKind::Construct { fields, .. } => {
-            fields.iter().find_map(|field| string_expr(&field.value))
-        }
+        ExprKind::Construct { base, fields, .. } => base
+            .as_ref()
+            .and_then(|base| string_expr(base))
+            .or_else(|| fields.iter().find_map(|field| string_expr(&field.value))),
         ExprKind::Array(values)
         | ExprKind::Call {
             arguments: values, ..

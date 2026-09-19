@@ -80,4 +80,48 @@ pub const FAILURES: &[(&str, &str)] = &[
         "type P { marker: bool, value: i64 = 1 / 0, } p: P = P { marker: true, };",
         "division-by-zero",
     ),
+    (UPDATE_FAILURES[0].0, UPDATE_FAILURES[0].1),
+    (UPDATE_FAILURES[1].0, UPDATE_FAILURES[1].1),
+    (UPDATE_FAILURES[2].0, UPDATE_FAILURES[2].1),
+    (UPDATE_FAILURES[3].0, UPDATE_FAILURES[3].1),
+];
+
+// source、停止理由、停止前の出力、失敗する式を固定します。
+pub const UPDATE_FAILURES: &[(&str, &str, &str, &str)] = &[
+    (
+        r#"type P { x: i64, }
+        fn base() -> P { print("base"); return P { x: 1 / 0 }; }
+        fn later() -> i64 { print("later"); return 2; }
+        p: P = P { ..base(), x: later() };"#,
+        "division-by-zero",
+        "base\n",
+        "1 / 0",
+    ),
+    (
+        r#"type P { x: i64, y: i64, }
+        fn base() -> P { print("base"); return P { x: 0, y: 0 }; }
+        fn field() -> i64 { print("field"); return 1 / 0; }
+        fn later() -> i64 { print("later"); return 2; }
+        p: P = P { ..base(), y: field(), x: later() };"#,
+        "division-by-zero",
+        "base\nfield\n",
+        "1 / 0",
+    ),
+    (
+        r#"type P { x: i64, }
+        fn base() -> P { print("base"); return P { x: 0 }; }
+        mut a: [P; 1] = [P { x: 0 }];
+        a[1] = P { ..base(), x: 1 / 0 };"#,
+        "array-index-out-of-bounds",
+        "",
+        "[1]",
+    ),
+    (
+        r#"type P { x: i64, }
+        fn later() -> i64 { print("later"); return 2; }
+        p: P = P { ..[P { x: 0 }][1], x: later() };"#,
+        "array-index-out-of-bounds",
+        "",
+        "[P { x: 0 }][1]",
+    ),
 ];

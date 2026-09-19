@@ -732,9 +732,21 @@ impl Lowerer<'_> {
                 Value::Scalar(scalar_type(&expr.ty))
             }
             cerune_ir::ExprKind::Construct {
-                type_id, fields, ..
+                type_id,
+                base,
+                fields,
+                ..
             } => {
                 let destination = self.allocate_aggregate(&expr.ty);
+                if let Some(base) = base {
+                    let Value::Aggregate {
+                        base_slot: source, ..
+                    } = self.lower_expr(base, depth)
+                    else {
+                        unreachable!("update base has the same aggregate type")
+                    };
+                    self.copy_aggregate(type_id.0, source, destination);
+                }
                 for field in fields {
                     let definition = &self.program.type_definitions[type_id.0].fields[field.id.0];
                     let value = self.lower_expr(&field.value, depth);
@@ -1357,11 +1369,12 @@ fn count_expr_nodes(expr: &cerune_ir::Expr) -> usize {
         | cerune_ir::ExprKind::Logical { left, right, .. } => {
             1 + count_expr_nodes(left) + count_expr_nodes(right)
         }
-        cerune_ir::ExprKind::Construct { fields, .. } => {
-            1 + fields
-                .iter()
-                .map(|field| count_expr_nodes(&field.value))
-                .sum::<usize>()
+        cerune_ir::ExprKind::Construct { base, fields, .. } => {
+            1 + base.as_ref().map_or(0, |base| count_expr_nodes(base))
+                + fields
+                    .iter()
+                    .map(|field| count_expr_nodes(&field.value))
+                    .sum::<usize>()
         }
         cerune_ir::ExprKind::FieldAccess { base, .. } => 1 + count_expr_nodes(base),
         cerune_ir::ExprKind::Array(values) => {
@@ -1445,9 +1458,14 @@ fn required_expr_scratch(expr: &cerune_ir::Expr, depth: usize) -> usize {
         cerune_ir::ExprKind::Binary { left, right, .. } => (depth + 1)
             .max(required_expr_scratch(left, depth + 1))
             .max(required_expr_scratch(right, depth + 1)),
-        cerune_ir::ExprKind::Construct { fields, .. } => fields
+        cerune_ir::ExprKind::Construct { base, fields, .. } => base
             .iter()
-            .map(|field| required_expr_scratch(&field.value, depth))
+            .map(|base| required_expr_scratch(base, depth))
+            .chain(
+                fields
+                    .iter()
+                    .map(|field| required_expr_scratch(&field.value, depth)),
+            )
             .max()
             .unwrap_or(0),
         cerune_ir::ExprKind::Call { arguments, .. } => arguments

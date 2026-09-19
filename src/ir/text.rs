@@ -291,9 +291,15 @@ fn emit_expr(expr: &Expr, program: &Program, output: &mut String) {
         ExprKind::Construct {
             type_id,
             type_name,
+            base,
             fields,
         } => {
             write!(output, "construct %{type_name}@{} {{", type_id.0).unwrap();
+            if let Some(base) = base {
+                output.push_str(" base = ");
+                emit_expr(base, program, output);
+                output.push_str(" [copy];");
+            }
             for field in fields {
                 write!(output, " field %{}@{} = ", field.name, field.id.0).unwrap();
                 emit_expr(&field.value, program, output);

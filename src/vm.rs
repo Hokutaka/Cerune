@@ -507,7 +507,11 @@ fn execute_frame_inner(
                 at_instruction(check_array_path(current, path, indices), pc)?;
             }
 
-            InstructionKind::Construct { type_id, fields } => {
+            InstructionKind::Construct {
+                type_id,
+                fields,
+                has_base,
+            } => {
                 let definition = program.type_definitions.get(*type_id).ok_or_else(|| {
                     VmError::new(VmErrorKind::InvalidType { type_id: *type_id }, pc)
                 })?;
@@ -541,6 +545,31 @@ fn execute_frame_inner(
                     values[field.field_id] = Some(value);
                 }
 
+                if *has_base {
+                    let base = at_instruction(pop_value(&mut stack), pc)?;
+                    let actual = base.ty();
+                    if actual != Type::Named(*type_id) {
+                        return Err(VmError::new(
+                            VmErrorKind::TypeMismatch {
+                                expected: Type::Named(*type_id),
+                                actual,
+                            },
+                            pc,
+                        ));
+                    }
+                    let Value::Aggregate {
+                        fields: inherited, ..
+                    } = base
+                    else {
+                        unreachable!("named values are aggregates")
+                    };
+                    // Load/引数受け渡しで複製した値を使い、元のスロットには触れません。
+                    for (slot, value) in values.iter_mut().zip(inherited) {
+                        if slot.is_none() {
+                            *slot = Some(value);
+                        }
+                    }
+                }
                 let values = values
                     .into_iter()
                     .enumerate()

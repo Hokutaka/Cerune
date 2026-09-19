@@ -241,6 +241,8 @@ pub enum ExprKind {
     Construct {
         type_name: String,
         type_name_span: Span,
+        /// 更新式の先頭で一度だけ評価する、同じ型の元の値です。
+        base: Option<Box<Expr>>,
         fields: Vec<FieldValue>,
     },
     FieldAccess {

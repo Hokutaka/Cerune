@@ -7,6 +7,8 @@
 | [values.ceru](values.ceru) | `u64`, `string`, product, public functions | Public type defaults and private helpers called by public functions |
 | [main.ceru](main.ceru) | `values::Reading`, fixed arrays, copies, short circuiting | Maximum u64, independent reassignment, string bytes/equality, skipped right operand |
 | [single.ceru](single.ceru) | The same computation in one file | Identical values and output order before and after splitting |
+| [product_update.ceru](product_update.ceru) | Update a public type | Preserve the original and inherit its label |
+| [product_update_failure.ceru](product_update_failure.ceru) | Division by zero while constructing the base | Skip subsequent fields and report the definition-file failure |
 | [failure.ceru](failure.ceru) | Successful call followed by division by zero | Prior output and the definition-file division origin |
 | [array_update.ceru](array_update.ceru) | Array assignment target check and a public function call | An invalid index prevents evaluation of the right-hand call |
 
@@ -17,7 +19,9 @@ cargo run -- run examples/modules/failure.ceru --diagnostic-format runtime-v1
 cargo run -- emit-sources examples/modules/main.ceru -o target/module-sources.json
 ```
 
-Both normal examples produce `18446744073709551615\n2\n観測\0\r\n\ntrue\nfalse\n計算\n5\n` in escaped-byte notation. Loading `values.ceru` does not execute `announce`; only an evaluated call to `divide` prints `計算`.
+`main.ceru` and `single.ceru` produce `18446744073709551615\n2\n観測\0\r\n\ntrue\nfalse\n計算\n5\n` in escaped-byte notation. Loading `values.ceru` does not execute `announce`; only an evaluated call to `divide` prints `計算`.
+
+`product_update.ceru` outputs `計算\n42\n5\n観測\0\r\n\n`. `product_update_failure.ceru` stops with `division-by-zero` and `file=2` after `開始\n計算\n`, without evaluating the subsequent `amount` field.
 
 The failure example intentionally exits with code 1 after `開始\n計算\n5\n計算\n`, reporting `code=division-by-zero` and `file=2`. Human-readable diagnostics identify `values.ceru:17:12`, the expression `value / divisor`. NodeIds and byte ranges may change with edits and line endings. Distinguish success, expected failure, and unexpected failure.
 

@@ -200,6 +200,8 @@ pub enum ExprKind {
     Construct {
         type_id: TypeId,
         type_name: String,
+        /// 先に評価してコピーします。存在する場合、既定値は使いません。
+        base: Option<Box<Expr>>,
         fields: Vec<FieldValue>,
     },
     FieldAccess {

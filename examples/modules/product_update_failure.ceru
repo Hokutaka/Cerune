@@ -1,0 +1,9 @@
+import "values.ceru" as values;
+
+// 元の値を作る途中で止まり、amountの式は実行しません。
+print("開始");
+changed: values::Reading = values::Reading {
+    ..values::reading(values::divide(1, 0)),
+    amount: values::divide(10, 2),
+};
+print(changed.amount);

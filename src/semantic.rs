@@ -434,7 +434,10 @@ fn collect_calls_in_expr(expr: &Expr, model: &SemanticModel, calls: &mut Vec<(Fu
                 collect_calls_in_expr(argument, model, calls);
             }
         }
-        ExprKind::Construct { fields, .. } => {
+        ExprKind::Construct { base, fields, .. } => {
+            if let Some(base) = base {
+                collect_calls_in_expr(base, model, calls);
+            }
             for field in fields {
                 collect_calls_in_expr(&field.value, model, calls);
             }
@@ -1136,11 +1139,25 @@ fn type_of_expr_expected(
         ExprKind::Construct {
             type_name,
             type_name_span,
+            base,
             fields,
         } => {
             let type_id = model.resolve_type_name(type_name, *type_name_span)?;
             let definition = model.type_definition(type_id);
             let mut supplied = vec![false; definition.fields.len()];
+            if let Some(base) = base {
+                let actual = model.type_of_expr(base, bindings)?;
+                if actual != Type::Named(type_id) {
+                    return Err(Diagnostic::new(
+                        format!(
+                            "update base expects {}, found {}",
+                            type_name,
+                            model.type_name(actual)
+                        ),
+                        base.span,
+                    ));
+                }
+            }
 
             for field_value in fields {
                 let field = definition
@@ -1181,7 +1198,7 @@ fn type_of_expr_expected(
             }
 
             for field in &definition.fields {
-                if !supplied[field.id.0] && field.default.is_none() {
+                if base.is_none() && !supplied[field.id.0] && field.default.is_none() {
                     return Err(Diagnostic::new(
                         format!("missing field `{}` for type `{type_name}`", field.name),
                         expr.span,

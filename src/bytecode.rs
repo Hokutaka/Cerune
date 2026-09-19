@@ -144,6 +144,7 @@ pub enum InstructionKind {
     Construct {
         type_id: usize,
         fields: Vec<ConstructField>,
+        has_base: bool,
     },
     FieldGet {
         type_id: usize,
@@ -766,14 +767,21 @@ impl Compiler {
             }
 
             ExprKind::Construct {
-                type_id, fields, ..
+                type_id,
+                base,
+                fields,
+                ..
             } => {
+                if let Some(base) = base {
+                    self.emit_expr(base);
+                }
                 for field in fields {
                     self.emit_expr(&field.value);
                 }
                 self.emit_source(
                     InstructionKind::Construct {
                         type_id: type_id.0,
+                        has_base: base.is_some(),
                         fields: fields
                             .iter()
                             .map(|field| ConstructField {
@@ -1116,10 +1124,19 @@ fn format_instruction(
             writeln!(output, "] ; {}", slots[*slot].name).unwrap();
         }
 
-        InstructionKind::Construct { type_id, fields } => {
+        InstructionKind::Construct {
+            type_id,
+            fields,
+            has_base,
+        } => {
             write!(
                 output,
-                "construct {} [",
+                "{} {} [",
+                if *has_base {
+                    "construct.from_base"
+                } else {
+                    "construct"
+                },
                 type_name(&Type::Named(*type_id), program)
             )
             .unwrap();

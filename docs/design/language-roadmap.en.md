@@ -2,7 +2,7 @@
 
 [日本語](language-roadmap.ja.md)
 
-As of 2026-09-12, this inventory includes merged PR #50 and runtime diagnostics across all routes. “Current” means implemented; candidates are proposals awaiting design and implementation. This document does not commit to candidate syntax or adoption. See the [language reference](../reference/language.en.md) for the current specification.
+As of 2026-09-19, this inventory includes modules, removal of the parameter limit, and product update expressions. “Current” means implemented; candidates are proposals awaiting design and implementation. This document does not commit to candidate syntax or adoption. See the [language reference](../reference/language.en.md) for the current specification.
 
 ## Properties Cerune should preserve
 
@@ -24,7 +24,7 @@ Cerune prioritizes explaining a computation's meaning and its transformation int
 | Booleans | `bool`, comparisons, `!`, short-circuiting `&&` and `||` | No implicit numeric conversion | [short_circuit](../../examples/short_circuit.ceru) |
 | Strings | `string`, printing, `==`, `!=`, `byte_len` | No concatenation, indexing, character count, or numeric conversion | [string_byte_length](../../examples/string_byte_length.ceru), [string_lookup](../../examples/string_lookup.ceru) |
 | Fixed arrays | `[T; N]`, nesting, value passing, updates through `mut` | Length belongs to the type; indices are `i64`; no dynamic lengths or slices | [fixed_arrays](../../examples/fixed_arrays.ceru), [heat_diffusion](../../examples/heat_diffusion.ceru) |
-| Named product types | Fields, defaults, nesting, value passing | No direct field assignment; construct a new value and reassign the whole binding | [product-point](../../examples/product-point.ceru), [packet_counter](../../examples/packet_counter.ceru) |
+| Named product types | Fields, defaults, update expressions, nesting, value passing | No direct field assignment; construct a new value and reassign the whole binding | [product-point](../../examples/product-point.ceru), [packet_counter](../../examples/packet_counter.ceru) |
 | Functions and control flow | Typed parameters/results, `void`, `if`/`else`, `while`/`for`, `break`/`continue`/`return` | No fixed parameter-count limit; no recursion | [function_values](../../examples/function_values.ceru), [loop_control](../../examples/loop_control.ceru) |
 | Bindings and conversions | Immutable by default, `mut`, explicit `infer`, `T(value)` and `convert<T>(value)` | `infer` is not a runtime type; conversions do not request truncation or saturation | [integer_conversions](../../examples/integer_conversions.ceru) |
 | Modules | Explicit imports, namespaces, function/type visibility | Cycles/private access diagnosed; no re-exports, module variables, or package distribution | [modules](../../examples/modules/README.en.md) |
@@ -45,7 +45,7 @@ Language support does not imply equal observation detail. Language check failure
 | --- | --- | --- |
 | 1 (implemented) | A common contract for failure reasons, source locations, and execution outcomes | Distinguish overflow, division by zero, conversion failures, and bounds failures; locate the failing expression. Compare identical failure examples across the VM and generated routes |
 | 2 (foundation implemented) | Code organization | Modules, namespaces, and visibility are implemented. Consider explicit compile-time constants when concrete examples require them |
-| 2 | Remove practical function/value limitations | The four-parameter limit has been lifted across all routes. Consider constructing a product with selected fields changed. Verify mixed arguments and independent copies |
+| 2 | Remove practical function/value limitations | The four-parameter limit has been lifted across all routes. Product updates create new values with selected fields replaced. Verify mixed arguments and independent copies |
 | 3 | Alternatives and recoverable failures as values | Consider enumerations/sum types, exhaustive branching, success/failure and present/absent values. Express a missing lookup without a special sentinel string |
 | 3 | Reusable array and numeric operations | Consider length queries, iteration, and generics when functions need to span types or lengths. Define rounding/truncation separately from today's exact conversions |
 | 4 | Dynamic data and external I/O | Define ownership, lifetimes, allocation failure, and effects before bytes, slices, dynamic arrays, concatenation, and files. Add recursion only after solving per-call storage and resource limits |
@@ -55,7 +55,7 @@ This is not a commitment to implement every item together. Priority 1 and founda
 
 The first priority-1 implementation adds [common runtime failure records](runtime-diagnostics.en.md) to the VM and Windows/Linux assembly and internal objects, including retained output before failure. C, LLVM, QBE, and WAT now implement the same contract and are compared against those reasons, locations, and prior output.
 
-Following [file-aware locations](source-files.en.md), [modules](modules.en.md) now implement explicit imports, namespaces, and function/type visibility, with cross-route CLI comparisons of modular and single-file programs. Compile-time constants, re-exports, and package distribution remain unsupported. The four-parameter limit has also been lifted; [the mixed-argument example](../../examples/function_arguments.ceru) checks evaluation order and copies. Next, consider constructing products with selected fields changed through concrete examples.
+Following [file-aware locations](source-files.en.md), [modules](modules.en.md) now implement explicit imports, namespaces, and function/type visibility, with cross-route CLI comparisons of modular and single-file programs. Compile-time constants, re-exports, and package distribution remain unsupported. The four-parameter limit has also been lifted; [the mixed-argument example](../../examples/function_arguments.ceru) checks evaluation order and copies. [Product updates](product-updates.en.md) are implemented, with copies, evaluation order, and failures compared across routes. Next, consider compile-time constants through concrete examples.
 
 Inheritance, implicit shared mutable references, automatic GPU dispatch, general asynchronous execution, and a large package system are not early priorities because current examples have not established their need.
 

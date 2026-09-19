@@ -209,7 +209,15 @@ fn runtime_failures_match_vm_codes_origins_and_prior_output() {
         };
         let failure = error.runtime_failure().unwrap();
         assert_eq!(failure.code.name(), expected_code, "{body}");
-        assert_eq!(error.vm_error().output(), "開始\0\r\n\nfalse\n", "{body}");
+        let prior_output = runtime_cases::UPDATE_FAILURES
+            .iter()
+            .find(|case| case.0 == body)
+            .map_or("", |case| case.2);
+        assert_eq!(
+            error.vm_error().output(),
+            format!("開始\0\r\n\nfalse\n{prior_output}"),
+            "{body}"
+        );
         for encoder in ["asm", "cerune"] {
             let input = workspace.0.join(if encoder == "asm" {
                 "program.s"

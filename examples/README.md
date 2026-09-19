@@ -89,6 +89,21 @@ cargo run -- run examples/u64_values.ceru
 
 `infer`は独立した値の型ではなく、型を推論する指定です。`void`は値を返さない関数の戻り方を表します。[floating_point.ceru](floating_point.ceru)と[functions.ceru](functions.ceru)で確認できます。
 
+### 構造体の更新式
+
+| サンプル | 確認すること |
+| --- | --- |
+| [product_update.ceru](product_update.ceru) | u64・文字列・配列・入れ子を更新し、元の値が変わらないこと |
+| [product_update_order.ceru](product_update_order.ceru) | 元の値を一度だけ評価、フィールドの記述順、既定値を再評価しないこと、短絡・ループ |
+| [modules/product_update.ceru](modules/product_update.ceru) | importした型・関数を使った更新 |
+
+```sh
+cargo run -- run examples/product_update.ceru
+cargo run -- run examples/product_update_order.ceru
+```
+
+最初の例では元の番号`9223372036854775808`と更新後の`9223372036854775809`、元の配列要素`10`と更新後の`99`を表示します。後者の冒頭は`base → default → replacement → 2`です。`default`は元の値を作るときだけ出力され、更新やコピーで再実行されません。詳しくは[更新式の設計](../docs/design/product-updates.ja.md)を参照してください。
+
 ### 多い引数を組み合わせる
 
 [function_arguments.ceru](function_arguments.ceru)は7引数の入れ子呼び出しと、11引数の値の受け渡しを比較します。

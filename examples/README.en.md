@@ -89,6 +89,21 @@ Out-of-range integer arithmetic stops instead of wrapping. Types do not mix impl
 
 `infer` requests type inference; it is not a separate value type. `void` describes functions returning no value. See [floating_point.ceru](floating_point.ceru) and [functions.ceru](functions.ceru).
 
+### Product update expressions
+
+| Example | Checks |
+| --- | --- |
+| [product_update.ceru](product_update.ceru) | Update u64, strings, arrays, and nested structs while preserving originals |
+| [product_update_order.ceru](product_update_order.ceru) | Evaluate the base once, preserve field order, skip inherited defaults, short circuiting and loops |
+| [modules/product_update.ceru](modules/product_update.ceru) | Update using imported types and functions |
+
+```sh
+cargo run -- run examples/product_update.ceru
+cargo run -- run examples/product_update_order.ceru
+```
+
+The first example prints the original sequence `9223372036854775808` and updated `9223372036854775809`, then original array element `10` and updated `99`. The second starts with `base → default → replacement → 2`. The default runs only when creating the base, not during updates or copies. See the [update design](../docs/design/product-updates.en.md).
+
 ### Combining many arguments
 
 [function_arguments.ceru](function_arguments.ceru) compares a nested seven-argument call with an eleven-argument value transfer.
