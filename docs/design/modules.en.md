@@ -23,8 +23,8 @@ pub fn reading(amount: u64) -> Reading {
 ## Names and visibility
 
 - Write `import "relative/path.ceru" as alias;` before definitions and statements. An alias is required. `import`, `as`, and `pub` are keywords.
-- Access external types and functions with `alias::name`. Local definitions use unqualified names. Definitions in separate files may have the same name.
-- Definitions are private to their file by default. Use `pub fn` or `pub type` to expose each definition independently.
+- Access external types, functions, and constants with `alias::name`. Local definitions use unqualified names. Definitions in separate files may have the same name.
+- Definitions are private to their file by default. Use `pub fn`, `pub type`, or `pub const` to expose each definition independently.
 - A public type exposes all its fields and defaults; field visibility and opaque types are unsupported. Public parameter/result types and public fields cannot refer to private types, including inside arrays.
 - Public function bodies may call private helpers in the same file. Importers cannot call those helpers directly.
 - Duplicate aliases and collisions between aliases and definitions, bindings, or parameters are diagnosed. Built-in type names, `infer`, `convert`, and `byte_len` cannot be aliases.
@@ -38,7 +38,7 @@ Relative paths resolve against the importing file's directory, with no fallback 
 
 Canonical physical paths identify duplicate files and cycles. Imports through symbolic links resolve relative to the target directory. Hard links with distinct canonical paths are separate modules. File IDs follow entry-first, depth-first traversal in import declaration order. Cycles are diagnosed and import nesting is limited to 128 levels. Files are read as UTF-8 without Unicode or CR/LF normalization.
 
-**Imported files may contain only imports, types, and functions.** Top-level bindings and executable statements are diagnosed even in unused dependencies. Put initialization in a function and call it explicitly from the entry. Imported functions named `main` are ordinary functions and never run automatically. The entry retains the existing choice of top-level statements or a parameterless `void` main, not both.
+**Imported files may contain only imports, types, functions, and constants.** Top-level bindings and executable statements are diagnosed even in unused dependencies. Put initialization in a function and call it explicitly from the entry. Imported functions named `main` are ordinary functions and never run automatically. The entry retains the existing choice of top-level statements or a parameterless `void` main, not both.
 
 Unused definitions are still checked and generated. Modules do not bypass existing type, parameter-count, recursion, or target restrictions. Numeric and string semantics remain shared by every route.
 
@@ -62,4 +62,6 @@ The [module examples](../../examples/modules/README.en.md) contain modular and s
 
 `tests/modules.rs` covers diamond imports, same-named private helpers, nominal identity, private types leaking through public signatures, cycle/syntax/type/path errors, preserving output files after compilation failures, and exact source contents. Existing single-source observation fixtures remain unchanged.
 
-Package distribution, version resolution, re-exports, compile-time constants, separate compilation, dynamic loading, and mutable module globals are outside this increment. Further function-parameter and value-operation improvements should follow concrete executable examples.
+[Compile-time constants](constants.en.md) are implemented. Public constants cannot expose private types, and unused constants are evaluated before execution. Constants introduce no shared mutable globals.
+
+Package distribution, version resolution, re-exports, separate compilation, dynamic loading, and mutable module globals are outside this increment. Further function-parameter and value-operation improvements should follow concrete executable examples.

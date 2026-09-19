@@ -19,6 +19,7 @@ pub enum Type {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Program {
+    pub constant_definitions: Vec<ConstantDefinition>,
     pub type_definitions: Vec<TypeDefinition>,
     pub function_definitions: Vec<FunctionDefinition>,
     pub statements: Vec<Statement>,
@@ -26,6 +27,16 @@ pub struct Program {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct TypeId(pub usize);
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ConstantDefinition {
+    pub id: usize,
+    pub name: String,
+    pub ty: Type,
+    pub initializer: Expr,
+    pub value: Expr,
+    pub span: Span,
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct FieldId(pub usize);
@@ -163,6 +174,10 @@ pub struct Expr {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ExprKind {
+    Constant {
+        id: usize,
+        value: Box<Expr>,
+    },
     StringByteLength {
         value: Box<Expr>,
     },

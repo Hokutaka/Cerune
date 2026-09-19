@@ -1,0 +1,29 @@
+// 定数は実行前に評価され、関数からも参照できます。
+const LIMIT: u64 = UNIT * 2;
+const UNIT: u64 = 64;
+const MAXIMUM: u64 = 18446744073709551615;
+const LABEL: string = "定数\0\r\n";
+const LABEL_BYTES: i64 = byte_len(LABEL);
+const SKIP: bool = false && (1 / 0 == 0);
+
+type Calibration { offsets: [i16; 2], gain: f32, label: string = LABEL, }
+const BASE: Calibration = Calibration { offsets: [10, -2], gain: 1.5 };
+const TUNED: Calibration = Calibration { ..BASE, gain: 2.0 };
+
+fn calibrate(raw: i16) -> i16 { return raw + BASE.offsets[0]; }
+
+print(LIMIT);
+print(MAXIMUM);
+print(LABEL_BYTES);
+print(SKIP);
+print(calibrate(5));
+print(BASE.gain);
+print(TUNED.gain);
+
+// 定数から取り出した配列を変更しても、定数は変わりません。
+mut offsets: [i16; 2] = TUNED.offsets;
+offsets[0] = 99;
+print(BASE.offsets[0]);
+print(TUNED.offsets[0]);
+print(offsets[0]);
+print(TUNED.label);

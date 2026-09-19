@@ -4,6 +4,8 @@
 
 | ファイル | 型・表現 | 確認内容 |
 | --- | --- | --- |
+| [constant_settings.ceru](constant_settings.ceru) | `pub const`・構造体・非公開定数 | 設定値と補正値をコンパイル時に評価 |
+| [constants.ceru](constants.ceru) | 定数のimportとコピー | `129 → 12 → 10 → 99`、最後に`設定\0\r\n`を表示 |
 | [values.ceru](values.ceru) | `u64`・`string`・product・公開関数 | 公開型の既定値と、公開関数から呼ぶ非公開補助関数 |
 | [main.ceru](main.ceru) | `values::Reading`・固定配列・コピー・短絡評価 | 最大u64、再代入後の独立性、文字列バイトと等値比較、実行しない右辺 |
 | [single.ceru](single.ceru) | 同じ処理を一つのファイルで表現 | 分割前後で値と出力順が変わらないこと |

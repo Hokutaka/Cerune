@@ -367,3 +367,11 @@ fn u64_values_match_known_output_on_c_and_llvm() {
     assert!(annotated.stderr.is_empty());
     assert_eq!(annotated.stdout, u64_cases::EXAMPLE.1.as_bytes());
 }
+
+#[test]
+fn constants_match_known_values_across_optimized_c_and_llvm() {
+    let Some(native) = Native::new() else { return };
+    for &(source, expected) in string_cases::constant_cases::CASES {
+        native.matches(source, expected);
+    }
+}

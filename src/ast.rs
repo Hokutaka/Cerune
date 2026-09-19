@@ -64,7 +64,9 @@ impl Program {
         self.items
             .iter()
             .filter_map(|item| match item {
-                Item::TypeDefinition(_) | Item::FunctionDefinition(_) => None,
+                Item::TypeDefinition(_)
+                | Item::FunctionDefinition(_)
+                | Item::ConstantDefinition(_) => None,
                 Item::Statement(statement) => Some(statement),
             })
             .nth(index)
@@ -74,9 +76,19 @@ impl Program {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Item {
+    ConstantDefinition(ConstantDefinition),
     TypeDefinition(TypeDefinition),
     FunctionDefinition(FunctionDefinition),
     Statement(Stmt),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ConstantDefinition {
+    pub name: String,
+    pub name_span: Span,
+    pub type_ref: TypeRef,
+    pub value: Expr,
+    pub span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

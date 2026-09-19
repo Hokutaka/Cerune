@@ -14,13 +14,28 @@ pub fn emit(program: &Program) -> String {
     )
     .unwrap();
 
-    if !program.type_definitions.is_empty()
+    if !program.constant_definitions.is_empty()
+        || !program.type_definitions.is_empty()
         || !program.function_definitions.is_empty()
         || !program.statements.is_empty()
     {
         writeln!(output).unwrap();
     }
 
+    for definition in &program.constant_definitions {
+        write!(
+            output,
+            "const %{}@{}: {} = ",
+            definition.name,
+            definition.id,
+            type_name(&definition.ty, program)
+        )
+        .unwrap();
+        emit_expr(&definition.initializer, program, &mut output);
+        output.push_str(" => ");
+        emit_expr(&definition.value, program, &mut output);
+        writeln!(output, " [compile-time]").unwrap();
+    }
     for definition in &program.type_definitions {
         writeln!(output, "type %{}@{} {{", definition.name, definition.id.0).unwrap();
         for field in &definition.fields {
@@ -227,6 +242,15 @@ fn emit_expr(expr: &Expr, program: &Program, output: &mut String) {
     write!(output, "#{} ", expr.id.0).unwrap();
 
     match &expr.kind {
+        ExprKind::Constant { id, value } => {
+            write!(
+                output,
+                "const %{}@{} => ",
+                program.constant_definitions[*id].name, id
+            )
+            .unwrap();
+            emit_expr(value, program, output);
+        }
         ExprKind::StringByteLength { value } => {
             output.push_str("byte_len.string(");
             emit_expr(value, program, output);

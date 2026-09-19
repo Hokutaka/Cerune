@@ -7,6 +7,12 @@ use crate::{
 
 /// 未使用の型や関数も含めて、文字列を必要とする最初の位置を返します。
 pub(super) fn first_string_span(program: &Program) -> Option<Span> {
+    // 定数化で文字列式が消えても、ターゲットとバイト出力の契約を保ちます。
+    for constant in &program.constant_definitions {
+        if let Some(span) = string_expr(&constant.initializer) {
+            return Some(span);
+        }
+    }
     for definition in &program.type_definitions {
         for field in &definition.fields {
             if contains_string(&field.ty) {
@@ -102,6 +108,7 @@ fn string_expr(expr: &Expr) -> Option<Span> {
         return Some(expr.span);
     }
     match &expr.kind {
+        ExprKind::Constant { value, .. } => string_expr(value),
         ExprKind::StringByteLength { value }
         | ExprKind::ConvertNumeric { value, .. }
         | ExprKind::ConvertInteger { value, .. }

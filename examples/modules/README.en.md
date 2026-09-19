@@ -4,6 +4,8 @@
 
 | File | Types and expressions | Checks |
 | --- | --- | --- |
+| [constant_settings.ceru](constant_settings.ceru) | `pub const`, structs, private constants | Evaluate shared settings and calibration values at compilation |
+| [constants.ceru](constants.ceru) | Imported constants and copies | Print `129 → 12 → 10 → 99`, then `設定\0\r\n` |
 | [values.ceru](values.ceru) | `u64`, `string`, product, public functions | Public type defaults and private helpers called by public functions |
 | [main.ceru](main.ceru) | `values::Reading`, fixed arrays, copies, short circuiting | Maximum u64, independent reassignment, string bytes/equality, skipped right operand |
 | [single.ceru](single.ceru) | The same computation in one file | Identical values and output order before and after splitting |

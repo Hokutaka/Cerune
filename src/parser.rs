@@ -107,15 +107,21 @@ impl Parser {
             let public = matches!(self.peek().kind, TokenKind::Pub);
             if public {
                 self.advance();
-                if !matches!(self.peek().kind, TokenKind::Fn | TokenKind::Type) {
-                    return Err(self.error("pub is only supported on functions and types".into()));
+                if !matches!(
+                    self.peek().kind,
+                    TokenKind::Fn | TokenKind::Type | TokenKind::Const
+                ) {
+                    return Err(self
+                        .error("pub is only supported on functions, types, and constants".into()));
                 }
                 let token = self.peek_next().clone();
                 if let TokenKind::Identifier(name) = token.kind {
                     exports.push((name, token.span));
                 }
             }
-            if matches!(&self.peek().kind, TokenKind::Type) {
+            if matches!(&self.peek().kind, TokenKind::Const) {
+                items.push(Item::ConstantDefinition(self.parse_constant_definition()?));
+            } else if matches!(&self.peek().kind, TokenKind::Type) {
                 items.push(Item::TypeDefinition(self.parse_type_definition()?));
             } else if matches!(&self.peek().kind, TokenKind::Fn) {
                 items.push(Item::FunctionDefinition(self.parse_function_definition()?));
@@ -128,6 +134,29 @@ impl Parser {
             program: Program { items },
             imports,
             exports,
+        })
+    }
+
+    fn parse_constant_definition(&mut self) -> ParseResult<crate::ast::ConstantDefinition> {
+        let start = self.advance().span.start();
+        let (name, name_span) = self.expect_identifier()?;
+        self.expect_simple(TokenKind::Colon)?;
+        let type_ref = self.parse_type_ref()?;
+        if type_ref.is_named("infer") {
+            return Err(Diagnostic::new(
+                "constants require an explicit type",
+                type_ref.span,
+            ));
+        }
+        self.expect_simple(TokenKind::Equal)?;
+        let value = self.parse_expression()?;
+        let end = self.expect_simple(TokenKind::Semicolon)?.end();
+        Ok(crate::ast::ConstantDefinition {
+            name,
+            name_span,
+            type_ref,
+            value,
+            span: self.span(start, end),
         })
     }
 

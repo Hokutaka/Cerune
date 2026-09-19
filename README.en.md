@@ -60,6 +60,7 @@ During development, replace `cerune` with `cargo run --quiet --`.
 | Functions | Typed parameters and returns, `void`, `return`; strings, structs, and arrays can also be passed and returned |
 | Entry point | Top-level statements or `fn main() -> void` (not both) |
 | Control flow | `if` / `else`, `while`, `for`, `break` / `continue` |
+| Constants | Typed `const`, compile-time evaluation, shared with `pub const` |
 | Modules | Explicit imports, namespaces, `pub` visibility |
 | Output and diagnostics | `print(expr);`, error reasons, source locations, output produced before failure |
 

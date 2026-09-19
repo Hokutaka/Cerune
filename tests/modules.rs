@@ -145,7 +145,7 @@ fn rejects_visibility_initialization_cycles_and_namespace_errors_at_their_source
         (
             valid,
             "import \"lib.ceru\" as lib; print(lib::value);",
-            "not variable values",
+            "unknown constant",
             "main.ceru",
         ),
         (
@@ -181,7 +181,7 @@ fn rejects_visibility_initialization_cycles_and_namespace_errors_at_their_source
         (
             "print(99);",
             "import \"lib.ceru\" as lib;",
-            "only imports, types, and functions",
+            "only imports, types, functions, and constants",
             "lib.ceru",
         ),
         (
@@ -403,4 +403,122 @@ fn manifest_preserves_dependency_text_and_cli_failures_identify_the_definition_f
     let output = process::bounded_output(Command::new(node).arg("-e").arg("const fs=require('fs');const m=JSON.parse(fs.readFileSync(process.argv[1],'utf8'));if(m.schema!=='cerune-sources-v1'||m.files.length!==2||m.files[1].id!==2)process.exit(1);process.stdout.write(m.files[1].text);").arg(w.0.join("sources.json")), &w.0, "manifest", Duration::from_secs(10)).unwrap();
     assert!(output.status.success());
     assert_eq!(output.stdout, library.as_bytes());
+}
+
+#[test]
+fn constants_resolve_across_diamond_imports_and_keep_private_values_private() {
+    let w = Workspace::new();
+    w.put(
+        "values.ceru",
+        "const HIDDEN: i64 = 3; pub const LIMIT: i64 = HIDDEN * 4;",
+    );
+    w.put(
+        "left.ceru",
+        "import \"values.ceru\" as values; pub const LEFT: i64 = values::LIMIT;",
+    );
+    w.put(
+        "right.ceru",
+        "import \"values.ceru\" as values; pub const RIGHT: i64 = values::LIMIT + 1;",
+    );
+    let entry = w.put("main.ceru", "import \"left.ceru\" as a; import \"right.ceru\" as b; const TOTAL: i64 = a::LEFT + b::RIGHT; fn main() -> void { print(TOTAL); }");
+    let compilation = modules::load(&entry).unwrap();
+    let ir = compilation.to_ir().unwrap();
+    assert_eq!(ir.constant_definitions.len(), 5);
+    assert_eq!(
+        run_bytecode(&bytecode::lower(&ir).unwrap()).unwrap(),
+        "25\n"
+    );
+    for (library, source, reason) in [
+        (
+            "const PRIVATE: i64 = 1;",
+            "import \"values.ceru\" as v; print(v::PRIVATE);",
+            "private constant",
+        ),
+        (
+            "type P { x: i64, } pub const VALUE: P = P { x: 1 };",
+            "import \"values.ceru\" as v;",
+            "public signature",
+        ),
+        (
+            "pub const VALUE: i64 = 1;",
+            "import \"values.ceru\" as v; const v: i64 = 1;",
+            "import alias",
+        ),
+        (
+            "pub const VALUE: i64 = 1; fn f(VALUE: i64) -> void {}",
+            "import \"values.ceru\" as v;",
+            "conflicts with a constant",
+        ),
+    ] {
+        w.put("values.ceru", library);
+        let entry = w.put("main.ceru", source);
+        let error = modules::load(&entry).unwrap_err();
+        assert!(error.diagnostic.message().contains(reason), "{error:?}");
+    }
+}
+
+#[test]
+fn invalid_imported_constants_fail_before_output_or_artifact_overwrite() {
+    let w = Workspace::new();
+    w.put(
+        "values.ceru",
+        "// 日本語\r\npub const BAD: i64 = 1 / 0;\r\n",
+    );
+    let entry = w.put(
+        "main.ceru",
+        "import \"values.ceru\" as v; print(\"not executed\");",
+    );
+    let compilation = modules::load(&entry).unwrap();
+    let error = compilation.to_ir().unwrap_err();
+    assert!(error.message().contains("division-by-zero"));
+    let span = error.primary_span().unwrap();
+    assert_eq!(compilation.sources.slice(span), Some("1 / 0"));
+    assert!(
+        compilation
+            .sources
+            .get(span.source_id())
+            .unwrap()
+            .name()
+            .ends_with("values.ceru")
+    );
+    for command in [
+        "run",
+        "check",
+        "emit-ir",
+        "emit-bytecode",
+        "emit-c",
+        "emit-llvm",
+        "emit-qbe",
+        "emit-wat",
+        "emit-asm",
+        "emit-obj",
+    ] {
+        let artifact = w.put("preserved.txt", "keep");
+        let args = if command == "run" || command == "check" {
+            Vec::new()
+        } else {
+            vec![
+                "--target",
+                "x86_64-unknown-linux-gnu",
+                "-o",
+                artifact.to_str().unwrap(),
+            ]
+        };
+        // 全コマンドが同じコンパイル時診断を出し、既存成果物を触りません。
+        let args: Vec<_> = if matches!(command, "emit-ir" | "emit-bytecode" | "emit-c" | "emit-wat")
+        {
+            vec!["-o", artifact.to_str().unwrap()]
+        } else {
+            args
+        };
+        let output = w.cli(command, &entry, &args);
+        assert!(!output.status.success(), "{command}");
+        assert!(output.stdout.is_empty(), "{command}");
+        let stderr = String::from_utf8(output.stderr).unwrap();
+        assert!(
+            stderr.contains("division-by-zero") && stderr.contains("values.ceru"),
+            "{command}: {stderr}"
+        );
+        assert_eq!(fs::read_to_string(artifact).unwrap(), "keep");
+    }
 }

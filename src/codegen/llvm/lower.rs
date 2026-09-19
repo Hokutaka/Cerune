@@ -549,6 +549,7 @@ impl Lowerer<'_> {
         }
 
         match &expr.kind {
+            cerune_ir::ExprKind::Constant { value, .. } => self.lower_expr(value),
             cerune_ir::ExprKind::StringByteLength { value } => {
                 let value = self.lower_expr(value);
                 let dest = self.next_temp();

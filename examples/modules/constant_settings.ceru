@@ -1,0 +1,6 @@
+const SCALE: i64 = 3;
+pub const LIMIT: u64 = 64 * 2;
+pub const TITLE: string = "設定\0\r\n";
+pub type Settings { limit: u64 = LIMIT, samples: [i64; 2], title: string = TITLE, }
+pub const DEFAULTS: Settings = Settings { samples: [10, 20] };
+pub fn scaled(value: i64) -> i64 { return value * SCALE; }

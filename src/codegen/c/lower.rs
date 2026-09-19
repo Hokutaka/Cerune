@@ -290,6 +290,7 @@ fn lower_expr_unchecked(expr: &cerune_ir::Expr) -> Expr {
     }
 
     let kind = match &expr.kind {
+        cerune_ir::ExprKind::Constant { value, .. } => lower_expr(value).kind,
         cerune_ir::ExprKind::StringByteLength { value } => ExprKind::StringByteLength {
             value: Box::new(lower_expr(value)),
         },
@@ -459,6 +460,7 @@ fn collect_array_types(program: &cerune_ir::Program) -> Vec<Type> {
     fn visit_expr(expr: &cerune_ir::Expr, types: &mut Vec<Type>) {
         add(&expr.ty, types);
         match &expr.kind {
+            cerune_ir::ExprKind::Constant { value, .. } => visit_expr(value, types),
             cerune_ir::ExprKind::StringByteLength { value } => visit_expr(value, types),
             cerune_ir::ExprKind::String(_) => {}
             cerune_ir::ExprKind::Array(values) => {

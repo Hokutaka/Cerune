@@ -89,6 +89,15 @@ Out-of-range integer arithmetic stops instead of wrapping. Types do not mix impl
 
 `infer` requests type inference; it is not a separate value type. `void` describes functions returning no value. See [floating_point.ceru](floating_point.ceru) and [functions.ceru](functions.ceru).
 
+### Compile-time constants
+
+| Example | What it demonstrates |
+| --- | --- |
+| [constants.ceru](constants.ceru) | u64 limits, strings, f32/struct/array constants, independent copies, and short circuiting |
+| [modules/constants.ceru](modules/constants.ceru) | Imported public settings and a private calibration constant |
+
+`cargo run -- run examples/constants.ceru` prints `128`, maximum u64, and the string byte length `9` first. A copied array can change to `99` while both struct constants retain `10`. Use `cargo run -- emit-ir examples/constants.ceru` to inspect initializer expressions and evaluated values.
+
 ### Product update expressions
 
 | Example | Checks |
