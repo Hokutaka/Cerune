@@ -3,6 +3,7 @@ use crate::ast::{
     FunctionDefinition, Item, IterationBinding, Parameter, Program, ReturnTypeRef, Stmt, StmtKind,
     Type, TypeDefinition, TypeRef, TypeRefKind, TypeSpec, UnaryOp,
 };
+use crate::ast::{GenericArgument, GenericCall, GenericParameter};
 use crate::diagnostic::Diagnostic;
 use crate::lexer::{Token, TokenKind};
 use crate::source::{ConversionSyntax, SourceId, Span};
@@ -340,6 +341,7 @@ impl Parser {
     fn parse_function_definition(&mut self) -> ParseResult<FunctionDefinition> {
         let start = self.advance().span.start();
         let (name, name_span) = self.expect_identifier()?;
+        let generic_parameters = self.parse_generic_parameters()?;
         self.expect_simple(TokenKind::LeftParen)?;
         let mut parameters = Vec::new();
 
@@ -387,12 +389,91 @@ impl Parser {
         let (body, end) = self.parse_block()?;
 
         Ok(FunctionDefinition {
+            generic_parameters,
             name,
             name_span,
             parameters,
             return_type,
             body,
             span: self.span(start, end),
+        })
+    }
+
+    fn parse_generic_parameters(&mut self) -> ParseResult<Vec<GenericParameter>> {
+        let mut parameters = Vec::new();
+        if !matches!(self.peek().kind, TokenKind::Less) {
+            return Ok(parameters);
+        }
+        self.advance();
+        loop {
+            let length = matches!(self.peek().kind, TokenKind::Const);
+            if length {
+                self.advance();
+            }
+            let (name, span) = self.expect_identifier()?;
+            if length {
+                self.expect_simple(TokenKind::Colon)?;
+                let ty = self.parse_type_ref()?;
+                if !ty.is_named("i64") {
+                    return Err(Diagnostic::new(
+                        "generic lengths require const N: i64",
+                        ty.span,
+                    ));
+                }
+            }
+            parameters.push(GenericParameter { name, span, length });
+            if !matches!(self.peek().kind, TokenKind::Comma) {
+                break;
+            }
+            self.advance();
+            if matches!(self.peek().kind, TokenKind::Greater) {
+                break;
+            }
+        }
+        self.expect_simple(TokenKind::Greater)?;
+        Ok(parameters)
+    }
+    fn parse_generic_call(&mut self, name: String, name_span: Span) -> ParseResult<Expr> {
+        self.expect_simple(TokenKind::ColonColon)?;
+        self.expect_simple(TokenKind::Less)?;
+        let mut generic_arguments = Vec::new();
+        loop {
+            let argument = if let TokenKind::Integer(digits) = &self.peek().kind {
+                let value = parse_array_length(digits, self.peek().span)?;
+                GenericArgument::Length {
+                    value,
+                    span: self.advance().span,
+                }
+            } else {
+                GenericArgument::Type(self.parse_type_ref()?)
+            };
+            generic_arguments.push(argument);
+            if !matches!(self.peek().kind, TokenKind::Comma) {
+                break;
+            }
+            self.advance();
+            if matches!(self.peek().kind, TokenKind::Greater) {
+                break;
+            }
+        }
+        self.expect_simple(TokenKind::Greater)?;
+        let expr = self.parse_call(name, name_span)?;
+        let ExprKind::Call {
+            name,
+            name_span,
+            arguments,
+        } = expr.kind
+        else {
+            unreachable!()
+        };
+        Ok(Expr {
+            span: expr.span,
+            kind: ExprKind::GenericCall(Box::new(GenericCall {
+                name,
+                name_span,
+                generic_arguments,
+                arguments,
+            })),
         })
     }
 
@@ -601,7 +682,7 @@ impl Parser {
         let value = self.parse_expression()?;
         let semicolon = self.expect_simple(TokenKind::Semicolon)?;
         let span = self.span(value.span.start(), semicolon.end());
-        if !matches!(value.kind, ExprKind::Call { .. }) {
+        if !matches!(value.kind, ExprKind::Call { .. } | ExprKind::GenericCall(_)) {
             return Err(Diagnostic::new(
                 "only a function call can be used as an expression statement",
                 value.span,
@@ -1139,7 +1220,9 @@ impl Parser {
 
             TokenKind::Identifier(name) => {
                 let (name, span) = self.finish_path(name, span)?;
-                if name == "convert" && self.starts_explicit_conversion() {
+                if matches!(&self.peek().kind, TokenKind::ColonColon) {
+                    self.parse_generic_call(name, span)
+                } else if name == "convert" && self.starts_explicit_conversion() {
                     self.expect_simple(TokenKind::Less)?;
                     let target = self.parse_type_ref()?;
                     self.expect_simple(TokenKind::Greater)?;
@@ -1383,7 +1466,9 @@ impl Parser {
     }
 
     fn finish_path(&mut self, mut name: String, mut span: Span) -> ParseResult<(String, Span)> {
-        while matches!(self.peek().kind, TokenKind::ColonColon) {
+        while matches!(self.peek().kind, TokenKind::ColonColon)
+            && matches!(self.peek_next().kind, TokenKind::Identifier(_))
+        {
             self.advance();
             let (member, end) = self.expect_identifier()?;
             name.push_str("::");

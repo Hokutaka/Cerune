@@ -25,6 +25,32 @@ pub(crate) fn resolve(program: &Program) -> Result<(Program, Vec<LengthUse>), Di
     Ok((output, resolver.uses))
 }
 
+pub(crate) fn resolve_length(
+    program: &Program,
+    name: &str,
+    span: Span,
+) -> Result<usize, Diagnostic> {
+    resolver(program).length(name, span)
+}
+pub(crate) fn resolve_type(
+    program: &Program,
+    ty: &mut TypeRef,
+) -> Result<Vec<LengthUse>, Diagnostic> {
+    let mut resolver = resolver(program);
+    resolver.ty(ty, false)?;
+    Ok(resolver.uses)
+}
+fn resolver(program: &Program) -> Resolver<'_> {
+    Resolver {
+        source: program,
+        constants: HashMap::new(),
+        types: HashMap::new(),
+        lengths: HashMap::new(),
+        stack: Vec::new(),
+        uses: Vec::new(),
+    }
+}
+
 struct Resolver<'a> {
     source: &'a Program,
     constants: HashMap<String, ConstantDefinition>,
@@ -203,6 +229,12 @@ impl Resolver<'_> {
         }
         *budget -= 1;
         match &mut expr.kind {
+            ExprKind::GenericCall(_) => {
+                return Err(Diagnostic::new(
+                    "function calls are not allowed in constant expressions",
+                    expr.span,
+                ));
+            }
             ExprKind::Variable(name) => self.constant(name, expr.span)?,
             ExprKind::Call {
                 name, arguments, ..

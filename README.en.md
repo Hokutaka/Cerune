@@ -58,7 +58,7 @@ During development, replace `cerune` with `cargo run --quiet --`.
 | Structs | Named types, field access and defaults, updates that create new values, nesting, value copies |
 | Sum types | `enum` variants with payloads; exhaustive `match` statements |
 | Arrays | Fixed length (including named constants), element counts with `array_len`, nesting, element access and updates, value copies |
-| Functions | Typed parameters and returns, `void`, `return`; strings, structs, arrays, and sums can also be passed and returned |
+| Functions | Typed parameters/results, `void`, `return`, type/array-length parameters; aggregate values can be passed and returned |
 | Entry point | Top-level statements or `fn main() -> void` (not both) |
 | Control flow | `if` / `else`, `while`, `for`, array `for … in`, `break` / `continue` |
 | Constants | Typed `const`, compile-time evaluation, shared with `pub const` |

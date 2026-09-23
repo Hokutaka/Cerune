@@ -1,3 +1,6 @@
+#[path = "generic_cases.rs"]
+pub mod generic_cases;
+
 #[path = "length_constant_cases.rs"]
 pub mod length_constant_cases;
 
@@ -94,6 +97,9 @@ pub const CASES: &[(&str, &str)] = &[
     iteration_cases::CASES[1],
     iteration_cases::CASES[2],
     iteration_cases::CASES[3],
+    generic_cases::CASES[0],
+    generic_cases::CASES[1],
+    generic_cases::CASES[2],
     length_constant_cases::CASES[0],
     length_constant_cases::CASES[1],
 ];

@@ -14,6 +14,7 @@ Cerune documentation is divided into `design`, which records design decisions, a
 | Runtime diagnostics / 実行時停止の共通記録 | [日本語](design/runtime-diagnostics.ja.md) | [English](design/runtime-diagnostics.en.md) |
 | Output routes and targets / 出力経路とターゲット | [日本語](design/targets.ja.md) | [English](design/targets.en.md) |
 | Language capabilities and roadmap / 言語機能と今後の順序 | [日本語](design/language-roadmap.ja.md) | [English](design/language-roadmap.en.md) |
+| Generic functions / 型・長さを引数にする関数 | [日本語](design/generic-functions.ja.md) | [English](design/generic-functions.en.md) |
 | Functions / 関数 | [日本語](design/functions.ja.md) | [English](design/functions.en.md) |
 | Named product types / 名前付きproduct type | [日本語](design/product-types.ja.md) | [English](design/product-types.en.md) |
 | Sum types and match / 直和型と分岐 | [日本語](design/sum-types.ja.md) | [English](design/sum-types.en.md) |

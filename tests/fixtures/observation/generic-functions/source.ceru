@@ -1,0 +1,7 @@
+fn first<T, const N: i64>(values: [T; N]) -> T {
+    return values[0];
+}
+const COUNT: u8 = 2;
+print(first::<u64, COUNT>([18446744073709551615, 1]));
+print(first::<i64, 1>([-7]));
+print(first::<u64, 2>([42, 0]));

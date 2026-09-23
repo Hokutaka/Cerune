@@ -1,0 +1,8 @@
+import "generic_arrays.ceru" as arrays;
+print("共有関数");
+values: [arrays::Label; arrays::COUNT] = [
+    arrays::Label { text: "日本語\0\r\n" },
+    arrays::Label { text: "予備" },
+];
+print(arrays::pair::<arrays::Label>(values).text);
+print(arrays::first::<u64, arrays::COUNT>([18446744073709551615, 0]));

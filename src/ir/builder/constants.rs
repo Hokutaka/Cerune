@@ -17,6 +17,9 @@ impl Builder<'_> {
                     ));
                 }
                 match &expr.kind {
+                    ast::ExprKind::GenericCall(_) => {
+                        unreachable!("generic calls are lowered before IR")
+                    }
                     ast::ExprKind::Variable(name) => {
                         if let Some((id, _)) = self.model.constants.get(name) {
                             references.push((*id, expr.span));
@@ -172,6 +175,7 @@ impl Builder<'_> {
                 constant_definitions: Vec::new(),
                 type_definitions: types,
                 function_definitions: vec![FunctionDefinition {
+                    generic_origin: None,
                     id: FunctionId(0),
                     name: "constant_evaluation".into(),
                     parameters: Vec::new(),

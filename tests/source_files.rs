@@ -521,6 +521,11 @@ fn module_cli_artifacts_execute_with_the_same_values_order_and_failure_origins()
             "共有サイズ\n6\n15\n保持\0\r\n\n",
             None,
         ),
+        (
+            "generic_functions.ceru",
+            "共有関数\n日本語\0\r\n\n18446744073709551615\n",
+            None,
+        ),
         ("sum_lookup.ceru", "空\0\r\n\n未登録\n直接\n", None),
         ("constants.ceru", "129\n12\n10\n99\n設定\0\r\n\n", None),
         ("product_update.ceru", "計算\n42\n5\n観測\0\r\n\n", None),

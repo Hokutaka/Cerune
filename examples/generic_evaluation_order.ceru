@@ -1,0 +1,15 @@
+// 実行時の引数は左から一度だけ評価し、配列は値として渡します。
+fn identity<T>(value: T) -> T { return value; }
+fn forwarded<T>(value: T) -> T { return identity::<T>(value); }
+fn select<T, const N: i64>(values: [T; N], index: i64) -> T {
+    print(N);
+    return forwarded::<T>(values[index]);
+}
+fn values() -> [string; 2] { print("配列"); return ["先頭", "末尾"]; }
+fn index() -> i64 { print("添字"); return 1; }
+fn fail<T>(value: T) -> bool { print("呼ばれない"); return 1 / 0 == 0; }
+
+print("評価順");
+print(select::<string, 2>(values(), index()));
+print(false && fail::<u64>(18446744073709551615));
+print(true || fail::<string>("短絡"));

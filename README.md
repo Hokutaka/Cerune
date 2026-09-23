@@ -58,7 +58,7 @@ cerune emit-c examples/floating_point.ceru -o floating_point.c
 | 構造体 | 名前付きの型、フィールド参照・既定値、部分変更で新しい値を作る更新式、入れ子、値コピー |
 | 直和型 | `enum`の選択肢と値、全選択肢を確認する`match`分岐 |
 | 配列 | 固定長配列（長さに定数も指定可）、`array_len`で要素数取得、入れ子、要素の参照・更新、値コピー |
-| 関数 | 型付き引数・戻り値、`void`、`return`。文字列・構造体・配列・直和型も受け渡し可能 |
+| 関数 | 型付き引数・戻り値、`void`、`return`、型・配列長のパラメーター。複合値も受け渡し可能 |
 | 実行開始 | トップレベル実行文、または`fn main() -> void`（併用不可） |
 | 制御構文 | `if` / `else`、`while`・`for`・配列の`for … in`、`break` / `continue` |
 | 定数 | 型付き`const`、コンパイル時評価、`pub const`で共有 |

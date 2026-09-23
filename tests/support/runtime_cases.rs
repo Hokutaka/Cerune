@@ -104,6 +104,9 @@ pub const FAILURES: &[(&str, &str)] = &[
         "const DATA: [i64; 1] = [7]; value: i64 = DATA[1];",
         "array-index-out-of-bounds",
     ),
+    (GENERIC_FAILURES[0].0, GENERIC_FAILURES[0].1),
+    (GENERIC_FAILURES[1].0, GENERIC_FAILURES[1].1),
+    (GENERIC_FAILURES[2].0, GENERIC_FAILURES[2].1),
     (CONSTANT_LENGTH_FAILURES[0].0, CONSTANT_LENGTH_FAILURES[0].1),
     (ITERATION_FAILURES[0].0, ITERATION_FAILURES[0].1),
     (ITERATION_FAILURES[1].0, ITERATION_FAILURES[1].1),
@@ -202,6 +205,30 @@ pub const ITERATION_FAILURES: &[(&str, &str, &str, &str)] = &[
         "division-by-zero",
         "2\n5\n0\n",
         "10 / v",
+    ),
+];
+
+pub const GENERIC_FAILURES: &[(&str, &str, &str, &str)] = &[
+    (
+        r#"fn divide<T>(a:T,b:T)->T { print("before"); return a / b; }
+        print(divide::<u64>(18446744073709551615, 0));"#,
+        "division-by-zero",
+        "before\n",
+        "a / b",
+    ),
+    (
+        r#"fn at<T,const N:i64>(v:[T;N], i:i64)->T { print("before"); return v[i]; }
+        print(at::<string, 2>(["a","b"], 2));"#,
+        "array-index-out-of-bounds",
+        "before\n",
+        "v[i]",
+    ),
+    (
+        r#"fn cast<T>(v:i64)->T { print("before"); return convert<T>(v); }
+        print(cast::<u8>(256));"#,
+        "integer-conversion-out-of-range",
+        "before\n",
+        "convert<T>(v)",
     ),
 ];
 

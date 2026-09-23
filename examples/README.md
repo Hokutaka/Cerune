@@ -130,6 +130,8 @@ cargo run --quiet -- emit-c examples/linear_regression.ceru
 | [conditional.ceru](conditional.ceru) | `if` / `else`とscope |
 | [loop_control.ceru](loop_control.ceru) | `while`、`break`、`continue` |
 | [for_sum.ceru](for_sum.ceru) | `for`と開始文の再代入 |
+| [generic_functions.ceru](generic_functions.ceru) | 型・長さを指定して集計・コピーを共用。文字列・u64・構造体・直和型 |
+| [generic_evaluation_order.ceru](generic_evaluation_order.ceru) | ジェネリック関数の転送、引数の評価順、短絡 |
 | [functions.ceru](functions.ceru) | 型付き関数、parameter、戻り値、`void`関数 |
 
 ## データ構造
@@ -201,6 +203,8 @@ cargo run --quiet -- emit-c examples/linear_regression.ceru
 | `function_arguments.ceru` | 冒頭は`引数の評価順`、`1`〜`7`、`28` |
 | `string_origins.ceru` | `日本語\0\ntrue\nfalse\n`。`skipped`は出ない。IRと注釈付きLLVMで比較`#7`・短絡評価`#14`から呼び出し・分岐へ辿る（[手順](../docs/reference/cli.ja.md#llvmの出自を辿る)） |
 | `string_byte_length.ceru` | `0, 9, 3, 2, 3, 4, 7, 3, 9, left, right, 9, false, false, 6, 10`に各LF。`left`・`right`は一回ずつ、`skipped`は出ない。`byte_len`でUTF-8長・コピー・関数・配列・既定値を確認 |
+| `generic_functions.ceru` | 合計`6 → 9223372036854775809 → 4`、元の文字列と更新後のコピー、構造体・直和型の値 |
+| `generic_evaluation_order.ceru` | `評価順 → 配列 → 添字 → 2 → 末尾 → false → true`。「呼ばれない」は出ない |
 | `constant_array_lengths.ceru` | 寸法`2 → 3`、行の合計`6 → 15`。コピー変更後も元は`6`、コピーは`99`。続いてu64の境界値、文字列のバイト数と内容 |
 | `array_iteration.ceru` | 正数の合計`15`、検索結果の添字`2`と`未登録`。元を変更しても走査は`1 → 2 → 3`、元の二番目は`99` |
 | `array_iteration_values.ceru` | 文字列の添字・バイト数・内容、u64の境界値。コピー変更後も元の行は`1 → 3`、元の構造体は`10`。直和型は`空 → 海` |

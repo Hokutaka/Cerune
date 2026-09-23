@@ -31,7 +31,14 @@ constant_definition := "const" IDENT ":" type_ref "=" expression ";"
 field_definition := IDENT ":" type_ref ("=" expression)?
 
 function_definition :=
-    "fn" IDENT "(" parameters? ")" "->" return_type block
+    "fn" IDENT generic_parameters? "(" parameters? ")" "->" return_type block
+
+generic_parameters := "<" generic_parameter ("," generic_parameter)* ","? ">"
+generic_parameter := IDENT | "const" IDENT ":" "i64"
+generic_arguments := "::<" generic_argument ("," generic_argument)* ","? ">"
+generic_argument := type_ref | INTEGER
+function_path := IDENT ("::" IDENT)?
+function_call := function_path generic_arguments? "(" arguments? ")"
 
 parameters  := parameter ("," parameter)*
 
@@ -42,7 +49,7 @@ return_type := type_ref | "void"
 statement   := binding
              | assignment
              | "print" "(" expression ")" ";"
-             | IDENT "(" arguments? ")" ";"
+             | function_call ";"
              | "return" expression? ";"
              | match_statement
              | if_statement
@@ -133,7 +140,7 @@ primary     := "true"
              | STRING
              | "[" expression ("," expression)* ","? "]"
              | IDENT
-             | IDENT "(" arguments? ")"
+             | function_call
              | variant_path "{" (field_value ("," field_value)* ","?)? "}"
              | IDENT "{" field_value ("," field_value)* ","? "}"
              | IDENT "{" ".." expression ("," field_value)* ","? "}"
@@ -452,6 +459,17 @@ show(answer);
 関数のparameterと戻り値には`bool`、`i8`、`u8`、`i16`、`u16`、`i32`、`u32`、`i64`、`u64`、`f32`、`f64`、`string`、名前付きproduct type、固定長配列を使えます。product typeと配列は値として渡されるため、関数が受け取った値と呼び出し側の値は同じ変更可能な場所を共有しません。引数の個数に言語としての固定上限は設けません。再帰とcommand-line argumentはまだサポートしません。未対応の書き方は黙って別の意味にせず、診断します。
 
 Cerune IRとbytecodeでは、関数ID、parameterの束縛ID、呼び出し、戻り値を観測できます。各backendの成果物では、これらが関数シンボル、引数、ローカル領域、ABI上のレジスタやメモリへ変わった結果を観測できます。詳細は[関数の設計](../design/functions.ja.md)を参照してください。
+
+### 型・長さを引数にする関数
+
+```cerune
+fn first<T, const N: i64>(values: [T; N]) -> T { return values[0]; }
+print(first::<string, 2>(["日本語", "予備"]));
+```
+
+`T`は型、`const N: i64`は正の配列長です。`::<...>`へ宣言順に全引数を書きます。型は既存の具体型、長さは正の整数リテラル・整数定数名・外側の長さ仮引数を使い、長さは本文でi64値としても参照できます。型仮引数への数値変換は`convert<T>(value)`です。`pub fn`や`alias::first::<string, COUNT>(values)`にも対応します。
+
+同じ型・長さは一つの通常関数へ具体化します。本文は使われた具体型ごとに検査し、未使用テンプレートの本文全体の型検査は保証しません。短絡で実行されない呼び出しも型検査します。値引数の評価順・コピー・停止規則は通常の関数と同じです。型引数の推論・trait・汎用の型定義・再帰は未対応です。詳細な制限と観測形式は[設計](../design/generic-functions.ja.md)、実行例は[generic_functions.ceru](../../examples/generic_functions.ceru)にあります。
 
 ## 可変な束縛と再代入
 
@@ -849,7 +867,7 @@ Cerune IRでは変換前後の型、入力、元の書式とソース位置を�
 
 C・LLVM・QBE・WAT・Windows x86-64では整数を64ビットで保持し、小さい整数型への変換には範囲検査を生成します。浮動小数点を含む変換はバックエンドIRにも型付きの操作として残し、表現を変えてよいか検査する処理を生成します。同じ型への変換は生成コードに命令を追加せず、Cerune IRとbytecodeには明示変換を残します。整数から`i64`への変換にも追加の実行処理は不要ですが、浮動小数点から`i64`への変換には検査が必要です。
 
-`convert`はキーワードではありません。`convert(value)`という通常の関数呼び出しや、変数を比較する`convert < limit`は引き続き使えます。`convert<型>(式)`の形は組み込みの変換で、同名のユーザー関数の定義によって意味は変わりません。この書式は、ユーザーが汎用の型引数付き関数を定義できることを意味しません。
+`convert`はキーワードではありません。`convert(value)`という通常の関数呼び出しや、変数を比較する`convert < limit`は引き続き使えます。`convert<型>(式)`の形は組み込みの変換で、同名のユーザー関数の定義によって意味は変わりません。ユーザー定義の型引数付き関数は`name::<型>(式)`の書式で呼び出します。
 
 ## 出力
 

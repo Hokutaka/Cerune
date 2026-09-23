@@ -755,3 +755,130 @@ fn imported_invalid_lengths_preserve_files_and_existing_artifacts() {
         }
     }
 }
+
+#[test]
+fn generic_modules_preserve_nominal_types_private_lengths_and_source_files() {
+    let entry =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("examples/modules/generic_functions.ceru");
+    let compilation = modules::load(&entry).unwrap();
+    let ir = compilation.to_ir().unwrap();
+    assert_eq!(
+        run_bytecode(&bytecode::lower(&ir).unwrap()).unwrap(),
+        "共有関数\n日本語\0\r\n\n18446744073709551615\n"
+    );
+    let origins: Vec<_> = ir
+        .function_definitions
+        .iter()
+        .filter_map(|f| f.generic_origin.as_ref())
+        .collect();
+    assert_eq!(origins.len(), 3);
+    assert!(origins.iter().any(|o| {
+        o.calls
+            .iter()
+            .any(|c| c.span.source_id() != o.definition.source_id())
+    }));
+    assert!(
+        origins
+            .iter()
+            .flat_map(|o| &o.calls)
+            .flat_map(|c| &c.argument_spans)
+            .any(|s| compilation.sources.slice(*s) == Some("arrays::COUNT"))
+    );
+    assert!(origins.iter().any(|o| {
+        o.calls
+            .iter()
+            .any(|c| compilation.sources.slice(c.span) == Some("first::<T, SIZE>(values)"))
+    }));
+}
+
+#[test]
+fn invalid_imported_generic_calls_preserve_diagnostics_and_artifacts() {
+    let w = Workspace::new();
+    for (library, main, reason) in [
+        (
+            "fn echo<T>(v:T)->T{return v;}",
+            "print(lib::echo::<i64>(1));",
+            "private function",
+        ),
+        (
+            "type Secret { n:i64 } pub fn echo<T>(v:T)->T{return v;}",
+            "print(lib::echo::<lib::Secret>(1));",
+            "private type",
+        ),
+        (
+            "const N:i64=2; pub fn size<const M:i64>()->i64{return M;}",
+            "print(lib::size::<lib::N>());",
+            "private constant",
+        ),
+        (
+            "pub fn add<T>(a:T,b:T)->T{return a+b;}",
+            "print(lib::add::<string>(\"a\",\"b\"));",
+            "generic instantiations",
+        ),
+        (
+            "pub fn echo<T>(v:T)->T{return v;}",
+            "print(lib::echo::<u8>(256));",
+            "does not fit",
+        ),
+        (
+            "pub fn echo<T>(v:T)->T{return v;}",
+            "print(lib::echo::<i64,2>(1));",
+            "generic arguments",
+        ),
+        (
+            "type Secret { n:i64 } pub fn bad<T>(v:Secret)->T{return 1;}",
+            "print(1);",
+            "private type",
+        ),
+        (
+            "pub fn bad<T>(v:T)->T{mut T:i64=1;return v;}",
+            "print(1);",
+            "conflicts with generic",
+        ),
+    ] {
+        w.put("lib.ceru", library);
+        let entry = w.put("main.ceru", &format!("import \"lib.ceru\" as lib; {main}"));
+        let artifact = w.put("result.ceir", "keep");
+        let output = w.cli("emit-ir", &entry, &["-o", artifact.to_str().unwrap()]);
+        assert!(!output.status.success(), "{library}: {main}");
+        let diagnostic = String::from_utf8(output.stderr).unwrap();
+        assert!(diagnostic.contains(reason), "{diagnostic}");
+        assert!(diagnostic.contains(".ceru:"), "{diagnostic}");
+        assert_eq!(fs::read_to_string(artifact).unwrap(), "keep");
+    }
+}
+
+#[test]
+fn distinct_module_types_do_not_share_generic_instances() {
+    let w = Workspace::new();
+    w.put("one.ceru", "pub type Item { value:i64 }");
+    w.put("two.ceru", "pub type Item { value:i64 }");
+    let entry = w.put(
+        "main.ceru",
+        r#"
+        import "one.ceru" as one; import "two.ceru" as two;
+        fn echo<T>(v:T)->T{return v;}
+        print(echo::<one::Item>(one::Item{value:1}).value);
+        print(echo::<two::Item>(two::Item{value:2}).value);
+    "#,
+    );
+    let compilation = modules::load(&entry).unwrap();
+    let ir = compilation.to_ir().unwrap();
+    assert_eq!(
+        run_bytecode(&bytecode::lower(&ir).unwrap()).unwrap(),
+        "1\n2\n"
+    );
+    assert_eq!(ir.function_definitions.len(), 2);
+    assert_ne!(
+        ir.function_definitions[0]
+            .generic_origin
+            .as_ref()
+            .unwrap()
+            .arguments,
+        ir.function_definitions[1]
+            .generic_origin
+            .as_ref()
+            .unwrap()
+            .arguments
+    );
+}

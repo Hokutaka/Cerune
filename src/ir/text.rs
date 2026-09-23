@@ -91,6 +91,28 @@ pub fn emit(program: &Program) -> String {
     }
 
     for (index, function) in program.function_definitions.iter().enumerate() {
+        if let Some(origin) = &function.generic_origin {
+            writeln!(
+                output,
+                "; instantiate {}::<{}> [definition source={} bytes={}..{}]",
+                origin.template,
+                origin.arguments.join(", "),
+                origin.definition.source_id().index(),
+                origin.definition.start(),
+                origin.definition.end()
+            )
+            .unwrap();
+            for call in &origin.calls {
+                writeln!(
+                    output,
+                    ";   call [source={} bytes={}..{}]",
+                    call.span.source_id().index(),
+                    call.span.start(),
+                    call.span.end()
+                )
+                .unwrap();
+            }
+        }
         write!(output, "fn %{}@{}(", function.name, function.id.0).unwrap();
         for (parameter_index, parameter) in function.parameters.iter().enumerate() {
             if parameter_index > 0 {

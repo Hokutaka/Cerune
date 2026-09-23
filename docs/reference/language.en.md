@@ -31,7 +31,14 @@ constant_definition := "const" IDENT ":" type_ref "=" expression ";"
 field_definition := IDENT ":" type_ref ("=" expression)?
 
 function_definition :=
-    "fn" IDENT "(" parameters? ")" "->" return_type block
+    "fn" IDENT generic_parameters? "(" parameters? ")" "->" return_type block
+
+generic_parameters := "<" generic_parameter ("," generic_parameter)* ","? ">"
+generic_parameter := IDENT | "const" IDENT ":" "i64"
+generic_arguments := "::<" generic_argument ("," generic_argument)* ","? ">"
+generic_argument := type_ref | INTEGER
+function_path := IDENT ("::" IDENT)?
+function_call := function_path generic_arguments? "(" arguments? ")"
 
 parameters  := parameter ("," parameter)*
 
@@ -42,7 +49,7 @@ return_type := type_ref | "void"
 statement   := binding
              | assignment
              | "print" "(" expression ")" ";"
-             | IDENT "(" arguments? ")" ";"
+             | function_call ";"
              | "return" expression? ";"
              | match_statement
              | if_statement
@@ -133,7 +140,7 @@ primary     := "true"
              | STRING
              | "[" expression ("," expression)* ","? "]"
              | IDENT
-             | IDENT "(" arguments? ")"
+             | function_call
              | variant_path "{" (field_value ("," field_value)* ","?)? "}"
              | IDENT "{" field_value ("," field_value)* ","? "}"
              | IDENT "{" ".." expression ("," field_value)* ","? "}"
@@ -452,6 +459,17 @@ Top-level executable statements receive a compiler-generated entrypoint. A progr
 Function parameters and results may use `bool`, `i8`, `u8`, `i16`, `u16`, `i32`, `u32`, `i64`, `u64`, `f32`, `f64`, `string`, named product types, and fixed arrays. Products and arrays are passed as values, so the received value and the caller's value do not share a mutable location. There is no fixed language-level parameter-count limit. Recursion and command-line arguments are not yet supported. Unsupported forms produce diagnostics instead of silently changing meaning.
 
 Cerune IR and bytecode expose function IDs, parameter binding IDs, calls, and returns. Backend artifacts expose how those entities become function symbols, arguments, local storage, and ABI registers or memory. See [Function design](../design/functions.en.md) for details.
+
+### Functions with type and length arguments
+
+```cerune
+fn first<T, const N: i64>(values: [T; N]) -> T { return values[0]; }
+print(first::<string, 2>(["日本語", "予備"]));
+```
+
+`T` is a type parameter and `const N: i64` is a positive length parameter. Supply every argument in declaration order using `::<...>`. Types are existing concrete types; lengths are positive integer literals, integer constant names, or enclosing length parameters. A length parameter is also an i64 body value. Convert to a type parameter with `convert<T>(value)`. `pub fn` and `alias::first::<string, COUNT>(values)` are supported.
+
+Equal resolved types/lengths share one ordinary function instance. Bodies are checked for each used concrete type; unused templates do not guarantee complete body type checking. Calls skipped by short-circuiting are still checked. Value-argument order, copying, and failure rules remain those of ordinary functions. Type-argument inference, traits, generic type definitions, and recursion are unsupported. See the [design](../design/generic-functions.en.md) for limits and observation formats and [generic_functions.ceru](../../examples/generic_functions.ceru) for a runnable example.
 
 ## Mutable bindings and reassignment
 
@@ -847,7 +865,7 @@ Cerune IR retains source/destination types, input, original spelling, and source
 
 C, LLVM, QBE, WAT, and Windows x86-64 retain integer values in 64-bit storage and check narrower integer destinations. Floating-point conversions retain a typed operation in backend IR and generate checks before accepting a changed representation. Same-type conversions need no native instruction; they remain explicit in Cerune IR and bytecode. Integer-to-`i64` conversions also need no extra native operation; float-to-`i64` conversions still require checks.
 
-Functions and types cannot be defined with the built-in type names `bool`, `i8`, `u8`, `i16`, `u16`, `i32`, `u32`, `i64`, `u64`, `f32`, `f64`, or `string`; these are diagnosed at the definition. `convert` is not a keyword: ordinary calls such as `convert(value)` and comparisons such as `convert < limit` remain available. The `convert<type>(expression)` form is a built-in conversion whose meaning does not change when a user function named `convert` exists. This form does not introduce user-defined generic functions.
+Functions and types cannot be defined with the built-in type names `bool`, `i8`, `u8`, `i16`, `u16`, `i32`, `u32`, `i64`, `u64`, `f32`, `f64`, or `string`; these are diagnosed at the definition. `convert` is not a keyword: ordinary calls such as `convert(value)` and comparisons such as `convert < limit` remain available. The `convert<type>(expression)` form is a built-in conversion whose meaning does not change when a user function named `convert` exists. User-defined generic functions use the call syntax `name::<type>(expression)`.
 
 ## Output
 
