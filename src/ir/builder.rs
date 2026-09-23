@@ -19,9 +19,17 @@ use super::{
 };
 
 pub fn build(program: &ast::Program) -> Result<Program, Diagnostic> {
-    let program = crate::sums::lower(program)?;
+    let (program, uses) = crate::array_lengths::resolve(program)?;
+    let program = crate::sums::lower(&program)?;
     let model = semantic::analyze_lowered(&program)?;
-    build_with_model(&program, &model)
+    let mut ir = build_with_model(&program, &model)?;
+    for usage in uses {
+        let id = model.constants[&usage.name].0;
+        ir.constant_definitions[id]
+            .array_length_uses
+            .push(usage.span);
+    }
+    Ok(ir)
 }
 
 pub(crate) fn build_with_model(

@@ -2,7 +2,7 @@
 
 [日本語](language-roadmap.ja.md)
 
-As of 2026-09-23, this inventory includes modules, removal of the parameter limit, product updates, compile-time constants, sum types with match, array-length queries, and array iteration. “Current” means implemented; candidates are proposals awaiting design and implementation. This document does not commit to candidate syntax or adoption. See the [language reference](../reference/language.en.md) for the current specification.
+As of 2026-09-23, this inventory includes modules, removal of the parameter limit, product updates, compile-time constants, sum types with match, array-length queries, array iteration, and constants in array type lengths. “Current” means implemented; candidates are proposals awaiting design and implementation. This document does not commit to candidate syntax or adoption. See the [language reference](../reference/language.en.md) for the current specification.
 
 ## Properties Cerune should preserve
 
@@ -28,7 +28,7 @@ Cerune prioritizes explaining a computation's meaning and its transformation int
 | Functions and control flow | Typed parameters/results, `void`, `if`/`else`, `while`/`for`, `break`/`continue`/`return` | No fixed parameter-count limit; no recursion | [function_values](../../examples/function_values.ceru), [loop_control](../../examples/loop_control.ceru) |
 | Bindings and conversions | Immutable by default, `mut`, explicit `infer`, `T(value)` and `convert<T>(value)` | `infer` is not a runtime type; conversions do not request truncation or saturation | [integer_conversions](../../examples/integer_conversions.ceru) |
 | Sum types | `enum` payload variants, exhaustive `match` | No guards, match expressions, or generic Option/Result | [sum_lookup](../../examples/sum_lookup.ceru) |
-| Compile-time constants | Typed `const`, dependency evaluation, `pub const` | No function calls, block-local declarations, or names in array type lengths | [constants](../../examples/constants.ceru) |
+| Compile-time constants | Typed `const`, dependency evaluation, array type lengths, `pub const` | No function calls or block-local declarations | [constants](../../examples/constants.ceru) |
 | Modules | Explicit imports, namespaces, function/type/constant visibility | Cycles/private access diagnosed; no re-exports, module variables, or package distribution | [modules](../../examples/modules/README.en.md) |
 
 The [example type tables](../../examples/README.en.md) list ranges and applications. Whole-array, whole-product, and whole-sum printing and equality are not implemented.
@@ -43,16 +43,15 @@ Language support does not imply equal observation detail. Language check failure
 
 ## Proposed priorities
 
-The `array_len` length query and `for … in` iteration over independent value copies are implemented. Add missing features in the order below, pairing a small design with examples and cross-route comparisons. Each stage determines its syntax and adoption.
+`array_len`, array `for … in`, and constant lengths `[T; COUNT]` are implemented. Add missing features in the order below, pairing a small design with examples and cross-route comparisons. Each stage determines its syntax and adoption.
 
 | Order | Missing feature | First contract and example |
 | --- | --- | --- |
-| 1 | Constants in array type lengths | Name resolution, dependency cycles, positive lengths, resource limits for `[T; COUNT]`. Share fixed sizes across modules |
-| 2 | Functions across types and lengths | Generic type checking, specialization, source correspondence. Reuse aggregation/search across element types and array lengths |
-| 3 | Numeric conversion choices | Define rounding, truncation, and saturation separately from current value-preserving conversions. Compare boundaries, NaN, infinity, and negative zero |
-| 4 | Aggregate comparison/printing and extended branching | Comparison order and display formats for arrays/products/sums; evaluation order for match expressions/guards. Add needed operations separately |
-| 5 | Dynamic data, recursion, external I/O | Define ownership, lifetimes, allocation failure, call storage, resource limits, and effects first. Introduce slices, concatenation, and files in stages |
-| 6 | Module distribution | Re-exports, dependencies/versions, reproducible builds; extend explicit imports |
+| 1 | Functions across types and lengths | Generic type checking, specialization, source correspondence. Reuse aggregation/search across element types and array lengths |
+| 2 | Numeric conversion choices | Define rounding, truncation, and saturation separately from current value-preserving conversions. Compare boundaries, NaN, infinity, and negative zero |
+| 3 | Aggregate comparison/printing and extended branching | Comparison order and display formats for arrays/products/sums; evaluation order for match expressions/guards. Add needed operations separately |
+| 4 | Dynamic data, recursion, external I/O | Define ownership, lifetimes, allocation failure, call storage, resource limits, and effects first. Introduce slices, concatenation, and files in stages |
+| 5 | Module distribution | Re-exports, dependencies/versions, reproducible builds; extend explicit imports |
 | Experiment | GPU numeric computation | Narrow the supported types, memory, synchronization, and diagnostics; compare independent element computations with the CPU |
 
 Existing foundations are [common failure records](runtime-diagnostics.en.md), [file origins](source-files.en.md), [modules](modules.en.md), [constants](constants.en.md), [functions](functions.en.md), [product updates](product-updates.en.md), [sums](sum-types.en.md), and [fixed arrays](fixed-arrays.en.md). The [mixed-argument](../../examples/function_arguments.ceru) and [array-length](../../examples/array_length.ceru) examples check value passing and evaluation order.

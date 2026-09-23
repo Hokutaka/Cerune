@@ -65,3 +65,5 @@ The [module examples](../../examples/modules/README.en.md) contain modular and s
 [Compile-time constants](constants.en.md) are implemented. Public constants cannot expose private types, and unused constants are evaluated before execution. Constants introduce no shared mutable globals.
 
 Package distribution, version resolution, re-exports, separate compilation, dynamic loading, and mutable module globals are outside this increment. The parameter-count limit has been lifted, and product updates and sum types are available. Next, evaluate reusable processing through examples of array-length queries and iteration.
+
+Array type lengths accept public integer constants through `alias::COUNT`. A local private constant may also determine a public type length: the public type carries a resolved number without exposing the private name. See [constant array lengths](constant-array-lengths.en.md).

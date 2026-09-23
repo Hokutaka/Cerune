@@ -48,7 +48,7 @@ Dependencies need not follow declaration order. Cycles are rejected, and travers
 
 `emit-ir` shows `[compile-time]` and the relationship between initializer and result. References display `const %name@ID => value`. Bytecode and generated artifacts use evaluated values. This IR mapping does not promise constant names in every target's debug format.
 
-Ordinary functions cannot run at compilation. Compile-time functions need a separate contract for termination, effects, and resource usage. Array type lengths still require integer literals: `[i64; LIMIT]` is unsupported. Block-local constant declarations, re-exports, and generics are also outside this increment.
+Ordinary functions cannot run at compilation. Compile-time functions need a separate contract for termination, effects, and resource usage. Integer constants may specify lengths such as `[i64; LIMIT]`; see [type dependencies, resource limits, and observation](constant-array-lengths.en.md). Block-local constant declarations, re-exports, and generics are also outside this increment.
 
 ## Examples and validation
 

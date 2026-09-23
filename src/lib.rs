@@ -1,3 +1,4 @@
+mod array_lengths;
 pub mod ast;
 pub mod bytecode;
 pub mod codegen;

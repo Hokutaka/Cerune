@@ -454,6 +454,9 @@ impl Lowerer {
         }
         *budget -= 1;
         let kind = match &ty.kind {
+            TypeRefKind::ArrayConstant { constant, .. } => {
+                return Err(Diagnostic::new("unresolved array length", constant.span));
+            }
             TypeRefKind::Array { element, length } => {
                 if *length > *budget {
                     return Err(Diagnostic::new(

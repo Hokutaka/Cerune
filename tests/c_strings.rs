@@ -358,3 +358,14 @@ fn array_iteration_preserves_snapshots_and_loop_control() {
         native.matches_vm(source);
     }
 }
+
+#[path = "support/length_constant_cases.rs"]
+mod length_constant_cases;
+#[test]
+fn constant_array_lengths_preserve_values_across_optimized_c() {
+    let Some(native) = NativeC::new() else { return };
+    for &(source, expected) in length_constant_cases::CASES {
+        assert_eq!(run_vm(source).unwrap(), expected);
+        native.matches_vm(source);
+    }
+}

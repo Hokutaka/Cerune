@@ -30,6 +30,8 @@ pub struct TypeId(pub usize);
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ConstantDefinition {
+    /// この定数を配列型の長さとして参照した位置です。
+    pub array_length_uses: Vec<Span>,
     pub id: usize,
     pub name: String,
     pub ty: Type,

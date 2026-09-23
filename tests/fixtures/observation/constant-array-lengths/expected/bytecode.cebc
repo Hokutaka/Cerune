@@ -1,0 +1,24 @@
+; Cerune bytecode v0.1
+
+.function 0 total(0:values:[i64; 2]) -> i64
+.slot 0 values [i64; 2]
+0000  load 0        ; values
+0001  push.i64 0
+0002  array.get i64 2
+0003  load 0        ; values
+0004  push.i64 1
+0005  array.get i64 2
+0006  add.i64
+0007  return.value
+.end
+
+.slot 0 values [i64; 2]
+
+0000  push.i64 3
+0001  push.i64 4
+0002  array.new i64 2
+0003  store 0       ; values
+0004  load 0        ; values
+0005  call 0 1  ; total
+0006  print.i64
+0007  halt

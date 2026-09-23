@@ -1,0 +1,13 @@
+; Cerune IR v0.2
+; #N identifies one statement or expression in this compilation
+
+const %COUNT@0: i64 = #3 add.i64(#4 const %BASE@1 => #5 1i64, #6 1i64) => #8 2i64 [compile-time]
+  array-length %COUNT@0 => 2 [source=0 bytes=73..78]
+  array-length %COUNT@0 => 2 [source=0 bytes=136..141]
+const %BASE@1: i64 = #0 1i64 => #2 1i64 [compile-time]
+fn %total@0(%values@0: [i64; 2]) -> i64 {
+  #9 return #10 add.i64(#11 index(#12 %values@0:[i64; 2], #13 0i64):i64, #14 index(#15 %values@0:[i64; 2], #16 1i64):i64)
+}
+
+#17 %values@1: [i64; 2] = #18 array[#19 3i64, #20 4i64]:[i64; 2]
+#21 print.i64 #22 call %total@0(#23 %values@1:[i64; 2]):i64

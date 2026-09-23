@@ -57,7 +57,7 @@ During development, replace `cerune` with `cargo run --quiet --`.
 | Numeric conversion | Explicit value-preserving conversions such as `f64(x)` / `convert<f64>(x)` |
 | Structs | Named types, field access and defaults, updates that create new values, nesting, value copies |
 | Sum types | `enum` variants with payloads; exhaustive `match` statements |
-| Arrays | Fixed length, element counts with `array_len`, nesting, element access and updates, value copies |
+| Arrays | Fixed length (including named constants), element counts with `array_len`, nesting, element access and updates, value copies |
 | Functions | Typed parameters and returns, `void`, `return`; strings, structs, arrays, and sums can also be passed and returned |
 | Entry point | Top-level statements or `fn main() -> void` (not both) |
 | Control flow | `if` / `else`, `while`, `for`, array `for … in`, `break` / `continue` |

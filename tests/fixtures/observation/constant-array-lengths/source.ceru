@@ -1,0 +1,5 @@
+const COUNT: i64 = BASE + 1;
+const BASE: i64 = 1;
+fn total(values: [i64; COUNT]) -> i64 { return values[0] + values[1]; }
+values: [i64; COUNT] = [3, 4];
+print(total(values));
