@@ -104,6 +104,9 @@ pub const FAILURES: &[(&str, &str)] = &[
         "const DATA: [i64; 1] = [7]; value: i64 = DATA[1];",
         "array-index-out-of-bounds",
     ),
+    (ITERATION_FAILURES[0].0, ITERATION_FAILURES[0].1),
+    (ITERATION_FAILURES[1].0, ITERATION_FAILURES[1].1),
+    (ITERATION_FAILURES[2].0, ITERATION_FAILURES[2].1),
     (ARRAY_LENGTH_FAILURES[0].0, ARRAY_LENGTH_FAILURES[0].1),
     (ARRAY_LENGTH_FAILURES[1].0, ARRAY_LENGTH_FAILURES[1].1),
     (ARRAY_LENGTH_FAILURES[2].0, ARRAY_LENGTH_FAILURES[2].1),
@@ -174,5 +177,29 @@ pub const ARRAY_LENGTH_FAILURES: &[(&str, &str, &str, &str)] = &[
         "division-by-zero",
         "default\n",
         "1 / 0",
+    ),
+];
+
+// 反復開始前の評価と、本体内の失敗を区別します。
+pub const ITERATION_FAILURES: &[(&str, &str, &str, &str)] = &[
+    (
+        r#"fn mark(n: i64) -> i64 { print(n); return n; }
+        for (v: infer in [mark(1), 1 / 0, mark(3)]) { print(v); break; }"#,
+        "division-by-zero",
+        "1\n",
+        "1 / 0",
+    ),
+    (
+        r#"fn make() -> [[i64; 1]; 1] { print("make"); return [[7]]; }
+        for (v: infer in make()[1]) { print(v); }"#,
+        "array-index-out-of-bounds",
+        "make\n",
+        "make()[1]",
+    ),
+    (
+        r#"for (v: infer in [2, 0, 4]) { print(v); print(10 / v); }"#,
+        "division-by-zero",
+        "2\n5\n0\n",
+        "10 / v",
     ),
 ];

@@ -472,6 +472,10 @@ fn collect_function_calls(
                 collect_function_calls(then_body, model, calls);
                 collect_function_calls(else_body, model, calls);
             }
+            StmtKind::ForEach { value, body, .. } => {
+                collect_calls_in_expr(value, model, calls);
+                collect_function_calls(body, model, calls);
+            }
             StmtKind::While { condition, body } => {
                 collect_calls_in_expr(condition, model, calls);
                 collect_function_calls(body, model, calls);
@@ -770,6 +774,35 @@ fn check_statements(
                 scopes.pop();
             }
             StmtKind::Match { .. } => unreachable!("match is elaborated before semantic analysis"),
+            StmtKind::ForEach { index, value, .. } => {
+                let ty = model.type_of_expr(value, &bindings)?;
+                if !matches!(ty, Type::Array { .. }) {
+                    return Err(Diagnostic::new(
+                        format!(
+                            "for-in expects a fixed array, found {}",
+                            model.type_name(ty)
+                        ),
+                        value.span,
+                    ));
+                }
+                if let Some(index) = index
+                    && index.mutable
+                {
+                    return Err(Diagnostic::new(
+                        "for-in index binding must be immutable",
+                        index.span,
+                    ));
+                }
+                scopes.push(HashMap::new());
+                check_statements(
+                    &crate::iteration::expand(statement),
+                    scopes,
+                    loop_depth,
+                    return_type,
+                    model,
+                )?;
+                scopes.pop();
+            }
             StmtKind::Binding {
                 mutable,
                 name,

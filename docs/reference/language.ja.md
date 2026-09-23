@@ -48,6 +48,7 @@ statement   := binding
              | if_statement
              | while_statement
              | for_statement
+             | for_each_statement
              | "break" ";"
              | "continue" ";"
 
@@ -58,6 +59,10 @@ while_statement := "while" expression block
 for_statement :=
     "for" "(" (binding_clause | binding_assignment_clause) ";"
     expression ";" binding_assignment_clause ")" block
+
+for_each_statement :=
+    "for" "(" (IDENT ":" type_spec ",")?
+    "mut"? IDENT ":" type_spec "in" expression ")" block
 
 block       := "{" statement* "}"
 
@@ -338,6 +343,27 @@ print(array_len(matrix[0])); // 3
 定数式でも使用できますが、引数全体に定数式の規則が適用されます。未使用の定数でも引数内の失敗を診断し、通常の関数呼び出しは認めません。配列型の長さへの定数の使用は引き続き未対応です。
 
 同名の関数・定数・import別名は定義できません。変数と関数の名前空間は別です。引数の数・型の誤り、結果を捨てる呼び出し文は診断します。[集計の例](../../examples/array_length.ceru)・[評価順の例](../../examples/array_length_order.ceru)を参照してください。
+
+
+### 固定長配列の反復
+
+```cerune
+values: [i64; 3] = [4, 7, 9];
+for (value: infer in values) { print(value); }
+for (index: i64, mut value: infer in values) {
+    value = value + index;
+    print(value);
+}
+print(values[1]); // 7
+```
+
+`for (要素: 型 in 対象)`、または`for (添字: 型, 要素: 型 in 対象)`で固定長配列を先頭から走査します。各束縛に明示型か`infer`が必要です。添字は不変な`i64`で、要素型は対象から決まります。`for (v: u8 in [1])`は型エラーで、対象を`[1u8]`などと指定します。`in`は予約語です。
+
+対象式は開始時に一度、外側のスコープで評価してコピーします。本文内で元の配列を変更しても走査中の値は変わりません。要素も毎回コピーし、`mut`を付けた場合はその回のコピーだけを変更できます。束縛は本文だけで有効で、同じ本文の重複宣言、定数・import別名の隠蔽は診断します。
+
+`continue`は次の要素へ進み、`break`・`return`は既存の意味に従います。最初に`break`しても対象全体の評価は済んでいます。対象や本文で失敗すると元の失敗式を記録して停止します。反復内の`return`だけでは、関数の全経路が値を返すと判定しません。空配列・文字列反復・参照・分解パターンは未対応です。
+
+Cerune IRでは対象のコピー・長さ・カーソルを`$for_in_*`の内部束縛と既存の`for`で表します。対象と本文のソース位置を保ち、生成した制御式はヘッダーへ結び付けます。[設計](../design/array-iteration.ja.md)と[集計・検索の例](../../examples/array_iteration.ceru)を参照してください。
 
 ## 直和型とmatch
 

@@ -136,6 +136,8 @@ Argument counts and types must match the declaration; there is no fixed count li
 
 | Example | Demonstrates |
 | --- | --- |
+| [array_iteration.ceru](array_iteration.ceru) | `for … in` aggregation/search, indices, early exit, and captured copies |
+| [array_iteration_values.ceru](array_iteration_values.ceru) | Iterate strings/u64/nested arrays/products/sums; mutate per-iteration copies |
 | [array_length.ceru](array_length.ceru) | Aggregate using element counts; constants, nesting, arrays of strings/u64/products/sums, and copies |
 | [array_length_order.ceru](array_length_order.ceru) | Evaluate calls/elements once despite a known length; short circuiting and loop conditions |
 | [ring_buffer.ceru](ring_buffer.ceru) | cycling a storage position with `%` to keep the latest four values and their average |
@@ -197,6 +199,8 @@ Argument counts and types must match the declaration; there is no fixed count li
 | `function_arguments.ceru` | Starts with `引数の評価順`, `1` through `7`, then `28` |
 | `string_origins.ceru` | `日本語\0\ntrue\nfalse\n`; no `skipped`. Compare IR and annotated LLVM: equality `#7` and short circuit `#14` lead to calls/branches ([walkthrough](../docs/reference/cli.en.md#following-llvm-origins)) |
 | `string_byte_length.ceru` | `0, 9, 3, 2, 3, 4, 7, 3, 9, left, right, 9, false, false, 6, 10`, each with LF. `left`/`right` run once; no `skipped`. `byte_len` covers UTF-8 lengths, copies, calls, arrays, and defaults |
+| `array_iteration.ceru` | Positive total `15`; search index `2` and `未登録`. Visits `1 → 2 → 3` despite original-array updates; original second element becomes `99` |
+| `array_iteration_values.ceru` | String indices/byte lengths/contents and u64 boundaries. After copy updates, original row starts remain `1 → 3`, original product count `10`; sums print `空 → 海` |
 | `array_length.ceru` | Aggregation: `4 → 20 → 4 → 118 → 20`; updating a copy preserves the original. Type examples: `2 → 3 → 2 → 9 → 2 → 2 → 2` (`9` is the string byte count) |
 | `array_length_order.ceru` | `make → 10 → 20 → 2`; the second call precedes `later → 5`. No `skipped`; loop-condition `2` appears three times, including the exit check |
 | `coin_change.ceru` | Minimum coin counts for amounts 1–6, then selected coins `3 → 3` |
@@ -233,6 +237,7 @@ cargo run -- emit-llvm examples/string_byte_length.ceru --target x86_64-unknown-
 | Check | Command / scope |
 | --- | --- |
 | Batch runner | Commands at the top; checks exit status |
+| Array iteration | `cargo test --test array_iteration`; example output, copies, control, diagnostic locations |
 | Expected output | `cargo test --test examples` |
 | C strings | `cargo test --test c_strings`; compare with the VM, with and without optimization |
 | LLVM strings | `cargo test --test llvm_strings`; compare VM/C/LLVM bytes |

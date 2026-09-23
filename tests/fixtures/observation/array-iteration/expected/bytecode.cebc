@@ -1,0 +1,51 @@
+; Cerune bytecode v0.1
+
+.function 0 values() -> [i64; 2]
+0000  push.i64 42
+0001  print.i64
+0002  push.i64 1
+0003  push.i64 2
+0004  array.new i64 2
+0005  return.value
+.end
+
+.slot 0 $for_in_snapshot_0_54 [i64; 2]
+.slot 1 $for_in_length_0_54 i64
+.slot 2 mut $for_in_cursor_0_54 i64
+.slot 3 i i64
+.slot 4 mut value i64
+
+0000  call 0 0  ; values
+0001  store 0       ; $for_in_snapshot_0_54
+0002  load 0        ; $for_in_snapshot_0_54
+0003  array_len [i64; 2]
+0004  store 1       ; $for_in_length_0_54
+0005  push.i64 0
+0006  store 2       ; $for_in_cursor_0_54
+0007  load 2        ; $for_in_cursor_0_54
+0008  load 1        ; $for_in_length_0_54
+0009  lt.i64
+0010  jump-if-false 0033
+0011  load 2        ; $for_in_cursor_0_54
+0012  store 3       ; i
+0013  load 0        ; $for_in_snapshot_0_54
+0014  load 2        ; $for_in_cursor_0_54
+0015  array.get i64 2
+0016  store 4       ; value
+0017  load 3        ; i
+0018  push.i64 0
+0019  eq.i64
+0020  jump-if-false 0022
+0021  jump 0028
+0022  load 4        ; value
+0023  push.i64 10
+0024  add.i64
+0025  assign 4      ; value
+0026  load 4        ; value
+0027  print.i64
+0028  load 2        ; $for_in_cursor_0_54
+0029  push.i64 1
+0030  add.i64
+0031  assign 2      ; $for_in_cursor_0_54
+0032  jump 0007
+0033  halt

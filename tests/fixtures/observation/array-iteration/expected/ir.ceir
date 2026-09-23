@@ -1,0 +1,28 @@
+; Cerune IR v0.2
+; #N identifies one statement or expression in this compilation
+
+fn %values@0() -> [i64; 2] {
+  #0 print.i64 #1 42i64
+  #2 return #3 array[#4 1i64, #5 2i64]:[i64; 2]
+}
+
+#6 %$for_in_snapshot_0_54@0: [i64; 2] = #7 call %values@0():[i64; 2]
+#8 %$for_in_length_0_54@1: i64 = #9 array_len(#10 %$for_in_snapshot_0_54@0:[i64; 2])
+#11 for.loop {
+  start {
+    #12 mut %$for_in_cursor_0_54@2: i64 = #13 0i64
+  }
+  condition.bool #14 lt.i64(#15 %$for_in_cursor_0_54@2:i64, #16 %$for_in_length_0_54@1:i64)
+  body {
+    #17 %i@3: i64 = #18 %$for_in_cursor_0_54@2:i64
+    #19 mut %value@4: i64 = #20 index(#21 %$for_in_snapshot_0_54@0:[i64; 2], #22 %$for_in_cursor_0_54@2:i64):i64
+    #23 if.bool #24 eq.i64(#25 %i@3:i64, #26 0i64) {
+      #27 continue
+    }
+    #28 set %value@4:i64 = #29 add.i64(#30 %value@4:i64, #31 10i64)
+    #32 print.i64 #33 %value@4:i64
+  }
+  update {
+    #34 set %$for_in_cursor_0_54@2:i64 = #35 add.i64(#36 %$for_in_cursor_0_54@2:i64, #37 1i64)
+  }
+}

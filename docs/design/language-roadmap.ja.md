@@ -2,7 +2,7 @@
 
 [English](language-roadmap.en.md)
 
-2026-09-23時点、モジュール・引数制限の解消・構造体の更新式・コンパイル時定数・直和型とmatch・配列長の取得までを反映しています。「現在」は実装済み、「候補」は設計・実装前の提案です。候補の構文や採用を確定する文書ではありません。現在の正確な仕様は[言語リファレンス](../reference/language.ja.md)を参照してください。
+2026-09-23時点、モジュール・引数制限の解消・構造体の更新式・コンパイル時定数・直和型とmatch・配列長の取得・配列反復までを反映しています。「現在」は実装済み、「候補」は設計・実装前の提案です。候補の構文や採用を確定する文書ではありません。現在の正確な仕様は[言語リファレンス](../reference/language.ja.md)を参照してください。
 
 ## Ceruneが持つべき性質
 
@@ -23,7 +23,7 @@ Ceruneでは、書いた計算の意味と、それが実行される表現へ�
 | 浮動小数点 | `f32`、`f64` | 演算には各精度の丸めがある。整数との明示変換は値を保てる場合のみ | [floating_point](../../examples/floating_point.ceru) |
 | 真偽値 | `bool`、比較、`!`、短絡評価する`&&`・`||` | 数値との暗黙変換なし | [short_circuit](../../examples/short_circuit.ceru) |
 | 文字列 | `string`、表示、`==`・`!=`、`byte_len` | 連結・添字参照・文字数・数値変換は未実装 | [string_byte_length](../../examples/string_byte_length.ceru)、[string_lookup](../../examples/string_lookup.ceru) |
-| 固定長配列 | `[T; N]`、`array_len`、入れ子、値渡し、`mut`な要素の更新 | 長さは型の一部。添字は`i64`。動的長・スライスなし | [fixed_arrays](../../examples/fixed_arrays.ceru)、[heat_diffusion](../../examples/heat_diffusion.ceru) |
+| 固定長配列 | `[T; N]`、`array_len`、`for … in`、入れ子、値渡し、`mut`な要素の更新 | 長さは型の一部。添字は`i64`。動的長・スライスなし | [array_iteration](../../examples/array_iteration.ceru)、[heat_diffusion](../../examples/heat_diffusion.ceru) |
 | 名前付きproduct type | フィールド、既定値、更新式、入れ子、値渡し | フィールドの直接代入なし。新しい値を構築して全体を再代入 | [product-point](../../examples/product-point.ceru)、[packet_counter](../../examples/packet_counter.ceru) |
 | 関数と制御構文 | 型付き引数・戻り値、`void`、`if`・`else`、`while`・`for`、`break`・`continue`・`return` | 引数数の固定上限なし。再帰なし | [function_values](../../examples/function_values.ceru)、[loop_control](../../examples/loop_control.ceru) |
 | 束縛と変換 | 既定で不変、`mut`、明示的な`infer`、`T(value)`と`convert<T>(value)` | `infer`は実行時型ではない。変換は切り捨てや飽和の指定ではない | [integer_conversions](../../examples/integer_conversions.ceru) |
@@ -43,17 +43,16 @@ Ceruneでは、書いた計算の意味と、それが実行される表現へ�
 
 ## 次に持つべきもの：提案する順序
 
-配列長の取得`array_len`を実装しました。未対応機能は次の順で、小さな設計・example・全経路の比較を一組として追加します。構文や採用は各段階の設計で確定します。
+配列長の取得`array_len`と、値をコピーして走査する`for … in`を実装しました。未対応機能は次の順で、小さな設計・example・全経路の比較を一組として追加します。構文や採用は各段階の設計で確定します。
 
 | 順序 | 未対応機能 | 最初に決める契約・確認例 |
 | --- | --- | --- |
-| 1 | 配列の反復 | 対象をいつ評価・コピーするか、要素と添字の扱い、`break`・`continue`。集計と検索を既存の添字ループと比較 |
-| 2 | 配列型の長さに定数を使用 | `[T; COUNT]`の名前解決・依存循環・正の長さ・資源上限。モジュールで共有する固定サイズ |
-| 3 | 型・長さをまたぐ関数 | ジェネリクスの型検査、具体化、生成元との対応。同じ集計・検索を異なる型と配列長で再利用 |
-| 4 | 数値変換の選択肢 | 丸め・切り捨て・飽和を、現在の値を保つ変換と別の操作として定義。境界・NaN・無限大・負のゼロを比較 |
-| 5 | 複合値の比較・表示と分岐の拡張 | 配列・構造体・直和型の比較順と表示形式、match式・ガードの評価順。必要な操作から分けて追加 |
-| 6 | 動的データ・再帰・外部入出力 | 所有・寿命・確保失敗・呼び出し領域・資源上限・副作用を先に定義。スライス、文字列連結、ファイルを段階的に扱う |
-| 7 | モジュールの配布 | 再export、依存・版・再現可能なビルド。現行の明示importを基準に拡張 |
+| 1 | 配列型の長さに定数を使用 | `[T; COUNT]`の名前解決・依存循環・正の長さ・資源上限。モジュールで共有する固定サイズ |
+| 2 | 型・長さをまたぐ関数 | ジェネリクスの型検査、具体化、生成元との対応。同じ集計・検索を異なる型と配列長で再利用 |
+| 3 | 数値変換の選択肢 | 丸め・切り捨て・飽和を、現在の値を保つ変換と別の操作として定義。境界・NaN・無限大・負のゼロを比較 |
+| 4 | 複合値の比較・表示と分岐の拡張 | 配列・構造体・直和型の比較順と表示形式、match式・ガードの評価順。必要な操作から分けて追加 |
+| 5 | 動的データ・再帰・外部入出力 | 所有・寿命・確保失敗・呼び出し領域・資源上限・副作用を先に定義。スライス、文字列連結、ファイルを段階的に扱う |
+| 6 | モジュールの配布 | 再export、依存・版・再現可能なビルド。現行の明示importを基準に拡張 |
 | 実験枠 | GPUの数値計算 | 対応型・メモリ・同期・診断を限定し、要素ごとの独立した計算をCPUと比較 |
 
 既存の基盤は[共通の停止記録](runtime-diagnostics.ja.md)、[ファイルの出自](source-files.ja.md)、[モジュール](modules.ja.md)、[定数](constants.ja.md)、[関数](functions.ja.md)、[構造体更新](product-updates.ja.md)、[直和型](sum-types.ja.md)、[固定長配列](fixed-arrays.ja.md)です。[混在引数](../../examples/function_arguments.ceru)・[配列長](../../examples/array_length.ceru)の例で値渡しと評価順を確認できます。

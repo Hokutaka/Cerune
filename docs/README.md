@@ -19,6 +19,7 @@ Cerune documentation is divided into `design`, which records design decisions, a
 | Sum types and match / 直和型と分岐 | [日本語](design/sum-types.ja.md) | [English](design/sum-types.en.md) |
 | Compile-time constants / コンパイル時定数 | [日本語](design/constants.ja.md) | [English](design/constants.en.md) |
 | Product updates / 構造体の更新式 | [日本語](design/product-updates.ja.md) | [English](design/product-updates.en.md) |
+| Array iteration / 配列の反復 | [日本語](design/array-iteration.ja.md) | [English](design/array-iteration.en.md) |
 | Fixed arrays / 固定長配列 | [日本語](design/fixed-arrays.ja.md) | [English](design/fixed-arrays.en.md) |
 | Strings / 文字列 | [日本語](design/strings.ja.md) | [English](design/strings.en.md) |
 | Unsigned 64-bit integers / u64 | [日本語](design/u64.ja.md) | [English](design/u64.en.md) |

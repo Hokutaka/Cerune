@@ -1,0 +1,6 @@
+fn values() -> [i64; 2] { print(42); return [1, 2]; }
+for (i: infer, mut value: infer in values()) {
+    if i == 0 { continue; }
+    value = value + 10;
+    print(value);
+}

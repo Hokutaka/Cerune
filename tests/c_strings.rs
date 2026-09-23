@@ -347,3 +347,14 @@ fn array_length_evaluates_operands_even_when_the_result_is_known() {
         native.matches_vm(source);
     }
 }
+
+#[path = "support/iteration_cases.rs"]
+mod iteration_cases;
+#[test]
+fn array_iteration_preserves_snapshots_and_loop_control() {
+    let Some(native) = NativeC::new() else { return };
+    for &(source, expected) in iteration_cases::CASES {
+        assert_eq!(run_vm(source).unwrap(), expected);
+        native.matches_vm(source);
+    }
+}

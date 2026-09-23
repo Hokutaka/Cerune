@@ -299,6 +299,10 @@ impl Lowerer {
                 self.statements(then_body)?;
                 self.statements(else_body)?;
             }
+            StmtKind::ForEach { value, body, .. } => {
+                self.expr(value)?;
+                self.statements(body)?;
+            }
             StmtKind::While { condition, body } => {
                 self.expr(condition)?;
                 self.statements(body)?;

@@ -1,7 +1,7 @@
 use crate::ast::{
     AssignmentProjection, AssignmentTarget, BinaryOp, Expr, ExprKind, FieldDefinition, FieldValue,
-    FunctionDefinition, Item, Parameter, Program, ReturnTypeRef, Stmt, StmtKind, Type,
-    TypeDefinition, TypeRef, TypeRefKind, TypeSpec, UnaryOp,
+    FunctionDefinition, Item, IterationBinding, Parameter, Program, ReturnTypeRef, Stmt, StmtKind,
+    Type, TypeDefinition, TypeRef, TypeRefKind, TypeSpec, UnaryOp,
 };
 use crate::diagnostic::Diagnostic;
 use crate::lexer::{Token, TokenKind};
@@ -707,7 +707,22 @@ impl Parser {
 
         let initializer = match (&self.peek().kind, &self.peek_next().kind) {
             (TokenKind::Mut, _) | (TokenKind::Identifier(_), TokenKind::Colon) => {
-                self.parse_binding()?
+                let header = self.parse_iteration_binding()?;
+                if matches!(self.peek().kind, TokenKind::In | TokenKind::Comma) {
+                    return self.parse_for_each(start, header);
+                }
+                self.expect_simple(TokenKind::Equal)?;
+                let value = self.parse_expression()?;
+                let end = self.expect_simple(TokenKind::Semicolon)?.end();
+                Stmt {
+                    kind: StmtKind::Binding {
+                        mutable: header.mutable,
+                        name: header.name,
+                        type_spec: header.type_spec,
+                        value,
+                    },
+                    span: self.span(header.span.start(), end),
+                }
             }
             (TokenKind::Identifier(_), TokenKind::Equal) => self.parse_assignment()?,
             _ => {
@@ -746,6 +761,48 @@ impl Parser {
                 condition,
                 update: Box::new(update),
                 body,
+            },
+            span: self.span(start, end),
+        })
+    }
+
+    fn parse_iteration_binding(&mut self) -> ParseResult<IterationBinding> {
+        let start = self.peek().span.start();
+        let mutable = matches!(self.peek().kind, TokenKind::Mut);
+        if mutable {
+            self.advance();
+        }
+        let (name, _) = self.expect_identifier()?;
+        self.expect_simple(TokenKind::Colon)?;
+        let type_spec = self.parse_type_spec()?;
+        let span = self.span(start, self.tokens[self.current - 1].span.end());
+        Ok(IterationBinding {
+            mutable,
+            name,
+            type_spec,
+            span,
+        })
+    }
+
+    fn parse_for_each(&mut self, start: usize, first: IterationBinding) -> ParseResult<Stmt> {
+        let (index, element) = if matches!(self.peek().kind, TokenKind::Comma) {
+            self.advance();
+            (Some(first), self.parse_iteration_binding()?)
+        } else {
+            (None, first)
+        };
+        self.expect_simple(TokenKind::In)?;
+        let value = self.parse_expression()?;
+        let close = self.expect_simple(TokenKind::RightParen)?;
+        let header_span = self.span(start, close.end());
+        let (body, end) = self.parse_block()?;
+        Ok(Stmt {
+            kind: StmtKind::ForEach {
+                index,
+                element,
+                value,
+                body,
+                header_span,
             },
             span: self.span(start, end),
         })

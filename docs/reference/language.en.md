@@ -48,6 +48,7 @@ statement   := binding
              | if_statement
              | while_statement
              | for_statement
+             | for_each_statement
              | "break" ";"
              | "continue" ";"
 
@@ -58,6 +59,10 @@ while_statement := "while" expression block
 for_statement :=
     "for" "(" (binding_clause | binding_assignment_clause) ";"
     expression ";" binding_assignment_clause ")" block
+
+for_each_statement :=
+    "for" "(" (IDENT ":" type_spec ",")?
+    "mut"? IDENT ":" type_spec "in" expression ")" block
 
 block       := "{" statement* "}"
 
@@ -338,6 +343,27 @@ Evaluate the argument exactly once. A known length does not remove calls in `arr
 Constant expressions support this operation, subject to constant-expression rules for the entire argument. Failures in unused constants are still diagnosed, and ordinary function calls remain forbidden. Constants in array type lengths are still unsupported.
 
 Functions, constants, and import aliases cannot use this name. Variable and function namespaces remain separate. Wrong argument counts/types and discarded call results are diagnosed. See the [aggregation example](../../examples/array_length.ceru) and [evaluation-order example](../../examples/array_length_order.ceru).
+
+
+### Fixed-array iteration
+
+```cerune
+values: [i64; 3] = [4, 7, 9];
+for (value: infer in values) { print(value); }
+for (index: i64, mut value: infer in values) {
+    value = value + index;
+    print(value);
+}
+print(values[1]); // 7
+```
+
+Use `for (element: type in subject)` or `for (index: type, element: type in subject)` to visit a fixed array from the beginning. Every binding requires an explicit type or `infer`. The index is immutable `i64`; the subject determines the element type. `for (v: u8 in [1])` is a type error; specify the subject as e.g. `[1u8]`. `in` is reserved.
+
+Evaluate and copy the subject once on entry, in the outer scope. Changes to the original array inside the body do not affect this snapshot. Each element is also copied; `mut` permits changing that iteration's copy only. Bindings are body-local; duplicate declarations in that body and shadowing constants/import aliases are diagnosed.
+
+`continue` advances to the next element; `break`/`return` retain their existing meaning. An immediate `break` still follows complete subject evaluation. Subject/body failures stop at the original failing expression. A `return` inside iteration alone does not establish that the function returns on every path. Empty arrays, string iteration, references, and destructuring patterns are unsupported.
+
+Cerune IR exposes the snapshot, length, and cursor as internal `$for_in_*` bindings and an existing `for`. Subject/body source locations are retained; generated control expressions point to the header. See the [design](../design/array-iteration.en.md) and [aggregation/search example](../../examples/array_iteration.ceru).
 
 ## Sum types and match
 

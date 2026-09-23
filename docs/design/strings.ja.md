@@ -97,7 +97,7 @@ LLVMのスナップショットはLinuxターゲットを明示して固定し�
 
 `string-values`の観測fixtureは全8成果物を固定します。`tests/support/string_cases.rs`の共通入力と既知の期待値を、VM・C・LLVMに加え、`cargo test --test string_routes`でQBE・WAT・直接アセンブリでも検証します。出力バイトの一致、評価順、短絡評価、コピー後の独立性、範囲外アクセスでの停止を分けて確認します。未使用の既定値にだけ文字列がある場合も、WindowsのC・LLVM・ASMが同じ出力モードを選びます。
 
-QBEはLinux x86-64、ASMはWindows x64とLinux x86-64で実行します。WATはWABTで検証・変換してNodeのWebAssemblyエンジンで実行し、公開要素が`main`だけであることも検査します。テスト用ホストの浮動小数点出力は共通fixtureの正確な値`1.5`に限定しており、一般的な数値整形実装ではありません。実行できない経路は理由を表示し、成功した比較とは区別します。CIでは両OSのジョブを合わせて全経路の実行を必須にします。
+QBEはLinux x86-64、ASMはWindows x64とLinux x86-64で実行します。WATはWABTで検証・変換してNodeのWebAssemblyエンジンで実行し、公開要素が`main`だけであることも検査します。テスト用ホストの浮動小数点出力は共通fixtureで正確に表せる値`1.5`・`2`・`2.5`・`4`に限定しており、一般的な数値整形実装ではありません。実行できない経路は理由を表示し、成功した比較とは区別します。CIでは両OSのジョブを合わせて全経路の実行を必須にします。
 
 開発用ツールは`CERUNE_TEST_QBE`、`CERUNE_TEST_ASM_CLANG`、`CERUNE_TEST_NODE`、`CERUNE_TEST_WAT2WASM_JS`（WABTの`bin/wat2wasm`）で明示できます。指定したツールがない場合はテスト失敗です。WABTの導入例は`npm install --prefix target/wasm-tools --no-audit --no-fund wabt@1.0.39`です。ツールの起動は開発用テストの責務で、Ceruneの生成コマンドには追加しません。
 
