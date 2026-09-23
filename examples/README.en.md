@@ -2,38 +2,38 @@
 
 [日本語](README.md)
 
-This directory contains programs that can be read and executed with the current Cerune language. Each example demonstrates a different piece of syntax or method of computation in a small program.
+Normal examples are the `.ceru` files in this directory.
 
-Four [expected-failure examples](runtime_failures/README.en.md) separately demonstrate retained output and the source expression where execution stops.
-
-The [file-origin example](source_files/README.en.md) uses the Rust API to validate the foundation for modules, parsing type/function definitions separately and comparing origins. These API components are outside the batch runner below. The [module examples](modules/README.en.md) use actual imports and provide a type table, modular/single-file programs, and a failure example.
+| Location | Purpose |
+| --- | --- |
+| This directory | Standalone programs; included in the batch runner |
+| [modules](modules/README.en.md) | Imports, single-file comparison, and expected failures |
+| [runtime_failures](runtime_failures/README.en.md) | Four expected stops: prior output and failing expressions |
+| [source_files](source_files/README.en.md) | Rust API examples: parse type/function files separately and compare origins; no imports |
 
 ## Run all examples
 
-From the repository root, run the following command to display each example's name, output, status, and a final summary:
+Run from the repository root. Subdirectories are outside the batch runner.
 
-```powershell
-.\scripts\run-examples.ps1
+| Environment | Run all | Select examples / reuse a build |
+| --- | --- | --- |
+| PowerShell | `.\scripts\run-examples.ps1` | `-Pattern "matrix*.ceru"` / `-SkipBuild` |
+| WSL / Bash | `bash scripts/run-examples.sh` | `--pattern 'matrix*.ceru'` / `--skip-build` |
+
+The runner shows names, output, exit status, and a summary. WSL needs its own Rust environment. Bash builds into `target/unix` by default, or `CARGO_TARGET_DIR` when set; reuse requires a build in the same location.
+
+To run one example or inspect its representations, replace the filename below:
+
+```sh
+cargo run --quiet -- run examples/linear_regression.ceru
+cargo run --quiet -- emit-ir examples/linear_regression.ceru
+cargo run --quiet -- emit-bytecode examples/linear_regression.ceru
+cargo run --quiet -- emit-c examples/linear_regression.ceru
 ```
-
-Use `-Pattern "matrix*.ceru"` to select examples. Use `-SkipBuild` to reuse an already built Cerune executable.
-
-For WSL / Bash, use the following commands. WSL also needs its own Rust development environment.
-
-```bash
-bash scripts/run-examples.sh
-bash scripts/run-examples.sh --pattern 'matrix*.ceru' --skip-build
-```
-
-The `.sh` script defaults to `target/unix/debug/cerune`, separate from Windows artifacts. It respects `CARGO_TARGET_DIR` when set. Use `--skip-build` only after building into the same output directory.
-
-The runner checks each example's exit status. Use `cargo test --test examples` to compare expected output, or `bash scripts/test.sh` to run fmt, Clippy, and all test targets together.
 
 ## Find examples by type
 
-Cerune supports eight integer kinds, `f32`/`f64`, `bool`, `string`, fixed arrays, products, and sums. The VM, C, LLVM, QBE, WAT, Windows/Linux ASM, and native objects support the same language features.
-
-`u64_values.ceru` is compared against known output across the routes; [native_values.ceru](native_values.ceru) checks mixed arguments and value passing on Windows/Linux. For machine-code generation, execution, and observation, see the [explicit external-tool procedure](../docs/design/native-code.en.md) and [internal encoder design](../docs/design/native-encoder.en.md).
+The tables cover numeric ranges and representative uses. `infer` requests type inference rather than naming a value type; `void` means a function returns no value. See [floating_point.ceru](floating_point.ceru) and [functions.ceru](functions.ceru).
 
 ### Signed integers: negative and positive values
 
@@ -53,15 +53,7 @@ Cerune supports eight integer kinds, `f32`/`f64`, `bool`, `string`, fixed arrays
 | `u32` | 0 through 4294967295 | [population_statistics.ceru](population_statistics.ceru) | values around three billion, widened to `i64` for aggregation |
 | `u64` | 0 through 18446744073709551615 | [u64_values.ceru](u64_values.ceru), [packet_counter.ceru](packet_counter.ceru) | maximum, high bit, unsigned comparison/division, functions, arrays, copies, and exact conversions |
 
-Run the u64 example with:
-
-```sh
-cargo run -- run examples/u64_values.ceru
-```
-
-Its first output lines are `u64`, `18446744073709551615`, `9223372036854775808`, and `0`. Reassigning the original binding preserves its copy, and the high bit remains part of a positive number. The [u64 design](../docs/design/u64.en.md) explains each target representation.
-
-Out-of-range integer arithmetic stops instead of wrapping. Types do not mix implicitly: use explicit conversions such as `i64(value)` or `convert<i64>(value)`. Compare both spellings in [integer_conversions.ceru](integer_conversions.ceru). Integers without type information default to `i64`; array indices also use `i64`. Bit widths describe value ranges; generated targets currently store even small integers in 64-bit locations.
+Integer overflow stops execution; values never wrap. Convert explicitly with `i64(value)` or `convert<i64>(value)`; [integer_conversions.ceru](integer_conversions.ceru) compares both spellings. Untyped integers and array indices use `i64`. Widths describe numeric ranges; generated targets currently use 64-bit storage even for small integers. See [u64 representations](../docs/design/u64.en.md).
 
 ### Floating point: fractions and precision
 
@@ -89,8 +81,6 @@ Out-of-range integer arithmetic stops instead of wrapping. Types do not mix impl
 | Product `type Point { ... }` | [product-point.ceru](product-point.ceru), [product_arrays.ceru](product_arrays.ceru) | fields, defaults, and arrays of products |
 | Nested arrays and products | [function_values.ceru](function_values.ceru), [u64_values.ceru](u64_values.ceru), [string_lookup.ceru](string_lookup.ceru) | combining numbers or strings and passing values to functions |
 
-`infer` requests type inference; it is not a separate value type. `void` describes functions returning no value. See [floating_point.ceru](floating_point.ceru) and [functions.ceru](functions.ceru).
-
 ### Sum types: values for each alternative
 
 | Example | Type and behavior |
@@ -100,16 +90,12 @@ Out-of-range integer arithmetic stops instead of wrapping. Types do not mix impl
 | [sum_values.ceru](sum_values.ceru) | Array/product payloads, copies, construction order, reassignment inside an arm |
 | [modules/sum_lookup.ceru](modules/sum_lookup.ceru) | Imported public enum, construction, exhaustive branching |
 
-`cargo run -- run examples/sum_lookup.ceru` outputs `空\0\r\n\n6\n未登録\n`. Use `cargo run -- emit-ir examples/sum_lookup.ceru` to inspect variant tags, subject copies, and branches.
-
 ### Compile-time constants
 
 | Example | What it demonstrates |
 | --- | --- |
 | [constants.ceru](constants.ceru) | u64 limits, strings, f32/struct/array constants, independent copies, and short circuiting |
-| [modules/constants.ceru](modules/constants.ceru) | Imported public settings and a private calibration constant |
-
-`cargo run -- run examples/constants.ceru` prints `128`, maximum u64, and the string byte length `9` first. A copied array can change to `99` while both struct constants retain `10`. Use `cargo run -- emit-ir examples/constants.ceru` to inspect initializer expressions and evaluated values.
+| [modules/constants.ceru](modules/constants.ceru) | Import public settings computed using a private calibration constant |
 
 ### Product update expressions
 
@@ -119,12 +105,7 @@ Out-of-range integer arithmetic stops instead of wrapping. Types do not mix impl
 | [product_update_order.ceru](product_update_order.ceru) | Evaluate the base once, preserve field order, skip inherited defaults, short circuiting and loops |
 | [modules/product_update.ceru](modules/product_update.ceru) | Update using imported types and functions |
 
-```sh
-cargo run -- run examples/product_update.ceru
-cargo run -- run examples/product_update_order.ceru
-```
-
-The first example prints the original sequence `9223372036854775808` and updated `9223372036854775809`, then original array element `10` and updated `99`. The second starts with `base → default → replacement → 2`. The default runs only when creating the base, not during updates or copies. See the [update design](../docs/design/product-updates.en.md).
+[Update semantics](../docs/design/product-updates.en.md).
 
 ### Combining many arguments
 
@@ -138,7 +119,7 @@ The first example prints the original sequence `9223372036854775808` and updated
 | `string` | Japanese text, NUL, CR, and LF pass through unchanged |
 | Arrays and products | Updating a callee's array copy leaves the original unchanged; product results remain independent |
 
-Run `cargo run -- run examples/function_arguments.ceru`. Output begins with `引数の評価順`, `1` through `7`, and `28`. There is no fixed parameter-count limit, but counts and types must match the declaration. See the [function design](../docs/design/functions.en.md) for placement and verification across routes.
+Argument counts and types must match the declaration; there is no fixed count limit. See [function placement and validation](../docs/design/functions.en.md).
 
 ## Basics and control flow
 
@@ -152,8 +133,6 @@ Run `cargo run -- run examples/function_arguments.ceru`. Output begins with `引
 | [functions.ceru](functions.ceru) | typed functions, parameters, results, and `void` functions |
 
 ## Data structures
-
-These examples show how to group, access, and pass multiple values. They use structs (named product types) and fixed arrays, which are currently supported.
 
 | Example | Demonstrates |
 | --- | --- |
@@ -202,57 +181,60 @@ These examples show how to group, access, and pass multiple values. They use str
 | [coin_change.ceru](coin_change.ceru) | dynamic programming for minimum coin counts, followed by reconstruction of the chosen coins |
 | [shortest_paths.ceru](shortest_paths.ceru) | all-pairs shortest paths by gradually allowing more intermediate towns |
 
-## Reading intermediate results
+## Reading output and intermediate results
 
-The new examples print intermediate values as well as final answers. Japanese comments in each file describe the output order.
+`\0`, `\r`, and `\n` below denote NUL, CR, and LF. Arrows and commas separate output lines. Japanese comments in each source describe their order.
 
-- `coin_change.ceru`: minimum counts for amounts 1 through 6, then the selected coins, 3 and 3.
-- `shortest_paths.ceru`: changes in the distance from town 0 to town 3, then the 4-by-4 distance table in row order. `-1` means unreachable.
-- `heat_diffusion.ceru`: five temperatures per step for four steps, then the saved initial center temperature.
-- `linear_regression.ceru`: initial loss; epoch, slope, intercept, and loss every ten epochs; then a prediction for a new input of 3.
+| Example | Output and interpretation |
+| --- | --- |
+| `u64_values.ceru` | Starts with `u64 → 18446744073709551615 → 9223372036854775808 → 0`. Reassignment preserves copies; the high bit stays positive |
+| `sum_lookup.ceru` | `空\0\r\n\n6\n未登録\n`. IR shows variant tags, the subject copy, and branches |
+| `constants.ceru` | Starts with `128 → 18446744073709551615 → 9` (string byte length). Updating an array copy to `99` leaves both struct constants at `10`. IR shows initializers and evaluated values |
+| `product_update.ceru` | Original/updated sequence: `9223372036854775808 / 9223372036854775809`; array element: `10 / 99` |
+| `product_update_order.ceru` | Starts with `base → default → replacement → 2`. Defaults run only when creating the base, never on updates or copies |
+| `function_arguments.ceru` | Starts with `引数の評価順`, `1` through `7`, then `28` |
+| `string_origins.ceru` | `日本語\0\ntrue\nfalse\n`; no `skipped`. Compare IR and annotated LLVM: equality `#7` and short circuit `#14` lead to calls/branches ([walkthrough](../docs/reference/cli.en.md#following-llvm-origins)) |
+| `string_byte_length.ceru` | `0, 9, 3, 2, 3, 4, 7, 3, 9, left, right, 9, false, false, 6, 10`, each with LF. `left`/`right` run once; no `skipped`. `byte_len` covers UTF-8 lengths, copies, calls, arrays, and defaults |
+| `coin_change.ceru` | Minimum coin counts for amounts 1–6, then selected coins `3 → 3` |
+| `shortest_paths.ceru` | Distance from town 0 to 3, then a 4×4 distance table in row order; `-1` means unreachable |
+| `heat_diffusion.ceru` | Five temperatures per step for four steps, then the saved initial center temperature |
+| `linear_regression.ceru` | Initial loss; epoch, slope, intercept, and loss every ten epochs; finally the prediction for input 3 |
+| `integer_limits.ceru` | Normally succeeds. Uncomment an expression at the end to inspect overflow and its diagnostic location |
 
-Try changing `rate` (the size of each learning step) or the iteration count in the regression example and compare the loss. To inspect the representations at different stages, run:
+Change `rate` (the learning step size) or the iteration count in `linear_regression.ceru` to compare learning progress. It learns slope/intercept using gradient descent; `xor_neural_network.ceru` uses fixed weights for inference and does not train XOR.
 
-```powershell
-cargo run --quiet -- run examples/linear_regression.ceru
-cargo run --quiet -- emit-ir examples/linear_regression.ceru
-cargo run --quiet -- emit-bytecode examples/linear_regression.ceru
-cargo run --quiet -- emit-c examples/linear_regression.ceru
-```
+## Generated output and checks
 
-`integer_limits.ceru` succeeds by default. Uncomment an expression at the end to observe an overflow stop and its diagnostic location.
+The VM, C, LLVM, QBE, WAT, Windows/Linux ASM, and native objects support the types and features above. Mutable arrays support in-place sorting and dynamic programming; recursion and dynamically sized collections remain unavailable.
 
-## Current scope
-
-These examples are programs expressible with numbers, booleans, strings, bindings, functions, conditionals, loops, named product types, and fixed arrays.
-
-Elements of a `mut` array can be assigned directly, so in-place sorting and array-updating dynamic programming are expressible. Recursion and dynamically sized collections are not available yet.
-
-The string examples support all seven existing routes. LLVM and QBE require explicit targets: QBE is validated on Linux x86-64, direct assembly on Windows x64 / Linux x86-64, and WAT in a WebAssembly environment providing the output host functions. `emit-ir` and `emit-bytecode` also expose type and content transformations.
-
-Run QBE, WAT, and direct assembly comparisons with `cargo test --test string_routes`. [String design](../docs/design/strings.en.md#validation-scope) documents tool selection and validation scope.
-
-For example, emit and compile the string-key lookup:
+| Route | Requirements / observation |
+| --- | --- |
+| C | External C compiler; compile and run as below |
+| LLVM | Explicit Windows/Linux target ([commands](../docs/reference/cli.en.md#llvm-target-selection)) |
+| QBE | Explicit Linux x86-64 target |
+| WAT | WebAssembly environment with output host functions |
+| ASM / native objects | Windows x64 or Linux x86-64; explicit target and tools. `native_values.ceru` covers mixed arguments and value passing ([external tools](../docs/design/native-code.en.md), [internal encoder](../docs/design/native-encoder.en.md)) |
 
 ```sh
 cargo run --quiet -- emit-c examples/string_lookup.ceru -o target/string_lookup.c
 clang -std=c11 target/string_lookup.c -o target/string_lookup
 ```
 
-Run the executable with `./target/string_lookup` in Bash or `.\target\string_lookup.exe` on Windows. An external C compiler is required.
+Run with `./target/string_lookup` in Bash or `.\target\string_lookup.exe` on Windows. For annotated LLVM, for example:
 
-For LLVM, use the Windows/Linux command examples in the [CLI reference](../docs/reference/cli.en.md#llvm-target-selection). `cargo test --test llvm_strings` compares VM, generated C, and generated LLVM output byte-for-byte. Setting `CERUNE_TEST_LLVM_CLANG` and `CERUNE_TEST_CC` makes unavailable selected compilers a test failure.
+```sh
+cargo run -- emit-llvm examples/string_byte_length.ceru --target x86_64-unknown-linux-gnu --annotate-origins -o target/string-byte-length.ll
+```
 
-`cargo test --test c_strings` runs generated C with and without optimization and compares it with the VM. Execution comparisons skip when the default C compiler is unavailable; setting `CERUNE_TEST_CC` makes the selected compiler mandatory. CI requires Clang and also checks with AddressSanitizer and UndefinedBehaviorSanitizer.
+| Check | Command / scope |
+| --- | --- |
+| Batch runner | Commands at the top; checks exit status |
+| Expected output | `cargo test --test examples` |
+| C strings | `cargo test --test c_strings`; compare with the VM, with and without optimization |
+| LLVM strings | `cargo test --test llvm_strings`; compare VM/C/LLVM bytes |
+| QBE / WAT / ASM strings | `cargo test --test string_routes` ([tools and scope](../docs/design/strings.en.md#validation-scope)) |
+| Full checks | `bash scripts/test.sh`; fmt, Clippy, all test targets |
 
-`xor_neural_network.ceru` demonstrates inference with predetermined weights. `linear_regression.ceru` learns a line's slope and intercept from data using gradient descent. Training the XOR neural network itself is not included.
+`u64_values.ceru` is checked against known output across routes. String byte lengths are also checked against expected bytes; the [observation fixture](../tests/fixtures/observation/string-byte-length/) contains small inputs and each representation.
 
-### Following string origins
-
-`string_origins.ceru` demonstrates calls, string content equality, and short-circuit evaluation. Escaped output is `日本語\0\ntrue\nfalse\n`; `skipped` is never printed. Compare `emit-ir` with `emit-llvm --annotate-origins` to follow equality node #7 and short-circuit node #14 to calls and branches. See the [CLI walkthrough](../docs/reference/cli.en.md#following-llvm-origins).
-
-### Inspecting string byte lengths
-
-Run `cargo run -- run examples/string_byte_length.ceru` and inspect `emit-ir` or `emit-llvm --target x86_64-unknown-linux-gnu --annotate-origins` for the same input.
-
-Output lines are `0, 9, 3, 2, 3, 4, 7, 3, 9, left, right, 9, false, false, 6, 10`, each followed by LF. The example exercises UTF-8 lengths, saved copies, calls, arrays, defaults, and evaluation order. Each of `left` and `right` is printed once; `skipped` is never printed. C, LLVM, QBE, WAT, and direct assembly are also executed against known expected bytes. See the [small observation fixture](../tests/fixtures/observation/string-byte-length/) for representations in every route.
+Missing default compilers may skip execution comparisons. Setting `CERUNE_TEST_CC` / `CERUNE_TEST_LLVM_CLANG` makes the selected compilers mandatory. CI requires Clang and also runs AddressSanitizer / UndefinedBehaviorSanitizer checks.
