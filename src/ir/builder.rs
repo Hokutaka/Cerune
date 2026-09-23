@@ -19,11 +19,21 @@ use super::{
 };
 
 pub fn build(program: &ast::Program) -> Result<Program, Diagnostic> {
-    let (program, uses) = crate::array_lengths::resolve(program)?;
-    let program = crate::sums::lower(&program)?;
-    let model = semantic::analyze_lowered(&program)?;
-    let mut ir = build_with_model(&program, &model)?;
-    for usage in uses {
+    let lowered = crate::generics::lower(program)?;
+    let (program, uses) =
+        crate::array_lengths::resolve(&lowered.program).map_err(|e| lowered.context(e))?;
+    let program = crate::sums::lower(&program).map_err(|e| lowered.context(e))?;
+    let model = semantic::analyze_lowered(&program).map_err(|e| lowered.context(e))?;
+    lowered.validate_arguments(&model)?;
+    let mut ir = build_with_model(&program, &model).map_err(|e| lowered.context(e))?;
+    for (name, origin) in lowered.origins {
+        ir.function_definitions
+            .iter_mut()
+            .find(|d| d.name == name)
+            .unwrap()
+            .generic_origin = Some(origin);
+    }
+    for usage in uses.into_iter().chain(lowered.array_length_uses) {
         let id = model.constants[&usage.name].0;
         ir.constant_definitions[id]
             .array_length_uses
@@ -158,6 +168,7 @@ impl Builder<'_> {
                 });
             }
             Ok(FunctionDefinition {
+                generic_origin: None,
                 id: FunctionId(definition.id.0),
                 name: definition.name.clone(),
                 parameters,
@@ -443,6 +454,7 @@ impl Builder<'_> {
                     }
                 }
             }
+            ast::ExprKind::GenericCall(_) => unreachable!("generic calls are lowered before IR"),
             ast::ExprKind::Boolean(value) => ExprKind::Boolean(*value),
             ast::ExprKind::String(value) => ExprKind::String(value.clone()),
             ast::ExprKind::Integer(literal) => {

@@ -2,7 +2,7 @@
 
 [日本語](language-roadmap.ja.md)
 
-As of 2026-09-23, this inventory includes modules, removal of the parameter limit, product updates, compile-time constants, sum types with match, array-length queries, array iteration, and constants in array type lengths. “Current” means implemented; candidates are proposals awaiting design and implementation. This document does not commit to candidate syntax or adoption. See the [language reference](../reference/language.en.md) for the current specification.
+As of 2026-09-23, this inventory includes modules, removal of the parameter limit, product updates, compile-time constants, sum types with match, array-length queries, array iteration, constants in array type lengths, and functions with explicit type/length parameters. “Current” means implemented; candidates are proposals awaiting design and implementation. This document does not commit to candidate syntax or adoption. See the [language reference](../reference/language.en.md) for the current specification.
 
 ## Properties Cerune should preserve
 
@@ -25,7 +25,7 @@ Cerune prioritizes explaining a computation's meaning and its transformation int
 | Strings | `string`, printing, `==`, `!=`, `byte_len` | No concatenation, indexing, character count, or numeric conversion | [string_byte_length](../../examples/string_byte_length.ceru), [string_lookup](../../examples/string_lookup.ceru) |
 | Fixed arrays | `[T; N]`, `array_len`, `for … in`, nesting, value passing, updates through `mut` | Length belongs to the type; indices are `i64`; no dynamic lengths or slices | [array_iteration](../../examples/array_iteration.ceru), [heat_diffusion](../../examples/heat_diffusion.ceru) |
 | Named product types | Fields, defaults, update expressions, nesting, value passing | No direct field assignment; construct a new value and reassign the whole binding | [product-point](../../examples/product-point.ceru), [packet_counter](../../examples/packet_counter.ceru) |
-| Functions and control flow | Typed parameters/results, `void`, `if`/`else`, `while`/`for`, `break`/`continue`/`return` | No fixed parameter-count limit; no recursion | [function_values](../../examples/function_values.ceru), [loop_control](../../examples/loop_control.ceru) |
+| Functions and control flow | Typed parameters/results, explicit type/length parameters, `void`, `if`/`else`, `while`/`for`, `break`/`continue`/`return` | No fixed parameter-count limit; no recursion | [function_values](../../examples/function_values.ceru), [loop_control](../../examples/loop_control.ceru) |
 | Bindings and conversions | Immutable by default, `mut`, explicit `infer`, `T(value)` and `convert<T>(value)` | `infer` is not a runtime type; conversions do not request truncation or saturation | [integer_conversions](../../examples/integer_conversions.ceru) |
 | Sum types | `enum` payload variants, exhaustive `match` | No guards, match expressions, or generic Option/Result | [sum_lookup](../../examples/sum_lookup.ceru) |
 | Compile-time constants | Typed `const`, dependency evaluation, array type lengths, `pub const` | No function calls or block-local declarations | [constants](../../examples/constants.ceru) |
@@ -43,15 +43,14 @@ Language support does not imply equal observation detail. Language check failure
 
 ## Proposed priorities
 
-`array_len`, array `for … in`, and constant lengths `[T; COUNT]` are implemented. Add missing features in the order below, pairing a small design with examples and cross-route comparisons. Each stage determines its syntax and adoption.
+`array_len`, array `for … in`, constant lengths `[T; COUNT]`, and [functions with type/length parameters](generic-functions.en.md) are implemented. Add missing features in the order below, pairing a small design with examples and cross-route comparisons. Each stage determines its syntax and adoption.
 
 | Order | Missing feature | First contract and example |
 | --- | --- | --- |
-| 1 | Functions across types and lengths | Generic type checking, specialization, source correspondence. Reuse aggregation/search across element types and array lengths |
-| 2 | Numeric conversion choices | Define rounding, truncation, and saturation separately from current value-preserving conversions. Compare boundaries, NaN, infinity, and negative zero |
-| 3 | Aggregate comparison/printing and extended branching | Comparison order and display formats for arrays/products/sums; evaluation order for match expressions/guards. Add needed operations separately |
-| 4 | Dynamic data, recursion, external I/O | Define ownership, lifetimes, allocation failure, call storage, resource limits, and effects first. Introduce slices, concatenation, and files in stages |
-| 5 | Module distribution | Re-exports, dependencies/versions, reproducible builds; extend explicit imports |
+| 1 | Numeric conversion choices | Define rounding, truncation, and saturation separately from current value-preserving conversions. Compare boundaries, NaN, infinity, and negative zero |
+| 2 | Aggregate comparison/printing and extended branching | Comparison order and display formats for arrays/products/sums; evaluation order for match expressions/guards. Add needed operations separately |
+| 3 | Dynamic data, recursion, external I/O | Define ownership, lifetimes, allocation failure, call storage, resource limits, and effects first. Introduce slices, concatenation, and files in stages |
+| 4 | Module distribution | Re-exports, dependencies/versions, reproducible builds; extend explicit imports |
 | Experiment | GPU numeric computation | Narrow the supported types, memory, synchronization, and diagnostics; compare independent element computations with the CPU |
 
 Existing foundations are [common failure records](runtime-diagnostics.en.md), [file origins](source-files.en.md), [modules](modules.en.md), [constants](constants.en.md), [functions](functions.en.md), [product updates](product-updates.en.md), [sums](sum-types.en.md), and [fixed arrays](fixed-arrays.en.md). The [mixed-argument](../../examples/function_arguments.ceru) and [array-length](../../examples/array_length.ceru) examples check value passing and evaluation order.

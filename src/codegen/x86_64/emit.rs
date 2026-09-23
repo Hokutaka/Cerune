@@ -181,7 +181,11 @@ fn emit_stack_allocation(frame_size: usize, target: super::Target, output: &mut 
 }
 
 fn function_name(function: &Function) -> String {
-    format!("cerune_fn_{}_{}", function.name, function.id)
+    format!(
+        "cerune_fn_{}_{}",
+        function.name.replace('$', "_"),
+        function.id
+    )
 }
 
 fn emit_epilogue(frame_size: usize, zero_result: bool, output: &mut String) {

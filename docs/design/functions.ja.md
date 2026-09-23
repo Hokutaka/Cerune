@@ -91,6 +91,8 @@ Cerune IRはABI register、stack offset、隠れた戻り先を決めません�
 
 registerとstackの基本規則は[Microsoft x64 calling convention](https://learn.microsoft.com/en-us/cpp/build/x64-calling-convention)と[System V AMD64 ABI](https://gitlab.com/x86-psABIs/x86-64-ABI)を参照してください。
 
+型・長さをまたぐ再利用には[ジェネリック関数](generic-functions.ja.md)を使えます。具体化後はこの文書の値渡し・ABI・停止の規則を適用します。
+
 ## 現在の制約
 
 引数の個数に言語としての固定上限は設けません。scalar、名前付きproduct type、固定長配列をparameterと戻り値に使えます。

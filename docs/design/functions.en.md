@@ -91,6 +91,8 @@ Storage for evaluated arguments is separate from the outgoing stack area. Calls 
 
 For the basic register and stack rules, see [Microsoft x64 calling convention](https://learn.microsoft.com/en-us/cpp/build/x64-calling-convention) and the [System V AMD64 ABI](https://gitlab.com/x86-psABIs/x86-64-ABI).
 
+[Generic functions](generic-functions.en.md) reuse code across types and lengths. After specialization, the value-passing, ABI, and failure rules in this document apply.
+
 ## Current limits
 
 There is no fixed language-level parameter-count limit. Scalars, named product types, and fixed arrays may be used as parameters and results.

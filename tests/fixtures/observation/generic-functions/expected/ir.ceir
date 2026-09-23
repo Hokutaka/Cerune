@@ -1,0 +1,20 @@
+; Cerune IR v0.2
+; #N identifies one statement or expression in this compilation
+
+const %COUNT@0: u8 = #0 2u8 => #2 2u8 [compile-time]
+; instantiate first::<u64, 2> [definition source=0 bytes=0..72]
+;   call [source=0 bytes=100..146]
+;   call [source=0 bytes=185..209]
+fn %$generic_0_first@0(%values@0: [u64; 2]) -> u64 {
+  #3 return #4 index(#5 %values@0:[u64; 2], #6 0i64):u64
+}
+
+; instantiate first::<i64, 1> [definition source=0 bytes=0..72]
+;   call [source=0 bytes=155..176]
+fn %$generic_1_first@1(%values@1: [i64; 1]) -> i64 {
+  #7 return #8 index(#9 %values@1:[i64; 1], #10 0i64):i64
+}
+
+#11 print.u64 #12 call %$generic_0_first@0(#13 array[#14 18446744073709551615u64, #15 1u64]:[u64; 2]):u64
+#16 print.i64 #17 call %$generic_1_first@1(#18 array[#19 neg.i64(#20 7i64)]:[i64; 1]):i64
+#21 print.u64 #22 call %$generic_0_first@0(#23 array[#24 42u64, #25 0u64]:[u64; 2]):u64

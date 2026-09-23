@@ -91,6 +91,7 @@ pub struct SemanticModel {
     pub bindings: Bindings,
     pub type_definitions: Vec<TypeDefinition>,
     pub function_definitions: Vec<FunctionDefinition>,
+    generic_calls: Vec<(crate::source::Span, String)>,
     constant_lengths: HashMap<String, usize>,
     type_names: HashMap<String, TypeId>,
     function_names: HashMap<String, FunctionId>,
@@ -171,9 +172,12 @@ impl SemanticModel {
 }
 
 pub fn check(program: &Program) -> SemanticResult<Bindings> {
-    let (program, _) = crate::array_lengths::resolve(program)?;
-    let program = crate::sums::lower(&program)?;
-    let model = analyze_lowered(&program)?;
+    let lowered = crate::generics::lower(program)?;
+    let (program, _) =
+        crate::array_lengths::resolve(&lowered.program).map_err(|e| lowered.context(e))?;
+    let program = crate::sums::lower(&program).map_err(|e| lowered.context(e))?;
+    let model = analyze_lowered(&program).map_err(|e| lowered.context(e))?;
+    lowered.validate_arguments(&model)?;
     if !model.constants.is_empty() {
         crate::ir::builder::build_with_model(&program, &model)?;
     }
@@ -181,10 +185,20 @@ pub fn check(program: &Program) -> SemanticResult<Bindings> {
 }
 
 pub fn analyze(program: &Program) -> SemanticResult<SemanticModel> {
-    let (program, uses) = crate::array_lengths::resolve(program)?;
-    let mut model = analyze_lowered(&crate::sums::lower(&program)?)?;
+    let lowered = crate::generics::lower(program)?;
+    let (program, uses) =
+        crate::array_lengths::resolve(&lowered.program).map_err(|e| lowered.context(e))?;
+    let program = crate::sums::lower(&program).map_err(|e| lowered.context(e))?;
+    let mut model = analyze_lowered(&program).map_err(|e| lowered.context(e))?;
+    lowered.validate_arguments(&model)?;
+    model.generic_calls = lowered
+        .origins
+        .into_iter()
+        .flat_map(|(name, o)| o.calls.into_iter().map(move |c| (c.span, name.clone())))
+        .collect();
     model.constant_lengths = uses
         .into_iter()
+        .chain(lowered.array_length_uses)
         .map(|usage| (usage.name, usage.length))
         .collect();
     Ok(model)
@@ -196,6 +210,7 @@ pub(crate) fn analyze_lowered(program: &Program) -> SemanticResult<SemanticModel
     let function_names = register_function_names(program)?;
     let function_definitions = resolve_function_definitions(program, &type_names, &function_names)?;
     let mut model = SemanticModel {
+        generic_calls: Vec::new(),
         constant_lengths: HashMap::new(),
         constants: HashMap::new(),
         bindings: HashMap::new(),
@@ -536,50 +551,62 @@ fn collect_function_calls(
 }
 
 fn collect_calls_in_expr(expr: &Expr, model: &SemanticModel, calls: &mut Vec<(FunctionId, Span)>) {
-    match &expr.kind {
-        ExprKind::Call {
-            name,
-            name_span,
-            arguments,
-        } => {
-            if let Some(id) = model.function_names.get(name) {
-                calls.push((*id, *name_span));
+    let mut pending = vec![expr];
+    let mut visited_defaults = std::collections::HashSet::new();
+    while let Some(expr) = pending.pop() {
+        match &expr.kind {
+            ExprKind::Call {
+                name,
+                name_span,
+                arguments,
+            } => {
+                if let Some(id) = model.function_names.get(name) {
+                    calls.push((*id, *name_span));
+                }
+                pending.extend(arguments.iter().rev());
             }
-            for argument in arguments {
-                collect_calls_in_expr(argument, model, calls);
+            ExprKind::Construct {
+                type_name,
+                base,
+                fields,
+                ..
+            } => {
+                // 更新式は既定値を再評価しません。通常構築でも省略した項目だけを辿ります。
+                if let Some(base) = base {
+                    pending.push(base);
+                } else if let Some(id) = model.type_names.get(type_name) {
+                    for (index, field) in model.type_definition(*id).fields.iter().enumerate() {
+                        if !fields.iter().any(|f| f.name == field.name)
+                            && let Some(default) = &field.default
+                            && visited_defaults.insert((*id, index))
+                        {
+                            pending.push(default);
+                        }
+                    }
+                }
+                pending.extend(fields.iter().rev().map(|f| &f.value));
             }
-        }
-        ExprKind::Construct { base, fields, .. } => {
-            if let Some(base) = base {
-                collect_calls_in_expr(base, model, calls);
+            ExprKind::Array(values) => pending.extend(values.iter().rev()),
+            ExprKind::Index { base, index } => {
+                pending.push(index);
+                pending.push(base);
             }
-            for field in fields {
-                collect_calls_in_expr(&field.value, model, calls);
+            ExprKind::FieldAccess { base, .. }
+            | ExprKind::Unary { value: base, .. }
+            | ExprKind::Convert { value: base, .. } => pending.push(base),
+            ExprKind::Binary { left, right, .. } | ExprKind::Logical { left, right, .. } => {
+                pending.push(right);
+                pending.push(left);
             }
-        }
-        ExprKind::Array(values) => {
-            for value in values {
-                collect_calls_in_expr(value, model, calls);
+            ExprKind::GenericCall(_) => {
+                unreachable!("generic calls are lowered before recursion checks")
             }
+            ExprKind::Boolean(_)
+            | ExprKind::String(_)
+            | ExprKind::Integer(_)
+            | ExprKind::Float { .. }
+            | ExprKind::Variable(_) => {}
         }
-        ExprKind::Index { base, index } => {
-            collect_calls_in_expr(base, model, calls);
-            collect_calls_in_expr(index, model, calls);
-        }
-        ExprKind::FieldAccess { base, .. }
-        | ExprKind::Unary { value: base, .. }
-        | ExprKind::Convert { value: base, .. } => {
-            collect_calls_in_expr(base, model, calls);
-        }
-        ExprKind::Binary { left, right, .. } | ExprKind::Logical { left, right, .. } => {
-            collect_calls_in_expr(left, model, calls);
-            collect_calls_in_expr(right, model, calls);
-        }
-        ExprKind::Boolean(_)
-        | ExprKind::String(_)
-        | ExprKind::Integer(_)
-        | ExprKind::Float { .. }
-        | ExprKind::Variable(_) => {}
     }
 }
 
@@ -1247,6 +1274,25 @@ fn type_of_expr_expected(
             }
             Ok(target_ty)
         }
+        ExprKind::GenericCall(call) => {
+            let name = model
+                .generic_calls
+                .iter()
+                .find(|(span, _)| *span == expr.span)
+                .map(|(_, name)| name.clone())
+                .ok_or_else(|| {
+                    Diagnostic::new("generic call has not been instantiated", expr.span)
+                })?;
+            let concrete = Expr {
+                span: expr.span,
+                kind: ExprKind::Call {
+                    name,
+                    name_span: call.name_span,
+                    arguments: call.arguments.clone(),
+                },
+            };
+            type_of_expr_expected(&concrete, bindings, expected, model)
+        }
         ExprKind::Boolean(_) => Ok(Type::Bool),
         ExprKind::String(_) => Ok(Type::String),
 
@@ -1625,6 +1671,7 @@ fn integer_hint(expr: &Expr, bindings: &Bindings, model: &SemanticModel) -> Opti
         ExprKind::Unary { value, .. } => integer_hint(value, bindings, model),
         ExprKind::Variable(_)
         | ExprKind::Call { .. }
+        | ExprKind::GenericCall(_)
         | ExprKind::Index { .. }
         | ExprKind::FieldAccess { .. }
         | ExprKind::Convert { .. } => match model.type_of_expr(expr, bindings).ok()? {

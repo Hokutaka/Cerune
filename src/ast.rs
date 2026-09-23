@@ -103,12 +103,51 @@ pub struct ConstantDefinition {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FunctionDefinition {
+    pub generic_parameters: Vec<GenericParameter>,
     pub name: String,
     pub name_span: Span,
     pub parameters: Vec<Parameter>,
     pub return_type: ReturnTypeRef,
     pub body: Vec<Stmt>,
     pub span: Span,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct GenericParameter {
+    pub name: String,
+    pub span: Span,
+    /// trueは正のi64配列長、falseは型パラメーターです。
+    pub length: bool,
+}
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum GenericArgument {
+    /// 名前の意味は対応する仮引数（型または長さ）で決まります。
+    Type(TypeRef),
+    Length {
+        value: usize,
+        span: Span,
+    },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct GenericOrigin {
+    pub template: String,
+    pub definition: Span,
+    pub arguments: Vec<String>,
+    pub calls: Vec<GenericUse>,
+}
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct GenericUse {
+    pub span: Span,
+    pub argument_spans: Vec<Span>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct GenericCall {
+    pub name: String,
+    pub name_span: Span,
+    pub generic_arguments: Vec<GenericArgument>,
+    pub arguments: Vec<Expr>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -290,6 +329,7 @@ impl IntegerLiteral {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ExprKind {
+    GenericCall(Box<GenericCall>),
     Logical {
         op: LogicalOp,
         left: Box<Expr>,

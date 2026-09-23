@@ -58,6 +58,7 @@ pub enum ReturnType {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FunctionDefinition {
+    pub generic_origin: Option<crate::ast::GenericOrigin>,
     pub id: FunctionId,
     pub name: String,
     pub parameters: Vec<Parameter>,

@@ -139,7 +139,7 @@ fn emit_function_signature(function: &super::ir::Function, module: &Module, outp
 }
 
 fn function_name(id: usize, name: &str) -> String {
-    format!("cerune_fn_{name}_{id}")
+    format!("cerune_fn_{}_{id}", name.replace('$', "_"))
 }
 
 fn emit_temporaries(types: &[Type], module: &Module, output: &mut String) {

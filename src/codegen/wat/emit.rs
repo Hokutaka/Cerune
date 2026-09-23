@@ -227,7 +227,11 @@ fn emit_function(function: &Function, module: &Module, output: &mut String) {
 }
 
 fn function_name(function: &Function) -> String {
-    format!("cerune_fn_{}_{}", function.name, function.id)
+    format!(
+        "cerune_fn_{}_{}",
+        function.name.replace('$', "_"),
+        function.id
+    )
 }
 
 fn emit_instruction(

@@ -582,7 +582,11 @@ fn slot_by_id(slots: &[Slot], id: SlotId) -> &Slot {
 }
 
 fn function_name(function: &Function) -> String {
-    format!("cerune.fn.{}.{}", function.name, function.id)
+    format!(
+        "cerune.fn.{}.{}",
+        function.name.replace('$', "_"),
+        function.id
+    )
 }
 
 fn temp(temp: Temp) -> String {

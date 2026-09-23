@@ -1,4 +1,5 @@
 use super::*;
+use crate::ast::{GenericArgument, GenericParameter};
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 enum Kind {
@@ -12,6 +13,7 @@ struct Symbol {
     name: String,
     public: bool,
     is_enum: bool,
+    generic_lengths: Vec<bool>,
 }
 #[derive(Default)]
 struct Names {
@@ -51,6 +53,12 @@ pub(super) fn resolve(units: &[Unit]) -> Result<Program, Diagnostic> {
                 Kind::Type => &mut scope.types,
             };
             let symbol = Symbol {
+                generic_lengths: match item {
+                    Item::FunctionDefinition(d) => {
+                        d.generic_parameters.iter().map(|p| p.length).collect()
+                    }
+                    _ => Vec::new(),
+                },
                 is_enum: matches!(item, Item::TypeDefinition(d) if d.variants.is_some()),
                 name: if index == 0 && kind == Kind::Function && name == "main" {
                     name.clone()
@@ -85,6 +93,7 @@ pub(super) fn resolve(units: &[Unit]) -> Result<Program, Diagnostic> {
             units,
             names: &names,
             current: index,
+            generics: &[],
         };
         for mut item in unit.module.program.items.clone() {
             match &mut item {
@@ -112,6 +121,12 @@ pub(super) fn resolve(units: &[Unit]) -> Result<Program, Diagnostic> {
                     }
                 }
                 Item::FunctionDefinition(d) => {
+                    resolver.generic_parameters(&d.generic_parameters)?;
+                    let generic_parameters = d.generic_parameters.clone();
+                    let resolver = Resolver {
+                        generics: &generic_parameters,
+                        ..resolver
+                    };
                     let public = names[index].functions[&d.name].public;
                     d.name = names[index].functions[&d.name].name.clone();
                     for parameter in &mut d.parameters {
@@ -135,8 +150,30 @@ struct Resolver<'a> {
     units: &'a [Unit],
     names: &'a [Names],
     current: usize,
+    generics: &'a [GenericParameter],
 }
 impl Resolver<'_> {
+    fn generic_parameters(&self, parameters: &[GenericParameter]) -> Result<(), Diagnostic> {
+        for p in parameters {
+            if self.units[self.current].imports.contains_key(&p.name)
+                || self.names[self.current].types.contains_key(&p.name)
+                || self.names[self.current].constants.contains_key(&p.name)
+                || self.names[self.current].functions.contains_key(&p.name)
+            {
+                return Err(Diagnostic::new(
+                    format!("conflicting generic parameter {}", p.name),
+                    p.span,
+                ));
+            }
+        }
+        Ok(())
+    }
+    fn generic(&self, name: &str, length: bool) -> bool {
+        self.generics
+            .iter()
+            .any(|p| p.name == name && p.length == length)
+    }
+
     fn name(&self, name: &str, span: Span, kind: Kind, public: bool) -> Result<String, Diagnostic> {
         let (target, member, qualified) = if let Some((alias, member)) = name.split_once("::") {
             (
@@ -196,13 +233,20 @@ impl Resolver<'_> {
 
     fn ty(&self, ty: &mut TypeRef, public: bool) -> Result<(), Diagnostic> {
         match &mut ty.kind {
-            TypeRefKind::Named(name) if Type::from_name(name).is_none() && name != "infer" => {
+            TypeRefKind::Named(name)
+                if Type::from_name(name).is_none()
+                    && name != "infer"
+                    && !self.generic(name, false) =>
+            {
                 *name = self.name(name, ty.span, Kind::Type, public)?
             }
             TypeRefKind::Array { element, .. } => self.ty(element, public)?,
             TypeRefKind::ArrayConstant { element, constant } => {
                 self.ty(element, public)?;
-                constant.name = self.name(&constant.name, constant.span, Kind::Constant, false)?;
+                if !self.generic(&constant.name, true) {
+                    constant.name =
+                        self.name(&constant.name, constant.span, Kind::Constant, false)?;
+                }
             }
             _ => {}
         }
@@ -210,6 +254,12 @@ impl Resolver<'_> {
     }
 
     fn binding(&self, name: &str, span: Span) -> Result<(), Diagnostic> {
+        if self.generics.iter().any(|p| p.name == name) {
+            return Err(Diagnostic::new(
+                format!("binding conflicts with generic parameter {name}"),
+                span,
+            ));
+        }
         if self.names[self.current].constants.contains_key(name) {
             return Err(Diagnostic::new(
                 format!("binding {name} conflicts with a constant"),
@@ -333,6 +383,42 @@ impl Resolver<'_> {
 
     fn expr(&self, expr: &mut Expr) -> Result<(), Diagnostic> {
         match &mut expr.kind {
+            ExprKind::GenericCall(call) => {
+                call.name = self.name(&call.name, call.name_span, Kind::Function, false)?;
+                let parameters = &self
+                    .names
+                    .iter()
+                    .flat_map(|n| n.functions.values())
+                    .find(|s| s.name == call.name)
+                    .unwrap()
+                    .generic_lengths;
+                if parameters.len() != call.generic_arguments.len() {
+                    return Err(Diagnostic::new(
+                        format!(
+                            "{} requires {} generic arguments",
+                            call.name,
+                            parameters.len()
+                        ),
+                        expr.span,
+                    ));
+                }
+                for (length, argument) in parameters.iter().zip(&mut call.generic_arguments) {
+                    if let GenericArgument::Type(ty) = argument {
+                        if *length {
+                            if let TypeRefKind::Named(name) = &mut ty.kind
+                                && !self.generic(name, true)
+                            {
+                                *name = self.name(name, ty.span, Kind::Constant, false)?;
+                            }
+                        } else {
+                            self.ty(ty, false)?;
+                        }
+                    }
+                }
+                for argument in &mut call.arguments {
+                    self.expr(argument)?;
+                }
+            }
             ExprKind::Call {
                 name,
                 name_span,

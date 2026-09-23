@@ -1,0 +1,43 @@
+// 同じ関数を、型と固定配列長を明示して使い分けます。
+fn first<T, const N: i64>(values: [T; N]) -> T {
+    return values[0];
+}
+fn total<T, const N: i64>(values: [T; N], zero: T) -> T {
+    mut result: T = zero;
+    for (value: T in values) { result = result + value; }
+    return result;
+}
+fn replace_first<T, const N: i64>(values: [T; N], replacement: T) -> [T; N] {
+    mut copy: [T; N] = values;
+    copy[0] = replacement;
+    return copy;
+}
+fn identity<T>(value: T) -> T { return value; }
+
+print("型と長さ");
+const PAIR: u8 = 2;
+print(total::<i64, 3>([1, 2, 3], 0));
+print(total::<u64, PAIR>([9223372036854775808, 1], 0));
+print(total::<f64, 2>([1.5, 2.5], 0.0));
+words: [string; PAIR] = ["日本語", "\0\r\n"];
+changed: infer = replace_first::<string, PAIR>(words, "変更");
+print(first::<string, 2>(words)); // 元の配列は変わりません。
+print(first::<string, PAIR>(changed));
+print(changed[1]);
+
+type Label { text: string, enabled: bool }
+label: Label = first::<Label, 2>([
+    Label { text: "保存", enabled: true },
+    Label { text: "予備", enabled: false },
+]);
+print(label.text);
+print(label.enabled);
+nested: infer = identity::<[[i64; 2]; 1]>([[7, 8]]);
+print(nested[0][1]);
+
+enum Choice { Value { text: string }, Empty }
+choice: Choice = identity::<Choice>(Choice::Value { text: "選択" });
+match choice {
+    Choice::Value { text: text } => { print(text); },
+    Choice::Empty {} => { print("空"); },
+}

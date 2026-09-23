@@ -130,6 +130,8 @@ Argument counts and types must match the declaration; there is no fixed count li
 | [conditional.ceru](conditional.ceru) | `if` / `else` and scope |
 | [loop_control.ceru](loop_control.ceru) | `while`, `break`, and `continue` |
 | [for_sum.ceru](for_sum.ceru) | `for` and assignment as its start statement |
+| [generic_functions.ceru](generic_functions.ceru) | Reuse aggregation/copying with explicit types and lengths: strings, u64, products, sums |
+| [generic_evaluation_order.ceru](generic_evaluation_order.ceru) | Generic forwarding, argument evaluation order, short-circuiting |
 | [functions.ceru](functions.ceru) | typed functions, parameters, results, and `void` functions |
 
 ## Data structures
@@ -201,6 +203,8 @@ Argument counts and types must match the declaration; there is no fixed count li
 | `function_arguments.ceru` | Starts with `引数の評価順`, `1` through `7`, then `28` |
 | `string_origins.ceru` | `日本語\0\ntrue\nfalse\n`; no `skipped`. Compare IR and annotated LLVM: equality `#7` and short circuit `#14` lead to calls/branches ([walkthrough](../docs/reference/cli.en.md#following-llvm-origins)) |
 | `string_byte_length.ceru` | `0, 9, 3, 2, 3, 4, 7, 3, 9, left, right, 9, false, false, 6, 10`, each with LF. `left`/`right` run once; no `skipped`. `byte_len` covers UTF-8 lengths, copies, calls, arrays, and defaults |
+| `generic_functions.ceru` | Totals `6 → 9223372036854775809 → 4`, original/replaced strings, product and sum values |
+| `generic_evaluation_order.ceru` | `評価順 → 配列 → 添字 → 2 → 末尾 → false → true`; does not print `呼ばれない` |
 | `constant_array_lengths.ceru` | Dimensions `2 → 3`, row totals `6 → 15`; after an update the original remains `6` and the copy is `99`. Also prints string lengths/bytes and u64 boundaries |
 | `array_iteration.ceru` | Positive total `15`; search index `2` and `未登録`. Visits `1 → 2 → 3` despite original-array updates; original second element becomes `99` |
 | `array_iteration_values.ceru` | String indices/byte lengths/contents and u64 boundaries. After copy updates, original row starts remain `1 → 3`, original product count `10`; sums print `空 → 海` |

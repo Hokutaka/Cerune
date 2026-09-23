@@ -1,0 +1,5 @@
+const SIZE: u8 = 2;
+pub type Label { text: string }
+pub fn first<T, const N: i64>(values: [T; N]) -> T { return values[0]; }
+pub fn pair<T>(values: [T; SIZE]) -> T { return first::<T, SIZE>(values); }
+pub const COUNT: u64 = 2;
