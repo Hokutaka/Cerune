@@ -647,3 +647,111 @@ fn array_iteration_resolves_imported_types_constants_and_functions() {
         assert!(String::from_utf8_lossy(&result.stderr).contains("import alias"));
     }
 }
+
+#[test]
+fn constant_array_lengths_resolve_public_values_and_private_implementation_sizes() {
+    let entry = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+        .join("examples/modules/constant_array_lengths.ceru");
+    let compilation = modules::load(&entry).unwrap();
+    let ir = compilation.to_ir().unwrap();
+    assert_eq!(
+        run_bytecode(&bytecode::lower(&ir).unwrap()).unwrap(),
+        "共有サイズ\n6\n15\n保持\0\r\n\n"
+    );
+    let uses: Vec<_> = ir
+        .constant_definitions
+        .iter()
+        .flat_map(|d| &d.array_length_uses)
+        .collect();
+    assert!(
+        uses.iter()
+            .any(|span| compilation.sources.slice(**span) == Some("dimensions::WIDTH"))
+    );
+    assert!(
+        uses.iter()
+            .any(|span| compilation.sources.slice(**span) == Some("INTERNAL_WIDTH"))
+    );
+}
+
+#[test]
+fn imported_invalid_lengths_preserve_files_and_existing_artifacts() {
+    let w = Workspace::new();
+    for (library, main, reason, slice) in [
+        (
+            "pub const N: i64 = 1 / 0;",
+            "type T { values: [i64; dims::N] }",
+            "division-by-zero",
+            "1 / 0",
+        ),
+        (
+            "pub const N: i64 = 0;",
+            "type T { values: [i64; dims::N] }",
+            "greater than zero",
+            "dims::N",
+        ),
+        (
+            "const N: i64 = 2;",
+            "type T { values: [i64; dims::N] }",
+            "private constant",
+            "dims::N",
+        ),
+        (
+            "pub const N: i64 = array_len(DATA); const DATA: [i64; N] = [1];",
+            "type T { values: [i64; dims::N] }",
+            "cyclic",
+            "N",
+        ),
+    ] {
+        w.put("dims.ceru", library);
+        let entry = w.put(
+            "main.ceru",
+            &format!("import \"dims.ceru\" as dims; print(\"never\"); {main}"),
+        );
+        let diagnostic = match modules::load(&entry) {
+            Ok(compilation) => {
+                let error = compilation.to_ir().unwrap_err();
+                assert_eq!(
+                    compilation.sources.slice(error.primary_span().unwrap()),
+                    Some(slice)
+                );
+                compilation.render(&error)
+            }
+            Err(error) => {
+                assert_eq!(
+                    error
+                        .sources
+                        .slice(error.diagnostic.primary_span().unwrap()),
+                    Some(slice)
+                );
+                error.render()
+            }
+        };
+        assert!(diagnostic.contains(reason), "{diagnostic}");
+        for command in [
+            "run",
+            "emit-ir",
+            "emit-bytecode",
+            "emit-c",
+            "emit-llvm",
+            "emit-qbe",
+            "emit-wat",
+            "emit-asm",
+        ] {
+            let artifact = w.put("artifact.txt", "keep");
+            let args = if command == "run" {
+                vec![]
+            } else {
+                vec!["-o", artifact.to_str().unwrap()]
+            };
+            let result = w.cli(command, &entry, &args);
+            assert!(!result.status.success(), "{command}");
+            assert!(result.stdout.is_empty(), "{command}");
+            assert!(
+                String::from_utf8_lossy(&result.stderr).contains(reason),
+                "{command}: {:?}",
+                result.stderr
+            );
+            assert_eq!(fs::read_to_string(artifact).unwrap(), "keep");
+        }
+    }
+}

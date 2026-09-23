@@ -91,13 +91,29 @@ pub struct SemanticModel {
     pub bindings: Bindings,
     pub type_definitions: Vec<TypeDefinition>,
     pub function_definitions: Vec<FunctionDefinition>,
+    constant_lengths: HashMap<String, usize>,
     type_names: HashMap<String, TypeId>,
     function_names: HashMap<String, FunctionId>,
 }
 
 impl SemanticModel {
     pub fn resolve_type_ref(&self, type_ref: &ast::TypeRef) -> SemanticResult<Type> {
-        resolve_type_ref(type_ref, &self.type_names)
+        let ty = match &type_ref.kind {
+            ast::TypeRefKind::ArrayConstant { element, constant } => Type::Array {
+                element: Box::new(self.resolve_type_ref(element)?),
+                length: *self
+                    .constant_lengths
+                    .get(&constant.name)
+                    .ok_or_else(|| Diagnostic::new("unresolved array length", constant.span))?,
+            },
+            ast::TypeRefKind::Array { element, length } => Type::Array {
+                element: Box::new(self.resolve_type_ref(element)?),
+                length: *length,
+            },
+            ast::TypeRefKind::Named(_) => resolve_type_ref(type_ref, &self.type_names)?,
+        };
+        check_storage(&ty, self, type_ref.span)?;
+        Ok(ty)
     }
 
     pub fn type_definition(&self, id: TypeId) -> &TypeDefinition {
@@ -123,7 +139,9 @@ impl SemanticModel {
     }
 
     pub fn type_of_expr(&self, expr: &Expr, bindings: &Bindings) -> SemanticResult<Type> {
-        type_of_expr_expected(expr, bindings, None, self)
+        let ty = type_of_expr_expected(expr, bindings, None, self)?;
+        check_storage(&ty, self, expr.span)?;
+        Ok(ty)
     }
 
     pub(crate) fn type_of_expr_expected(
@@ -132,7 +150,9 @@ impl SemanticModel {
         bindings: &Bindings,
         expected: Option<Type>,
     ) -> SemanticResult<Type> {
-        type_of_expr_expected(expr, bindings, expected, self)
+        let ty = type_of_expr_expected(expr, bindings, expected, self)?;
+        check_storage(&ty, self, expr.span)?;
+        Ok(ty)
     }
 
     pub fn type_name(&self, ty: Type) -> String {
@@ -151,7 +171,8 @@ impl SemanticModel {
 }
 
 pub fn check(program: &Program) -> SemanticResult<Bindings> {
-    let program = crate::sums::lower(program)?;
+    let (program, _) = crate::array_lengths::resolve(program)?;
+    let program = crate::sums::lower(&program)?;
     let model = analyze_lowered(&program)?;
     if !model.constants.is_empty() {
         crate::ir::builder::build_with_model(&program, &model)?;
@@ -160,7 +181,13 @@ pub fn check(program: &Program) -> SemanticResult<Bindings> {
 }
 
 pub fn analyze(program: &Program) -> SemanticResult<SemanticModel> {
-    analyze_lowered(&crate::sums::lower(program)?)
+    let (program, uses) = crate::array_lengths::resolve(program)?;
+    let mut model = analyze_lowered(&crate::sums::lower(&program)?)?;
+    model.constant_lengths = uses
+        .into_iter()
+        .map(|usage| (usage.name, usage.length))
+        .collect();
+    Ok(model)
 }
 
 pub(crate) fn analyze_lowered(program: &Program) -> SemanticResult<SemanticModel> {
@@ -169,6 +196,7 @@ pub(crate) fn analyze_lowered(program: &Program) -> SemanticResult<SemanticModel
     let function_names = register_function_names(program)?;
     let function_definitions = resolve_function_definitions(program, &type_names, &function_names)?;
     let mut model = SemanticModel {
+        constant_lengths: HashMap::new(),
         constants: HashMap::new(),
         bindings: HashMap::new(),
         type_definitions,
@@ -177,6 +205,18 @@ pub(crate) fn analyze_lowered(program: &Program) -> SemanticResult<SemanticModel
         function_names,
     };
 
+    reject_infinite_types(&model)?;
+    for definition in &model.type_definitions {
+        check_storage(&Type::Named(definition.id), &model, definition.span)?;
+    }
+    for definition in &model.function_definitions {
+        for parameter in &definition.parameters {
+            check_storage(&parameter.ty, &model, parameter.span)?;
+        }
+        if let ReturnType::Value(ty) = &definition.return_type {
+            check_storage(ty, &model, definition.span)?;
+        }
+    }
     for item in &program.items {
         if let Item::ConstantDefinition(d) = item {
             if ast::Type::from_name(&d.name).is_some()
@@ -202,7 +242,6 @@ pub(crate) fn analyze_lowered(program: &Program) -> SemanticResult<SemanticModel
             }
         }
     }
-    reject_infinite_types(&model)?;
     for item in &program.items {
         if let Item::ConstantDefinition(d) = item {
             let expected = model.constants[&d.name].1.clone();
@@ -671,6 +710,9 @@ fn resolve_type_ref(
             return resolve_type_name(name, type_ref.span, type_names);
         }
         ast::TypeRefKind::Array { element, length } => (element, *length),
+        ast::TypeRefKind::ArrayConstant { constant, .. } => {
+            return Err(Diagnostic::new("unresolved array length", constant.span));
+        }
     };
     let element = resolve_type_ref(element, type_names)?;
     Ok(Type::Array {
@@ -730,6 +772,49 @@ fn reject_infinite_types(model: &SemanticModel) -> SemanticResult<()> {
         }
     }
     Ok(())
+}
+
+fn check_storage(ty: &Type, model: &SemanticModel, span: Span) -> SemanticResult<()> {
+    fn size(
+        ty: &Type,
+        model: &SemanticModel,
+        memo: &mut HashMap<TypeId, usize>,
+        depth: usize,
+    ) -> Option<usize> {
+        if depth >= 128 {
+            return None;
+        }
+        let slots = match ty {
+            Type::Array { element, length } => {
+                size(element, model, memo, depth + 1)?.checked_mul(*length)?
+            }
+            Type::Named(id) => {
+                if let Some(value) = memo.get(id) {
+                    return Some(*value);
+                }
+                let mut total = 0usize;
+                for field in &model.type_definition(*id).fields {
+                    total = total.checked_add(size(&field.ty, model, memo, depth + 1)?)?;
+                    if total > 100_000 {
+                        return None;
+                    }
+                }
+                let total = total.max(1);
+                memo.insert(*id, total);
+                total
+            }
+            _ => 1,
+        };
+        (slots <= 100_000).then_some(slots)
+    }
+    size(ty, model, &mut HashMap::new(), 0)
+        .map(|_| ())
+        .ok_or_else(|| {
+            Diagnostic::new(
+                "aggregate storage exceeds 100000 scalar slots or depth 128",
+                span,
+            )
+        })
 }
 
 fn check_defaults(model: &SemanticModel) -> SemanticResult<()> {

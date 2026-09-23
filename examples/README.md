@@ -136,6 +136,8 @@ cargo run --quiet -- emit-c examples/linear_regression.ceru
 
 | サンプル | 内容 |
 | --- | --- |
+| [constant_array_lengths.ceru](constant_array_lengths.ceru) | 定数で固定サイズを共有。前方参照、型の同一性、関数、文字列・u64・enumとコピー |
+| [modules/constant_array_lengths.ceru](modules/constant_array_lengths.ceru) | importした寸法と、公開型の内部で使う非公開定数 |
 | [array_iteration.ceru](array_iteration.ceru) | `for … in`による集計・検索、添字、途中終了、走査中のコピー |
 | [array_iteration_values.ceru](array_iteration_values.ceru) | 文字列・u64・入れ子配列・構造体・直和型の反復と`mut`な要素コピー |
 | [array_length.ceru](array_length.ceru) | 要素数を使った集計。定数、入れ子、文字列・u64・構造体・直和型の配列とコピー |
@@ -199,6 +201,7 @@ cargo run --quiet -- emit-c examples/linear_regression.ceru
 | `function_arguments.ceru` | 冒頭は`引数の評価順`、`1`〜`7`、`28` |
 | `string_origins.ceru` | `日本語\0\ntrue\nfalse\n`。`skipped`は出ない。IRと注釈付きLLVMで比較`#7`・短絡評価`#14`から呼び出し・分岐へ辿る（[手順](../docs/reference/cli.ja.md#llvmの出自を辿る)） |
 | `string_byte_length.ceru` | `0, 9, 3, 2, 3, 4, 7, 3, 9, left, right, 9, false, false, 6, 10`に各LF。`left`・`right`は一回ずつ、`skipped`は出ない。`byte_len`でUTF-8長・コピー・関数・配列・既定値を確認 |
+| `constant_array_lengths.ceru` | 寸法`2 → 3`、行の合計`6 → 15`。コピー変更後も元は`6`、コピーは`99`。続いてu64の境界値、文字列のバイト数と内容 |
 | `array_iteration.ceru` | 正数の合計`15`、検索結果の添字`2`と`未登録`。元を変更しても走査は`1 → 2 → 3`、元の二番目は`99` |
 | `array_iteration_values.ceru` | 文字列の添字・バイト数・内容、u64の境界値。コピー変更後も元の行は`1 → 3`、元の構造体は`10`。直和型は`空 → 海` |
 | `array_length.ceru` | 集計は`4 → 20 → 4 → 118 → 20`。コピーを変更しても元は不変。型別の長さは`2 → 3 → 2 → 9 → 2 → 2 → 2`（`9`だけ文字列のバイト数） |

@@ -1,0 +1,12 @@
+const INTERNAL_WIDTH: u8 = 3;
+pub const WIDTH: i64 = i64(INTERNAL_WIDTH);
+pub const ROWS: u32 = 2;
+
+// 非公開の定数も、公開する型の「値としての長さ」には利用できます。
+pub type Row { values: [i64; INTERNAL_WIDTH] }
+pub const FIRST: Row = Row { values: [1, 2, 3] };
+pub fn total(row: [i64; WIDTH]) -> i64 {
+    mut result: i64 = 0;
+    for (value: infer in row) { result = result + value; }
+    return result;
+}

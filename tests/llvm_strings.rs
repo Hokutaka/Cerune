@@ -399,3 +399,11 @@ fn array_iteration_matches_known_outputs_across_optimized_c_and_llvm() {
         native.matches(source, expected);
     }
 }
+
+#[test]
+fn constant_array_lengths_preserve_values_across_optimized_c_and_llvm() {
+    let Some(native) = Native::new() else { return };
+    for &(source, expected) in string_cases::length_constant_cases::CASES {
+        native.matches(source, expected);
+    }
+}

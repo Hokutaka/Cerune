@@ -200,6 +200,10 @@ impl Resolver<'_> {
                 *name = self.name(name, ty.span, Kind::Type, public)?
             }
             TypeRefKind::Array { element, .. } => self.ty(element, public)?,
+            TypeRefKind::ArrayConstant { element, constant } => {
+                self.ty(element, public)?;
+                constant.name = self.name(&constant.name, constant.span, Kind::Constant, false)?;
+            }
             _ => {}
         }
         Ok(())

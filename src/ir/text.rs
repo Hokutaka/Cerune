@@ -35,6 +35,22 @@ pub fn emit(program: &Program) -> String {
         output.push_str(" => ");
         emit_expr(&definition.value, program, &mut output);
         writeln!(output, " [compile-time]").unwrap();
+        for span in &definition.array_length_uses {
+            writeln!(
+                output,
+                "  array-length %{}@{} => {} [source={} bytes={}..{}]",
+                definition.name,
+                definition.id,
+                match definition.value.kind {
+                    super::ExprKind::Integer(n) => n,
+                    _ => unreachable!(),
+                },
+                span.source_id().index(),
+                span.start(),
+                span.end()
+            )
+            .unwrap();
+        }
     }
     for definition in &program.type_definitions {
         if let Some(variants) = &definition.variants {

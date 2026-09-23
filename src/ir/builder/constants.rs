@@ -204,6 +204,7 @@ impl Builder<'_> {
             let value = self.freeze(evaluated.clone(), &ty, source.value.span);
             self.constant_cache.borrow_mut()[id] = Some((
                 super::super::ConstantDefinition {
+                    array_length_uses: Vec::new(),
                     id,
                     name: source.name.clone(),
                     ty,

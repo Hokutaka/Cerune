@@ -48,10 +48,20 @@ impl TypeRef {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum TypeRefKind {
     Named(String),
+    ArrayConstant {
+        element: Box<TypeRef>,
+        constant: Box<ArrayLengthRef>,
+    },
     Array {
         element: Box<TypeRef>,
         length: usize,
     },
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ArrayLengthRef {
+    pub name: String,
+    pub span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

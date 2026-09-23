@@ -25,6 +25,7 @@ const OBSERVATION_CASES: &[&str] = &[
     "fixed-arrays",
     "array-length",
     "array-iteration",
+    "constant-array-lengths",
     "product-array-field",
     "product-array-elements",
     "nested-fixed-arrays",

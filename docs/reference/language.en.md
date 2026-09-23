@@ -94,7 +94,8 @@ type_spec   := "i8"
 
 type_ref    := "i8" | "u8" | "i16" | "u16" | "i32" | "u32" | "i64" | "u64" | "f32" | "f64" | "bool" | "string" | fixed_array_type | IDENT
 
-fixed_array_type := "[" type_ref ";" INTEGER "]"
+fixed_array_type := "[" type_ref ";" array_length "]"
+array_length := INTEGER | IDENT ("::" IDENT)?
 
 expression  := logical_or
 
@@ -328,6 +329,22 @@ Updating one copy of an array does not change another copy. The assigned value m
 
 See [Fixed array design](../design/fixed-arrays.en.md) for the detailed design and bounds-check representation in each backend.
 
+
+### Constants in type lengths
+
+```cerune
+const COUNT: u32 = 2;
+values: [i64; COUNT] = [7, 9];
+same: [i64; 2] = values;
+print(array_len(same)); // 2
+```
+
+Specify a positive integer literal, an integer constant name, or `alias::COUNT`. Every integer kind is accepted, but the value must be positive and at most `i64::MAX`. Declaration order is unrestricted. Resolved lengths determine type identity; mismatched initializer counts remain errors.
+
+Write calculations in definitions such as `const COUNT: i64 = BASE + 1;`. `[T; COUNT + 1]`, calls in type lengths, and runtime variables are unsupported. Cycles through types are diagnosed. Public types may use local private size constants; importing a constant name requires `pub`.
+
+The shared resource limit is 100,000 scalar units per aggregate value and type-computation depth 128, applying equally to literals, constant names, and `infer`. IR retains the constant's computation and its type-reference locations. See [evaluation and limits](../design/constant-array-lengths.en.md) and the [example](../../examples/constant_array_lengths.ceru).
+
 ### Array element count
 
 `array_len(values)` accepts one fixed array `[T; N]` and returns its outermost element count `N` as `i64`, regardless of the element type. Use `byte_len` for string bytes.
@@ -340,7 +357,7 @@ print(array_len(matrix[0])); // 3
 
 Evaluate the argument exactly once. A known length does not remove calls in `array_len(make())` or evaluation of array elements. If the argument fails, report the original failing expression without returning a length. Short-circuited operands remain unevaluated; a loop condition evaluates the argument each time the condition is checked.
 
-Constant expressions support this operation, subject to constant-expression rules for the entire argument. Failures in unused constants are still diagnosed, and ordinary function calls remain forbidden. Constants in array type lengths are still unsupported.
+Constant expressions support this operation, subject to constant-expression rules for the entire argument. Failures in unused constants are still diagnosed, and ordinary function calls remain forbidden. Integer results can be stored in constants and used as array type lengths.
 
 Functions, constants, and import aliases cannot use this name. Variable and function namespaces remain separate. Wrong argument counts/types and discarded call results are diagnosed. See the [aggregation example](../../examples/array_length.ceru) and [evaluation-order example](../../examples/array_length_order.ceru).
 
@@ -388,7 +405,7 @@ match value {
 
 Numbers, booleans, strings, arrays, structs, and sums are supported. Constant expressions cannot reference runtime variables or call ordinary functions. Short circuiting is preserved, while every constant is type-checked and evaluated even if unused. Evaluation failures are compilation errors.
 
-Constants cannot be assigned or shadowed by local bindings. Export with `pub const` and access through `alias::LIMIT`. Constant names in array type lengths and block-local declarations are unsupported. See the [evaluation and observation contract](../design/constants.en.md) and [example](../../examples/constants.ceru).
+Constants cannot be assigned or shadowed by local bindings. Export with `pub const` and access through `alias::LIMIT`. Integer constants can also specify array type lengths; block-local declarations remain unsupported. See the [evaluation and observation contract](../design/constants.en.md) and [example](../../examples/constants.ceru).
 
 ## Modules and visibility
 

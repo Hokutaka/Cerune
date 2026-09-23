@@ -104,6 +104,7 @@ pub const FAILURES: &[(&str, &str)] = &[
         "const DATA: [i64; 1] = [7]; value: i64 = DATA[1];",
         "array-index-out-of-bounds",
     ),
+    (CONSTANT_LENGTH_FAILURES[0].0, CONSTANT_LENGTH_FAILURES[0].1),
     (ITERATION_FAILURES[0].0, ITERATION_FAILURES[0].1),
     (ITERATION_FAILURES[1].0, ITERATION_FAILURES[1].1),
     (ITERATION_FAILURES[2].0, ITERATION_FAILURES[2].1),
@@ -203,3 +204,10 @@ pub const ITERATION_FAILURES: &[(&str, &str, &str, &str)] = &[
         "10 / v",
     ),
 ];
+
+pub const CONSTANT_LENGTH_FAILURES: &[(&str, &str, &str, &str)] = &[(
+    r#"const COUNT: u8 = 2; mut values: [i64; COUNT] = [1, 2]; print("before"); values[2] = 3;"#,
+    "array-index-out-of-bounds",
+    "before\n",
+    "[2]",
+)];

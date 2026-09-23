@@ -31,6 +31,10 @@ Dynamic lengths are outside the current scope.
 
 ## Design decisions
 
+### Constants in type lengths
+
+`[T; COUNT]` and `[T; settings::COUNT]` accept integer constants. Equal resolved numbers produce the same type as literal lengths. Cyclic type/constant dependencies and invalid lengths are diagnosed. The shared aggregate limit is 100,000 expanded scalar units and type-computation depth 128, also applying to literals and `infer`. See [details and observation](constant-array-lengths.en.md).
+
 ### Length is part of the type
 
 `[i64; 3]` and `[i64; 4]` are different types. Storage size is therefore known during compilation, and assigning arrays with different lengths is rejected before execution.

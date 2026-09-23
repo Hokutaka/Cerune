@@ -1,0 +1,43 @@
+// 固定サイズを定数で共有し、型・関数・反復に同じ長さを使います。
+const ROWS: u8 = 2;
+const COLUMNS: i64 = BASE + 1;
+const BASE: i64 = 2;
+
+type Grid { values: [[i64; COLUMNS]; ROWS] }
+const TABLE: Grid = Grid { values: [[1, 2, 3], [4, 5, 6]] };
+
+fn total(row: [i64; COLUMNS]) -> i64 {
+    mut result: i64 = 0;
+    for (value: infer in row) { result = result + value; }
+    return result;
+}
+
+print("固定サイズ");
+print(array_len(TABLE.values));
+print(array_len(TABLE.values[0]));
+for (row: [i64; COLUMNS] in TABLE.values) { print(total(row)); }
+
+mut copy: [[i64; 3]; 2] = TABLE.values;
+copy[1][2] = 99;
+print(TABLE.values[1][2]); // 6：コピーは独立
+print(copy[1][2]);
+
+const BYTE_COUNT: i64 = byte_len("日");
+bytes: [u8; BYTE_COUNT] = [1, 2, 3];
+print(array_len(bytes));
+
+const PAIR: u64 = 2;
+enum Entry { Values { values: [u64; PAIR] }, Missing }
+entries: [Entry; ROWS] = [
+    Entry::Values { values: [18446744073709551615, 9223372036854775808] },
+    Entry::Missing {},
+];
+for (entry: infer in entries) {
+    match entry {
+        Entry::Values { values: values } => { for (value: infer in values) { print(value); } },
+        Entry::Missing {} => { print("未登録"); },
+    }
+}
+
+fn labels() -> [string; ROWS] { return ["日本語", "\0\r\n"]; }
+for (text: infer in labels()) { print(byte_len(text)); print(text); }

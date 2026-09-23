@@ -542,6 +542,20 @@ impl Parser {
                 ));
             }
             self.expect_simple(TokenKind::Semicolon)?;
+            if matches!(self.peek().kind, TokenKind::Identifier(_)) {
+                let (name, name_span) = self.expect_path()?;
+                let end = self.expect_simple(TokenKind::RightBracket)?.end();
+                return Ok(TypeRef {
+                    kind: TypeRefKind::ArrayConstant {
+                        element: Box::new(element),
+                        constant: Box::new(crate::ast::ArrayLengthRef {
+                            name,
+                            span: name_span,
+                        }),
+                    },
+                    span: self.span(start, end),
+                });
+            }
             let length_token = self.advance().clone();
             let length = match length_token.kind {
                 TokenKind::Integer(digits) => parse_array_length(&digits, length_token.span)?,
