@@ -2,38 +2,38 @@
 
 [English](README.en.md)
 
-このディレクトリには、現在のCeruneで読んで実行できるプログラムを置きます。それぞれの例は、別の構文や計算方法を小さく示します。
+このディレクトリ直下の`.ceru`が、単独で実行できる正常例です。
 
-[意図した停止の例](runtime_failures/README.md)には、停止前の出力と失敗する式を追う4例を分けて置いています。
-
-[ファイルごとの出自の例](source_files/README.md)は、モジュール化の土台を検証するRust API用サンプルです。型・関数を別々に解析して出自を比較します。この部品は下記の一括実行対象に含めません。実際にimportを使う例は[modules](modules/README.md)にあり、型別の表と単一ファイル版・分割版・失敗例を比較できます。
+| 場所 | 内容 |
+| --- | --- |
+| このディレクトリ | 一括実行できるプログラム |
+| [modules](modules/README.md) | import、単一ファイル版との比較、意図した停止 |
+| [runtime_failures](runtime_failures/README.md) | 停止前の出力と失敗する式を追う4例 |
+| [source_files](source_files/README.md) | 型・関数のファイルを別々に解析し、出自を比較するRust API例。importは使わない |
 
 ## まとめて実行
 
-リポジトリのルートから次を実行すると、すべてのサンプルについて名前、実行結果、成否、最後の集計を表示します。
+リポジトリのルートで実行します。サブディレクトリは一括実行の対象外です。
 
-```powershell
-.\scripts\run-examples.ps1
+| 環境 | 全件実行 | 対象を絞る／ビルド済み実行ファイルを使う |
+| --- | --- | --- |
+| PowerShell | `.\scripts\run-examples.ps1` | `-Pattern "matrix*.ceru"`／`-SkipBuild` |
+| WSL / Bash | `bash scripts/run-examples.sh` | `--pattern 'matrix*.ceru'`／`--skip-build` |
+
+名前・出力・終了状態・集計を表示します。WSLにはWSL側のRust環境が必要です。Bashのビルド先は既定で`target/unix`、指定時は`CARGO_TARGET_DIR`です。ビルドを省く場合は、同じ出力先で一度ビルドしてください。
+
+個別実行や各段階の表現を見るときは、次のファイル名を置き換えます。
+
+```sh
+cargo run --quiet -- run examples/linear_regression.ceru
+cargo run --quiet -- emit-ir examples/linear_regression.ceru
+cargo run --quiet -- emit-bytecode examples/linear_regression.ceru
+cargo run --quiet -- emit-c examples/linear_regression.ceru
 ```
-
-`-Pattern "matrix*.ceru"`で対象を絞れます。`-SkipBuild`を指定すると、既にbuildされているCeruneを使います。
-
-WSL / Bashでは次を使います。WSL側にもRustの開発環境が必要です。
-
-```bash
-bash scripts/run-examples.sh
-bash scripts/run-examples.sh --pattern 'matrix*.ceru' --skip-build
-```
-
-`.sh`側は既定で`target/unix/debug/cerune`を使い、Windowsの生成物と分離します。`CARGO_TARGET_DIR`を指定した場合はその出力先を使います。`--skip-build`は、同じ出力先へ一度ビルドした後に指定してください。
-
-一括実行は各サンプルの終了状態を確認します。期待する出力まで照合するには`cargo test --test examples`、fmt・clippy・全テストをまとめて実行するには`bash scripts/test.sh`を使います。
 
 ## 型から探す
 
-8種類の整数型、`f32`・`f64`、`bool`、`string`、固定長配列、構造体、直和型を使えます。VM・C・LLVM・QBE・WAT・Windows/Linux ASM・自前オブジェクトで同じ言語機能を扱います。
-
-`u64_values.ceru`は全経路で既知の期待出力と比較し、[native_values.ceru](native_values.ceru)ではWindows/Linuxの混在引数と値渡しを確認します。機械語の生成・実行・観測は、[外部ツールを明示する手順](../docs/design/native-code.ja.md)と[自前エンコーダの設計](../docs/design/native-encoder.ja.md)を参照してください。
+数値範囲と用途を型ごとにまとめます。`infer`は値の型ではなく型推論の指定、`void`は値を返さない関数の戻り方です。[floating_point.ceru](floating_point.ceru)と[functions.ceru](functions.ceru)で確認できます。
 
 ### 符号付き整数：負数と正数
 
@@ -53,15 +53,7 @@ bash scripts/run-examples.sh --pattern 'matrix*.ceru' --skip-build
 | `u32` | 0〜4294967295 | [population_statistics.ceru](population_statistics.ceru) | 30億前後の値を保持し、集計時には`i64`へ広げる |
 | `u64` | 0〜18446744073709551615 | [u64_values.ceru](u64_values.ceru), [packet_counter.ceru](packet_counter.ceru) | 最大値、最上位ビット、符号なし比較・除算、関数・配列・コピー、正確な変換 |
 
-u64の例は次のコマンドで実行できます。
-
-```sh
-cargo run -- run examples/u64_values.ceru
-```
-
-先頭の出力は順に`u64`、`18446744073709551615`、`9223372036854775808`、`0`です。元の束縛を再代入してもコピーは保持され、最上位ビットも正の数値として扱います。[u64の設計](../docs/design/u64.ja.md)では各生成先の表現も説明しています。
-
-整数の範囲外演算は停止し、折り返しません。型同士は暗黙に混ぜず、`i64(value)`や`convert<i64>(value)`で明示変換します。[integer_conversions.ceru](integer_conversions.ceru)で二つの表記を比較できます。型情報のない整数は`i64`になり、配列の添字も`i64`です。表のビット幅は数値の範囲を表し、現在の生成先では小さい整数も64ビット領域に格納します。
+整数の範囲外演算は折り返さず停止します。型を混ぜるときは`i64(value)`や`convert<i64>(value)`で明示変換します（[両表記の例](integer_conversions.ceru)）。型情報のない整数と配列の添字は`i64`です。ビット幅は数値範囲を表し、現在の生成先では小さい整数も64ビット領域に格納します。[u64の表現](../docs/design/u64.ja.md)も参照できます。
 
 ### 浮動小数点：小数と精度
 
@@ -89,8 +81,6 @@ cargo run -- run examples/u64_values.ceru
 | 構造体 `type Point { ... }` | [product-point.ceru](product-point.ceru)、[product_arrays.ceru](product_arrays.ceru) | フィールド・既定値と、構造体を要素にする配列 |
 | 入れ子の配列・構造体 | [function_values.ceru](function_values.ceru)、[u64_values.ceru](u64_values.ceru)、[string_lookup.ceru](string_lookup.ceru) | 数値や文字列を組み合わせ、関数へ値として渡す |
 
-`infer`は独立した値の型ではなく、型を推論する指定です。`void`は値を返さない関数の戻り方を表します。[floating_point.ceru](floating_point.ceru)と[functions.ceru](functions.ceru)で確認できます。
-
 ### 直和型：選択肢に応じた値
 
 | サンプル | 型・確認すること |
@@ -100,16 +90,12 @@ cargo run -- run examples/u64_values.ceru
 | [sum_values.ceru](sum_values.ceru) | 配列・構造体を持つ選択肢、コピー、構築順と分岐内の再代入 |
 | [modules/sum_lookup.ceru](modules/sum_lookup.ceru) | 公開enumのimport・構築・網羅的な分岐 |
 
-`cargo run -- run examples/sum_lookup.ceru`は`空\0\r\n\n6\n未登録\n`を出力します。`cargo run -- emit-ir examples/sum_lookup.ceru`で選択肢とタグ、対象コピー、分岐を確認できます。
-
 ### コンパイル時定数
 
 | サンプル | 確認すること |
 | --- | --- |
 | [constants.ceru](constants.ceru) | u64の上限、文字列、f32・構造体・配列の定数、コピーと短絡評価 |
-| [modules/constants.ceru](modules/constants.ceru) | 公開した設定値と非公開の補正定数をimportして利用 |
-
-`cargo run -- run examples/constants.ceru`の冒頭は`128`、最大u64、文字列のバイト数`9`です。コピーした配列を`99`に変えても、二つの構造体定数の値は`10`のままです。`cargo run -- emit-ir examples/constants.ceru`で定義式と評価済みの値を確認できます。
+| [modules/constants.ceru](modules/constants.ceru) | 非公開の補正定数から計算した公開設定をimportして利用 |
 
 ### 構造体の更新式
 
@@ -119,12 +105,7 @@ cargo run -- run examples/u64_values.ceru
 | [product_update_order.ceru](product_update_order.ceru) | 元の値を一度だけ評価、フィールドの記述順、既定値を再評価しないこと、短絡・ループ |
 | [modules/product_update.ceru](modules/product_update.ceru) | importした型・関数を使った更新 |
 
-```sh
-cargo run -- run examples/product_update.ceru
-cargo run -- run examples/product_update_order.ceru
-```
-
-最初の例では元の番号`9223372036854775808`と更新後の`9223372036854775809`、元の配列要素`10`と更新後の`99`を表示します。後者の冒頭は`base → default → replacement → 2`です。`default`は元の値を作るときだけ出力され、更新やコピーで再実行されません。詳しくは[更新式の設計](../docs/design/product-updates.ja.md)を参照してください。
+[更新式の規則](../docs/design/product-updates.ja.md)。
 
 ### 多い引数を組み合わせる
 
@@ -138,7 +119,7 @@ cargo run -- run examples/product_update_order.ceru
 | `string` | 日本語・NUL・CR/LFをそのまま渡す |
 | 配列・構造体 | 関数内の配列コピーを更新しても元は不変。構造体の戻り値も独立 |
 
-`cargo run -- run examples/function_arguments.ceru`で実行できます。先頭は`引数の評価順`、`1`〜`7`、`28`です。引数数の固定上限はありませんが、個数と型は関数宣言に一致させます。[関数の設計](../docs/design/functions.ja.md)に各経路の配置と検証方法を記載しています。
+引数の個数と型は宣言に一致させます。個数の固定上限はありません。[関数の配置と検証](../docs/design/functions.ja.md)も参照できます。
 
 ## 基本と制御
 
@@ -152,8 +133,6 @@ cargo run -- run examples/product_update_order.ceru
 | [functions.ceru](functions.ceru) | 型付き関数、parameter、戻り値、`void`関数 |
 
 ## データ構造
-
-複数の値をどうまとめ、取り出し、受け渡すかを学ぶ例です。現在は構造体（名前付きproduct type）と固定長配列を使います。
 
 | サンプル | 内容 |
 | --- | --- |
@@ -202,65 +181,60 @@ cargo run -- run examples/product_update_order.ceru
 | [coin_change.ceru](coin_change.ceru) | 少ない金額の答えを使い回して最少枚数を求め、使った硬貨も復元する動的計画法 |
 | [shortest_paths.ceru](shortest_paths.ceru) | 途中で寄れる町を増やして、全組み合わせの最短距離を求める |
 
-## 計算途中を読む
+## 出力と計算途中の読み方
 
-追加例では、答えに至る途中の数値も`print`しています。出力の順番は各ファイルの日本語コメントで説明しています。
+`\0`・`\r`・`\n`はNUL・CR・LF、矢印とカンマは出力行の区切りです。各ソースの日本語コメントでも順序を説明しています。
 
-- `coin_change.ceru`: 1円から6円までの最少枚数、その後に使う硬貨の3円と3円。
-- `shortest_paths.ceru`: 町0から町3への距離の変化、その後に4行4列の距離表。`-1`は到達できない印です。
-- `heat_diffusion.ceru`: 1段階につき5区間の温度を4回、その後に保存しておいた初期の中央温度。
-- `linear_regression.ceru`: 学習前の誤差、10回ごとの学習回数・傾き・切片・誤差、最後に新しい入力3の予測値。
+| サンプル | 出力と確認内容 |
+| --- | --- |
+| `u64_values.ceru` | 冒頭は`u64 → 18446744073709551615 → 9223372036854775808 → 0`。再代入後もコピーを保持し、最上位ビットも正の数として扱う |
+| `sum_lookup.ceru` | `空\0\r\n\n6\n未登録\n`。IRでは選択肢のタグ・対象コピー・分岐を確認 |
+| `constants.ceru` | 冒頭は`128 → 18446744073709551615 → 9`（文字列のバイト数）。配列のコピーを`99`に変えても、二つの構造体定数は`10`。IRでは定義式と評価済みの値を確認 |
+| `product_update.ceru` | 元／更新後の番号は`9223372036854775808 / 9223372036854775809`、配列要素は`10 / 99` |
+| `product_update_order.ceru` | 冒頭は`base → default → replacement → 2`。既定値は元の構築時だけ実行し、更新・コピーでは再実行しない |
+| `function_arguments.ceru` | 冒頭は`引数の評価順`、`1`〜`7`、`28` |
+| `string_origins.ceru` | `日本語\0\ntrue\nfalse\n`。`skipped`は出ない。IRと注釈付きLLVMで比較`#7`・短絡評価`#14`から呼び出し・分岐へ辿る（[手順](../docs/reference/cli.ja.md#llvmの出自を辿る)） |
+| `string_byte_length.ceru` | `0, 9, 3, 2, 3, 4, 7, 3, 9, left, right, 9, false, false, 6, 10`に各LF。`left`・`right`は一回ずつ、`skipped`は出ない。`byte_len`でUTF-8長・コピー・関数・配列・既定値を確認 |
+| `coin_change.ceru` | 1〜6円の最少枚数、その後に使う硬貨の`3 → 3` |
+| `shortest_paths.ceru` | 町0→3の距離の変化、その後に4×4の距離表を行順で表示。`-1`は到達不能 |
+| `heat_diffusion.ceru` | 5区間の温度を4段階分、その後に保存した初期の中央温度 |
+| `linear_regression.ceru` | 学習前の誤差、10回ごとの回数・傾き・切片・誤差、最後に入力3の予測値 |
+| `integer_limits.ceru` | 通常は成功。末尾の式のコメントを外すと桁あふれと診断位置を確認できる |
 
-直線の学習を試すには、`rate`（1回でどれだけ動かすか）や繰り返し回数を変え、誤差の変化を比較できます。各段階の表現を見るには、たとえば次を実行します。
+`linear_regression.ceru`の`rate`（一回の更新幅）や繰り返し回数を変えると、学習の進み方を比較できます。勾配降下法で傾き・切片を学ぶ例です。`xor_neural_network.ceru`は固定した重みによる推論だけで、XORの学習は含みません。
 
-```powershell
-cargo run --quiet -- run examples/linear_regression.ceru
-cargo run --quiet -- emit-ir examples/linear_regression.ceru
-cargo run --quiet -- emit-bytecode examples/linear_regression.ceru
-cargo run --quiet -- emit-c examples/linear_regression.ceru
-```
+## 生成と検証
 
-`integer_limits.ceru`は通常は成功します。末尾のコメントアウトした式を有効にすると、桁あふれによる停止と診断位置を確認できます。
+VM・C・LLVM・QBE・WAT・Windows/Linux ASM・自前オブジェクトで、上記の型と言語機能を扱います。可変配列によるその場でのソートや動的計画法も可能です。再帰と動的長のコレクションは未対応です。
 
-## 現在の範囲
-
-これらは、数値、真偽値、文字列、束縛、関数、条件分岐、ループ、名前付きproduct type、固定長配列で表現できるプログラムです。
-
-`mut`な配列では要素を直接更新できるため、in-place sortや配列を更新する動的計画法も表現できます。再帰、動的な長さのcollectionはまだありません。
-
-文字列のサンプルは既存7経路に対応します。LLVMとQBEには明示的なターゲットを渡し、QBEはLinux x86-64、直接アセンブリはWindows x64 / Linux x86-64、WATは出力用ホスト関数を備えたWebAssembly環境で検証します。`emit-ir`と`emit-bytecode`でも型と内容の変換を読めます。
-
-QBE・WAT・直接アセンブリの実行比較は`cargo test --test string_routes`で確認できます。[文字列の設計](../docs/design/strings.ja.md#検証範囲)にツールの指定と検証範囲を記載しています。
-
-例えば、文字列をキーにした検索をCへ変換できます。
+| 経路 | 実行条件・確認内容 |
+| --- | --- |
+| C | 外部Cコンパイラでコンパイルして実行（下記） |
+| LLVM | Windows/Linuxのターゲットを明示（[コマンド例](../docs/reference/cli.ja.md#llvmのターゲット指定)） |
+| QBE | Linux x86-64のターゲットを明示 |
+| WAT | 出力用ホスト関数を備えたWebAssembly環境 |
+| ASM／自前オブジェクト | Windows x64／Linux x86-64のターゲット・ツールを明示。`native_values.ceru`で混在引数と値渡しを確認（[外部ツールの手順](../docs/design/native-code.ja.md)、[自前エンコーダ](../docs/design/native-encoder.ja.md)） |
 
 ```sh
 cargo run --quiet -- emit-c examples/string_lookup.ceru -o target/string_lookup.c
 clang -std=c11 target/string_lookup.c -o target/string_lookup
 ```
 
-生成した実行ファイルをBashでは`./target/string_lookup`、Windowsでは`.\target\string_lookup.exe`で実行します。外部のCコンパイラが必要です。
-
-LLVMの場合は、[CLIリファレンス](../docs/reference/cli.ja.md#llvmのターゲット指定)にあるWindows/Linuxのコマンド例を使ってください。`cargo test --test llvm_strings`で、文字列のVM・生成C・生成LLVMの出力をバイト単位で比較できます。`CERUNE_TEST_LLVM_CLANG`と`CERUNE_TEST_CC`を設定すると、指定したコンパイラがない場合もテスト失敗になります。
-
-`cargo test --test c_strings`はC生成物を最適化あり・なしで実行し、VMの結果と比較します。既定のCコンパイラがない環境では実行比較をスキップしますが、`CERUNE_TEST_CC`にコンパイラを指定すると検証を必須にできます。CIではClangを必須とし、AddressSanitizerとUndefinedBehaviorSanitizerでも検査します。
-
-`xor_neural_network.ceru`は、あらかじめ決めた重みを使う推論の例です。`linear_regression.ceru`では、勾配降下法で直線の傾きと切片をデータから学びます。XORニューラルネット自体の学習はまだ含みません。
-
-### 文字列の変換元を辿る
-
-`string_origins.ceru`は関数呼び出し、文字列の内容比較、短絡評価を観察する例です。出力をエスケープ表記にすると`日本語\0\ntrue\nfalse\n`です。`skipped`は出力されません。
-
-`emit-ir`と`emit-llvm --annotate-origins`を並べると、`#7`の内容比較や`#14`の短絡評価からLLVMの呼び出し・分岐へ辿れます。[実行手順と出自注釈](../docs/reference/cli.ja.md#llvmの出自を辿る)を参照してください。
-
-### 文字列のバイト数を確かめる
-
-`string_byte_length.ceru`は`byte_len`を使い、UTF-8の長さ、コピー済みの値、関数・配列・既定値、評価順を確認する例です。
+Bashでは`./target/string_lookup`、Windowsでは`.\target\string_lookup.exe`で実行します。注釈付きLLVMの生成例：
 
 ```sh
-cargo run -- run examples/string_byte_length.ceru
-cargo run -- emit-ir examples/string_byte_length.ceru
-cargo run -- emit-llvm examples/string_byte_length.ceru --target x86_64-unknown-linux-gnu --annotate-origins -o string-byte-length.ll
+cargo run -- emit-llvm examples/string_byte_length.ceru --target x86_64-unknown-linux-gnu --annotate-origins -o target/string-byte-length.ll
 ```
 
-出力は順に`0, 9, 3, 2, 3, 4, 7, 3, 9, left, right, 9, false, false, 6, 10`で、各値の後にLFが付きます。`left`と`right`は各一回だけ出力され、`skipped`は出力されません。C・LLVM・QBE・WAT・直接アセンブリも実行して既知の期待バイト列と比較します。小さい入力と各経路の表現は[観測fixture](../tests/fixtures/observation/string-byte-length/)で読めます。
+| 検証 | コマンド・内容 |
+| --- | --- |
+| 一括実行 | 冒頭のスクリプト。終了状態を確認 |
+| 期待出力 | `cargo test --test examples` |
+| Cの文字列 | `cargo test --test c_strings`。最適化あり・なしでVMと比較 |
+| LLVMの文字列 | `cargo test --test llvm_strings`。VM・C・LLVMのバイト列を比較 |
+| QBE・WAT・ASMの文字列 | `cargo test --test string_routes`（[ツールと検証範囲](../docs/design/strings.ja.md#検証範囲)） |
+| 全体 | `bash scripts/test.sh`。fmt・clippy・全テスト |
+
+`u64_values.ceru`は全経路で既知の出力と比較します。文字列のバイト数も期待バイト列と照合し、小さい入力と各経路の表現は[観測fixture](../tests/fixtures/observation/string-byte-length/)で確認できます。
+
+既定コンパイラがなければ実行比較を省略する場合があります。`CERUNE_TEST_CC`・`CERUNE_TEST_LLVM_CLANG`で指定すると必須になります。CIではClangを必須とし、AddressSanitizer・UndefinedBehaviorSanitizerでも検査します。
