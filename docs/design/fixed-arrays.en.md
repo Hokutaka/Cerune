@@ -119,6 +119,10 @@ Observable array types, lengths, binding IDs, instruction numbers, and memory ad
 
 Bounds checks stop execution before an invalid memory access. Arrays do not, however, hide secrets. Elements may be visible in artifacts and observations. The current language specification provides no mechanism for hiding secret values.
 
+## Iteration
+
+`for (value: infer in values)` visits elements in order. It copies the subject once on entry and passes each element by value. See [array iteration](array-iteration.en.md) for index bindings, `mut`, loop control, and observation.
+
 ## Current limits
 
 - Element types are `bool`, any integer kind (including `u64`), `f32`, `f64`, `string`, named product types, sum types, or fixed arrays.

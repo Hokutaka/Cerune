@@ -204,6 +204,9 @@ impl Builder<'_> {
         for statement in statements {
             if let ast::StmtKind::Block(body) = &statement.kind {
                 result.extend(self.with_scope(|builder| builder.build_statements(body))?);
+            } else if matches!(statement.kind, ast::StmtKind::ForEach { .. }) {
+                let expanded = crate::iteration::expand(statement);
+                result.extend(self.with_scope(|builder| builder.build_statements(&expanded))?);
             } else {
                 result.push(self.build_statement(statement)?);
             }
@@ -216,7 +219,9 @@ impl Builder<'_> {
         let bindings = self.visible_bindings();
 
         let kind = match &statement.kind {
-            ast::StmtKind::Block(_) | ast::StmtKind::Match { .. } => {
+            ast::StmtKind::Block(_)
+            | ast::StmtKind::Match { .. }
+            | ast::StmtKind::ForEach { .. } => {
                 unreachable!("blocks and matches are expanded before building a single statement")
             }
             ast::StmtKind::Binding {

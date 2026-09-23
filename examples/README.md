@@ -136,6 +136,8 @@ cargo run --quiet -- emit-c examples/linear_regression.ceru
 
 | サンプル | 内容 |
 | --- | --- |
+| [array_iteration.ceru](array_iteration.ceru) | `for … in`による集計・検索、添字、途中終了、走査中のコピー |
+| [array_iteration_values.ceru](array_iteration_values.ceru) | 文字列・u64・入れ子配列・構造体・直和型の反復と`mut`な要素コピー |
 | [array_length.ceru](array_length.ceru) | 要素数を使った集計。定数、入れ子、文字列・u64・構造体・直和型の配列とコピー |
 | [array_length_order.ceru](array_length_order.ceru) | 長さが既知でも関数・要素を一度ずつ評価。短絡評価とループ条件 |
 | [ring_buffer.ceru](ring_buffer.ceru) | `%`で保存位置を循環させ、直近4件の値と平均を保つ |
@@ -197,6 +199,8 @@ cargo run --quiet -- emit-c examples/linear_regression.ceru
 | `function_arguments.ceru` | 冒頭は`引数の評価順`、`1`〜`7`、`28` |
 | `string_origins.ceru` | `日本語\0\ntrue\nfalse\n`。`skipped`は出ない。IRと注釈付きLLVMで比較`#7`・短絡評価`#14`から呼び出し・分岐へ辿る（[手順](../docs/reference/cli.ja.md#llvmの出自を辿る)） |
 | `string_byte_length.ceru` | `0, 9, 3, 2, 3, 4, 7, 3, 9, left, right, 9, false, false, 6, 10`に各LF。`left`・`right`は一回ずつ、`skipped`は出ない。`byte_len`でUTF-8長・コピー・関数・配列・既定値を確認 |
+| `array_iteration.ceru` | 正数の合計`15`、検索結果の添字`2`と`未登録`。元を変更しても走査は`1 → 2 → 3`、元の二番目は`99` |
+| `array_iteration_values.ceru` | 文字列の添字・バイト数・内容、u64の境界値。コピー変更後も元の行は`1 → 3`、元の構造体は`10`。直和型は`空 → 海` |
 | `array_length.ceru` | 集計は`4 → 20 → 4 → 118 → 20`。コピーを変更しても元は不変。型別の長さは`2 → 3 → 2 → 9 → 2 → 2 → 2`（`9`だけ文字列のバイト数） |
 | `array_length_order.ceru` | `make → 10 → 20 → 2`。二度目の呼び出し後に`later → 5`。短絡した`skipped`は出ず、ループ条件の`2`は終了判定も含め3回 |
 | `coin_change.ceru` | 1〜6円の最少枚数、その後に使う硬貨の`3 → 3` |
@@ -233,6 +237,7 @@ cargo run -- emit-llvm examples/string_byte_length.ceru --target x86_64-unknown-
 | 検証 | コマンド・内容 |
 | --- | --- |
 | 一括実行 | 冒頭のスクリプト。終了状態を確認 |
+| 配列反復 | `cargo test --test array_iteration`。exampleの期待出力、コピー・制御・診断位置 |
 | 期待出力 | `cargo test --test examples` |
 | Cの文字列 | `cargo test --test c_strings`。最適化あり・なしでVMと比較 |
 | LLVMの文字列 | `cargo test --test llvm_strings`。VM・C・LLVMのバイト列を比較 |

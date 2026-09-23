@@ -1,3 +1,6 @@
+#[path = "iteration_cases.rs"]
+pub mod iteration_cases;
+
 #[path = "array_cases.rs"]
 pub mod array_cases;
 
@@ -84,6 +87,10 @@ pub const CASES: &[(&str, &str)] = &[
     array_cases::CASES[0],
     array_cases::CASES[1],
     array_cases::CASES[2],
+    iteration_cases::CASES[0],
+    iteration_cases::CASES[1],
+    iteration_cases::CASES[2],
+    iteration_cases::CASES[3],
 ];
 
 pub const PRODUCT_UPDATES: &[(&str, &str)] = &[

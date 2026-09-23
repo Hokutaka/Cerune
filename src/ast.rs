@@ -167,6 +167,13 @@ pub struct Stmt {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum StmtKind {
+    ForEach {
+        index: Option<IterationBinding>,
+        element: IterationBinding,
+        value: Expr,
+        body: Vec<Stmt>,
+        header_span: Span,
+    },
     Match {
         value: Expr,
         arms: Vec<MatchArm>,
@@ -209,6 +216,14 @@ pub enum StmtKind {
     },
     Break,
     Continue,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct IterationBinding {
+    pub mutable: bool,
+    pub name: String,
+    pub type_spec: TypeSpec,
+    pub span: Span,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]

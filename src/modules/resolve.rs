@@ -291,6 +291,22 @@ impl Resolver<'_> {
                 self.statements(then_body)?;
                 self.statements(else_body)?;
             }
+            StmtKind::ForEach {
+                index,
+                element,
+                value,
+                body,
+                ..
+            } => {
+                self.expr(value)?;
+                for binding in index.iter_mut().chain(std::iter::once(element)) {
+                    self.binding(&binding.name, binding.span)?;
+                    if let TypeSpec::Explicit(ty) = &mut binding.type_spec {
+                        self.ty(ty, false)?;
+                    }
+                }
+                self.statements(body)?;
+            }
             StmtKind::While { condition, body } => {
                 self.expr(condition)?;
                 self.statements(body)?;

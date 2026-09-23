@@ -212,6 +212,7 @@ fn runtime_failures_match_vm_codes_origins_and_prior_output() {
         let prior_output = runtime_cases::UPDATE_FAILURES
             .iter()
             .chain(runtime_cases::ARRAY_LENGTH_FAILURES)
+            .chain(runtime_cases::ITERATION_FAILURES)
             .find(|case| case.0 == body)
             .map_or("", |case| case.2);
         assert_eq!(

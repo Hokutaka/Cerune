@@ -1,0 +1,39 @@
+// 要素を値として受け取り、不要な値はcontinueで飛ばします。
+fn positive_total(values: [i64; 5]) -> i64 {
+    mut total: i64 = 0;
+    for (value: infer in values) {
+        if value <= 0 { continue; }
+        total = total + value;
+    }
+    return total;
+}
+
+// 添字が必要な検索では、先頭にi64の束縛を追加します。
+enum Position { Found { index: i64 }, Missing }
+fn find(values: [i64; 5], needle: i64) -> Position {
+    for (index: i64, value: infer in values) {
+        if value == needle { return Position::Found { index: index }; }
+    }
+    return Position::Missing {};
+}
+
+values: [i64; 5] = [4, -2, 7, 4, 0];
+print("集計");
+print(positive_total(values));
+match find(values, 7) {
+    Position::Found { index: index } => { print(index); },
+    Position::Missing {} => { print("未登録"); },
+}
+match find(values, 9) {
+    Position::Found { index: index } => { print(index); },
+    Position::Missing {} => { print("未登録"); },
+}
+
+// 反復開始時のコピーを読み続け、元の配列の変更は次の要素へ伝わりません。
+print("コピー");
+mut original: [i64; 3] = [1, 2, 3];
+for (value: infer in original) {
+    original[1] = 99;
+    print(value);
+}
+print(original[1]);

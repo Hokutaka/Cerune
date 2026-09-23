@@ -2,7 +2,7 @@
 
 [日本語](language-roadmap.ja.md)
 
-As of 2026-09-23, this inventory includes modules, removal of the parameter limit, product updates, compile-time constants, sum types with match, and array-length queries. “Current” means implemented; candidates are proposals awaiting design and implementation. This document does not commit to candidate syntax or adoption. See the [language reference](../reference/language.en.md) for the current specification.
+As of 2026-09-23, this inventory includes modules, removal of the parameter limit, product updates, compile-time constants, sum types with match, array-length queries, and array iteration. “Current” means implemented; candidates are proposals awaiting design and implementation. This document does not commit to candidate syntax or adoption. See the [language reference](../reference/language.en.md) for the current specification.
 
 ## Properties Cerune should preserve
 
@@ -23,7 +23,7 @@ Cerune prioritizes explaining a computation's meaning and its transformation int
 | Floating point | `f32`, `f64` | Arithmetic rounds at the selected precision; explicit conversions involving integers must preserve the value | [floating_point](../../examples/floating_point.ceru) |
 | Booleans | `bool`, comparisons, `!`, short-circuiting `&&` and `||` | No implicit numeric conversion | [short_circuit](../../examples/short_circuit.ceru) |
 | Strings | `string`, printing, `==`, `!=`, `byte_len` | No concatenation, indexing, character count, or numeric conversion | [string_byte_length](../../examples/string_byte_length.ceru), [string_lookup](../../examples/string_lookup.ceru) |
-| Fixed arrays | `[T; N]`, `array_len`, nesting, value passing, updates through `mut` | Length belongs to the type; indices are `i64`; no dynamic lengths or slices | [fixed_arrays](../../examples/fixed_arrays.ceru), [heat_diffusion](../../examples/heat_diffusion.ceru) |
+| Fixed arrays | `[T; N]`, `array_len`, `for … in`, nesting, value passing, updates through `mut` | Length belongs to the type; indices are `i64`; no dynamic lengths or slices | [array_iteration](../../examples/array_iteration.ceru), [heat_diffusion](../../examples/heat_diffusion.ceru) |
 | Named product types | Fields, defaults, update expressions, nesting, value passing | No direct field assignment; construct a new value and reassign the whole binding | [product-point](../../examples/product-point.ceru), [packet_counter](../../examples/packet_counter.ceru) |
 | Functions and control flow | Typed parameters/results, `void`, `if`/`else`, `while`/`for`, `break`/`continue`/`return` | No fixed parameter-count limit; no recursion | [function_values](../../examples/function_values.ceru), [loop_control](../../examples/loop_control.ceru) |
 | Bindings and conversions | Immutable by default, `mut`, explicit `infer`, `T(value)` and `convert<T>(value)` | `infer` is not a runtime type; conversions do not request truncation or saturation | [integer_conversions](../../examples/integer_conversions.ceru) |
@@ -43,17 +43,16 @@ Language support does not imply equal observation detail. Language check failure
 
 ## Proposed priorities
 
-The `array_len` length query is implemented. Add missing features in the order below, pairing a small design with examples and cross-route comparisons. Each stage determines its syntax and adoption.
+The `array_len` length query and `for … in` iteration over independent value copies are implemented. Add missing features in the order below, pairing a small design with examples and cross-route comparisons. Each stage determines its syntax and adoption.
 
 | Order | Missing feature | First contract and example |
 | --- | --- | --- |
-| 1 | Array iteration | When to evaluate/copy the subject, elements and indices, `break`/`continue`. Compare aggregation/search with existing index loops |
-| 2 | Constants in array type lengths | Name resolution, dependency cycles, positive lengths, resource limits for `[T; COUNT]`. Share fixed sizes across modules |
-| 3 | Functions across types and lengths | Generic type checking, specialization, source correspondence. Reuse aggregation/search across element types and array lengths |
-| 4 | Numeric conversion choices | Define rounding, truncation, and saturation separately from current value-preserving conversions. Compare boundaries, NaN, infinity, and negative zero |
-| 5 | Aggregate comparison/printing and extended branching | Comparison order and display formats for arrays/products/sums; evaluation order for match expressions/guards. Add needed operations separately |
-| 6 | Dynamic data, recursion, external I/O | Define ownership, lifetimes, allocation failure, call storage, resource limits, and effects first. Introduce slices, concatenation, and files in stages |
-| 7 | Module distribution | Re-exports, dependencies/versions, reproducible builds; extend explicit imports |
+| 1 | Constants in array type lengths | Name resolution, dependency cycles, positive lengths, resource limits for `[T; COUNT]`. Share fixed sizes across modules |
+| 2 | Functions across types and lengths | Generic type checking, specialization, source correspondence. Reuse aggregation/search across element types and array lengths |
+| 3 | Numeric conversion choices | Define rounding, truncation, and saturation separately from current value-preserving conversions. Compare boundaries, NaN, infinity, and negative zero |
+| 4 | Aggregate comparison/printing and extended branching | Comparison order and display formats for arrays/products/sums; evaluation order for match expressions/guards. Add needed operations separately |
+| 5 | Dynamic data, recursion, external I/O | Define ownership, lifetimes, allocation failure, call storage, resource limits, and effects first. Introduce slices, concatenation, and files in stages |
+| 6 | Module distribution | Re-exports, dependencies/versions, reproducible builds; extend explicit imports |
 | Experiment | GPU numeric computation | Narrow the supported types, memory, synchronization, and diagnostics; compare independent element computations with the CPU |
 
 Existing foundations are [common failure records](runtime-diagnostics.en.md), [file origins](source-files.en.md), [modules](modules.en.md), [constants](constants.en.md), [functions](functions.en.md), [product updates](product-updates.en.md), [sums](sum-types.en.md), and [fixed arrays](fixed-arrays.en.md). The [mixed-argument](../../examples/function_arguments.ceru) and [array-length](../../examples/array_length.ceru) examples check value passing and evaluation order.

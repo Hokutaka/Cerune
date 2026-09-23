@@ -1,0 +1,42 @@
+// バイト列を変えずに文字列の要素を受け取ります。
+words: [string; 2] = ["日本語", "\0\r\n"];
+for (index: i64, word: string in words) {
+    print(index);
+    print(byte_len(word));
+    print(word);
+}
+
+counts: [u64; 2] = [18446744073709551615, 9223372036854775808];
+for (count: u64 in counts) { print(count); }
+
+// mutな要素変数もその回のコピーです。元の配列は更新しません。
+matrix: [[i64; 2]; 2] = [[1, 2], [3, 4]];
+for (mut row: infer in matrix) {
+    row[0] = 99;
+    for (value: i64 in row) { print(value); }
+}
+print(matrix[0][0]);
+print(matrix[1][0]);
+
+type Reading { count: u64, label: string, }
+readings: [Reading; 2] = [
+    Reading { count: 10, label: "北" },
+    Reading { count: 20, label: "南" },
+];
+for (mut reading: Reading in readings) {
+    reading = Reading { ..reading, count: reading.count + 1 };
+    print(reading.count);
+    print(reading.label);
+}
+print(readings[0].count);
+
+enum Choice { Text { value: string }, Missing }
+choices: [Choice; 3] = [
+    Choice::Text { value: "空" }, Choice::Missing {}, Choice::Text { value: "海" },
+];
+for (choice: Choice in choices) {
+    match choice {
+        Choice::Text { value: text } => { print(text); },
+        Choice::Missing {} => { continue; },
+    }
+}

@@ -3,6 +3,7 @@ pub mod bytecode;
 pub mod codegen;
 pub mod diagnostic;
 pub mod ir;
+mod iteration;
 pub mod lexer;
 pub mod modules;
 pub mod parser;

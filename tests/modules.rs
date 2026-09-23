@@ -608,3 +608,42 @@ fn array_lengths_resolve_inside_imported_functions_and_constants() {
         }
     }
 }
+
+#[test]
+fn array_iteration_resolves_imported_types_constants_and_functions() {
+    let w = Workspace::new();
+    w.put(
+        "values.ceru",
+        r#"
+        pub type Row { value: i64 }
+        pub const ROWS: [Row; 2] = [Row { value: 7 }, Row { value: 9 }];
+        pub fn total() -> i64 {
+            mut result: i64 = 0;
+            for (row: Row in ROWS) { result = result + row.value; }
+            return result;
+        }
+    "#,
+    );
+    let entry = w.put(
+        "main.ceru",
+        r#"
+        import "values.ceru" as values;
+        for (i: i64, row: values::Row in values::ROWS) { print(i); print(row.value); }
+        print(values::total());
+    "#,
+    );
+    let compilation = modules::load(&entry).unwrap();
+    assert_eq!(
+        run_bytecode(&bytecode::lower(&compilation.to_ir().unwrap()).unwrap()).unwrap(),
+        "0\n7\n1\n9\n16\n"
+    );
+    for header in ["values: infer", "values: i64, row: infer"] {
+        let entry = w.put(
+            "main.ceru",
+            &format!("import \"values.ceru\" as values; for ({header} in [1]) {{}}"),
+        );
+        let result = w.cli("check", &entry, &[]);
+        assert!(!result.status.success());
+        assert!(String::from_utf8_lossy(&result.stderr).contains("import alias"));
+    }
+}

@@ -60,7 +60,7 @@ During development, replace `cerune` with `cargo run --quiet --`.
 | Arrays | Fixed length, element counts with `array_len`, nesting, element access and updates, value copies |
 | Functions | Typed parameters and returns, `void`, `return`; strings, structs, arrays, and sums can also be passed and returned |
 | Entry point | Top-level statements or `fn main() -> void` (not both) |
-| Control flow | `if` / `else`, `while`, `for`, `break` / `continue` |
+| Control flow | `if` / `else`, `while`, `for`, array `for … in`, `break` / `continue` |
 | Constants | Typed `const`, compile-time evaluation, shared with `pub const` |
 | Modules | Explicit imports, namespaces, `pub` visibility |
 | Output and diagnostics | `print(expr);`, error reasons, source locations, output produced before failure |
