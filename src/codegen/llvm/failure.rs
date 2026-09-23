@@ -52,6 +52,9 @@ fn codes(instruction: &Instruction) -> Vec<Code> {
         Instruction::ArrayGet { .. } | Instruction::ArraySet { .. } => {
             vec![Code::ArrayIndexOutOfBounds]
         }
+        Instruction::ConvertNumeric { conversion, .. } if conversion.truncates() => {
+            vec![Code::ConversionNotFinite, Code::ConversionOutOfRange]
+        }
         Instruction::ConvertNumeric { conversion, .. } => match (conversion.from, conversion.to) {
             (N::Integer(_), N::Integer(_)) => vec![Code::IntegerConversionOutOfRange],
             (N::Integer(_), _) => vec![Code::ConversionInexact],

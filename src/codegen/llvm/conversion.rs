@@ -10,11 +10,44 @@ pub(super) fn type_name(ty: NumericType) -> &'static str {
     }
 }
 
+fn emit_truncation(conversion: NumericConversion, output: &mut String) {
+    let NumericType::Integer(ty) = conversion.to else {
+        unreachable!()
+    };
+    let (lower, exclusive) = conversion.integer_lower_bound();
+    let compare = if exclusive { "ole" } else { "olt" };
+    let instruction = if ty == crate::types::IntegerType::U64 {
+        "fptoui"
+    } else {
+        "fptosi"
+    };
+    writeln!(
+        output,
+        "define internal i64 @{}({} %value, ptr %failure) {{\nentry:",
+        conversion.helper(),
+        type_name(conversion.from)
+    )
+    .unwrap();
+    let number = widen(conversion.from, output);
+    writeln!(output, "  %bits = bitcast double {number} to i64\n  %magnitude = and i64 %bits, 9223372036854775807\n  %nonfinite = icmp uge i64 %magnitude, 9218868437227405312\n  br i1 %nonfinite, label %nonfinite_failure, label %bounds\nnonfinite_failure:").unwrap();
+    emit_trap(Code::ConversionNotFinite, output);
+    writeln!(output, "bounds:\n  %below = fcmp {compare} double {number}, 0x{:016X}\n  %above = fcmp oge double {number}, 0x{:016X}\n  %outside = or i1 %below, %above\n  br i1 %outside, label %range, label %convert\nrange:", lower.to_bits(), ((ty.maximum() + 1) as f64).to_bits()).unwrap();
+    emit_trap(Code::ConversionOutOfRange, output);
+    writeln!(
+        output,
+        "convert:\n  %result = {instruction} double {number} to i64\n  ret i64 %result\n}}\n"
+    )
+    .unwrap();
+}
+
 pub(super) fn emit_support(conversion: NumericConversion, output: &mut String) {
+    if conversion.truncates() {
+        return emit_truncation(conversion, output);
+    }
     if conversion.uses_u64() {
         return super::unsigned::emit_conversion(conversion, output);
     }
-    let NumericConversion { from, to } = conversion;
+    let NumericConversion { from, to, .. } = conversion;
     let result_ty = type_name(to);
     writeln!(
         output,

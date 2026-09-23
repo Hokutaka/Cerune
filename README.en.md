@@ -54,7 +54,7 @@ During development, replace `cerune` with `cargo run --quiet --`.
 | --- | --- |
 | Variables | Explicit types or inference with `infer`; immutable by default, reassignable with `mut` |
 | Operators | Arithmetic, remainder, comparisons, bit operations, logical negation, short-circuit evaluation |
-| Numeric conversion | Explicit value-preserving conversions such as `f64(x)` / `convert<f64>(x)` |
+| Numeric conversion | `convert<T>(x)` / `T(x)` preserve values; `trunc<T>(x)` discards the fractional part |
 | Structs | Named types, field access and defaults, updates that create new values, nesting, value copies |
 | Sum types | `enum` variants with payloads; exhaustive `match` statements |
 | Arrays | Fixed length (including named constants), element counts with `array_len`, nesting, element access and updates, value copies |
@@ -65,9 +65,9 @@ During development, replace `cerune` with `cargo run --quiet --`.
 | Modules | Explicit imports, namespaces, `pub` visibility |
 | Output and diagnostics | `print(expr);`, error reasons, source locations, output produced before failure |
 
-**Arithmetic rules:** No implicit numeric conversions. Integer overflow, invalid integer division, out-of-bounds access, and conversions that cannot preserve the value stop execution. Floating-point arithmetic rounds.
+**Arithmetic rules:** No implicit numeric conversions. Integer overflow, invalid integer division, out-of-bounds access, failed exact conversions, and out-of-range truncated results stop execution. Floating-point arithmetic rounds.
 
-**Not implemented:** Recursion, dynamic arrays, string concatenation/indexing, catching runtime stops, explicit rounding/truncation.
+**Not implemented:** Recursion, dynamic arrays, string concatenation/indexing, catching runtime stops, round-to-nearest and saturating conversions.
 
 ## Execution and Output
 

@@ -20,13 +20,13 @@ Ceruneでは、書いた計算の意味と、それが実行される表現へ�
 | --- | --- | --- | --- |
 | 符号付き整数 | `i8`、`i16`、`i32`、`i64`、算術・比較・ビット演算 | 範囲外演算は停止。小さい型も現在の格納領域は64ビット | [sensor_calibration](../../examples/sensor_calibration.ceru)、[integer_limits](../../examples/integer_limits.ceru) |
 | 符号なし整数 | `u8`、`u16`、`u32`、`u64` | `u64`は0〜18446744073709551615。暗黙の符号変換や折り返しなし | [u64_values](../../examples/u64_values.ceru)、[packet_counter](../../examples/packet_counter.ceru) |
-| 浮動小数点 | `f32`、`f64` | 演算には各精度の丸めがある。整数との明示変換は値を保てる場合のみ | [floating_point](../../examples/floating_point.ceru) |
+| 浮動小数点 | `f32`、`f64` | 演算には各精度の丸めがある。`convert`は値を保持、`trunc`は整数へゼロ方向に切り捨て | [floating_point](../../examples/floating_point.ceru) |
 | 真偽値 | `bool`、比較、`!`、短絡評価する`&&`・`||` | 数値との暗黙変換なし | [short_circuit](../../examples/short_circuit.ceru) |
 | 文字列 | `string`、表示、`==`・`!=`、`byte_len` | 連結・添字参照・文字数・数値変換は未実装 | [string_byte_length](../../examples/string_byte_length.ceru)、[string_lookup](../../examples/string_lookup.ceru) |
 | 固定長配列 | `[T; N]`、`array_len`、`for … in`、入れ子、値渡し、`mut`な要素の更新 | 長さは型の一部。添字は`i64`。動的長・スライスなし | [array_iteration](../../examples/array_iteration.ceru)、[heat_diffusion](../../examples/heat_diffusion.ceru) |
 | 名前付きproduct type | フィールド、既定値、更新式、入れ子、値渡し | フィールドの直接代入なし。新しい値を構築して全体を再代入 | [product-point](../../examples/product-point.ceru)、[packet_counter](../../examples/packet_counter.ceru) |
 | 関数と制御構文 | 型付き引数・戻り値、型・長さの明示パラメーター、`void`、`if`・`else`、`while`・`for`、`break`・`continue`・`return` | 引数数の固定上限なし。再帰なし | [function_values](../../examples/function_values.ceru)、[loop_control](../../examples/loop_control.ceru) |
-| 束縛と変換 | 既定で不変、`mut`、明示的な`infer`、`T(value)`と`convert<T>(value)` | `infer`は実行時型ではない。変換は切り捨てや飽和の指定ではない | [integer_conversions](../../examples/integer_conversions.ceru) |
+| 束縛と変換 | 既定で不変、`mut`、明示的な`infer`、`T(value)`と`convert<T>(value)` | `infer`は実行時型ではない。切り捨ては別の`trunc<T>(value)`、飽和は未実装 | [integer_conversions](../../examples/integer_conversions.ceru) |
 | 直和型 | `enum`の値付き選択肢、網羅的な`match` | ガード・match式・汎用Option/Resultは未実装 | [sum_lookup](../../examples/sum_lookup.ceru) |
 | コンパイル時定数 | 型付き`const`、依存式の評価、配列型の長さ、`pub const` | 関数呼び出し・ブロック内宣言なし | [constants](../../examples/constants.ceru) |
 | モジュール | 明示的なimport・名前空間・関数/型/定数のpub指定 | 循環・非公開参照を診断。再export・モジュール変数・パッケージ配布なし | [modules](../../examples/modules/README.md) |
@@ -47,7 +47,7 @@ Ceruneでは、書いた計算の意味と、それが実行される表現へ�
 
 | 順序 | 未対応機能 | 最初に決める契約・確認例 |
 | --- | --- | --- |
-| 1 | 数値変換の選択肢 | 丸め・切り捨て・飽和を、現在の値を保つ変換と別の操作として定義。境界・NaN・無限大・負のゼロを比較 |
+| 1 | 数値変換の選択肢 | `trunc`を実装済み。次は四捨五入などの丸めと飽和の規則を別々に定義。境界・NaN・無限大・負のゼロを比較 |
 | 2 | 複合値の比較・表示と分岐の拡張 | 配列・構造体・直和型の比較順と表示形式、match式・ガードの評価順。必要な操作から分けて追加 |
 | 3 | 動的データ・再帰・外部入出力 | 所有・寿命・確保失敗・呼び出し領域・資源上限・副作用を先に定義。スライス、文字列連結、ファイルを段階的に扱う |
 | 4 | モジュールの配布 | 再export、依存・版・再現可能なビルド。現行の明示importを基準に拡張 |

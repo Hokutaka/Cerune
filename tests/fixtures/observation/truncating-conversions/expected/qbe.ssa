@@ -1,0 +1,217 @@
+section ".rodata" data $cerune_origin_1_6_22 = { b 32, b 110, b 111, b 100, b 101, b 61, b 49, b 32, b 98, b 121, b 116, b 101, b 115, b 61, b 54, b 46, b 46, b 50, b 50, b 10 }
+section ".rodata" data $cerune_origin_5_31_47 = { b 32, b 110, b 111, b 100, b 101, b 61, b 53, b 32, b 98, b 121, b 116, b 101, b 115, b 61, b 51, b 49, b 46, b 46, b 52, b 55, b 10 }
+section ".rodata" data $cerune_origin_8_56_72 = { b 32, b 110, b 111, b 100, b 101, b 61, b 56, b 32, b 98, b 121, b 116, b 101, b 115, b 61, b 53, b 54, b 46, b 46, b 55, b 50, b 10 }
+section ".rodata" data $cerune_origin_12_81_98 = { b 32, b 110, b 111, b 100, b 101, b 61, b 49, b 50, b 32, b 98, b 121, b 116, b 101, b 115, b 61, b 56, b 49, b 46, b 46, b 57, b 56, b 10 }
+section ".rodata" data $cerune_code_integer_overflow = { b 99, b 101, b 114, b 117, b 110, b 101, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 105, b 110, b 116, b 101, b 103, b 101, b 114, b 45, b 111, b 118, b 101, b 114, b 102, b 108, b 111, b 119 }
+function $cerune_fail_integer_overflow(l %origin, l %origin_len) {
+@start
+  call $cerune_runtime_failure(l $cerune_code_integer_overflow, l 40, l %origin, l %origin_len)
+  hlt
+}
+
+section ".rodata" data $cerune_code_division_by_zero = { b 99, b 101, b 114, b 117, b 110, b 101, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 100, b 105, b 118, b 105, b 115, b 105, b 111, b 110, b 45, b 98, b 121, b 45, b 122, b 101, b 114, b 111 }
+function $cerune_fail_division_by_zero(l %origin, l %origin_len) {
+@start
+  call $cerune_runtime_failure(l $cerune_code_division_by_zero, l 40, l %origin, l %origin_len)
+  hlt
+}
+
+section ".rodata" data $cerune_code_division_overflow = { b 99, b 101, b 114, b 117, b 110, b 101, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 100, b 105, b 118, b 105, b 115, b 105, b 111, b 110, b 45, b 111, b 118, b 101, b 114, b 102, b 108, b 111, b 119 }
+function $cerune_fail_division_overflow(l %origin, l %origin_len) {
+@start
+  call $cerune_runtime_failure(l $cerune_code_division_overflow, l 41, l %origin, l %origin_len)
+  hlt
+}
+
+section ".rodata" data $cerune_code_remainder_by_zero = { b 99, b 101, b 114, b 117, b 110, b 101, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 114, b 101, b 109, b 97, b 105, b 110, b 100, b 101, b 114, b 45, b 98, b 121, b 45, b 122, b 101, b 114, b 111 }
+function $cerune_fail_remainder_by_zero(l %origin, l %origin_len) {
+@start
+  call $cerune_runtime_failure(l $cerune_code_remainder_by_zero, l 41, l %origin, l %origin_len)
+  hlt
+}
+
+section ".rodata" data $cerune_code_invalid_shift_count = { b 99, b 101, b 114, b 117, b 110, b 101, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 105, b 110, b 118, b 97, b 108, b 105, b 100, b 45, b 115, b 104, b 105, b 102, b 116, b 45, b 99, b 111, b 117, b 110, b 116 }
+function $cerune_fail_invalid_shift_count(l %origin, l %origin_len) {
+@start
+  call $cerune_runtime_failure(l $cerune_code_invalid_shift_count, l 43, l %origin, l %origin_len)
+  hlt
+}
+
+section ".rodata" data $cerune_code_integer_conversion_out_of_range = { b 99, b 101, b 114, b 117, b 110, b 101, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 105, b 110, b 116, b 101, b 103, b 101, b 114, b 45, b 99, b 111, b 110, b 118, b 101, b 114, b 115, b 105, b 111, b 110, b 45, b 111, b 117, b 116, b 45, b 111, b 102, b 45, b 114, b 97, b 110, b 103, b 101 }
+function $cerune_fail_integer_conversion_out_of_range(l %origin, l %origin_len) {
+@start
+  call $cerune_runtime_failure(l $cerune_code_integer_conversion_out_of_range, l 55, l %origin, l %origin_len)
+  hlt
+}
+
+section ".rodata" data $cerune_code_conversion_out_of_range = { b 99, b 101, b 114, b 117, b 110, b 101, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 99, b 111, b 110, b 118, b 101, b 114, b 115, b 105, b 111, b 110, b 45, b 111, b 117, b 116, b 45, b 111, b 102, b 45, b 114, b 97, b 110, b 103, b 101 }
+function $cerune_fail_conversion_out_of_range(l %origin, l %origin_len) {
+@start
+  call $cerune_runtime_failure(l $cerune_code_conversion_out_of_range, l 47, l %origin, l %origin_len)
+  hlt
+}
+
+section ".rodata" data $cerune_code_conversion_inexact = { b 99, b 101, b 114, b 117, b 110, b 101, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 99, b 111, b 110, b 118, b 101, b 114, b 115, b 105, b 111, b 110, b 45, b 105, b 110, b 101, b 120, b 97, b 99, b 116 }
+function $cerune_fail_conversion_inexact(l %origin, l %origin_len) {
+@start
+  call $cerune_runtime_failure(l $cerune_code_conversion_inexact, l 42, l %origin, l %origin_len)
+  hlt
+}
+
+section ".rodata" data $cerune_code_conversion_not_finite = { b 99, b 101, b 114, b 117, b 110, b 101, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 99, b 111, b 110, b 118, b 101, b 114, b 115, b 105, b 111, b 110, b 45, b 110, b 111, b 116, b 45, b 102, b 105, b 110, b 105, b 116, b 101 }
+function $cerune_fail_conversion_not_finite(l %origin, l %origin_len) {
+@start
+  call $cerune_runtime_failure(l $cerune_code_conversion_not_finite, l 45, l %origin, l %origin_len)
+  hlt
+}
+
+section ".rodata" data $cerune_code_conversion_nan = { b 99, b 101, b 114, b 117, b 110, b 101, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 99, b 111, b 110, b 118, b 101, b 114, b 115, b 105, b 111, b 110, b 45, b 110, b 97, b 110 }
+function $cerune_fail_conversion_nan(l %origin, l %origin_len) {
+@start
+  call $cerune_runtime_failure(l $cerune_code_conversion_nan, l 38, l %origin, l %origin_len)
+  hlt
+}
+
+section ".rodata" data $cerune_code_conversion_negative_zero = { b 99, b 101, b 114, b 117, b 110, b 101, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 99, b 111, b 110, b 118, b 101, b 114, b 115, b 105, b 111, b 110, b 45, b 110, b 101, b 103, b 97, b 116, b 105, b 118, b 101, b 45, b 122, b 101, b 114, b 111 }
+function $cerune_fail_conversion_negative_zero(l %origin, l %origin_len) {
+@start
+  call $cerune_runtime_failure(l $cerune_code_conversion_negative_zero, l 48, l %origin, l %origin_len)
+  hlt
+}
+
+section ".rodata" data $cerune_code_array_index_out_of_bounds = { b 99, b 101, b 114, b 117, b 110, b 101, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 97, b 114, b 114, b 97, b 121, b 45, b 105, b 110, b 100, b 101, b 120, b 45, b 111, b 117, b 116, b 45, b 111, b 102, b 45, b 98, b 111, b 117, b 110, b 100, b 115 }
+function $cerune_fail_array_index_out_of_bounds(l %origin, l %origin_len) {
+@start
+  call $cerune_runtime_failure(l $cerune_code_array_index_out_of_bounds, l 49, l %origin, l %origin_len)
+  hlt
+}
+
+function $cerune_runtime_failure(l %code, l %code_len, l %origin, l %origin_len) {
+@start
+  call $fflush(l 0)
+  call $write(w 2, l %code, l %code_len)
+  call $write(w 2, l %origin, l %origin_len)
+  call $abort()
+  hlt
+}
+
+data $fmt_u64 = { b "%llu", b 10, b 0 }
+data $fmt_i64 = { b "%lld", b 10, b 0 }
+data $fmt_f32 = { b "%.9g", b 10, b 0 }
+data $fmt_f64 = { b "%.17g", b 10, b 0 }
+
+function l $cerune_convert_f64_i64(d %value, l %origin, l %origin_len) {
+@start
+  %bits =l cast %value
+  %magnitude =l and %bits, 9223372036854775807
+  %not_finite =w cugel %magnitude, 9218868437227405312
+  jnz %not_finite, @not_finite, @zero_check
+@zero_check
+  %negative_zero =w ceql %bits, -9223372036854775808
+  jnz %negative_zero, @negative_zero, @bounds
+@bounds
+  %below =w cltd %value, d_-9223372036854775808
+  %above =w cged %value, d_9223372036854775808
+  %outside =w or %below, %above
+  jnz %outside, @range, @convert
+@convert
+  %result =l dtosi %value
+  %back =d sltof %result
+  %changed =w cned %back, %value
+  jnz %changed, @inexact, @ok
+@not_finite
+  call $cerune_runtime_failure(l $cerune_code_conversion_not_finite, l 45, l %origin, l %origin_len)
+  hlt
+@negative_zero
+  call $cerune_runtime_failure(l $cerune_code_conversion_negative_zero, l 48, l %origin, l %origin_len)
+  hlt
+@range
+  call $cerune_runtime_failure(l $cerune_code_conversion_out_of_range, l 47, l %origin, l %origin_len)
+  hlt
+@inexact
+  call $cerune_runtime_failure(l $cerune_code_conversion_inexact, l 42, l %origin, l %origin_len)
+  hlt
+@ok
+  ret %result
+}
+
+function l $cerune_trunc_f64_u8(d %value, l %origin, l %origin_len) {
+@start
+  %bits =l cast %value
+  %magnitude =l and %bits, 9223372036854775807
+  %nonfinite =w cugel %magnitude, 9218868437227405312
+  jnz %nonfinite, @not_finite, @bounds
+@bounds
+  %below =w cled %value, d_-1
+  %above =w cged %value, d_256
+  %outside =w or %below, %above
+  jnz %outside, @range, @convert
+@convert
+  %result =l dtosi %value
+  ret %result
+@not_finite
+  call $cerune_runtime_failure(l $cerune_code_conversion_not_finite, l 45, l %origin, l %origin_len)
+  hlt
+@range
+  call $cerune_runtime_failure(l $cerune_code_conversion_out_of_range, l 47, l %origin, l %origin_len)
+  hlt
+}
+
+function l $cerune_trunc_f64_i64(d %value, l %origin, l %origin_len) {
+@start
+  %bits =l cast %value
+  %magnitude =l and %bits, 9223372036854775807
+  %nonfinite =w cugel %magnitude, 9218868437227405312
+  jnz %nonfinite, @not_finite, @bounds
+@bounds
+  %below =w cltd %value, d_-9223372036854776000
+  %above =w cged %value, d_9223372036854775808
+  %outside =w or %below, %above
+  jnz %outside, @range, @convert
+@convert
+  %result =l dtosi %value
+  ret %result
+@not_finite
+  call $cerune_runtime_failure(l $cerune_code_conversion_not_finite, l 45, l %origin, l %origin_len)
+  hlt
+@range
+  call $cerune_runtime_failure(l $cerune_code_conversion_out_of_range, l 47, l %origin, l %origin_len)
+  hlt
+}
+
+function l $cerune_trunc_f64_u64(d %value, l %origin, l %origin_len) {
+@start
+  %bits =l cast %value
+  %magnitude =l and %bits, 9223372036854775807
+  %nonfinite =w cugel %magnitude, 9218868437227405312
+  jnz %nonfinite, @not_finite, @bounds
+@bounds
+  %below =w cled %value, d_-1
+  %above =w cged %value, d_18446744073709551616
+  %outside =w or %below, %above
+  jnz %outside, @range, @convert
+@convert
+  %result =l dtoui %value
+  ret %result
+@not_finite
+  call $cerune_runtime_failure(l $cerune_code_conversion_not_finite, l 45, l %origin, l %origin_len)
+  hlt
+@range
+  call $cerune_runtime_failure(l $cerune_code_conversion_out_of_range, l 47, l %origin, l %origin_len)
+  hlt
+}
+
+export function w $main() {
+@start
+  %tmp0 =d neg d_3.7
+  %tmp1 =l call $cerune_trunc_f64_i64(d %tmp0, l $cerune_origin_1_6_22, l 20)
+  %tmp2 =w call $printf(l $fmt_i64, ..., l %tmp1)
+  %tmp3 =l call $cerune_trunc_f64_u8(d d_255.9, l $cerune_origin_5_31_47, l 21)
+  %tmp4 =w call $printf(l $fmt_i64, ..., l %tmp3)
+  %tmp5 =d neg d_0.9
+  %tmp6 =l call $cerune_trunc_f64_u64(d %tmp5, l $cerune_origin_8_56_72, l 21)
+  %tmp7 =w call $printf(l $fmt_u64, ..., l %tmp6)
+  %tmp8 =l call $cerune_convert_f64_i64(d d_2.0, l $cerune_origin_12_81_98, l 22)
+  %tmp9 =w call $printf(l $fmt_i64, ..., l %tmp8)
+  ret 0
+}

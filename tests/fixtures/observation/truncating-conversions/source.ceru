@@ -1,0 +1,4 @@
+print(trunc<i64>(-3.7));
+print(trunc<u8>(255.9));
+print(trunc<u64>(-0.9));
+print(convert<i64>(2.0));

@@ -13,8 +13,41 @@ pub(super) fn type_name(ty: NumericType) -> &'static str {
     }
 }
 
+fn emit_truncation(conversion: NumericConversion, output: &mut String) {
+    let NumericType::Integer(ty) = conversion.to else {
+        unreachable!()
+    };
+    let (lower, exclusive) = conversion.integer_lower_bound();
+    let compare = if exclusive { "cled" } else { "cltd" };
+    let instruction = if ty == IntegerType::U64 {
+        "dtoui"
+    } else {
+        "dtosi"
+    };
+    writeln!(
+        output,
+        "function l ${}({} %value, l %origin, l %origin_len) {{\n@start",
+        conversion.helper(),
+        type_name(conversion.from)
+    )
+    .unwrap();
+    let number = if conversion.from == NumericType::F32 {
+        output.push_str("  %number =d exts %value\n");
+        "%number"
+    } else {
+        "%value"
+    };
+    writeln!(output, "  %bits =l cast {number}\n  %magnitude =l and %bits, 9223372036854775807\n  %nonfinite =w cugel %magnitude, 9218868437227405312\n  jnz %nonfinite, @not_finite, @bounds\n@bounds\n  %below =w {compare} {number}, d_{lower}\n  %above =w cged {number}, d_{}\n  %outside =w or %below, %above\n  jnz %outside, @range, @convert\n@convert\n  %result =l {instruction} {number}\n  ret %result", ty.maximum() + 1).unwrap();
+    super::failure::block("not_finite", FailureCode::ConversionNotFinite, output);
+    super::failure::block("range", FailureCode::ConversionOutOfRange, output);
+    output.push_str("}\n\n");
+}
+
 pub(super) fn emit_support(conversion: NumericConversion, output: &mut String) {
-    let NumericConversion { from, to } = conversion;
+    if conversion.truncates() {
+        return emit_truncation(conversion, output);
+    }
+    let NumericConversion { from, to, .. } = conversion;
     let result_ty = type_name(to);
     writeln!(
         output,

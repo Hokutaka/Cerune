@@ -1,5 +1,14 @@
 use cerune_lang::run_vm;
 
+#[path = "support/truncation_cases.rs"]
+mod truncation_cases;
+#[test]
+fn truncation_examples_keep_values_and_evaluation_order() {
+    for &(source, expected) in &truncation_cases::CASES[..2] {
+        assert_eq!(run_vm(source).unwrap(), expected);
+    }
+}
+
 #[test]
 fn function_arguments_keep_order_nested_calls_and_copies() {
     assert_eq!(

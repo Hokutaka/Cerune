@@ -811,7 +811,7 @@ Cerune IR and bytecode retain the operation and original kind, such as `rem.u8`,
 
 ## Explicit numeric conversions
 
-Numeric conversion has two equivalent spellings:
+Exact, value-preserving numeric conversion has two equivalent spellings:
 
 ```cerune
 value: i64 = 42;
@@ -855,7 +855,25 @@ print(f32(1.5));         // 1.5
 
 Exactness checks apply to the already evaluated input, not to an ideal mathematical result. Ordinary floating-point arithmetic and literal parsing still use floating-point rounding. These conversions do not add arbitrary precision or rounding operations. `f32(0.1f32)` preserves its already-rounded input; `f64(0.1f32)` widens that exact value and therefore differs from the `f64` literal `0.1`.
 
-Floating-point conversion failures record source/destination types, reason, and source origin. Reasons distinguish range, precision, nonfinite input for integer conversion, NaN when changing float types, and negative zero for integer conversion. Rounding and truncation operations are not implemented.
+Floating-point conversion failures record source/destination types, reason, and source origin. Reasons distinguish range, precision, nonfinite input for integer conversion, NaN when changing float types, and negative zero for integer conversion. Explicit truncation uses the separate `trunc` operation below.
+
+### Truncating the fractional part
+
+`trunc<T>(value)` converts an `f32` or `f64` toward zero to integer type `T`: `i8`, `u8`, `i16`, `u16`, `i32`, `u32`, `i64`, or `u64`.
+
+| Input | Result |
+| --- | --- |
+| `trunc<i64>(3.7)` / `trunc<i64>(-3.7)` | `3` / `-3` |
+| `trunc<u8>(255.9)` / `trunc<i8>(-128.9)` | `255` / `-128` |
+| `trunc<u64>(-0.9)` / `trunc<u64>(-0.0)` | Both yield `0` |
+| `trunc<u8>(256.0)` / `trunc<u8>(-1.0)` | Stop with `conversion-out-of-range` |
+| NaN or either infinity | Stop with `conversion-not-finite` |
+
+The input is evaluated once, then checked for nonfinite values and for the range of the truncated integer, in that order. The destination does not change input type inference. Integer inputs and floating-point destinations are compile-time errors. Exactness checks for `convert<T>` and `T(value)` remain unchanged.
+
+It works in `const` evaluation and functions with explicit type arguments. `trunc` is not a keyword; ordinary function and variable names remain available. Built-in `trunc<T>(value)` is distinct from user-defined `trunc::<T>(value)`.
+
+IR and bytecode retain `convert.trunc`; backend IR retains `ConversionMode::Truncate` along with types and source origins. See the [design](../design/truncating-conversions.en.md) and [example](../../examples/truncating_conversions.ceru).
 
 ### Observing conversions
 

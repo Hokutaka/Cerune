@@ -315,6 +315,7 @@ fn emit_expr(expr: &Expr, program: &Program, output: &mut String) {
             output.push(')');
         }
         ExprKind::ConvertNumeric {
+            mode,
             value,
             from,
             to,
@@ -326,7 +327,8 @@ fn emit_expr(expr: &Expr, program: &Program, output: &mut String) {
             };
             write!(
                 output,
-                "convert.exact.{}->{}[{spelling}](",
+                "convert.{}.{}->{}[{spelling}](",
+                mode.name(),
                 from.name(),
                 to.name()
             )

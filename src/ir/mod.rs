@@ -190,8 +190,9 @@ pub enum ExprKind {
     StringByteLength {
         value: Box<Expr>,
     },
-    /// 浮動小数点を含む明示変換です。値や符号を保てない場合は失敗します。
+    /// 浮動小数点を含む変換です。値を保つ変換と明示した切り捨てを区別します。
     ConvertNumeric {
+        mode: crate::types::ConversionMode,
         from: crate::types::NumericType,
         to: crate::types::NumericType,
         syntax: ConversionSyntax,

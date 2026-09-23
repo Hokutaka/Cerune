@@ -121,6 +121,7 @@ pub enum InstructionKind {
     },
     StringByteLength,
     ConvertNumeric {
+        mode: crate::types::ConversionMode,
         from: crate::types::NumericType,
         to: crate::types::NumericType,
     },
@@ -696,11 +697,16 @@ impl Compiler {
                 self.emit_source(InstructionKind::StringByteLength, expr.id, expr.span);
             }
             ExprKind::ConvertNumeric {
-                value, from, to, ..
+                value,
+                from,
+                to,
+                mode,
+                ..
             } => {
                 self.emit_expr(value);
                 self.emit_source(
                     InstructionKind::ConvertNumeric {
+                        mode: *mode,
                         from: *from,
                         to: *to,
                     },
@@ -1269,8 +1275,15 @@ fn format_instruction(
             writeln!(output, "ge.{}", type_name(ty, program),).unwrap();
         }
 
-        InstructionKind::ConvertNumeric { from, to } => {
-            writeln!(output, "convert.exact {} -> {}", from.name(), to.name()).unwrap();
+        InstructionKind::ConvertNumeric { from, to, mode } => {
+            writeln!(
+                output,
+                "convert.{} {} -> {}",
+                mode.name(),
+                from.name(),
+                to.name()
+            )
+            .unwrap();
         }
         InstructionKind::ConvertInteger { from, to } => {
             writeln!(output, "convert.checked {} -> {}", from.name(), to.name()).unwrap();

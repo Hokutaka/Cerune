@@ -246,6 +246,7 @@ fn conversion_keeps_resolved_types_spelling_and_source_origin() {
             to,
             syntax: actual,
             value,
+            ..
         } = &expr.kind
         else {
             panic!()

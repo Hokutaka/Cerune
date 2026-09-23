@@ -12,6 +12,45 @@ pub enum NumericConversionFailure {
     NegativeZero,
 }
 
+pub(super) fn convert_with_mode(
+    value: Value,
+    from: NumericType,
+    to: NumericType,
+    mode: crate::types::ConversionMode,
+) -> VmResult<Value> {
+    if mode == crate::types::ConversionMode::Exact {
+        return convert(value, from, to);
+    }
+    if !matches!(from, NumericType::F32 | NumericType::F64)
+        || !matches!(to, NumericType::Integer(_))
+    {
+        return Err(VmErrorKind::InvalidNumericConversion { from, to });
+    }
+    if value.ty() != from.into() {
+        return Err(VmErrorKind::TypeMismatch {
+            expected: from.into(),
+            actual: value.ty(),
+        });
+    }
+    let number = match value {
+        Value::F32(n) => f64::from(n),
+        Value::F64(n) => n,
+        _ => unreachable!(),
+    };
+    let NumericType::Integer(ty) = to else {
+        unreachable!()
+    };
+    let fail = |reason| VmErrorKind::NumericConversionFailed { from, to, reason };
+    if !number.is_finite() {
+        return Err(fail(NumericConversionFailure::NotFinite));
+    }
+    let number = number.trunc();
+    if number < ty.minimum() as f64 || number >= (ty.maximum() + 1) as f64 {
+        return Err(fail(NumericConversionFailure::OutOfRange));
+    }
+    Ok(Value::Integer(number as i128, ty))
+}
+
 pub(super) fn convert(value: Value, from: NumericType, to: NumericType) -> VmResult<Value> {
     if value.ty() != from.into() {
         return Err(VmErrorKind::TypeMismatch {

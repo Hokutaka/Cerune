@@ -104,6 +104,16 @@ pub const FAILURES: &[(&str, &str)] = &[
         "const DATA: [i64; 1] = [7]; value: i64 = DATA[1];",
         "array-index-out-of-bounds",
     ),
+    (TRUNCATION_FAILURES[0].0, TRUNCATION_FAILURES[0].1),
+    (TRUNCATION_FAILURES[1].0, TRUNCATION_FAILURES[1].1),
+    (TRUNCATION_FAILURES[2].0, TRUNCATION_FAILURES[2].1),
+    (TRUNCATION_FAILURES[3].0, TRUNCATION_FAILURES[3].1),
+    (TRUNCATION_FAILURES[4].0, TRUNCATION_FAILURES[4].1),
+    (TRUNCATION_FAILURES[5].0, TRUNCATION_FAILURES[5].1),
+    (TRUNCATION_FAILURES[6].0, TRUNCATION_FAILURES[6].1),
+    (TRUNCATION_FAILURES[7].0, TRUNCATION_FAILURES[7].1),
+    (TRUNCATION_FAILURES[8].0, TRUNCATION_FAILURES[8].1),
+    (TRUNCATION_FAILURES[9].0, TRUNCATION_FAILURES[9].1),
     (GENERIC_FAILURES[0].0, GENERIC_FAILURES[0].1),
     (GENERIC_FAILURES[1].0, GENERIC_FAILURES[1].1),
     (GENERIC_FAILURES[2].0, GENERIC_FAILURES[2].1),
@@ -205,6 +215,69 @@ pub const ITERATION_FAILURES: &[(&str, &str, &str, &str)] = &[
         "division-by-zero",
         "2\n5\n0\n",
         "10 / v",
+    ),
+];
+
+pub const TRUNCATION_FAILURES: &[(&str, &str, &str, &str)] = &[
+    (
+        r#"print("before"); print(trunc<i8>(-129.0)); print("after");"#,
+        "conversion-out-of-range",
+        "before\n",
+        "trunc<i8>(-129.0)",
+    ),
+    (
+        r#"print("before"); print(trunc<u8>(256.0f32)); print("after");"#,
+        "conversion-out-of-range",
+        "before\n",
+        "trunc<u8>(256.0f32)",
+    ),
+    (
+        r#"print("before"); print(trunc<u64>(-1.0)); print("after");"#,
+        "conversion-out-of-range",
+        "before\n",
+        "trunc<u64>(-1.0)",
+    ),
+    (
+        r#"print("before"); print(trunc<i64>(9223372036854775808.0)); print("after");"#,
+        "conversion-out-of-range",
+        "before\n",
+        "trunc<i64>(9223372036854775808.0)",
+    ),
+    (
+        r#"print("before"); print(trunc<i64>(-9223372036854777856.0)); print("after");"#,
+        "conversion-out-of-range",
+        "before\n",
+        "trunc<i64>(-9223372036854777856.0)",
+    ),
+    (
+        r#"print("before"); print(trunc<u64>(18446744073709551616.0)); print("after");"#,
+        "conversion-out-of-range",
+        "before\n",
+        "trunc<u64>(18446744073709551616.0)",
+    ),
+    (
+        r#"print("before"); print(trunc<i8>(0.0 / 0.0)); print("after");"#,
+        "conversion-not-finite",
+        "before\n",
+        "trunc<i8>(0.0 / 0.0)",
+    ),
+    (
+        r#"print("before"); print(trunc<u64>(0.0f32 / 0.0f32)); print("after");"#,
+        "conversion-not-finite",
+        "before\n",
+        "trunc<u64>(0.0f32 / 0.0f32)",
+    ),
+    (
+        r#"print("before"); print(trunc<u64>(1.0 / 0.0)); print("after");"#,
+        "conversion-not-finite",
+        "before\n",
+        "trunc<u64>(1.0 / 0.0)",
+    ),
+    (
+        r#"print("before"); print(trunc<i64>(-1.0f32 / 0.0f32)); print("after");"#,
+        "conversion-not-finite",
+        "before\n",
+        "trunc<i64>(-1.0f32 / 0.0f32)",
     ),
 ];
 

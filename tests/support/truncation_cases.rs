@@ -1,0 +1,89 @@
+pub const CASES: &[(&str, &str)] = &[
+    (
+        include_str!("../../examples/truncating_conversions.ceru"),
+        "切り捨て\n3\n-3\n255\n0\n-128\n0\n18446744073709549568\n3\n1\n-2\n",
+    ),
+    (
+        include_str!("../../examples/truncating_evaluation_order.ceru"),
+        "評価順\n左\n右\n2\nfalse\ntrue\n255\n12\n0\n",
+    ),
+    (
+        r#"print("境界");
+print(trunc<i8>(0.9f32));
+print(trunc<i8>(-0.9f32));
+print(trunc<i8>(-0.0f32));
+print(trunc<i8>(1.9f32));
+print(trunc<u8>(0.9f32));
+print(trunc<u8>(-0.9f32));
+print(trunc<u8>(-0.0f32));
+print(trunc<u8>(1.9f32));
+print(trunc<i16>(0.9f32));
+print(trunc<i16>(-0.9f32));
+print(trunc<i16>(-0.0f32));
+print(trunc<i16>(1.9f32));
+print(trunc<u16>(0.9f32));
+print(trunc<u16>(-0.9f32));
+print(trunc<u16>(-0.0f32));
+print(trunc<u16>(1.9f32));
+print(trunc<i32>(0.9f32));
+print(trunc<i32>(-0.9f32));
+print(trunc<i32>(-0.0f32));
+print(trunc<i32>(1.9f32));
+print(trunc<u32>(0.9f32));
+print(trunc<u32>(-0.9f32));
+print(trunc<u32>(-0.0f32));
+print(trunc<u32>(1.9f32));
+print(trunc<i64>(0.9f32));
+print(trunc<i64>(-0.9f32));
+print(trunc<i64>(-0.0f32));
+print(trunc<i64>(1.9f32));
+print(trunc<u64>(0.9f32));
+print(trunc<u64>(-0.9f32));
+print(trunc<u64>(-0.0f32));
+print(trunc<u64>(1.9f32));
+print(trunc<i8>(0.9f64));
+print(trunc<i8>(-0.9f64));
+print(trunc<i8>(-0.0f64));
+print(trunc<i8>(1.9f64));
+print(trunc<u8>(0.9f64));
+print(trunc<u8>(-0.9f64));
+print(trunc<u8>(-0.0f64));
+print(trunc<u8>(1.9f64));
+print(trunc<i16>(0.9f64));
+print(trunc<i16>(-0.9f64));
+print(trunc<i16>(-0.0f64));
+print(trunc<i16>(1.9f64));
+print(trunc<u16>(0.9f64));
+print(trunc<u16>(-0.9f64));
+print(trunc<u16>(-0.0f64));
+print(trunc<u16>(1.9f64));
+print(trunc<i32>(0.9f64));
+print(trunc<i32>(-0.9f64));
+print(trunc<i32>(-0.0f64));
+print(trunc<i32>(1.9f64));
+print(trunc<u32>(0.9f64));
+print(trunc<u32>(-0.9f64));
+print(trunc<u32>(-0.0f64));
+print(trunc<u32>(1.9f64));
+print(trunc<i64>(0.9f64));
+print(trunc<i64>(-0.9f64));
+print(trunc<i64>(-0.0f64));
+print(trunc<i64>(1.9f64));
+print(trunc<u64>(0.9f64));
+print(trunc<u64>(-0.9f64));
+print(trunc<u64>(-0.0f64));
+print(trunc<u64>(1.9f64));
+print(trunc<i8>(-128.999));
+print(trunc<u8>(255.999));
+print(trunc<i16>(-32768.999));
+print(trunc<u16>(65535.999));
+print(trunc<i32>(-2147483648.9));
+print(trunc<u32>(4294967295.9));
+print(trunc<i64>(-9223372036854775808.0));
+print(trunc<i64>(9223372036854774784.0));
+print(trunc<u64>(9223372036854775808.0));
+print(trunc<u64>(18446744073709549568.0));
+"#,
+        "境界\n0\n0\n0\n1\n0\n0\n0\n1\n0\n0\n0\n1\n0\n0\n0\n1\n0\n0\n0\n1\n0\n0\n0\n1\n0\n0\n0\n1\n0\n0\n0\n1\n0\n0\n0\n1\n0\n0\n0\n1\n0\n0\n0\n1\n0\n0\n0\n1\n0\n0\n0\n1\n0\n0\n0\n1\n0\n0\n0\n1\n0\n0\n0\n1\n-128\n255\n-32768\n65535\n-2147483648\n4294967295\n-9223372036854775808\n9223372036854774784\n9223372036854775808\n18446744073709549568\n",
+    ),
+];

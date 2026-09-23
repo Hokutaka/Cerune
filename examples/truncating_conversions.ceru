@@ -1,0 +1,16 @@
+// 小数部分をゼロへ向かって切り捨てます。切り捨て後も整数型の範囲外なら停止します。
+print("切り捨て");
+print(trunc<i64>(3.7));
+print(trunc<i64>(-3.7));
+print(trunc<u8>(255.9));
+print(trunc<u8>(-0.9));
+print(trunc<i8>(-128.9));
+print(trunc<u64>(-0.0));
+print(trunc<u64>(18446744073709549568.0));
+
+// 正確な変換は引き続きconvertで指定できます。
+print(convert<i64>(3.0));
+fn whole<T>(value: f64) -> T { return trunc<T>(value); }
+const COUNT: i64 = trunc<i64>(2.9);
+values: [i16; COUNT] = [whole::<i16>(1.9), whole::<i16>(-2.9)];
+for (value: infer in values) { print(value); }

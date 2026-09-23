@@ -62,7 +62,12 @@ Integer overflow stops execution; values never wrap. Convert explicitly with `i6
 | `f32` | 32-bit floating point | [floating_point.ceru](floating_point.ceru), [logistic_map.ceru](logistic_map.ceru) | rounding and computation differences from `f64` |
 | `f64` | 64-bit floating point | [floating_point.ceru](floating_point.ceru), [small_values.ceru](small_values.ceru) | small-value display and arithmetic rounding; floats without type information default to `f64` |
 
-[measurement_statistics.ceru](measurement_statistics.ceru) and [normalized_histogram.ceru](normalized_histogram.ceru) convert between integers and floats. Explicit conversion succeeds only when it preserves the value. This is separate from rounding during ordinary floating-point arithmetic.
+[measurement_statistics.ceru](measurement_statistics.ceru) and [normalized_histogram.ceru](normalized_histogram.ceru) convert between integers and floats. `convert<T>` succeeds only when it preserves the value. `trunc<T>` discards the fractional part toward zero. These are separate from ordinary floating-point arithmetic rounding.
+
+| Conversion example | What to observe |
+| --- | --- |
+| [truncating_conversions.ceru](truncating_conversions.ceru) | `3.7 → 3`, `-3.7 → -3`, `u8` boundaries, `u64`, constants and type arguments |
+| [truncating_evaluation_order.ceru](truncating_evaluation_order.ceru) | Arguments evaluated once from left to right, skipped conversions through short-circuiting, independent array copies |
 
 ### Booleans and strings
 

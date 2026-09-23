@@ -19,6 +19,11 @@ pub enum IntegerOperation {
 /// Cerune VMの実行中に発生した問題の種類を表します。
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum VmErrorKind {
+    /// bytecodeが対応しない型の組み合わせで切り捨てを要求しました。
+    InvalidNumericConversion {
+        from: crate::types::NumericType,
+        to: crate::types::NumericType,
+    },
     /// 変換前後の型と、値を保てなかった理由を保持します。
     NumericConversionFailed {
         from: crate::types::NumericType,
@@ -333,9 +338,12 @@ fn execute_frame_inner(
                 // 対応する32/64ビット環境のRust文字列はisize::MAXを超えません。
                 stack.push(Value::Integer(value.len() as i128, IntegerType::I64));
             }
-            InstructionKind::ConvertNumeric { from, to } => {
+            InstructionKind::ConvertNumeric { from, to, mode } => {
                 let value = at_instruction(pop_value(&mut stack), pc)?;
-                stack.push(at_instruction(numeric::convert(value, *from, *to), pc)?);
+                stack.push(at_instruction(
+                    numeric::convert_with_mode(value, *from, *to, *mode),
+                    pc,
+                )?);
             }
             InstructionKind::ConvertInteger { from, to } => {
                 let value = at_instruction(pop_integer(&mut stack, *from), pc)?;

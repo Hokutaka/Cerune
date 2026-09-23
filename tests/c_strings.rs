@@ -359,6 +359,17 @@ fn array_iteration_preserves_snapshots_and_loop_control() {
     }
 }
 
+#[path = "support/truncation_cases.rs"]
+mod truncation_cases;
+#[test]
+fn truncation_matches_vm_in_optimized_c() {
+    let Some(native) = NativeC::new() else { return };
+    for &(source, expected) in truncation_cases::CASES {
+        assert_eq!(run_vm(source).unwrap(), expected);
+        native.matches_vm(source);
+    }
+}
+
 #[path = "support/generic_cases.rs"]
 mod generic_cases;
 #[test]
