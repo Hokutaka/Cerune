@@ -679,13 +679,18 @@ impl LoweringContext<'_> {
                 Value::Scalar(Type::String)
             }
             cerune_ir::ExprKind::ConvertNumeric {
-                value, from, to, ..
+                value,
+                from,
+                to,
+                mode,
+                ..
             } => {
                 self.lower_expr(value, instructions);
                 if from != to {
                     instructions.push(
                         Instruction::ConvertNumeric {
                             conversion: crate::codegen::NumericConversion {
+                                mode: *mode,
                                 from: *from,
                                 to: *to,
                             },

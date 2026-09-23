@@ -572,13 +572,18 @@ impl Lowerer<'_> {
                 Value::Scalar(Type::String)
             }
             cerune_ir::ExprKind::ConvertNumeric {
-                value, from, to, ..
+                value,
+                from,
+                to,
+                mode,
+                ..
             } => {
                 self.lower_expr(value, depth);
                 if from != to {
                     let label = self.next_label();
                     self.push(Instruction::ConvertNumeric {
                         conversion: crate::codegen::NumericConversion {
+                            mode: *mode,
                             from: *from,
                             to: *to,
                         },

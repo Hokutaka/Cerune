@@ -436,7 +436,12 @@ impl Builder<'_> {
                     bindings,
                 )?),
             },
-            ast::ExprKind::Convert { value, syntax, .. } => {
+            ast::ExprKind::Convert {
+                value,
+                syntax,
+                mode,
+                ..
+            } => {
                 let value = self.build_expr(value, None, bindings)?;
                 if let (Type::Integer(from), semantic::Type::Integer(to)) = (&value.ty, &ty) {
                     ExprKind::ConvertInteger {
@@ -447,6 +452,7 @@ impl Builder<'_> {
                     }
                 } else {
                     ExprKind::ConvertNumeric {
+                        mode: *mode,
                         from: numeric_type(&value.ty),
                         to: numeric_type(&ir_type(ty.clone())),
                         value: Box::new(value),

@@ -7,6 +7,7 @@ use crate::ast::{GenericArgument, GenericCall, GenericParameter};
 use crate::diagnostic::Diagnostic;
 use crate::lexer::{Token, TokenKind};
 use crate::source::{ConversionSyntax, SourceId, Span};
+use crate::types::ConversionMode;
 
 type ParseResult<T> = Result<T, Diagnostic>;
 
@@ -1222,11 +1223,22 @@ impl Parser {
                 let (name, span) = self.finish_path(name, span)?;
                 if matches!(&self.peek().kind, TokenKind::ColonColon) {
                     self.parse_generic_call(name, span)
-                } else if name == "convert" && self.starts_explicit_conversion() {
+                } else if matches!(name.as_str(), "convert" | "trunc")
+                    && self.starts_explicit_conversion()
+                {
                     self.expect_simple(TokenKind::Less)?;
                     let target = self.parse_type_ref()?;
                     self.expect_simple(TokenKind::Greater)?;
-                    self.parse_conversion(target, ConversionSyntax::Explicit, span.start())
+                    self.parse_conversion(
+                        target,
+                        ConversionSyntax::Explicit,
+                        if name == "trunc" {
+                            ConversionMode::Truncate
+                        } else {
+                            ConversionMode::Exact
+                        },
+                        span.start(),
+                    )
                 } else if Type::from_name(&name).is_some()
                     && matches!(&self.peek().kind, TokenKind::LeftParen)
                 {
@@ -1234,7 +1246,12 @@ impl Parser {
                         kind: TypeRefKind::Named(name),
                         span,
                     };
-                    self.parse_conversion(target, ConversionSyntax::Compact, span.start())
+                    self.parse_conversion(
+                        target,
+                        ConversionSyntax::Compact,
+                        ConversionMode::Exact,
+                        span.start(),
+                    )
                 } else if matches!(&self.peek().kind, TokenKind::LeftParen) {
                     self.parse_call(name, span)
                 } else if self.starts_construct() {
@@ -1286,6 +1303,7 @@ impl Parser {
         &mut self,
         target: TypeRef,
         syntax: ConversionSyntax,
+        mode: ConversionMode,
         start: usize,
     ) -> ParseResult<Expr> {
         self.expect_simple(TokenKind::LeftParen)?;
@@ -1308,6 +1326,7 @@ impl Parser {
         let end = self.expect_simple(TokenKind::RightParen)?.end();
         Ok(Expr {
             kind: ExprKind::Convert {
+                mode,
                 target,
                 value: Box::new(value),
                 syntax,

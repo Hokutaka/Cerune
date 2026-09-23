@@ -336,6 +336,7 @@ pub enum ExprKind {
         right: Box<Expr>,
     },
     Convert {
+        mode: crate::types::ConversionMode,
         target: TypeRef,
         value: Box<Expr>,
         syntax: ConversionSyntax,

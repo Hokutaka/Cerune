@@ -533,7 +533,11 @@ impl Lowerer<'_> {
                 }
             }
             cerune_ir::ExprKind::ConvertNumeric {
-                value, from, to, ..
+                value,
+                from,
+                to,
+                mode,
+                ..
             } => {
                 let (ty, value) = self.lower_scalar_expr(value);
                 if from == to {
@@ -545,6 +549,7 @@ impl Lowerer<'_> {
                     dest,
                     value,
                     conversion: crate::codegen::NumericConversion {
+                        mode: *mode,
                         from: *from,
                         to: *to,
                     },

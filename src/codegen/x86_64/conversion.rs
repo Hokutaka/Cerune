@@ -2,6 +2,47 @@ use super::failure::Reporter;
 use crate::runtime::FailureCode as Failure;
 use crate::{codegen::NumericConversion, types::NumericType};
 
+fn emit_truncation(
+    conversion: NumericConversion,
+    label: usize,
+    prefix: &str,
+    reporter: &mut Reporter,
+    output: &mut String,
+) {
+    let NumericType::Integer(ty) = conversion.to else {
+        unreachable!()
+    };
+    let base = format!(".Lcerune_{prefix}_trunc_{label}");
+    if conversion.from == NumericType::F32 {
+        output.push_str("  cvtss2sd %xmm0, %xmm2\n");
+    } else {
+        output.push_str("  movapd %xmm0, %xmm2\n");
+    }
+    output.push_str(&format!("  ucomisd %xmm2, %xmm2\n  jp {base}_nonfinite\n"));
+    for infinity in [f64::INFINITY, f64::NEG_INFINITY] {
+        load_bound(infinity, output);
+        output.push_str(&format!("  ucomisd %xmm1, %xmm2\n  je {base}_nonfinite\n"));
+    }
+    let (lower, exclusive) = conversion.integer_lower_bound();
+    let jump = if exclusive { "jbe" } else { "jb" };
+    load_bound(lower, output);
+    output.push_str(&format!("  ucomisd %xmm1, %xmm2\n  {jump} {base}_range\n"));
+    load_bound((ty.maximum() + 1) as f64, output);
+    output.push_str(&format!("  ucomisd %xmm1, %xmm2\n  jae {base}_range\n"));
+    if ty == crate::types::IntegerType::U64 {
+        // SSE2の符号付き変換を使い、u64の上半分は2^63を引いてから最上位ビットを戻します。
+        load_bound(9223372036854775808.0, output);
+        output.push_str(&format!("  ucomisd %xmm1, %xmm2\n  jb {base}_small\n  movapd %xmm2, %xmm3\n  subsd %xmm1, %xmm3\n  cvttsd2siq %xmm3, %rax\n  btcq $63, %rax\n  jmp {base}_done\n{base}_small:\n"));
+    }
+    output.push_str(&format!(
+        "  cvttsd2siq %xmm2, %rax\n  jmp {base}_done\n{base}_nonfinite:\n"
+    ));
+    reporter.emit(Failure::ConversionNotFinite, output);
+    output.push_str(&format!("{base}_range:\n"));
+    reporter.emit(Failure::ConversionOutOfRange, output);
+    output.push_str(&format!("{base}_done:\n"));
+}
+
 pub(super) fn emit(
     conversion: NumericConversion,
     label: usize,
@@ -9,6 +50,9 @@ pub(super) fn emit(
     reporter: &mut Reporter,
     output: &mut String,
 ) {
+    if conversion.truncates() {
+        return emit_truncation(conversion, label, prefix, reporter, output);
+    }
     if conversion.uses_u64() {
         return super::unsigned::emit_conversion(conversion, label, prefix, reporter, output);
     }

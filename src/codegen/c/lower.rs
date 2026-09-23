@@ -322,7 +322,11 @@ fn lower_expr_unchecked(expr: &cerune_ir::Expr) -> Expr {
             right: Box::new(lower_expr(right)),
         },
         cerune_ir::ExprKind::ConvertNumeric {
-            value, from, to, ..
+            value,
+            from,
+            to,
+            mode,
+            ..
         } => {
             if from == to {
                 return lower_expr(value);
@@ -330,6 +334,7 @@ fn lower_expr_unchecked(expr: &cerune_ir::Expr) -> Expr {
             ExprKind::ConvertNumeric {
                 value: Box::new(lower_expr(value)),
                 conversion: crate::codegen::NumericConversion {
+                    mode: *mode,
                     from: *from,
                     to: *to,
                 },

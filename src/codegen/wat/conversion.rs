@@ -14,16 +14,53 @@ pub(super) fn type_name(ty: NumericType) -> &'static str {
     }
 }
 
+fn emit_truncation(conversion: NumericConversion, origin: Origin, name: &str, output: &mut String) {
+    let NumericType::Integer(ty) = conversion.to else {
+        unreachable!()
+    };
+    let (lower, exclusive) = conversion.integer_lower_bound();
+    let compare = if exclusive { "le" } else { "lt" };
+    let signedness = if ty == IntegerType::U64 { "u" } else { "s" };
+    writeln!(output, "  (func ${name} (param $value {}) (result i64)\n    (local $number f64)\n    local.get $value", type_name(conversion.from)).unwrap();
+    if conversion.from == NumericType::F32 {
+        output.push_str("    f64.promote_f32\n");
+    }
+    output.push_str("    local.set $number\n");
+    emit_if(
+        "    local.get $number\n    local.get $number\n    f64.ne\n    local.get $number\n    f64.abs\n    f64.const inf\n    f64.eq\n    i32.or\n",
+        Failure::ConversionNotFinite,
+        origin,
+        output,
+    );
+    emit_if(
+        &format!(
+            "    local.get $number\n    f64.const {lower}\n    f64.{compare}\n    local.get $number\n    f64.const {}\n    f64.ge\n    i32.or\n",
+            ty.maximum() + 1
+        ),
+        Failure::ConversionOutOfRange,
+        origin,
+        output,
+    );
+    writeln!(
+        output,
+        "    local.get $number\n    i64.trunc_f64_{signedness}\n  )"
+    )
+    .unwrap();
+}
+
 pub(super) fn emit_support(
     conversion: NumericConversion,
     origin: Origin,
     name: &str,
     output: &mut String,
 ) {
+    if conversion.truncates() {
+        return emit_truncation(conversion, origin, name, output);
+    }
     if conversion.uses_u64() {
         return super::unsigned::emit_conversion(conversion, origin, name, output);
     }
-    let NumericConversion { from, to } = conversion;
+    let NumericConversion { from, to, .. } = conversion;
     writeln!(output, "  (func ${name} (param $value {}) (result {})\n    (local $result {})\n    (local $number f64)", type_name(from), type_name(to), type_name(to)).unwrap();
     match (from, to) {
         (NumericType::Integer(_), NumericType::F32 | NumericType::F64) => {

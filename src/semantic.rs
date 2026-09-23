@@ -1253,7 +1253,12 @@ fn type_of_expr_expected(
     model: &SemanticModel,
 ) -> SemanticResult<Type> {
     match &expr.kind {
-        ExprKind::Convert { target, value, .. } => {
+        ExprKind::Convert {
+            target,
+            value,
+            mode,
+            ..
+        } => {
             let target_ty = model.resolve_type_ref(target)?;
             if !is_numeric(&target_ty) {
                 return Err(Diagnostic::new(
@@ -1271,6 +1276,20 @@ fn type_of_expr_expected(
                     ),
                     value.span,
                 ));
+            }
+            if *mode == crate::types::ConversionMode::Truncate {
+                if !matches!(target_ty, Type::Integer(_)) {
+                    return Err(Diagnostic::new(
+                        "trunc target must be an integer type",
+                        target.span,
+                    ));
+                }
+                if !matches!(input_ty, Type::F32 | Type::F64) {
+                    return Err(Diagnostic::new(
+                        "trunc requires an f32 or f64 value",
+                        value.span,
+                    ));
+                }
             }
             Ok(target_ty)
         }

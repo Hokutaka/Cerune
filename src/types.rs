@@ -94,7 +94,21 @@ impl IntegerType {
     }
 }
 
-/// 数値を変えない明示変換で扱う型です。boolや集約型は含めません。
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum ConversionMode {
+    Exact,
+    Truncate,
+}
+impl ConversionMode {
+    pub const fn name(self) -> &'static str {
+        match self {
+            Self::Exact => "exact",
+            Self::Truncate => "trunc",
+        }
+    }
+}
+
+/// 数値変換で扱う型です。boolや集約型は含めません。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum NumericType {
     Integer(IntegerType),

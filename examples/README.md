@@ -62,7 +62,12 @@ cargo run --quiet -- emit-c examples/linear_regression.ceru
 | `f32` | 32ビット浮動小数点 | [floating_point.ceru](floating_point.ceru)、[logistic_map.ceru](logistic_map.ceru) | `f64`との丸め・計算結果の違い |
 | `f64` | 64ビット浮動小数点 | [floating_point.ceru](floating_point.ceru)、[small_values.ceru](small_values.ceru) | 小さい値の表示と計算時の丸め。型情報のない浮動小数点は`f64` |
 
-[measurement_statistics.ceru](measurement_statistics.ceru)と[normalized_histogram.ceru](normalized_histogram.ceru)では整数と浮動小数点を行き来します。明示変換は値を保てる場合だけ成功します。通常の浮動小数点演算で生じる丸めとは別の規則です。
+[measurement_statistics.ceru](measurement_statistics.ceru)と[normalized_histogram.ceru](normalized_histogram.ceru)では整数と浮動小数点を行き来します。`convert<T>`は値を保てる場合だけ成功します。`trunc<T>`は小数部分をゼロ方向へ切り捨てます。通常の浮動小数点演算で生じる丸めとは別の規則です。
+
+| 変換の例 | 確認すること |
+| --- | --- |
+| [truncating_conversions.ceru](truncating_conversions.ceru) | `3.7 → 3`、`-3.7 → -3`、`u8`の境界、`u64`、定数と型引数 |
+| [truncating_evaluation_order.ceru](truncating_evaluation_order.ceru) | 引数を左から一度だけ評価、短絡で変換を省略、配列コピーの独立性 |
 
 ### 真偽値と文字列
 

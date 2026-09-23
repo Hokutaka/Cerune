@@ -17,6 +17,9 @@ pub mod sum_cases;
 pub mod constant_cases;
 
 // 全経路に同じ入力と既知の期待バイト列を渡します。
+#[path = "truncation_cases.rs"]
+pub mod truncation_cases;
+
 pub const CASES: &[(&str, &str)] = &[
     (
         r#"
@@ -140,6 +143,9 @@ pub const PRODUCT_UPDATES: &[(&str, &str)] = &[
      "#,
         "base\nbase\n1\n2\n3\n4\n",
     ),
+    truncation_cases::CASES[0],
+    truncation_cases::CASES[1],
+    truncation_cases::CASES[2],
 ];
 
 pub const UNUSED_DEFAULT: &str =

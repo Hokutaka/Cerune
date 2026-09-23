@@ -10,11 +10,32 @@ pub(super) fn type_name(ty: NumericType) -> &'static str {
     }
 }
 
+fn emit_truncation(conversion: NumericConversion, output: &mut String) {
+    let NumericType::Integer(ty) = conversion.to else {
+        unreachable!()
+    };
+    let (lower, exclusive) = conversion.integer_lower_bound();
+    let compare = if exclusive { "<=" } else { "<" };
+    let result = type_name(conversion.to);
+    writeln!(
+        output,
+        "static {result} {}({} value, const char *origin) {{",
+        conversion.helper(),
+        type_name(conversion.from)
+    )
+    .unwrap();
+    output.push_str("    double number = (double)value;\n    if (!isfinite(number)) cerune_runtime_fail(\"conversion-not-finite\", origin);\n");
+    writeln!(output, "    if (number {compare} {lower}.0 || number >= {}.0) cerune_runtime_fail(\"conversion-out-of-range\", origin);\n    return ({result})number;\n}}\n", ty.maximum() + 1).unwrap();
+}
+
 pub(super) fn emit_support(conversion: NumericConversion, output: &mut String) {
+    if conversion.truncates() {
+        return emit_truncation(conversion, output);
+    }
     if conversion.uses_u64() {
         return super::unsigned::emit_conversion(conversion, output);
     }
-    let NumericConversion { from, to } = conversion;
+    let NumericConversion { from, to, .. } = conversion;
     writeln!(
         output,
         "static {} {}({} value, const char *origin) {{",

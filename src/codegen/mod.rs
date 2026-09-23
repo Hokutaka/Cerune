@@ -12,14 +12,30 @@ pub use qbe::emit_qbe;
 pub use wat::emit_wat;
 pub use x86_64_win::emit_x86_64_win_asm;
 
-/// 値を変えない数値変換です。Emitterがソース構文を解釈し直す必要はありません。
+/// 変換の意味を保持します。Emitterがソース構文を解釈し直す必要はありません。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord)]
 pub struct NumericConversion {
+    pub mode: crate::types::ConversionMode,
     pub from: crate::types::NumericType,
     pub to: crate::types::NumericType,
 }
 
 impl NumericConversion {
+    pub fn truncates(self) -> bool {
+        self.mode == crate::types::ConversionMode::Truncate
+    }
+    /// 下限と、その境界自体を拒否するかを返します。
+    /// i64の最小値-1はf64で区別できないため、表せる最小値を含む境界にします。
+    pub fn integer_lower_bound(self) -> (f64, bool) {
+        let crate::types::NumericType::Integer(ty) = self.to else {
+            unreachable!()
+        };
+        if self.truncates() && ty != crate::types::IntegerType::I64 {
+            ((ty.minimum() - 1) as f64, true)
+        } else {
+            (ty.minimum() as f64, false)
+        }
+    }
     pub fn uses_u64(self) -> bool {
         matches!(
             self.from,
@@ -31,7 +47,12 @@ impl NumericConversion {
     }
 
     pub fn helper(self) -> String {
-        format!("cerune_convert_{}_{}", self.from.name(), self.to.name())
+        let operation = if self.mode == crate::types::ConversionMode::Truncate {
+            "trunc"
+        } else {
+            "convert"
+        };
+        format!("cerune_{operation}_{}_{}", self.from.name(), self.to.name())
     }
 }
 
@@ -156,6 +177,7 @@ fn u64_integer_conversion(expr: &crate::ir::Expr) -> Option<(&crate::ir::Expr, N
         return None;
     };
     let conversion = NumericConversion {
+        mode: crate::types::ConversionMode::Exact,
         from: crate::types::NumericType::Integer(*from),
         to: crate::types::NumericType::Integer(*to),
     };

@@ -52,6 +52,11 @@ pub fn render_compact_with_sources(error: &VmError, sources: &SourceMap, span: S
 
 fn render_message(error: &VmError) -> String {
     match error.kind() {
+        VmErrorKind::InvalidNumericConversion { from, to } => format!(
+            "invalid trunc conversion from {} to {}",
+            from.name(),
+            to.name()
+        ),
         VmErrorKind::NumericConversionFailed { from, to, reason } => {
             let detail = match reason {
                 super::NumericConversionFailure::OutOfRange => {
