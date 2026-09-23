@@ -109,7 +109,8 @@ fn string_expr(expr: &Expr) -> Option<Span> {
     }
     match &expr.kind {
         ExprKind::Constant { value, .. } => string_expr(value),
-        ExprKind::StringByteLength { value }
+        ExprKind::ArrayLength { value }
+        | ExprKind::StringByteLength { value }
         | ExprKind::ConvertNumeric { value, .. }
         | ExprKind::ConvertInteger { value, .. }
         | ExprKind::Unary { value, .. }

@@ -1,0 +1,38 @@
+// 要素数を型から取得し、ループの上限を配列に合わせます。
+const VALUES: [i64; 4] = [2, 4, 6, 8];
+const COUNT: i64 = array_len(VALUES);
+
+fn sum(values: [i64; 4]) -> i64 {
+    mut result: i64 = 0;
+    for (mut i: i64 = 0; i < array_len(values); i = i + 1) {
+        result = result + values[i];
+    }
+    return result;
+}
+
+print("集計");
+print(COUNT);
+print(sum(VALUES));
+mut copied: [i64; 4] = VALUES;
+copied[0] = 100;
+print(array_len(copied));
+print(sum(copied));
+print(sum(VALUES));
+
+// 入れ子では、その段の要素数です。文字列のバイト数とは区別します。
+print("型と長さ");
+matrix: [[i64; 3]; 2] = [[1, 2, 3], [4, 5, 6]];
+print(array_len(matrix));
+print(array_len(matrix[0]));
+words: [string; 2] = ["日本語", "\0\r\n"];
+print(array_len(words));
+print(byte_len(words[0]));
+counts: [u64; 2] = [18446744073709551615, 9223372036854775808];
+print(array_len(counts));
+
+type Point { x: f64, y: f64, }
+points: [Point; 2] = [Point { x: 1.0, y: 2.0 }, Point { x: 3.0, y: 4.0 }];
+print(array_len(points));
+enum Choice { Present { text: string }, Missing }
+choices: [Choice; 2] = [Choice::Present { text: "空" }, Choice::Missing {}];
+print(array_len(choices));

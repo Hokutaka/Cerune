@@ -424,6 +424,12 @@ fn emit_print(
 
 fn emit_expr(expr: &Expr, module: &Module, output: &mut String) {
     match &expr.kind {
+        ExprKind::ArrayLength { value, length } => {
+            // sizeofでは評価が消えるため、カンマ式で引数の評価を残します。
+            output.push_str("((void)(");
+            emit_expr(value, module, output);
+            write!(output, "), INT64_C({length}))").unwrap();
+        }
         ExprKind::StringByteLength { value } => {
             output.push_str("((int64_t)(");
             emit_expr(value, module, output);
@@ -718,7 +724,9 @@ impl RuntimeSupport {
         self.strings |= expr.ty == Type::String;
         self.nonfinite |= matches!(&expr.kind, ExprKind::Float { text, .. } if matches!(text.as_str(), "nan" | "inf" | "-inf"));
         match &expr.kind {
-            ExprKind::StringByteLength { value } => self.include_expr(value),
+            ExprKind::ArrayLength { value, .. } | ExprKind::StringByteLength { value } => {
+                self.include_expr(value)
+            }
             ExprKind::Sequence { bindings, value } => {
                 for (_, value) in bindings {
                     self.include_expr(value);

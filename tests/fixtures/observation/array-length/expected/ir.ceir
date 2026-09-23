@@ -1,0 +1,10 @@
+; Cerune IR v0.2
+; #N identifies one statement or expression in this compilation
+
+fn %values@0() -> [i64; 2] {
+  #0 print.i64 #1 42i64
+  #2 return #3 array[#4 10i64, #5 20i64]:[i64; 2]
+}
+
+#6 print.i64 #7 array_len(#8 call %values@0():[i64; 2])
+#9 print.bool #10 and.short_circuit.bool(#11 false:bool, #12 eq.i64(#13 array_len(#14 call %values@0():[i64; 2]), #15 2i64))

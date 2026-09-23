@@ -182,7 +182,10 @@ fn visit(
             ));
         }
         if Type::from_name(&import.alias).is_some()
-            || matches!(import.alias.as_str(), "infer" | "convert" | "byte_len")
+            || matches!(
+                import.alias.as_str(),
+                "infer" | "convert" | "byte_len" | "array_len"
+            )
         {
             return Err(Diagnostic::new(
                 format!("import alias `{}` is reserved", import.alias),

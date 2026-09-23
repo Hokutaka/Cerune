@@ -659,6 +659,14 @@ impl LoweringContext<'_> {
         }
         match &expr.kind {
             cerune_ir::ExprKind::Constant { value, .. } => self.lower_expr(value, instructions),
+            cerune_ir::ExprKind::ArrayLength { value } => {
+                let cerune_ir::Type::Array { length, .. } = &value.ty else {
+                    unreachable!()
+                };
+                self.lower_expr(value, instructions);
+                instructions.push(Instruction::I64Const(*length as i64));
+                Value::Scalar(Type::I64)
+            }
             cerune_ir::ExprKind::StringByteLength { value } => {
                 self.lower_expr(value, instructions);
                 instructions.push(Instruction::I64Load { offset: 0 });

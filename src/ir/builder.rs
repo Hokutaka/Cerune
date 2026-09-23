@@ -387,7 +387,7 @@ impl Builder<'_> {
         bindings: &Bindings,
     ) -> Result<Expr, Diagnostic> {
         if !self.constant_stack.borrow().is_empty()
-            && matches!(&expr.kind, ast::ExprKind::Call { name, .. } if name != "byte_len")
+            && matches!(&expr.kind, ast::ExprKind::Call { name, .. } if !matches!(name.as_str(), "byte_len" | "array_len"))
         {
             return Err(Diagnostic::new(
                 "function calls are not allowed in constant expressions",
@@ -398,6 +398,11 @@ impl Builder<'_> {
         let ty = self.model.type_of_expr_expected(expr, bindings, expected)?;
 
         let kind = match &expr.kind {
+            ast::ExprKind::Call {
+                name, arguments, ..
+            } if name == "array_len" => ExprKind::ArrayLength {
+                value: Box::new(self.build_expr(&arguments[0], None, bindings)?),
+            },
             ast::ExprKind::Call {
                 name, arguments, ..
             } if name == "byte_len" => ExprKind::StringByteLength {

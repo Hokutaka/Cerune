@@ -31,7 +31,9 @@ pub(super) fn resolve(units: &[Unit]) -> Result<Program, Diagnostic> {
                 Item::ConstantDefinition(d) => (&d.name, d.name_span, Kind::Constant),
                 _ => continue,
             };
-            if Type::from_name(name).is_some() || (kind != Kind::Type && name == "byte_len") {
+            if Type::from_name(name).is_some()
+                || (kind != Kind::Type && matches!(name.as_str(), "byte_len" | "array_len"))
+            {
                 return Err(Diagnostic::new(
                     format!("definition name `{name}` is reserved"),
                     span,
@@ -316,7 +318,7 @@ impl Resolver<'_> {
                 name_span,
                 arguments,
             } => {
-                if name != "byte_len" {
+                if !matches!(name.as_str(), "byte_len" | "array_len") {
                     *name = self.name(name, *name_span, Kind::Function, false)?;
                 }
                 for argument in arguments {

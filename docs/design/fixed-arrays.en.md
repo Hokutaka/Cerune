@@ -35,6 +35,16 @@ Dynamic lengths are outside the current scope.
 
 `[i64; 3]` and `[i64; 4]` are different types. Storage size is therefore known during compilation, and assigning arrays with different lengths is rejected before execution.
 
+### Querying the element count
+
+`array_len(values)` evaluates its argument once and returns the outermost length from its type as `i64`. Matching the index type allows `i < array_len(values)` without conversions. Strings use `byte_len`; distinct names keep the units explicit.
+
+Preserve evaluation as well as the result: `array_len([f(), g()])` executes `f` then `g` once each, with ordinary failure and short-circuit rules. C uses a comma expression that evaluates the argument before the constant length, rather than unevaluated `sizeof`. Other routes also lower the argument before returning the length. Copies may be optimized away while preserving output, failures, and order.
+
+Cerune IR retains `array_len`, its argument, and both NodeIds/Spans. The `array_len [T; N]` bytecode instruction checks the evaluated array's type and length. No dynamic allocation or hidden runtime metadata is added for the length. Constant expressions evaluate the argument and retain the result.
+
+The [aggregation/type example](../../examples/array_length.ceru) and [evaluation-order example](../../examples/array_length_order.ceru) are compared with known output on the VM, C, LLVM, QBE, WAT, Windows/Linux ASM, and internal COFF/ELF. C/LLVM are tested with and without optimization; failure cases also compare prior output, reasons, and original source locations. The [observation fixture](../../tests/fixtures/observation/array-length/) records IR, bytecode, and generated representations of the same small input.
+
 ### Arrays are values
 
 Putting an array into another binding copies the whole value. Two bindings do not silently share one hidden mutable region.
@@ -111,7 +121,7 @@ Bounds checks stop execution before an invalid memory access. Arrays do not, how
 
 ## Current limits
 
-- Element types are `bool`, any integer kind (including `u64`), `f32`, `f64`, `string`, named product types, or fixed arrays.
+- Element types are `bool`, any integer kind (including `u64`), `f32`, `f64`, `string`, named product types, sum types, or fixed arrays.
 - Length is a positive integer.
 - Empty array literals are unavailable.
 - Whole-array comparison and `print` are unavailable.

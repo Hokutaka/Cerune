@@ -104,6 +104,9 @@ pub const FAILURES: &[(&str, &str)] = &[
         "const DATA: [i64; 1] = [7]; value: i64 = DATA[1];",
         "array-index-out-of-bounds",
     ),
+    (ARRAY_LENGTH_FAILURES[0].0, ARRAY_LENGTH_FAILURES[0].1),
+    (ARRAY_LENGTH_FAILURES[1].0, ARRAY_LENGTH_FAILURES[1].1),
+    (ARRAY_LENGTH_FAILURES[2].0, ARRAY_LENGTH_FAILURES[2].1),
     (UPDATE_FAILURES[0].0, UPDATE_FAILURES[0].1),
     (UPDATE_FAILURES[1].0, UPDATE_FAILURES[1].1),
     (UPDATE_FAILURES[2].0, UPDATE_FAILURES[2].1),
@@ -147,5 +150,29 @@ pub const UPDATE_FAILURES: &[(&str, &str, &str, &str)] = &[
         "array-index-out-of-bounds",
         "",
         "[P { x: 0 }][1]",
+    ),
+];
+
+// 停止理由だけでなく、先行出力と元の失敗式も固定します。
+pub const ARRAY_LENGTH_FAILURES: &[(&str, &str, &str, &str)] = &[
+    (
+        r#"print("before"); print(array_len([1 / 0])); print("after");"#,
+        "division-by-zero",
+        "before\n",
+        "1 / 0",
+    ),
+    (
+        r#"fn make() -> [[i64; 1]; 1] { print("make"); return [[7]]; }
+        print(array_len(make()[1]));"#,
+        "array-index-out-of-bounds",
+        "make\n",
+        "make()[1]",
+    ),
+    (
+        r#"type Row { marker: bool, data: [i64; 1] = [1 / 0], }
+        print("default"); print(array_len((Row { marker: true }).data));"#,
+        "division-by-zero",
+        "default\n",
+        "1 / 0",
     ),
 ];

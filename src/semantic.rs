@@ -180,7 +180,7 @@ pub(crate) fn analyze_lowered(program: &Program) -> SemanticResult<SemanticModel
     for item in &program.items {
         if let Item::ConstantDefinition(d) = item {
             if ast::Type::from_name(&d.name).is_some()
-                || d.name == "byte_len"
+                || matches!(d.name.as_str(), "byte_len" | "array_len")
                 || model.function_names.contains_key(&d.name)
                 || model.type_names.contains_key(&d.name)
             {
@@ -275,9 +275,12 @@ fn register_function_names(program: &Program) -> SemanticResult<HashMap<String, 
         let Item::FunctionDefinition(definition) = item else {
             continue;
         };
-        if definition.name == "byte_len" {
+        if matches!(definition.name.as_str(), "byte_len" | "array_len") {
             return Err(Diagnostic::new(
-                "function name `byte_len` is reserved for a built-in operation",
+                format!(
+                    "function name `{}` is reserved for a built-in operation",
+                    definition.name
+                ),
                 definition.name_span,
             ));
         }
@@ -1551,6 +1554,25 @@ fn check_call(
     bindings: &Bindings,
     model: &SemanticModel,
 ) -> SemanticResult<ReturnType> {
+    if name == "array_len" {
+        if arguments.len() != 1 {
+            return Err(Diagnostic::new(
+                format!("array_len expects 1 argument, found {}", arguments.len()),
+                name_span,
+            ));
+        }
+        let actual = model.type_of_expr(&arguments[0], bindings)?;
+        if !matches!(actual, Type::Array { .. }) {
+            return Err(Diagnostic::new(
+                format!(
+                    "array_len expects a fixed array, found {}",
+                    model.type_name(actual)
+                ),
+                arguments[0].span,
+            ));
+        }
+        return Ok(ReturnType::Value(Type::Integer(IntegerType::I64)));
+    }
     if name == "byte_len" {
         if arguments.len() != 1 {
             return Err(Diagnostic::new(

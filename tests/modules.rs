@@ -579,3 +579,32 @@ fn enum_exports_keep_variant_names_nominal_types_and_private_payloads() {
         assert!(text.contains(reason), "{library}: {source}: {text}");
     }
 }
+
+#[test]
+fn array_lengths_resolve_inside_imported_functions_and_constants() {
+    let w = Workspace::new();
+    w.put("values.ceru", "pub const ITEMS: [i64; 2] = [7, 9]; pub const COUNT: i64 = array_len(ITEMS); pub fn size() -> i64 { return array_len(ITEMS); }");
+    let entry = w.put("main.ceru", "import \"values.ceru\" as values; print(values::COUNT); print(values::size()); print(array_len(values::ITEMS));");
+    let compilation = modules::load(&entry).unwrap();
+    assert_eq!(
+        run_bytecode(&bytecode::lower(&compilation.to_ir().unwrap()).unwrap()).unwrap(),
+        "2\n2\n2\n"
+    );
+    for (library, source) in [
+        (
+            "pub fn array_len() -> i64 { return 1; }",
+            "import \"values.ceru\" as values;",
+        ),
+        (
+            "pub const array_len: i64 = 1;",
+            "import \"values.ceru\" as values;",
+        ),
+        ("", "import \"values.ceru\" as array_len;"),
+    ] {
+        w.put("values.ceru", library);
+        let entry = w.put("main.ceru", source);
+        if let Ok(compilation) = modules::load(&entry) {
+            assert!(compilation.to_ir().is_err());
+        }
+    }
+}

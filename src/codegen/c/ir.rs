@@ -141,6 +141,10 @@ impl From<&crate::ir::Expr> for Origin {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ExprKind {
+    ArrayLength {
+        value: Box<Expr>,
+        length: usize,
+    },
     StringByteLength {
         value: Box<Expr>,
     },

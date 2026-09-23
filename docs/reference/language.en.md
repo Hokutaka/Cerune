@@ -284,7 +284,7 @@ first = [30, 40];
 print(second[0]); // 10
 ```
 
-An element type may be `bool`, `i8`, `u8`, `i16`, `u16`, `i32`, `u32`, `i64`, `u64`, `f32`, `f64`, `string`, a named product type, or another fixed array. A fixed array may also be used as a field of a product type.
+An element type may be `bool`, `i8`, `u8`, `i16`, `u16`, `i32`, `u32`, `i64`, `u64`, `f32`, `f64`, `string`, a named product type, a sum type, or another fixed array. A fixed array may also be used as a field of a product type.
 
 ```cerune
 type Point {
@@ -322,6 +322,22 @@ An element of a `mut` array can be updated with `values[index] = value;`. Nested
 Updating one copy of an array does not change another copy. The assigned value must have the declared element type. Updating through an immutable binding is an error, just like reassigning the complete array.
 
 See [Fixed array design](../design/fixed-arrays.en.md) for the detailed design and bounds-check representation in each backend.
+
+### Array element count
+
+`array_len(values)` accepts one fixed array `[T; N]` and returns its outermost element count `N` as `i64`, regardless of the element type. Use `byte_len` for string bytes.
+
+```cerune
+matrix: [[i64; 3]; 2] = [[1, 2, 3], [4, 5, 6]];
+print(array_len(matrix));    // 2
+print(array_len(matrix[0])); // 3
+```
+
+Evaluate the argument exactly once. A known length does not remove calls in `array_len(make())` or evaluation of array elements. If the argument fails, report the original failing expression without returning a length. Short-circuited operands remain unevaluated; a loop condition evaluates the argument each time the condition is checked.
+
+Constant expressions support this operation, subject to constant-expression rules for the entire argument. Failures in unused constants are still diagnosed, and ordinary function calls remain forbidden. Constants in array type lengths are still unsupported.
+
+Functions, constants, and import aliases cannot use this name. Variable and function namespaces remain separate. Wrong argument counts/types and discarded call results are diagnosed. See the [aggregation example](../../examples/array_length.ceru) and [evaluation-order example](../../examples/array_length_order.ceru).
 
 ## Sum types and match
 

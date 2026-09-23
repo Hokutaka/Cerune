@@ -552,6 +552,14 @@ impl Lowerer<'_> {
 
         match &expr.kind {
             cerune_ir::ExprKind::Constant { value, .. } => self.lower_expr(value, depth),
+            cerune_ir::ExprKind::ArrayLength { value } => {
+                let cerune_ir::Type::Array { length, .. } = &value.ty else {
+                    unreachable!()
+                };
+                self.lower_expr(value, depth);
+                self.push(Instruction::MovI64ImmediateToRax(*length as i64));
+                Value::Scalar(Type::I64)
+            }
             cerune_ir::ExprKind::StringByteLength { value } => {
                 self.lower_expr(value, depth);
                 self.push(Instruction::LoadStringLength);
@@ -1365,7 +1373,8 @@ fn count_expr_nodes(expr: &cerune_ir::Expr) -> usize {
         | cerune_ir::ExprKind::Variable { .. } => 1,
         cerune_ir::ExprKind::ConvertNumeric { value, .. }
         | cerune_ir::ExprKind::ConvertInteger { value, .. } => count_expr_nodes(value),
-        cerune_ir::ExprKind::StringByteLength { value }
+        cerune_ir::ExprKind::ArrayLength { value }
+        | cerune_ir::ExprKind::StringByteLength { value }
         | cerune_ir::ExprKind::Unary { value, .. } => 1 + count_expr_nodes(value),
         cerune_ir::ExprKind::Binary { left, right, .. }
         | cerune_ir::ExprKind::Logical { left, right, .. } => {
@@ -1440,7 +1449,8 @@ fn required_expr_scratch(expr: &cerune_ir::Expr, depth: usize) -> usize {
         | cerune_ir::ExprKind::Integer(_)
         | cerune_ir::ExprKind::Float { .. }
         | cerune_ir::ExprKind::Variable { .. } => 0,
-        cerune_ir::ExprKind::StringByteLength { value }
+        cerune_ir::ExprKind::ArrayLength { value }
+        | cerune_ir::ExprKind::StringByteLength { value }
         | cerune_ir::ExprKind::Unary { value, .. }
         | cerune_ir::ExprKind::ConvertNumeric { value, .. }
         | cerune_ir::ExprKind::ConvertInteger { value, .. }

@@ -1,0 +1,32 @@
+// 長さが既知でも、引数の評価を消しません。
+fn item(value: i64) -> i64 {
+    print(value);
+    return value;
+}
+fn make() -> [i64; 2] {
+    print("make");
+    return [item(10), item(20)];
+}
+fn later() -> i64 {
+    print("later");
+    return 3;
+}
+fn pair(first: i64, second: i64) -> i64 {
+    return first + second;
+}
+fn fail() -> [i64; 1] {
+    print("skipped");
+    return [1 / 0];
+}
+
+print(array_len(make()));
+print(pair(array_len(make()), later()));
+print(false && array_len(fail()) == 1);
+print(true || array_len(fail()) == 1);
+
+// ループ条件では、その条件を調べるたびに一度ずつ評価します。
+mut i: i64 = 0;
+while i < array_len([item(2), 3]) {
+    print(i);
+    i = i + 1;
+}

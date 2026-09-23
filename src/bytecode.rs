@@ -115,6 +115,10 @@ pub enum InstructionOrigin {
 
 #[derive(Debug, Clone)]
 pub enum InstructionKind {
+    ArrayLength {
+        element: Type,
+        length: usize,
+    },
     StringByteLength,
     ConvertNumeric {
         from: crate::types::NumericType,
@@ -673,6 +677,20 @@ impl Compiler {
     fn emit_expr(&mut self, expr: &Expr) {
         match &expr.kind {
             ExprKind::Constant { value, .. } => self.emit_expr(value),
+            ExprKind::ArrayLength { value } => {
+                let ir::Type::Array { element, length } = &value.ty else {
+                    unreachable!()
+                };
+                self.emit_expr(value);
+                self.emit_source(
+                    InstructionKind::ArrayLength {
+                        element: element.as_ref().clone().into(),
+                        length: *length,
+                    },
+                    expr.id,
+                    expr.span,
+                );
+            }
             ExprKind::StringByteLength { value } => {
                 self.emit_expr(value);
                 self.emit_source(InstructionKind::StringByteLength, expr.id, expr.span);
@@ -1063,6 +1081,14 @@ fn format_instruction(
     match instruction {
         InstructionKind::PushBool(value) => {
             writeln!(output, "push.bool {value}").unwrap();
+        }
+        InstructionKind::ArrayLength { element, length } => {
+            writeln!(
+                output,
+                "array_len [{}; {length}]",
+                type_name(element, program)
+            )
+            .unwrap();
         }
         InstructionKind::StringByteLength => {
             writeln!(output, "byte_len.string").unwrap();

@@ -1,0 +1,6 @@
+fn values() -> [i64; 2] {
+    print(42);
+    return [10, 20];
+}
+print(array_len(values()));
+print(false && array_len(values()) == 2);

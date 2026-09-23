@@ -335,3 +335,15 @@ fn enum_storage_is_initialized_and_copies_preserve_payloads() {
         native.matches_vm(source);
     }
 }
+
+#[allow(dead_code)]
+#[path = "support/array_cases.rs"]
+mod array_cases;
+#[test]
+fn array_length_evaluates_operands_even_when_the_result_is_known() {
+    let Some(native) = NativeC::new() else { return };
+    for &(source, expected) in array_cases::CASES {
+        assert_eq!(run_vm(source).unwrap(), expected);
+        native.matches_vm(source);
+    }
+}
