@@ -1,0 +1,41 @@
+data $fmt_i64 = { b "%lld", b 10, b 0 }
+data $fmt_f32 = { b "%.9g", b 10, b 0 }
+data $fmt_f64 = { b "%.17g", b 10, b 0 }
+data $bool_false = { b "false", b 0 }
+data $bool_true = { b "true", b 0 }
+data $bool_texts = align 8 { l $bool_false, l $bool_true }
+
+function $cerune_fn_values_0(l %result) {
+@start
+  %slot_aggregate_tmp0 =l alloc8 16
+  %tmp0 =w call $printf(l $fmt_i64, ..., l 42)
+  storel 10, %slot_aggregate_tmp0
+  %tmp1 =l add %slot_aggregate_tmp0, 8
+  storel 20, %tmp1
+  blit %slot_aggregate_tmp0, %result, 16
+  ret
+}
+
+export function w $main() {
+@start
+  %slot_aggregate_tmp0 =l alloc8 16
+  %slot_logical_result1 =l alloc8 8
+  %slot_aggregate_tmp1 =l alloc8 16
+  call $cerune_fn_values_0(l %slot_aggregate_tmp0)
+  %tmp0 =w call $printf(l $fmt_i64, ..., l 2)
+  storew 0, %slot_logical_result1
+  jnz 0, @block0, @block1
+@block0 # logical_rhs
+  call $cerune_fn_values_0(l %slot_aggregate_tmp1)
+  %tmp1 =w ceql 2, 2
+  storew %tmp1, %slot_logical_result1
+  jmp @block1
+@block1 # logical_end
+  %tmp2 =w loadw %slot_logical_result1
+  %tmp3 =l extsw %tmp2
+  %tmp4 =l mul %tmp3, 8
+  %tmp5 =l add $bool_texts, %tmp4
+  %tmp6 =l loadl %tmp5
+  %tmp7 =w call $puts(l %tmp6)
+  ret 0
+}

@@ -136,6 +136,8 @@ cargo run --quiet -- emit-c examples/linear_regression.ceru
 
 | サンプル | 内容 |
 | --- | --- |
+| [array_length.ceru](array_length.ceru) | 要素数を使った集計。定数、入れ子、文字列・u64・構造体・直和型の配列とコピー |
+| [array_length_order.ceru](array_length_order.ceru) | 長さが既知でも関数・要素を一度ずつ評価。短絡評価とループ条件 |
 | [ring_buffer.ceru](ring_buffer.ceru) | `%`で保存位置を循環させ、直近4件の値と平均を保つ |
 | [string_lookup.ceru](string_lookup.ceru) | 文字列をキーに構造体の配列を線形探索し、対応する表示や既定値を返す |
 | [product-point.ceru](product-point.ceru) | 点の座標を構造体にまとめる。フィールドの既定値と読み取り |
@@ -195,6 +197,8 @@ cargo run --quiet -- emit-c examples/linear_regression.ceru
 | `function_arguments.ceru` | 冒頭は`引数の評価順`、`1`〜`7`、`28` |
 | `string_origins.ceru` | `日本語\0\ntrue\nfalse\n`。`skipped`は出ない。IRと注釈付きLLVMで比較`#7`・短絡評価`#14`から呼び出し・分岐へ辿る（[手順](../docs/reference/cli.ja.md#llvmの出自を辿る)） |
 | `string_byte_length.ceru` | `0, 9, 3, 2, 3, 4, 7, 3, 9, left, right, 9, false, false, 6, 10`に各LF。`left`・`right`は一回ずつ、`skipped`は出ない。`byte_len`でUTF-8長・コピー・関数・配列・既定値を確認 |
+| `array_length.ceru` | 集計は`4 → 20 → 4 → 118 → 20`。コピーを変更しても元は不変。型別の長さは`2 → 3 → 2 → 9 → 2 → 2 → 2`（`9`だけ文字列のバイト数） |
+| `array_length_order.ceru` | `make → 10 → 20 → 2`。二度目の呼び出し後に`later → 5`。短絡した`skipped`は出ず、ループ条件の`2`は終了判定も含め3回 |
 | `coin_change.ceru` | 1〜6円の最少枚数、その後に使う硬貨の`3 → 3` |
 | `shortest_paths.ceru` | 町0→3の距離の変化、その後に4×4の距離表を行順で表示。`-1`は到達不能 |
 | `heat_diffusion.ceru` | 5区間の温度を4段階分、その後に保存した初期の中央温度 |

@@ -1,3 +1,6 @@
+#[path = "array_cases.rs"]
+pub mod array_cases;
+
 #[path = "sum_cases.rs"]
 pub mod sum_cases;
 
@@ -78,6 +81,9 @@ pub const CASES: &[(&str, &str)] = &[
     sum_cases::CASES[4],
     constant_cases::CASES[0],
     constant_cases::CASES[1],
+    array_cases::CASES[0],
+    array_cases::CASES[1],
+    array_cases::CASES[2],
 ];
 
 pub const PRODUCT_UPDATES: &[(&str, &str)] = &[

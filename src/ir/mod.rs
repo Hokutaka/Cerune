@@ -180,6 +180,10 @@ pub enum ExprKind {
         id: usize,
         value: Box<Expr>,
     },
+    /// 配列式を一度評価してから、最外側の要素数を返します。
+    ArrayLength {
+        value: Box<Expr>,
+    },
     StringByteLength {
         value: Box<Expr>,
     },

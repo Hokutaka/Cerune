@@ -23,6 +23,7 @@ const OBSERVATION_CASES: &[&str] = &[
     "functions",
     "aggregate-functions",
     "fixed-arrays",
+    "array-length",
     "product-array-field",
     "product-array-elements",
     "nested-fixed-arrays",

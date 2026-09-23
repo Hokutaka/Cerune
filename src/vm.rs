@@ -313,6 +313,21 @@ fn execute_frame_inner(
             .ok_or_else(|| VmError::new(VmErrorKind::InstructionOutOfBounds, pc))?;
 
         match &instruction.kind {
+            InstructionKind::ArrayLength { element, length } => {
+                let value = at_instruction(pop_value(&mut stack), pc)?;
+                let expected = Type::Array {
+                    element: Box::new(element.clone()),
+                    length: *length,
+                };
+                let actual = value.ty();
+                if actual != expected {
+                    return Err(VmError::new(
+                        VmErrorKind::TypeMismatch { expected, actual },
+                        pc,
+                    ));
+                }
+                stack.push(Value::Integer(*length as i128, IntegerType::I64));
+            }
             InstructionKind::StringByteLength => {
                 let value = at_instruction(pop_string(&mut stack), pc)?;
                 // 対応する32/64ビット環境のRust文字列はisize::MAXを超えません。

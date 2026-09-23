@@ -136,6 +136,8 @@ Argument counts and types must match the declaration; there is no fixed count li
 
 | Example | Demonstrates |
 | --- | --- |
+| [array_length.ceru](array_length.ceru) | Aggregate using element counts; constants, nesting, arrays of strings/u64/products/sums, and copies |
+| [array_length_order.ceru](array_length_order.ceru) | Evaluate calls/elements once despite a known length; short circuiting and loop conditions |
 | [ring_buffer.ceru](ring_buffer.ceru) | cycling a storage position with `%` to keep the latest four values and their average |
 | [string_lookup.ceru](string_lookup.ceru) | linear search by a string key in an array of structs, returning display text or a default |
 | [product-point.ceru](product-point.ceru) | grouping point coordinates in a struct, with field defaults and access |
@@ -195,6 +197,8 @@ Argument counts and types must match the declaration; there is no fixed count li
 | `function_arguments.ceru` | Starts with `引数の評価順`, `1` through `7`, then `28` |
 | `string_origins.ceru` | `日本語\0\ntrue\nfalse\n`; no `skipped`. Compare IR and annotated LLVM: equality `#7` and short circuit `#14` lead to calls/branches ([walkthrough](../docs/reference/cli.en.md#following-llvm-origins)) |
 | `string_byte_length.ceru` | `0, 9, 3, 2, 3, 4, 7, 3, 9, left, right, 9, false, false, 6, 10`, each with LF. `left`/`right` run once; no `skipped`. `byte_len` covers UTF-8 lengths, copies, calls, arrays, and defaults |
+| `array_length.ceru` | Aggregation: `4 → 20 → 4 → 118 → 20`; updating a copy preserves the original. Type examples: `2 → 3 → 2 → 9 → 2 → 2 → 2` (`9` is the string byte count) |
+| `array_length_order.ceru` | `make → 10 → 20 → 2`; the second call precedes `later → 5`. No `skipped`; loop-condition `2` appears three times, including the exit check |
 | `coin_change.ceru` | Minimum coin counts for amounts 1–6, then selected coins `3 → 3` |
 | `shortest_paths.ceru` | Distance from town 0 to 3, then a 4×4 distance table in row order; `-1` means unreachable |
 | `heat_diffusion.ceru` | Five temperatures per step for four steps, then the saved initial center temperature |

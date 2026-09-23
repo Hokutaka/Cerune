@@ -383,3 +383,11 @@ fn sums_preserve_choices_and_payloads_across_optimized_c_and_llvm() {
         native.matches(source, expected);
     }
 }
+
+#[test]
+fn array_length_preserves_evaluation_across_optimized_c_and_llvm() {
+    let Some(native) = Native::new() else { return };
+    for &(source, expected) in string_cases::array_cases::CASES {
+        native.matches(source, expected);
+    }
+}

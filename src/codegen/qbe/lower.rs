@@ -493,6 +493,16 @@ impl Lowerer<'_> {
 
         match &expr.kind {
             cerune_ir::ExprKind::Constant { value, .. } => self.lower_expr(value),
+            cerune_ir::ExprKind::ArrayLength { value } => {
+                let cerune_ir::Type::Array { length, .. } = &value.ty else {
+                    unreachable!()
+                };
+                self.lower_expr(value);
+                Value::Scalar {
+                    ty: Type::I64,
+                    operand: Operand::Integer(*length as i64),
+                }
+            }
             cerune_ir::ExprKind::StringByteLength { value } => {
                 let value = self.lower_expr(value);
                 let Value::Scalar {

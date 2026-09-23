@@ -25,7 +25,7 @@ impl Builder<'_> {
                     ast::ExprKind::Call {
                         name, arguments, ..
                     } => {
-                        if name != "byte_len" {
+                        if !matches!(name.as_str(), "byte_len" | "array_len") {
                             return Err(Diagnostic::new(
                                 "function calls are not allowed in constant expressions",
                                 expr.span,

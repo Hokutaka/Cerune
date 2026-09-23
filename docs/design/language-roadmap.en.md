@@ -2,7 +2,7 @@
 
 [日本語](language-roadmap.ja.md)
 
-As of 2026-09-20, this inventory includes modules, removal of the parameter limit, product updates, compile-time constants, and sum types with match. “Current” means implemented; candidates are proposals awaiting design and implementation. This document does not commit to candidate syntax or adoption. See the [language reference](../reference/language.en.md) for the current specification.
+As of 2026-09-23, this inventory includes modules, removal of the parameter limit, product updates, compile-time constants, sum types with match, and array-length queries. “Current” means implemented; candidates are proposals awaiting design and implementation. This document does not commit to candidate syntax or adoption. See the [language reference](../reference/language.en.md) for the current specification.
 
 ## Properties Cerune should preserve
 
@@ -23,7 +23,7 @@ Cerune prioritizes explaining a computation's meaning and its transformation int
 | Floating point | `f32`, `f64` | Arithmetic rounds at the selected precision; explicit conversions involving integers must preserve the value | [floating_point](../../examples/floating_point.ceru) |
 | Booleans | `bool`, comparisons, `!`, short-circuiting `&&` and `||` | No implicit numeric conversion | [short_circuit](../../examples/short_circuit.ceru) |
 | Strings | `string`, printing, `==`, `!=`, `byte_len` | No concatenation, indexing, character count, or numeric conversion | [string_byte_length](../../examples/string_byte_length.ceru), [string_lookup](../../examples/string_lookup.ceru) |
-| Fixed arrays | `[T; N]`, nesting, value passing, updates through `mut` | Length belongs to the type; indices are `i64`; no dynamic lengths or slices | [fixed_arrays](../../examples/fixed_arrays.ceru), [heat_diffusion](../../examples/heat_diffusion.ceru) |
+| Fixed arrays | `[T; N]`, `array_len`, nesting, value passing, updates through `mut` | Length belongs to the type; indices are `i64`; no dynamic lengths or slices | [fixed_arrays](../../examples/fixed_arrays.ceru), [heat_diffusion](../../examples/heat_diffusion.ceru) |
 | Named product types | Fields, defaults, update expressions, nesting, value passing | No direct field assignment; construct a new value and reassign the whole binding | [product-point](../../examples/product-point.ceru), [packet_counter](../../examples/packet_counter.ceru) |
 | Functions and control flow | Typed parameters/results, `void`, `if`/`else`, `while`/`for`, `break`/`continue`/`return` | No fixed parameter-count limit; no recursion | [function_values](../../examples/function_values.ceru), [loop_control](../../examples/loop_control.ceru) |
 | Bindings and conversions | Immutable by default, `mut`, explicit `infer`, `T(value)` and `convert<T>(value)` | `infer` is not a runtime type; conversions do not request truncation or saturation | [integer_conversions](../../examples/integer_conversions.ceru) |
@@ -43,23 +43,22 @@ Language support does not imply equal observation detail. Language check failure
 
 ## Proposed priorities
 
-| Priority | Candidate | Purpose and first example |
+The `array_len` length query is implemented. Add missing features in the order below, pairing a small design with examples and cross-route comparisons. Each stage determines its syntax and adoption.
+
+| Order | Missing feature | First contract and example |
 | --- | --- | --- |
-| 1 (implemented) | A common contract for failure reasons, source locations, and execution outcomes | Distinguish overflow, division by zero, conversion failures, and bounds failures; locate the failing expression. Compare identical failure examples across the VM and generated routes |
-| 2 (foundation implemented) | Code organization | Modules, namespaces, and visibility are implemented. Compile-time constants can also be shared |
-| 2 | Remove practical function/value limitations | The four-parameter limit has been lifted across all routes. Product updates create new values with selected fields replaced. Verify mixed arguments and independent copies |
-| 3 (foundation implemented) | Alternatives and recoverable failures as values | `enum` and exhaustive `match` represent present/absent results. Generics and implicit error propagation remain unsupported |
-| 3 | Reusable array and numeric operations | Consider length queries, iteration, and generics when functions need to span types or lengths. Define rounding/truncation separately from today's exact conversions |
-| 4 | Dynamic data and external I/O | Define ownership, lifetimes, allocation failure, and effects before bytes, slices, dynamic arrays, concatenation, and files. Add recursion only after solving per-call storage and resource limits |
-| Experiment | GPU numeric computation | Define a narrow type, memory, synchronization, and diagnostic contract; compare independent element computations with the CPU |
+| 1 | Array iteration | When to evaluate/copy the subject, elements and indices, `break`/`continue`. Compare aggregation/search with existing index loops |
+| 2 | Constants in array type lengths | Name resolution, dependency cycles, positive lengths, resource limits for `[T; COUNT]`. Share fixed sizes across modules |
+| 3 | Functions across types and lengths | Generic type checking, specialization, source correspondence. Reuse aggregation/search across element types and array lengths |
+| 4 | Numeric conversion choices | Define rounding, truncation, and saturation separately from current value-preserving conversions. Compare boundaries, NaN, infinity, and negative zero |
+| 5 | Aggregate comparison/printing and extended branching | Comparison order and display formats for arrays/products/sums; evaluation order for match expressions/guards. Add needed operations separately |
+| 6 | Dynamic data, recursion, external I/O | Define ownership, lifetimes, allocation failure, call storage, resource limits, and effects first. Introduce slices, concatenation, and files in stages |
+| 7 | Module distribution | Re-exports, dependencies/versions, reproducible builds; extend explicit imports |
+| Experiment | GPU numeric computation | Narrow the supported types, memory, synchronization, and diagnostics; compare independent element computations with the CPU |
 
-This is not a commitment to implement every item together. Priority 1 and foundational modules are implemented; continue evaluating additions through small designs and executable examples. A limited GPU experiment need not wait for complete modules, generics, or dynamic allocation.
+Existing foundations are [common failure records](runtime-diagnostics.en.md), [file origins](source-files.en.md), [modules](modules.en.md), [constants](constants.en.md), [functions](functions.en.md), [product updates](product-updates.en.md), [sums](sum-types.en.md), and [fixed arrays](fixed-arrays.en.md). The [mixed-argument](../../examples/function_arguments.ceru) and [array-length](../../examples/array_length.ceru) examples check value passing and evaluation order.
 
-The first priority-1 implementation adds [common runtime failure records](runtime-diagnostics.en.md) to the VM and Windows/Linux assembly and internal objects, including retained output before failure. C, LLVM, QBE, and WAT now implement the same contract and are compared against those reasons, locations, and prior output.
-
-Following [file-aware locations](source-files.en.md), [modules](modules.en.md) now implement explicit imports, namespaces, and function/type visibility, with cross-route CLI comparisons of modular and single-file programs. [Compile-time constants](constants.en.md) are implemented; re-exports and package distribution remain unsupported. The four-parameter limit has also been lifted; [the mixed-argument example](../../examples/function_arguments.ceru) checks evaluation order and copies. [Product updates](product-updates.en.md) are implemented, with copies, evaluation order, and failures compared across routes. [Sum types and exhaustive branching](sum-types.en.md) now cover present/absent values and payload copies across routes. Next, evaluate array/numeric reuse through examples of length queries and iteration.
-
-Inheritance, implicit shared mutable references, automatic GPU dispatch, general asynchronous execution, and a large package system are not early priorities because current examples have not established their need.
+This is not a commitment to implement everything together. GPU experiments need not await every stage. Inheritance, implicit shared mutable references, automatic GPU dispatch, and general async facilities are not prioritized without evidence from current examples.
 
 ## GPU direction
 
