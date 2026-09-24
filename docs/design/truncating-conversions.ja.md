@@ -13,15 +13,15 @@
 - NaN・正負の無限大は`conversion-not-finite`、範囲外は`conversion-out-of-range`。停止理由・ソース位置・先行出力を残します。
 - 浮動小数点リテラルや計算は従来の精度です。切り捨ての入力は既に評価された値であり、数学上の無限精度の値ではありません。
 
-定数評価と型引数付き関数も同じ規則です。評価順・短絡評価・配列コピーの独立性は変えません。丸め・飽和・整数の下位ビット切り出しは別の候補です。
+定数評価と型引数付き関数も同じ規則です。評価順・短絡評価・配列コピーの独立性は変えません。他の丸め方と飽和は[丸め変換](rounding-conversions.ja.md)を参照してください。整数の下位ビット切り出しは別の候補です。
 
 ## 表現と生成
 
-ASTから`ConversionMode::{Exact, Truncate}`を保持します。ソースの書式`ConversionSyntax`とは分け、IR・bytecodeには`convert.exact` / `convert.trunc`が残ります。各backendも型と方針を受け取り、ソース構文を解釈し直しません。
+ASTから`ConversionMode::Exact`または`Rounded { rounding: Truncate, overflow: Checked }`を保持します。ソースの書式`ConversionSyntax`とは分け、IR・bytecodeには`convert.exact` / `convert.trunc`が残ります。各backendも型と方針を受け取り、ソース構文を解釈し直しません。
 
 VMは切り捨て後に範囲を調べます。生成先では、変換前の浮動小数点比較で同じ判定をします。上限は常に`最大値+1`未満です。下限は通常`最小値-1`より大きい値を許可し、`i64`だけは表現可能な最小値以上を許可します。`i64最小値-1`は`f64`で区別できず、その間に表せる値がないためです。`f32`入力は正確に`f64`へ広げて検査します。
 
-この事前検査で、Cの範囲外キャスト、LLVMのpoison、Wasmの組み込みtrapが言語の診断を置き換えることを防ぎます。Cのfloat→整数変換の範囲は[C11草案 `6.3.1.4](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)、LLVMのゼロ方向変換と範囲外の扱いは[LangRef](https://llvm.org/docs/LangRef.html#fptoui-to-instruction)に従います。
+この事前検査で、Cの範囲外キャスト、LLVMのpoison、Wasmの組み込みtrapが言語の診断を置き換えることを防ぎます。Cのfloat→整数変換の範囲は[C11草案 6.3.1.4](https://www.open-std.org/jtc1/sc22/wg14/www/docs/n1570.pdf)、LLVMのゼロ方向変換と範囲外の扱いは[LangRef](https://llvm.org/docs/LangRef.html#fptoui-to-instruction)に従います。
 
 Cは検査後のcast、LLVMは`fptosi/fptoui`、QBEは`dtosi/dtoui`、WATは`i64.trunc_f64_s/u`、ASMと自前エンコーダはSSE2の変換を使います。x86の`u64`上半分は`2^63`を引いて符号付き変換し、最上位ビットを戻します。OS・ターゲットの指定方法は既存のままです。
 

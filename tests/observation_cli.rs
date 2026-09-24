@@ -10,6 +10,7 @@ const OBSERVATION_CASES: &[&str] = &[
     "integer-bit-operations",
     "numeric-conversions",
     "truncating-conversions",
+    "rounding-conversions",
     "u64-values",
     "float-types",
     "float-output",
@@ -32,6 +33,32 @@ const OBSERVATION_CASES: &[&str] = &[
     "product-array-elements",
     "nested-fixed-arrays",
 ];
+
+#[test]
+fn rounding_origins_are_visible_in_llvm_and_both_assemblies() {
+    for (command, target, file) in [
+        ("emit-llvm", "x86_64-unknown-linux-gnu", "llvm.annotated.ll"),
+        ("emit-asm", "x86_64-unknown-linux-gnu", "linux.annotated.s"),
+        ("emit-asm", "x86_64-pc-windows-msvc", "windows.annotated.s"),
+    ] {
+        let output = Command::new(env!("CARGO_BIN_EXE_cerune"))
+            .arg(command)
+            .arg(source_path("rounding-conversions"))
+            .args(["--target", target, "--annotate-origins"])
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        assert!(output.stderr.is_empty());
+        assert_eq!(
+            String::from_utf8(output.stdout).unwrap(),
+            expected_output("rounding-conversions", file).replace("\r\n", "\n")
+        );
+    }
+}
 
 fn fixture_path(case_name: &str) -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))

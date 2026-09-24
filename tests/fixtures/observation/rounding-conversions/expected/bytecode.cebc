@@ -1,0 +1,50 @@
+; Cerune bytecode v0.1
+
+.function 0 value(0:x:f64) -> f64
+.slot 0 x f64
+0000  load 0        ; x
+0001  return.value
+.end
+
+0000  push.f64 2.5
+0001  neg.f64
+0002  call 0 1  ; value
+0003  convert.floor f64 -> i64
+0004  print.i64
+0005  push.f64 2.5
+0006  neg.f64
+0007  call 0 1  ; value
+0008  convert.ceil f64 -> i64
+0009  print.i64
+0010  push.f64 2.5
+0011  call 0 1  ; value
+0012  convert.round f64 -> i64
+0013  print.i64
+0014  push.f64 2.5
+0015  call 0 1  ; value
+0016  convert.round_ties_even f64 -> i64
+0017  print.i64
+0018  push.f64 300
+0019  call 0 1  ; value
+0020  convert.saturating_trunc f64 -> u8
+0021  print.u8
+0022  push.f64 0.1
+0023  neg.f64
+0024  call 0 1  ; value
+0025  convert.saturating_floor f64 -> u8
+0026  print.u8
+0027  push.f64 255.1
+0028  call 0 1  ; value
+0029  convert.saturating_ceil f64 -> u8
+0030  print.u8
+0031  push.f64 255.5
+0032  call 0 1  ; value
+0033  convert.saturating_round f64 -> u8
+0034  print.u8
+0035  push.f64 254.5
+0036  call 0 1  ; value
+0037  convert.saturating_round_ties_even f64 -> u8
+0038  print.u8
+0039  push.i64 3
+0040  print.i64
+0041  halt

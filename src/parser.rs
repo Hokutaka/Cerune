@@ -1223,7 +1223,7 @@ impl Parser {
                 let (name, span) = self.finish_path(name, span)?;
                 if matches!(&self.peek().kind, TokenKind::ColonColon) {
                     self.parse_generic_call(name, span)
-                } else if matches!(name.as_str(), "convert" | "trunc")
+                } else if ConversionMode::from_name(&name).is_some()
                     && self.starts_explicit_conversion()
                 {
                     self.expect_simple(TokenKind::Less)?;
@@ -1232,11 +1232,7 @@ impl Parser {
                     self.parse_conversion(
                         target,
                         ConversionSyntax::Explicit,
-                        if name == "trunc" {
-                            ConversionMode::Truncate
-                        } else {
-                            ConversionMode::Exact
-                        },
+                        ConversionMode::from_name(&name).unwrap(),
                         span.start(),
                     )
                 } else if Type::from_name(&name).is_some()

@@ -1,0 +1,12 @@
+const COUNT: i64 = ceil<i64>(2.1);
+fn value(x: f64) -> f64 { return x; }
+print(floor<i64>(value(-2.5)));
+print(ceil<i64>(value(-2.5)));
+print(round<i64>(value(2.5)));
+print(round_ties_even<i64>(value(2.5)));
+print(saturating_trunc<u8>(value(300.0)));
+print(saturating_floor<u8>(value(-0.1)));
+print(saturating_ceil<u8>(value(255.1)));
+print(saturating_round<u8>(value(255.5)));
+print(saturating_round_ties_even<u8>(value(254.5)));
+print(COUNT);

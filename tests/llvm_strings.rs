@@ -409,6 +409,14 @@ fn constant_array_lengths_preserve_values_across_optimized_c_and_llvm() {
 }
 
 #[test]
+fn rounding_matches_vm_in_optimized_c_and_llvm() {
+    let Some(native) = Native::new() else { return };
+    for &(source, expected) in string_cases::rounding_cases::CASES {
+        native.matches(source, expected);
+    }
+}
+
+#[test]
 fn truncation_matches_vm_in_optimized_c_and_llvm() {
     let Some(native) = Native::new() else { return };
     for &(source, expected) in string_cases::truncation_cases::CASES {

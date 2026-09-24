@@ -50,6 +50,9 @@ pub(super) fn emit(
     reporter: &mut Reporter,
     output: &mut String,
 ) {
+    if conversion.mode.rounding().is_some() && !conversion.truncates() {
+        return super::rounding::emit(conversion, label, prefix, reporter, output);
+    }
     if conversion.truncates() {
         return emit_truncation(conversion, label, prefix, reporter, output);
     }

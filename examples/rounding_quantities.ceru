@@ -1,0 +1,11 @@
+// 負の座標も含め、幅10の区画番号を求めます。
+fn cell<T>(position: f64) -> T { return floor<T>(position / 10.0); }
+print("区画と必要数");
+print(cell::<i32>(-0.1));
+print(cell::<i32>(19.9));
+// 17個を6個ずつ収める箱の数です。
+print(ceil<i64>(17.0 / 6.0));
+// 定数の元の式と評価結果はemit-irで確認できます。
+const COUNT: i64 = ceil<i64>(8.1 / 4.0);
+values: [i64; COUNT] = [10, 20, 30];
+print(array_len(values));

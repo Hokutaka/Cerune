@@ -44,6 +44,9 @@ fn emit_truncation(conversion: NumericConversion, output: &mut String) {
 }
 
 pub(super) fn emit_support(conversion: NumericConversion, output: &mut String) {
+    if conversion.mode.rounding().is_some() && !conversion.truncates() {
+        return super::rounding::emit(conversion, output);
+    }
     if conversion.truncates() {
         return emit_truncation(conversion, output);
     }

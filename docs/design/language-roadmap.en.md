@@ -20,13 +20,13 @@ Cerune prioritizes explaining a computation's meaning and its transformation int
 | --- | --- | --- | --- |
 | Signed integers | `i8`, `i16`, `i32`, `i64`, arithmetic, comparisons, bit operations | Out-of-range arithmetic stops; small types currently also occupy 64-bit storage | [sensor_calibration](../../examples/sensor_calibration.ceru), [integer_limits](../../examples/integer_limits.ceru) |
 | Unsigned integers | `u8`, `u16`, `u32`, `u64` | `u64` covers 0–18446744073709551615; no implicit signedness changes or wrapping | [u64_values](../../examples/u64_values.ceru), [packet_counter](../../examples/packet_counter.ceru) |
-| Floating point | `f32`, `f64` | Arithmetic rounds at the selected precision; `convert` preserves values; `trunc` converts floats to integers toward zero | [floating_point](../../examples/floating_point.ceru) |
+| Floating point | `f32`, `f64` | Arithmetic rounds at the selected precision; `convert` preserves values; float-to-integer rounding and saturation are explicit | [floating_point](../../examples/floating_point.ceru) |
 | Booleans | `bool`, comparisons, `!`, short-circuiting `&&` and `||` | No implicit numeric conversion | [short_circuit](../../examples/short_circuit.ceru) |
 | Strings | `string`, printing, `==`, `!=`, `byte_len` | No concatenation, indexing, character count, or numeric conversion | [string_byte_length](../../examples/string_byte_length.ceru), [string_lookup](../../examples/string_lookup.ceru) |
 | Fixed arrays | `[T; N]`, `array_len`, `for … in`, nesting, value passing, updates through `mut` | Length belongs to the type; indices are `i64`; no dynamic lengths or slices | [array_iteration](../../examples/array_iteration.ceru), [heat_diffusion](../../examples/heat_diffusion.ceru) |
 | Named product types | Fields, defaults, update expressions, nesting, value passing | No direct field assignment; construct a new value and reassign the whole binding | [product-point](../../examples/product-point.ceru), [packet_counter](../../examples/packet_counter.ceru) |
 | Functions and control flow | Typed parameters/results, explicit type/length parameters, `void`, `if`/`else`, `while`/`for`, `break`/`continue`/`return` | No fixed parameter-count limit; no recursion | [function_values](../../examples/function_values.ceru), [loop_control](../../examples/loop_control.ceru) |
-| Bindings and conversions | Immutable by default, `mut`, explicit `infer`, `T(value)` and `convert<T>(value)` | `infer` is not a runtime type; truncation uses separate `trunc<T>(value)`; saturation is not implemented | [integer_conversions](../../examples/integer_conversions.ceru) |
+| Bindings and conversions | Immutable by default, `mut`, explicit `infer`, `T(value)` and `convert<T>(value)` | `infer` is not a runtime type; five float-to-integer rounding modes and explicit saturation are supported | [integer_conversions](../../examples/integer_conversions.ceru) |
 | Sum types | `enum` payload variants, exhaustive `match` | No guards, match expressions, or generic Option/Result | [sum_lookup](../../examples/sum_lookup.ceru) |
 | Compile-time constants | Typed `const`, dependency evaluation, array type lengths, `pub const` | No function calls or block-local declarations | [constants](../../examples/constants.ceru) |
 | Modules | Explicit imports, namespaces, function/type/constant visibility | Cycles/private access diagnosed; no re-exports, module variables, or package distribution | [modules](../../examples/modules/README.en.md) |
@@ -43,14 +43,13 @@ Language support does not imply equal observation detail. Language check failure
 
 ## Proposed priorities
 
-`array_len`, array `for … in`, constant lengths `[T; COUNT]`, and [functions with type/length parameters](generic-functions.en.md) are implemented. Add missing features in the order below, pairing a small design with examples and cross-route comparisons. Each stage determines its syntax and adoption.
+`array_len`, array `for … in`, constant lengths `[T; COUNT]`, and [functions with type/length parameters](generic-functions.en.md) are implemented, along with [explicit rounding and saturation](rounding-conversions.en.md). Add missing features in the order below, pairing a small design with examples and cross-route comparisons. Each stage determines its syntax and adoption.
 
 | Order | Missing feature | First contract and example |
 | --- | --- | --- |
-| 1 | Numeric conversion choices | `trunc` is implemented. Next define rounding and saturation separately. Compare boundaries, NaN, infinity, and negative zero |
-| 2 | Aggregate comparison/printing and extended branching | Comparison order and display formats for arrays/products/sums; evaluation order for match expressions/guards. Add needed operations separately |
-| 3 | Dynamic data, recursion, external I/O | Define ownership, lifetimes, allocation failure, call storage, resource limits, and effects first. Introduce slices, concatenation, and files in stages |
-| 4 | Module distribution | Re-exports, dependencies/versions, reproducible builds; extend explicit imports |
+| 1 | Aggregate comparison/printing and extended branching | Comparison order and display formats for arrays/products/sums; evaluation order for match expressions/guards. Add needed operations separately |
+| 2 | Dynamic data, recursion, external I/O | Define ownership, lifetimes, allocation failure, call storage, resource limits, and effects first. Introduce slices, concatenation, and files in stages |
+| 3 | Module distribution | Re-exports, dependencies/versions, reproducible builds; extend explicit imports |
 | Experiment | GPU numeric computation | Narrow the supported types, memory, synchronization, and diagnostics; compare independent element computations with the CPU |
 
 Existing foundations are [common failure records](runtime-diagnostics.en.md), [file origins](source-files.en.md), [modules](modules.en.md), [constants](constants.en.md), [functions](functions.en.md), [product updates](product-updates.en.md), [sums](sum-types.en.md), and [fixed arrays](fixed-arrays.en.md). The [mixed-argument](../../examples/function_arguments.ceru) and [array-length](../../examples/array_length.ceru) examples check value passing and evaluation order.

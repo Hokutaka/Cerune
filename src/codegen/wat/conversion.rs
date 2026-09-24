@@ -54,6 +54,9 @@ pub(super) fn emit_support(
     name: &str,
     output: &mut String,
 ) {
+    if conversion.mode.rounding().is_some() && !conversion.truncates() {
+        return super::rounding::emit(conversion, origin, name, output);
+    }
     if conversion.truncates() {
         return emit_truncation(conversion, origin, name, output);
     }

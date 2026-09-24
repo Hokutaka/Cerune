@@ -1,0 +1,9 @@
+// 同じ入力に対して、丸め方をソースで選びます。
+print("丸め方");
+for (value: f64 in [2.5, 3.5, -2.5, -3.5]) {
+    print(trunc<i64>(value));
+    print(floor<i64>(value));
+    print(ceil<i64>(value));
+    print(round<i64>(value));
+    print(round_ties_even<i64>(value));
+}
