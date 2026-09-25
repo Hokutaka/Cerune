@@ -3,6 +3,7 @@ pub mod ast;
 pub mod bytecode;
 pub mod codegen;
 pub mod diagnostic;
+pub mod embedding;
 mod generics;
 pub mod ir;
 mod iteration;
