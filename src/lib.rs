@@ -29,6 +29,27 @@ pub struct ExecutionError {
 }
 
 impl ExecutionError {
+    pub(crate) fn from_vm_error(
+        bytecode: &bytecode::BytecodeProgram,
+        vm_error: vm::VmError,
+    ) -> Self {
+        let instructions = vm_error
+            .function_id()
+            .and_then(|function_id| bytecode.functions.get(function_id))
+            .map_or(bytecode.instructions.as_slice(), |function| {
+                function.instructions.as_slice()
+            });
+
+        let origin = instructions
+            .get(vm_error.instruction_index())
+            .map(|instruction| instruction.origin);
+
+        Self {
+            vm_error: Box::new(vm_error),
+            origin,
+        }
+    }
+
     /// VMが報告した構造化エラーを返します。
     pub const fn vm_error(&self) -> &vm::VmError {
         &self.vm_error
@@ -46,6 +67,7 @@ impl ExecutionError {
         let InstructionOrigin::Source { node_id, span } = self.origin? else {
             return None;
         };
+
         Some(runtime::RuntimeFailure {
             code: runtime::FailureCode::from_vm(self.vm_error.kind())?,
             node_id,
@@ -202,22 +224,7 @@ pub fn run_vm(source: &str) -> Result<String, RunError> {
 
 /// ファイル識別子を持つIRからlowerしたbytecodeも、同じ出自付きエラーを返します。
 pub fn run_bytecode(bytecode: &bytecode::BytecodeProgram) -> Result<String, ExecutionError> {
-    vm::run(bytecode).map_err(|vm_error| {
-        let instructions = vm_error
-            .function_id()
-            .and_then(|function_id| bytecode.functions.get(function_id))
-            .map_or(bytecode.instructions.as_slice(), |function| {
-                function.instructions.as_slice()
-            });
-        let origin = instructions
-            .get(vm_error.instruction_index())
-            .map(|instruction| instruction.origin);
-
-        ExecutionError {
-            vm_error: Box::new(vm_error),
-            origin,
-        }
-    })
+    vm::run(bytecode).map_err(|vm_error| ExecutionError::from_vm_error(bytecode, vm_error))
 }
 
 #[cfg(test)]
