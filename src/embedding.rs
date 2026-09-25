@@ -84,7 +84,7 @@ pub fn resolve_function(
             });
         };
 
-        if &slot.ty != &Type::F64 {
+        if slot.ty != Type::F64 {
             return Err(FunctionResolutionError::UnsupportedParameterType {
                 name: name.to_owned(),
                 index,
