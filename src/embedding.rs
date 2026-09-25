@@ -374,4 +374,30 @@ mod tests {
         );
         assert!(error.origin().is_some());
     }
+
+    #[test]
+    fn reuses_resolved_function_for_repeated_invocation() {
+        let program = Arc::new(
+            compile_to_bytecode(
+                r#"
+            fn add(lhs: f64, rhs: f64) -> f64 {
+                return lhs + rhs;
+            }
+            "#,
+            )
+            .unwrap(),
+        );
+
+        let function = resolve_function(Arc::clone(&program), "add").unwrap();
+
+        let first =
+            invoke_function(&function, &[HostValue::F64(1.0), HostValue::F64(2.0)]).unwrap();
+        let second =
+            invoke_function(&function, &[HostValue::F64(10.5), HostValue::F64(20.25)]).unwrap();
+
+        assert_eq!(first.return_value(), Some(&HostValue::F64(3.0)));
+        assert_eq!(second.return_value(), Some(&HostValue::F64(30.75)));
+        assert_eq!(first.output(), "");
+        assert_eq!(second.output(), "");
+    }
 }
