@@ -104,6 +104,6 @@ WSL側にもRustが必要です。`.sh`のビルド先は既定で`target/unix`�
 - [型・用途別サンプル](examples/README.md) · [言語仕様](docs/reference/language.ja.md) · [CLI](docs/reference/cli.ja.md)
 - [設計文書](docs/README.md) · [今後の計画](docs/design/language-roadmap.ja.md) · [Primerからの移行](docs/design/naming.ja.md)
 - [Tint\*](https://github.com/Hokutaka/Tint-St.)：ソースと生成表現を並べて観察する環境。
-- [Whitebase](https://github.com/Hokutaka/Whitebase)：Rust・C++・Assemblyの演算を測定・比較する環境。Ceruneとの連携は未実装。
+- [Whitebase](https://github.com/Hokutaka/Whitebase)：Rust・C++・Assemblyの演算を測定・比較する環境。
 
 [MIT License](LICENSE)
