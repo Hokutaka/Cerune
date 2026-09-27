@@ -12,6 +12,7 @@ Cerune documentation is divided into `design`, which records design decisions, a
 | Compiler architecture / コンパイラ構成 | [日本語](design/architecture.ja.md) | [English](design/architecture.en.md) |
 | Observability contract / 可観測性の契約 | [日本語](design/observability.ja.md) | [English](design/observability.en.md) |
 | Runtime diagnostics / 実行時停止の共通記録 | [日本語](design/runtime-diagnostics.ja.md) | [English](design/runtime-diagnostics.en.md) |
+| VM embedding / VMの埋め込み実行 | [日本語](design/vm-embedding.ja.md) | [English](design/vm-embedding.en.md) |
 | Output routes and targets / 出力経路とターゲット | [日本語](design/targets.ja.md) | [English](design/targets.en.md) |
 | Language capabilities and roadmap / 言語機能と今後の順序 | [日本語](design/language-roadmap.ja.md) | [English](design/language-roadmap.en.md) |
 | Rounding and saturation / 丸め方と飽和 | [日本語](design/rounding-conversions.ja.md) | [English](design/rounding-conversions.en.md) |

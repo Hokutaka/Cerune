@@ -237,8 +237,33 @@ pub fn run(program: &BytecodeProgram) -> Result<String, VmError> {
 
 /// 定数式専用の引数なしフレーム。呼出し側が副作用を排除したIRだけを渡します。
 pub(crate) fn evaluate_constant(program: &BytecodeProgram) -> Result<Value, VmError> {
-    execute_frame(program, Frame::Function(0), Vec::new(), &mut String::new())
-        .map(|value| value.expect("constant evaluator returns a value"))
+    execute_function(program, 0, Vec::new())
+        .map(|(value, _output)| value.expect("constant evaluator returns a value"))
+}
+
+/// コンパイル済みbytecode内の関数を、指定した引数で直接実行します。
+///
+/// 正常終了時は戻り値と実行中の出力を返し、失敗時はそれまでの出力を
+/// `VmError` に保持します。
+pub(crate) fn execute_function(
+    program: &BytecodeProgram,
+    function_id: usize,
+    arguments: Vec<Value>,
+) -> Result<(Option<Value>, String), VmError> {
+    let mut output = String::new();
+
+    match execute_frame(
+        program,
+        Frame::Function(function_id),
+        arguments,
+        &mut output,
+    ) {
+        Ok(value) => Ok((value, output)),
+        Err(mut error) => {
+            error.output = output.into_boxed_str();
+            Err(error)
+        }
+    }
 }
 
 fn execute_frame(
@@ -1361,6 +1386,7 @@ fn format_value(value: Value, expected: Type) -> VmResult<String> {
 
 #[cfg(test)]
 mod tests {
+    use super::{Value, execute_function};
     use crate::types::IntegerType;
     use crate::{
         bytecode::{self, BytecodeProgram, Instruction, InstructionKind, Slot, Type},
@@ -1655,5 +1681,37 @@ mod tests {
         .unwrap();
 
         assert_eq!(run(&program).unwrap(), "2\n");
+    }
+
+    #[test]
+    fn executes_function_directly() {
+        let program = crate::compile_to_bytecode(
+            r#"
+            fn add(lhs: f64, rhs: f64) -> f64 {
+                return lhs + rhs;
+            }
+            "#,
+        )
+        .unwrap();
+
+        let function_id = program
+            .functions
+            .iter()
+            .position(|function| function.name == "add")
+            .unwrap();
+
+        let (value, output) = execute_function(
+            &program,
+            function_id,
+            vec![Value::F64(1.25), Value::F64(2.5)],
+        )
+        .unwrap();
+
+        match value {
+            Some(Value::F64(value)) => assert_eq!(value, 3.75),
+            other => panic!("expected f64 return value, found {other:?}"),
+        }
+
+        assert_eq!(output, "");
     }
 }
