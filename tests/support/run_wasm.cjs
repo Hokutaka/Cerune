@@ -13,6 +13,10 @@ const imports = { cerune: {
     if (!Number.isInteger(value) || value < 0 || value > 255) throw new Error('invalid output byte');
     output.push(Buffer.from([value]));
   },
+  write_i64: value => output.push(Buffer.from(value.toString())),
+  write_u64: value => output.push(Buffer.from(BigInt.asUintN(64, value).toString())),
+  write_f32: value => { if (![1.5, 2, 2.5, 4].includes(value)) throw new Error('unsupported test float'); output.push(Buffer.from(value.toString())); },
+  write_f64: value => { if (![1.5, 2, 2.5, 4].includes(value)) throw new Error('unsupported test float'); output.push(Buffer.from(value.toString())); },
   print_bool: value => writeText(value ? 'true' : 'false'),
   print_i64: value => writeText(value.toString()),
   print_u64: value => writeText(BigInt.asUintN(64, value).toString()),

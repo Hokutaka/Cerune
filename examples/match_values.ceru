@@ -1,0 +1,26 @@
+enum Lookup { Found { text: string }, Missing, }
+fn caption(value: Lookup) -> string {
+    return match value {
+        Lookup::Found { text: text } if byte_len(text) > 0 => text,
+        Lookup::Found { text: text } => "空欄",
+        Lookup::Missing {} => "未登録",
+    };
+}
+fn select<T>(value: Lookup, yes: T, no: T) -> T {
+    return match value {
+        Lookup::Found { text: _ } => yes,
+        Lookup::Missing {} => no,
+    };
+}
+print(caption(Lookup::Found { text: "空" }));
+print(caption(Lookup::Found { text: "" }));
+print(caption(Lookup::Missing {}));
+print(select::<[i64; 2]>(Lookup::Missing {}, [1, 2], [3, 4]));
+enum Count { Some { value: i64 }, None, }
+const COUNT: i64 = match (Count::Some { value: 2 }) {
+    Count::Some { value: n } if n > 0 => n,
+    Count::Some { value: _ } => 1,
+    Count::None {} => 1,
+};
+values: [u64; COUNT] = [0u64, 18446744073709551615u64];
+print(values);

@@ -102,6 +102,9 @@ pub fn emit_with_origins(module: &Module, annotate_origins: bool) -> String {
         super::string::emit_support(module, &mut output);
     }
 
+    if module.uses_write {
+        output.push_str(&crate::codegen::display::llvm());
+    }
     for ty in &array_types {
         emit_array_get(ty, module, &mut output);
         output.push('\n');
@@ -224,6 +227,15 @@ fn emit_instruction(
 ) {
     let failure = super::failure::argument(instruction, origin);
     match instruction {
+        Instruction::Write { kind, value } => {
+            writeln!(
+                output,
+                "  call void @cerune.write.{kind}({} {})",
+                crate::codegen::display::llvm_type(kind),
+                operand(*value)
+            )
+            .unwrap();
+        }
         Instruction::PrintString { value } => {
             writeln!(
                 output,

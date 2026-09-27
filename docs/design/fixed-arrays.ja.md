@@ -132,6 +132,6 @@ scalarの大きさが4 byteでも、QBE、WebAssembly、Windows x86-64では現�
 - 要素型は`bool`、各整数型（`u64`を含む）、`f32`、`f64`、`string`、名前付きproduct type、直和型または固定長配列
 - 長さは0より大きい整数
 - 空の配列リテラルは未対応
-- 配列全体の比較と`print`は未対応
+- 配列全体の`==`・`!=`と`print`に対応。[順序・表示形式](aggregate-values.ja.md)を共通に定義
 
 未対応の形は、backendごとに違う動作へ落とさず、フロントエンドで診断します。

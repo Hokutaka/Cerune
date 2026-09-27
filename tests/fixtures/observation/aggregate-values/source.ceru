@@ -1,0 +1,10 @@
+enum Item { Value { n: i64 }, Empty, }
+left: [i64; 2] = [1, 2];
+print(left == [1, 3]);
+print(Item::Value { n: 7 });
+result: i64 = match (Item::Value { n: 7 }) {
+    Item::Value { n: n } if n > 0 => n,
+    Item::Value { n: _ } => 0,
+    Item::Empty {} => -1,
+};
+print(result);

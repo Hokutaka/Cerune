@@ -7,6 +7,7 @@ use super::ir::{
 
 pub fn lower(program: &cerune_ir::Program) -> Module {
     let mut module = Module {
+        uses_write: crate::codegen::display::uses_write(program),
         uses_strings: crate::codegen::support::first_string_span(program).is_some(),
         temporaries: Vec::new(),
         array_types: collect_array_types(program),
@@ -83,6 +84,7 @@ fn collect_array_assignment_types(program: &cerune_ir::Program) -> Vec<Type> {
                     visit(body, result);
                 }
                 cerune_ir::StatementKind::Binding { .. }
+                | cerune_ir::StatementKind::Write { .. }
                 | cerune_ir::StatementKind::Print { .. }
                 | cerune_ir::StatementKind::Call { .. }
                 | cerune_ir::StatementKind::Return { .. }
@@ -194,6 +196,10 @@ fn lower_statement(statement: &cerune_ir::Statement) -> Statement {
             value: lower_expr(value),
         },
 
+        cerune_ir::StatementKind::Write { value, quoted } => Statement::Write {
+            kind: crate::codegen::display::kind(&value.ty, *quoted),
+            value: lower_expr(value),
+        },
         cerune_ir::StatementKind::Print { value } => Statement::Print {
             format: print_format(&value.ty),
             value: lower_expr(value),
@@ -299,6 +305,9 @@ fn lower_expr_unchecked(expr: &cerune_ir::Expr) -> Expr {
     }
 
     let kind = match &expr.kind {
+        cerune_ir::ExprKind::Let { .. } | cerune_ir::ExprKind::Conditional { .. } => {
+            unreachable!("match expressions are lowered before code generation")
+        }
         cerune_ir::ExprKind::Constant { value, .. } => lower_expr(value).kind,
         cerune_ir::ExprKind::ArrayLength { value } => {
             let cerune_ir::Type::Array { length, .. } = &value.ty else {
@@ -483,6 +492,9 @@ fn collect_array_types(program: &cerune_ir::Program) -> Vec<Type> {
     fn visit_expr(expr: &cerune_ir::Expr, types: &mut Vec<Type>) {
         add(&expr.ty, types);
         match &expr.kind {
+            cerune_ir::ExprKind::Let { .. } | cerune_ir::ExprKind::Conditional { .. } => {
+                unreachable!("match expressions are lowered before code generation")
+            }
             cerune_ir::ExprKind::Constant { value, .. } => visit_expr(value, types),
             cerune_ir::ExprKind::ArrayLength { value }
             | cerune_ir::ExprKind::StringByteLength { value } => visit_expr(value, types),
@@ -544,7 +556,8 @@ fn collect_array_types(program: &cerune_ir::Program) -> Vec<Type> {
                 }
                 visit_expr(value, types);
             }
-            cerune_ir::StatementKind::Print { value }
+            cerune_ir::StatementKind::Write { value, .. }
+            | cerune_ir::StatementKind::Print { value }
             | cerune_ir::StatementKind::Return { value: Some(value) } => visit_expr(value, types),
             cerune_ir::StatementKind::Call { arguments, .. } => {
                 for argument in arguments {

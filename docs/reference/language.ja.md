@@ -23,7 +23,9 @@ variant     := IDENT ("{" payload_fields? "}")?
 payload_fields := (IDENT ":" type_ref) ("," IDENT ":" type_ref)* ","?
 variant_path := IDENT "::" IDENT | IDENT "::" IDENT "::" IDENT
 match_statement := "match" expression "{" match_arm ("," match_arm)* ","? "}"
-match_arm   := variant_path "{" pattern_fields? "}" "=>" block
+match_arm   := variant_path "{" pattern_fields? "}" ("if" expression)? "=>" block
+match_expression := "match" expression "{" match_value_arm ("," match_value_arm)* ","? "}"
+match_value_arm := variant_path "{" pattern_fields? "}" ("if" expression)? "=>" expression
 pattern_fields := (IDENT ":" IDENT) ("," IDENT ":" IDENT)* ","?
 
 constant_definition := "const" IDENT ":" type_ref "=" expression ";"
@@ -131,7 +133,8 @@ unary       := ("-" | "!" | "~") unary
 
 postfix     := primary (("." IDENT) | ("[" expression "]"))*
 
-primary     := "true"
+primary     := match_expression
+             | "true"
              | ("i8" | "u8" | "i16" | "u16" | "i32" | "u32" | "i64" | "u64" | "f32" | "f64") "(" expression ","? ")"
              | "convert" "<" type_ref ">" "(" expression ","? ")"
              | "false"
@@ -259,7 +262,7 @@ if (Flags { enabled: true, }).enabled {
 }
 ```
 
-空のproduct type、空の構築式、無限サイズになる値による再帰型、積値どうしの比較、積値そのものの`print`は現在サポートしません。
+空のproduct type、空の構築式、無限サイズになる値による再帰型は現在サポートしません。積値全体の等値比較と`print`は[複合値の規則](../design/aggregate-values.ja.md)に従います。
 
 詳細な設計と各backendの表現は[名前付きproduct typeの設計](../design/product-types.ja.md)で説明します。
 
@@ -402,9 +405,19 @@ match value {
 }
 ```
 
-`match`は文です。対象を一度だけ評価してコピーし、選んだ分岐だけ実行します。全選択肢を各一回列挙し、各フィールドは`field: binding`で不変なローカル値として取り出すか`field: _`で捨てます。構築式を対象へ直接書くときは括弧で囲みます。構築のフィールドはソース順に評価します。コピー後の再代入は他の値に影響しません。
+`match`は文・式に使えます。対象を一度だけ評価してコピーし、ソース順に分岐を調べます。パターンの後に`if 条件`を付けると、タグが一致した場合だけ`bool`の条件を評価し、偽なら次へ進みます。各選択肢にガードなし分岐が必要で、その後に同じ選択肢の分岐は書けません。選んだ本文・結果だけを評価します。各フィールドは`field: binding`で不変なローカル値として取り出すか`field: _`で捨てます。構築式を対象へ直接書くときは括弧で囲みます。構築のフィールドはソース順に評価します。コピー後の再代入は他の値に影響しません。
 
-`enum`・`match`は予約語です。`pub enum`は全選択肢とフィールドを公開し、import側では`alias::Enum::Variant`を使います。enumのフィールドには既定値を書けません。再帰的な値型、全体の表示・等値比較、直接フィールド参照、構造体更新式、ガード、全体ワイルドカード、入れ子パターン、match式は未対応です。`return`・`break`・`continue`は通常の関数・ループへ作用します。実行時停止の捕捉は行いません。[設計と表現](../design/sum-types.ja.md)、[example](../../examples/sum_lookup.ceru)を参照してください。
+`enum`・`match`は予約語です。`pub enum`は全選択肢とフィールドを公開し、import側では`alias::Enum::Variant`を使います。enumのフィールドには既定値を書けません。再帰的な値型、直接フィールド参照、構造体更新式、全体ワイルドカード、入れ子パターンは未対応です。全体の表示・等値比較は[複合値の規則](../design/aggregate-values.ja.md)に従います。`return`・`break`・`continue`は通常の関数・ループへ作用します。実行時停止の捕捉は行いません。[設計と表現](../design/sum-types.ja.md)、[example](../../examples/sum_lookup.ceru)を参照してください。
+
+文の分岐は`=> { 文... }`、式の分岐は`=> 式`です。全結果の型を揃え、期待型があれば各分岐へ伝えます。期待型がなければ最初の結果で型を決めます。暗黙の変換やブロック式は追加しません。束縛はガードとその分岐だけで有効です。
+
+```cerune
+label: string = match value {
+    Lookup::Found { text: text } if byte_len(text) > 0 => text,
+    Lookup::Found { text: _ } => "空欄",
+    Lookup::Missing {} => "未登録",
+};
+```
 
 ## コンパイル時定数
 
@@ -643,7 +656,7 @@ enabled: bool = true;
 disabled: bool = !enabled;
 ```
 
-`==`と`!=`は、同じ型の数値・真偽値・文字列どうしを比較できます。配列と構造体の値全体の比較は未対応です。数値型では、さらに`<`、`<=`、`>`、`>=`を使用できます。比較結果の型は常に`bool`です。
+`==`と`!=`は、同じ型の数値・真偽値・文字列・配列・構造体・直和型を比較できます。左右の式を左から一度ずつ評価し、複合値は添字順・フィールド宣言順で再帰的に調べます。直和型はタグと選択中のペイロードだけを比較し、最初の不一致で比較を終えます。数値型では、さらに`<`、`<=`、`>`、`>=`を使用できます。比較結果の型は常に`bool`です。
 
 ```cerune
 same: bool = enabled == true;
@@ -908,7 +921,7 @@ C・LLVM・QBE・WAT・Windows x86-64では整数を64ビットで保持し、�
 
 マイナスのゼロは`-0`と表示します。符号を隠して`0`に書き換えることはしません。
 
-`print(expression);`は全経路で真偽値・数値・`string`を受け付けます。構造体はフィールド、固定長配列は要素を指定し、直和型は`match`で値を取り出して出力します。
+`print(expression);`は全経路で真偽値・数値・`string`・固定長配列・構造体・直和型を受け付けます。複合値は`[1, 2]`・`{x: 1}`・`Found{text: "空"}`の形で表示し、入れ子の文字列を引用・エスケープします。引数を完全に評価してから表示を開始し、最後にLFを一つ付けます。[表示形式と生成手順](../design/aggregate-values.ja.md)を参照してください。
 
 Ceruneは、観測対象となる浮動小数点数の挙動が見えるだけの精度を保って出力します。
 
@@ -928,6 +941,8 @@ f64    有効数字17桁
 表示は値を変更しません。`1.0 + 1e-20 == 1.0`が`true`になるのは計算時の丸めであり、表示が小さな値を消しているわけではありません。[小さな数値の例](../../examples/small_values.ceru)で確認できます。
 
 VMはこの規則で整形し、C・LLVM・QBE・Windows x86-64の生成コードは`printf`の`%.9g`・`%.17g`を使います。WATは数値をそのままホストの`cerune.print_f32`・`cerune.print_f64`へ渡すため、ホスト側にも同じ表示規則が必要です。
+
+複合値表示では、WATの`cerune.write_i64`・`write_u64`・`write_f32`・`write_f64`をホストが同じ数値規則・改行なしで実装します。文字列と区切り記号は`write_byte`で渡し、内部メモリは公開しません。
 
 VMの無限大は`inf`・`-inf`、NaNは`NaN`と表示します。生成コードでの特殊値の綴りは対象の実行環境に依存します。NaNの内部情報は`print`の十進表示では区別できません。
 

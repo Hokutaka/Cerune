@@ -91,6 +91,22 @@ pub fn emit(program: &Program) -> String {
     }
 
     for (index, function) in program.function_definitions.iter().enumerate() {
+        if let Some(kind) = function.lowering {
+            let name = match kind {
+                super::LoweringKind::AggregateEquality => "aggregate-equality",
+                super::LoweringKind::AggregateDisplay => "aggregate-display",
+                super::LoweringKind::MatchBinding => "match-binding",
+                super::LoweringKind::MatchSelect => "match-selection",
+            };
+            writeln!(
+                output,
+                "; lower {name} [generated source={} bytes={}..{}]",
+                function.span.source_id().index(),
+                function.span.start(),
+                function.span.end()
+            )
+            .unwrap();
+        }
         if let Some(origin) = &function.generic_origin {
             writeln!(
                 output,
@@ -195,6 +211,16 @@ fn emit_statement(statement: &Statement, indent: usize, program: &Program, outpu
             emit_expr(value, program, output);
             writeln!(output).unwrap();
         }
+        StatementKind::Write { value, quoted } => {
+            write!(
+                output,
+                "{prefix}{node}write{} ",
+                if *quoted { ".quoted" } else { "" }
+            )
+            .unwrap();
+            emit_expr(value, program, output);
+            writeln!(output).unwrap();
+        }
         StatementKind::Print { value } => {
             write!(
                 output,
@@ -295,6 +321,26 @@ fn emit_expr(expr: &Expr, program: &Program, output: &mut String) {
     write!(output, "#{} ", expr.id.0).unwrap();
 
     match &expr.kind {
+        ExprKind::Let {
+            name, value, body, ..
+        } => {
+            write!(output, "match-bind {name} = ").unwrap();
+            emit_expr(value, program, output);
+            output.push_str(" in ");
+            emit_expr(body, program, output);
+        }
+        ExprKind::Conditional {
+            condition,
+            then_value,
+            else_value,
+        } => {
+            output.push_str("match-select ");
+            emit_expr(condition, program, output);
+            output.push_str(" then ");
+            emit_expr(then_value, program, output);
+            output.push_str(" else ");
+            emit_expr(else_value, program, output);
+        }
         ExprKind::Constant { id, value } => {
             write!(
                 output,

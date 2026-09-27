@@ -40,6 +40,7 @@ pub fn lower(program: &cerune_ir::Program) -> Module {
     lowerer.lower_statements(&program.statements);
 
     Module {
+        uses_write: crate::codegen::display::uses_write(program),
         target: None,
         uses_strings: crate::codegen::support::first_string_span(program).is_some(),
         functions,
@@ -242,6 +243,17 @@ impl Lowerer<'_> {
                 false
             }
 
+            cerune_ir::StatementKind::Write { value, quoted } => {
+                let kind = crate::codegen::display::kind(&value.ty, *quoted);
+                let Value::Scalar { operand, .. } = self.lower_expr(value) else {
+                    unreachable!()
+                };
+                self.instructions.push(Instruction::Write {
+                    kind,
+                    value: operand,
+                });
+                false
+            }
             cerune_ir::StatementKind::Print { value } => {
                 let Value::Scalar { ty, operand } = self.lower_expr(value) else {
                     unreachable!("semantic analysis rejects aggregate printing")
@@ -492,6 +504,9 @@ impl Lowerer<'_> {
         }
 
         match &expr.kind {
+            cerune_ir::ExprKind::Let { .. } | cerune_ir::ExprKind::Conditional { .. } => {
+                unreachable!("match expressions are lowered before code generation")
+            }
             cerune_ir::ExprKind::Constant { value, .. } => self.lower_expr(value),
             cerune_ir::ExprKind::ArrayLength { value } => {
                 let cerune_ir::Type::Array { length, .. } = &value.ty else {
@@ -1312,6 +1327,7 @@ fn collect_slots(
                 collect_slots(body, program, slots, slot_map, name_counts);
             }
             cerune_ir::StatementKind::Assignment { .. }
+            | cerune_ir::StatementKind::Write { .. }
             | cerune_ir::StatementKind::Print { .. }
             | cerune_ir::StatementKind::Call { .. }
             | cerune_ir::StatementKind::Return { .. }

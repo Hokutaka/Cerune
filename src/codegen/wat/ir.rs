@@ -12,6 +12,7 @@ pub enum Type {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Module {
+    pub uses_write: bool,
     pub uses_strings: bool,
     pub strings: Vec<(usize, String)>,
     pub memory_pages: u32,
@@ -45,6 +46,9 @@ pub enum LoopKind {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Instruction {
+    Write {
+        kind: &'static str,
+    },
     /// 検査の呼び出し先をソース位置ごとに静的に生成します。
     Located {
         origin: Origin,

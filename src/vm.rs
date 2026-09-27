@@ -909,6 +909,30 @@ fn execute_frame_inner(
                 stack.push(Value::Bool(!value));
             }
 
+            InstructionKind::Write { ty, quoted } => {
+                let value = at_instruction(pop_value(&mut stack), pc)?;
+                let text = at_instruction(format_value(value, ty.clone()), pc)?;
+                if *quoted {
+                    output.push('"');
+                    for ch in text.chars() {
+                        match ch {
+                            '"' => output.push_str("\\\""),
+                            '\\' => output.push_str("\\\\"),
+                            '\0' => output.push_str("\\0"),
+                            '\n' => output.push_str("\\n"),
+                            '\r' => output.push_str("\\r"),
+                            '\t' => output.push_str("\\t"),
+                            ch if ch < ' ' || ch == '\x7f' => {
+                                output.push_str(&format!("\\u{{{:02x}}}", ch as u32))
+                            }
+                            _ => output.push(ch),
+                        }
+                    }
+                    output.push('"');
+                } else {
+                    output.push_str(&text);
+                }
+            }
             InstructionKind::Print(ty) => {
                 let value = at_instruction(pop_value(&mut stack), pc)?;
 

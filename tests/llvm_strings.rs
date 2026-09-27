@@ -431,3 +431,11 @@ fn generic_functions_preserve_values_across_optimized_c_and_llvm() {
         native.matches(source, expected);
     }
 }
+
+#[test]
+fn aggregate_values_match_optimized_c_and_llvm() {
+    let Some(native) = Native::new() else { return };
+    for &(source, expected) in string_cases::aggregate_cases::CASES {
+        native.matches(source, expected);
+    }
+}

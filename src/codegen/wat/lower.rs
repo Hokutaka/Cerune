@@ -45,6 +45,7 @@ pub fn lower(program: &cerune_ir::Program) -> Module {
     context.lower_statements(&program.statements, &mut instructions);
 
     Module {
+        uses_write: crate::codegen::display::uses_write(program),
         uses_strings: crate::codegen::support::first_string_span(program).is_some(),
         memory_pages: if context.next_address == 0 {
             0
@@ -350,6 +351,11 @@ impl LoweringContext<'_> {
                 }
             }
 
+            cerune_ir::StatementKind::Write { value, quoted } => {
+                let kind = crate::codegen::display::kind(&value.ty, *quoted);
+                self.lower_expr(value, instructions);
+                instructions.push(Instruction::Write { kind });
+            }
             cerune_ir::StatementKind::Print { value } => {
                 let Value::Scalar(ty) = self.lower_expr(value, instructions) else {
                     unreachable!("semantic analysis rejects aggregate printing")
@@ -658,6 +664,9 @@ impl LoweringContext<'_> {
             return Value::Scalar(Type::I64);
         }
         match &expr.kind {
+            cerune_ir::ExprKind::Let { .. } | cerune_ir::ExprKind::Conditional { .. } => {
+                unreachable!("match expressions are lowered before code generation")
+            }
             cerune_ir::ExprKind::Constant { value, .. } => self.lower_expr(value, instructions),
             cerune_ir::ExprKind::ArrayLength { value } => {
                 let cerune_ir::Type::Array { length, .. } = &value.ty else {
@@ -1399,6 +1408,7 @@ fn collect_locations(
                 collect_locations(body, program, locals, locations, name_counts, next_address);
             }
             cerune_ir::StatementKind::Assignment { .. }
+            | cerune_ir::StatementKind::Write { .. }
             | cerune_ir::StatementKind::Print { .. }
             | cerune_ir::StatementKind::Call { .. }
             | cerune_ir::StatementKind::Return { .. }

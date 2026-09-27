@@ -15,6 +15,9 @@ pub fn emit(module: &Module) -> String {
         )
         .unwrap();
     }
+    if module.uses_write {
+        output.push_str(&crate::codegen::display::qbe());
+    }
     let i64_operations = i64_operations(module);
     super::failure::emit(module, &mut output);
     if module
@@ -308,6 +311,15 @@ fn emit_instruction(
     output: &mut String,
 ) {
     match instruction {
+        Instruction::Write { kind, value } => {
+            writeln!(
+                output,
+                "  call $cerune_write_{kind}({} {})",
+                crate::codegen::display::qbe_type(kind),
+                operand(value, slots)
+            )
+            .unwrap();
+        }
         Instruction::PrintString { value } => {
             writeln!(
                 output,

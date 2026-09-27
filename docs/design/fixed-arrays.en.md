@@ -132,6 +132,6 @@ Bounds checks stop execution before an invalid memory access. Arrays do not, how
 - Element types are `bool`, any integer kind (including `u64`), `f32`, `f64`, `string`, named product types, sum types, or fixed arrays.
 - Length is a positive integer.
 - Empty array literals are unavailable.
-- Whole-array comparison and `print` are unavailable.
+- Whole-array `==` / `!=` and `print` follow the shared [ordering and display rules](aggregate-values.en.md).
 
 Unsupported forms are diagnosed in the frontend instead of acquiring different behavior in different backends.

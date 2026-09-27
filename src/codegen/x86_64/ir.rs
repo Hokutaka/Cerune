@@ -28,6 +28,7 @@ pub enum CompareOp {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Module {
+    pub uses_write: bool,
     pub origins: Vec<Origin>,
     pub target: super::Target,
     pub uses_strings: bool,
@@ -84,6 +85,9 @@ pub enum FloatConstant {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Instruction {
+    Write {
+        kind: &'static str,
+    },
     CallPrintSysV(Type),
     CallPrintU64,
     CompareU64(CompareOp),

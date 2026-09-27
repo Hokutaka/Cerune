@@ -1,0 +1,159 @@
+; Cerune bytecode v0.1
+
+.type 0 Item
+.field 0.0 $tag i64
+.field 0.1 $Value$n i64
+
+.function 0 $equal0(0:$left:[i64; 2], 1:$right:[i64; 2]) -> bool
+.slot 0 $left [i64; 2]
+.slot 1 $right [i64; 2]
+.slot 2 mut $index i64
+0000  push.i64 0
+0001  store 2       ; $index
+0002  load 2        ; $index
+0003  push.i64 2
+0004  lt.i64
+0005  jump-if-false 0022
+0006  load 0        ; $left
+0007  load 2        ; $index
+0008  array.get i64 2
+0009  load 1        ; $right
+0010  load 2        ; $index
+0011  array.get i64 2
+0012  eq.i64
+0013  not.bool
+0014  jump-if-false 0017
+0015  push.bool false
+0016  return.value
+0017  load 2        ; $index
+0018  push.i64 1
+0019  add.i64
+0020  assign 2      ; $index
+0021  jump 0002
+0022  push.bool true
+0023  return.value
+.end
+
+.function 1 $match_bind1(0:$capture1:%Item@0) -> bool
+.slot 0 $capture1 %Item@0
+.slot 1 n i64
+0000  load 0        ; $capture1
+0001  field.get %Item@0.%$Value$n@1
+0002  store 1       ; n
+0003  load 1        ; n
+0004  push.i64 0
+0005  gt.i64
+0006  return.value
+.end
+
+.function 2 $match_bind2(0:$capture1:%Item@0) -> i64
+.slot 0 $capture1 %Item@0
+.slot 1 n i64
+0000  load 0        ; $capture1
+0001  field.get %Item@0.%$Value$n@1
+0002  store 1       ; n
+0003  load 1        ; n
+0004  return.value
+.end
+
+.function 3 $match_select3(0:$capture1:%Item@0) -> i64
+.slot 0 $capture1 %Item@0
+0000  load 0        ; $capture1
+0001  field.get %Item@0.%$tag@0
+0002  push.i64 0
+0003  eq.i64
+0004  jump-if-false 0007
+0005  push.i64 0
+0006  return.value
+0007  push.i64 1
+0008  neg.i64
+0009  return.value
+.end
+
+.function 4 $match_select4(0:$capture1:%Item@0) -> i64
+.slot 0 $capture1 %Item@0
+0000  load 0        ; $capture1
+0001  field.get %Item@0.%$tag@0
+0002  push.i64 0
+0003  eq.i64
+0004  jump-if-false 0008
+0005  load 0        ; $capture1
+0006  call 1 1  ; $match_bind1
+0007  jump 0009
+0008  push.bool false
+0009  jump-if-false 0013
+0010  load 0        ; $capture1
+0011  call 2 1  ; $match_bind2
+0012  return.value
+0013  load 0        ; $capture1
+0014  call 3 1  ; $match_select3
+0015  return.value
+.end
+
+.function 5 $match_bind5() -> i64
+.slot 0 $match0 %Item@0
+0000  push.i64 0
+0001  push.i64 7
+0002  construct %Item@0 [%$tag@0:generated, %$Value$n@1:explicit]
+0003  store 0       ; $match0
+0004  load 0        ; $match0
+0005  call 4 1  ; $match_select4
+0006  return.value
+.end
+
+.function 6 $display6(0:$value:%Item@0) -> void
+.slot 0 $value %Item@0
+0000  load 0        ; $value
+0001  field.get %Item@0.%$tag@0
+0002  push.i64 0
+0003  eq.i64
+0004  jump-if-false 0016
+0005  push.string "Value"
+0006  write string
+0007  push.string "{"
+0008  write string
+0009  push.string "n: "
+0010  write string
+0011  load 0        ; $value
+0012  field.get %Item@0.%$Value$n@1
+0013  write i64
+0014  push.string "}"
+0015  write string
+0016  load 0        ; $value
+0017  field.get %Item@0.%$tag@0
+0018  push.i64 1
+0019  eq.i64
+0020  jump-if-false 0027
+0021  push.string "Empty"
+0022  write string
+0023  push.string "{"
+0024  write string
+0025  push.string "}"
+0026  write string
+0027  push.string ""
+0028  print.string
+0029  return
+.end
+
+.slot 0 left [i64; 2]
+.slot 1 result i64
+
+0000  push.i64 1
+0001  push.i64 2
+0002  array.new i64 2
+0003  store 0       ; left
+0004  load 0        ; left
+0005  push.i64 1
+0006  push.i64 3
+0007  array.new i64 2
+0008  call 0 2  ; $equal0
+0009  print.bool
+0010  push.i64 0
+0011  push.i64 7
+0012  construct %Item@0 [%$tag@0:generated, %$Value$n@1:explicit]
+0013  call 6 1  ; $display6
+0014  call 5 0  ; $match_bind5
+0015  store 1       ; result
+0016  load 1        ; result
+0017  print.i64
+0018  halt

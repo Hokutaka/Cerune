@@ -300,6 +300,12 @@ impl Resolver<'_> {
                             self.binding(&field.binding, field.binding_span)?;
                         }
                     }
+                    if let Some(guard) = &mut arm.guard {
+                        self.expr(guard)?;
+                    }
+                    if let Some(result) = &mut arm.result {
+                        self.expr(result)?;
+                    }
                     self.statements(&mut arm.body)?;
                 }
             }
@@ -383,6 +389,25 @@ impl Resolver<'_> {
 
     fn expr(&self, expr: &mut Expr) -> Result<(), Diagnostic> {
         match &mut expr.kind {
+            ExprKind::Match { value, arms } => {
+                let mut statement = Stmt {
+                    kind: StmtKind::Match {
+                        value: *value.clone(),
+                        arms: arms.clone(),
+                    },
+                    span: expr.span,
+                };
+                self.statement(&mut statement)?;
+                let StmtKind::Match {
+                    value: new_value,
+                    arms: new_arms,
+                } = statement.kind
+                else {
+                    unreachable!()
+                };
+                **value = new_value;
+                *arms = new_arms;
+            }
             ExprKind::GenericCall(call) => {
                 call.name = self.name(&call.name, call.name_span, Kind::Function, false)?;
                 let parameters = &self

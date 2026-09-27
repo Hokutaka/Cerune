@@ -17,6 +17,22 @@ impl Builder<'_> {
                     ));
                 }
                 match &expr.kind {
+                    ast::ExprKind::Let { value, body, .. } => {
+                        pending.push(body);
+                        pending.push(value);
+                    }
+                    ast::ExprKind::Conditional {
+                        condition,
+                        then_value,
+                        else_value,
+                    } => {
+                        pending.push(else_value);
+                        pending.push(then_value);
+                        pending.push(condition);
+                    }
+                    ast::ExprKind::Match { .. } => {
+                        unreachable!("match is expanded before constants")
+                    }
                     ast::ExprKind::GenericCall(_) => {
                         unreachable!("generic calls are lowered before IR")
                     }
@@ -171,10 +187,11 @@ impl Builder<'_> {
                         .collect(),
                 })
                 .collect();
-            let program = Program {
+            let mut program = Program {
                 constant_definitions: Vec::new(),
                 type_definitions: types,
                 function_definitions: vec![FunctionDefinition {
+                    lowering: None,
                     generic_origin: None,
                     id: FunctionId(0),
                     name: "constant_evaluation".into(),
@@ -191,9 +208,12 @@ impl Builder<'_> {
                 }],
                 statements: Vec::new(),
             };
+            super::super::aggregates::lower(&mut program);
             let bytecode = crate::bytecode::lower(&program)?;
             let evaluated = crate::vm::evaluate_constant(&bytecode).map_err(|error| {
-                let instruction = &bytecode.functions[0].instructions[error.instruction_index()];
+                let function_id = error.function_id().unwrap_or(0);
+                let instruction =
+                    &bytecode.functions[function_id].instructions[error.instruction_index()];
                 let span = match instruction.origin {
                     crate::bytecode::InstructionOrigin::Source { span, .. } => span,
                     _ => source.value.span,

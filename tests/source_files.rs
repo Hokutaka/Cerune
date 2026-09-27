@@ -527,6 +527,11 @@ fn module_cli_artifacts_execute_with_the_same_values_order_and_failure_origins()
             None,
         ),
         ("sum_lookup.ceru", "空\0\r\n\n未登録\n直接\n", None),
+        (
+            "aggregate_match.ceru",
+            "[Found{text: \"空\\0\\r\\n\"}, Missing{}]\ntrue\n空欄\n未登録\n",
+            None,
+        ),
         ("constants.ceru", "129\n12\n10\n99\n設定\0\r\n\n", None),
         ("product_update.ceru", "計算\n42\n5\n観測\0\r\n\n", None),
         (

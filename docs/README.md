@@ -20,6 +20,7 @@ Cerune documentation is divided into `design`, which records design decisions, a
 | Generic functions / 型・長さを引数にする関数 | [日本語](design/generic-functions.ja.md) | [English](design/generic-functions.en.md) |
 | Functions / 関数 | [日本語](design/functions.ja.md) | [English](design/functions.en.md) |
 | Named product types / 名前付きproduct type | [日本語](design/product-types.ja.md) | [English](design/product-types.en.md) |
+| Aggregate values and match expressions / 複合値とmatch式 | [日本語](design/aggregate-values.ja.md) | [English](design/aggregate-values.en.md) |
 | Sum types and match / 直和型と分岐 | [日本語](design/sum-types.ja.md) | [English](design/sum-types.en.md) |
 | Compile-time constants / コンパイル時定数 | [日本語](design/constants.ja.md) | [English](design/constants.en.md) |
 | Product updates / 構造体の更新式 | [日本語](design/product-updates.ja.md) | [English](design/product-updates.en.md) |

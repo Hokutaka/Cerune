@@ -32,6 +32,11 @@ pub fn emit_with_origins(module: &Module, annotate: bool) -> String {
     }
 
     output.push_str("\n.text\n");
+    if module.uses_write {
+        output.push_str(&crate::codegen::display::asm_support(
+            module.target.is_linux(),
+        ));
+    }
     if module.uses_strings {
         output.push_str(if module.target.is_linux() {
             super::string::LINUX_SUPPORT
@@ -226,6 +231,10 @@ fn emit_instruction(
     output: &mut String,
 ) {
     match instruction {
+        Instruction::Write { kind } => output.push_str(&crate::codegen::display::asm_call(
+            kind,
+            module.target.is_linux(),
+        )),
         Instruction::CallPrintSysV(ty) => emit_sysv_print(*ty, output),
         Instruction::CallPrintU64 => {
             if module.target.is_linux() {

@@ -1,5 +1,9 @@
 // VMと各生成経路で照合する、理由が既知の失敗例です。
 pub const FAILURES: &[(&str, &str)] = &[
+    (AGGREGATE_FAILURES[0].0, AGGREGATE_FAILURES[0].1),
+    (AGGREGATE_FAILURES[1].0, AGGREGATE_FAILURES[1].1),
+    (AGGREGATE_FAILURES[2].0, AGGREGATE_FAILURES[2].1),
+    (AGGREGATE_FAILURES[3].0, AGGREGATE_FAILURES[3].1),
     (
         "enum E { Value { n: i64 }, Empty } x: E = E::Value { n: 1 / 0 };",
         "division-by-zero",
@@ -454,3 +458,30 @@ pub const CONSTANT_LENGTH_FAILURES: &[(&str, &str, &str, &str)] = &[(
     "before\n",
     "[2]",
 )];
+
+pub const AGGREGATE_FAILURES: &[(&str, &str, &str, &str)] = &[
+    (
+        r#"fn bad()->[i64;1]{print("before");return [1 / 0];} print(bad());"#,
+        "division-by-zero",
+        "before\n",
+        "1 / 0",
+    ),
+    (
+        r#"enum E{A{n:i64},B} print("before"); x:E=E::A{n:0}; print(match x{E::A{n:n} if 1 / n > 0 => 1, E::A{n:_}=>2,E::B{}=>3});"#,
+        "division-by-zero",
+        "before\n",
+        "1 / n",
+    ),
+    (
+        r#"enum E{A{n:i64},B} print("before"); x:E=E::A{n:2}; print(match x{E::A{n:n}=>[10][n],E::B{}=>0});"#,
+        "array-index-out-of-bounds",
+        "before\n",
+        "[10][n]",
+    ),
+    (
+        r#"enum E{A{n:i64},B} print("before"); x:E=E::A{n:0}; match x{E::A{n:n} if 1 / n > 0 => {print(1);}, E::A{n:_}=>{},E::B{}=>{}}"#,
+        "division-by-zero",
+        "before\n",
+        "1 / n",
+    ),
+];

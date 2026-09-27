@@ -16,6 +16,9 @@ pub fn emit(module: &Module) -> String {
     }
 
     writeln!(output, "(module").unwrap();
+    if module.uses_write {
+        output.push_str(&crate::codegen::display::wat_imports());
+    }
     if uses_failures {
         output.push_str(
             "  (import \"cerune\" \"write_error_byte\" (func $write_error_byte (param i32)))\n",
@@ -70,6 +73,9 @@ pub fn emit(module: &Module) -> String {
         super::string::emit(module, &mut output);
     }
 
+    if module.uses_write {
+        output.push_str(&crate::codegen::display::wat());
+    }
     for function in &module.functions {
         emit_function(function, module, &mut output);
         writeln!(output).unwrap();
@@ -253,6 +259,9 @@ fn emit_instruction(
         )
         .unwrap(),
         Instruction::Failure(record) => super::failure::emit(*record, &prefix, output),
+        Instruction::Write { kind } => {
+            writeln!(output, "{prefix}call $cerune_write_{kind}").unwrap()
+        }
         Instruction::CallPrintU64 => writeln!(output, "{prefix}call $print_u64").unwrap(),
         Instruction::I64LtU => writeln!(output, "{prefix}i64.lt_u").unwrap(),
         Instruction::I64LeU => writeln!(output, "{prefix}i64.le_u").unwrap(),

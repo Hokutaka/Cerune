@@ -1,0 +1,7 @@
+import "lookup_values.ceru" as values;
+import "aggregate_helpers.ceru" as helpers;
+const SAME: bool = values::EMPTY == values::Lookup::Missing {};
+print([values::lookup("sky"), values::EMPTY]);
+print(SAME);
+print(helpers::label(values::Lookup::Found { text: "" }));
+print(helpers::label(values::EMPTY));

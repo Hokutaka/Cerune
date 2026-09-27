@@ -11,7 +11,9 @@ pub(super) fn lower(module: &mut Module) {
 fn statements(body: &mut [Statement], temporaries: &mut Vec<Type>) {
     for statement in body {
         match statement {
-            Statement::Binding { value, .. } | Statement::Print { value, .. } => {
+            Statement::Binding { value, .. }
+            | Statement::Write { value, .. }
+            | Statement::Print { value, .. } => {
                 expression(value, temporaries);
             }
             Statement::Assignment { target, value } => {

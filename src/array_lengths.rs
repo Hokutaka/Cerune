@@ -12,6 +12,7 @@ pub(crate) struct LengthUse {
 pub(crate) fn resolve(program: &Program) -> Result<(Program, Vec<LengthUse>), Diagnostic> {
     let mut resolver = Resolver {
         source: program,
+        local_names: Vec::new(),
         constants: HashMap::new(),
         types: HashMap::new(),
         lengths: HashMap::new(),
@@ -43,6 +44,7 @@ pub(crate) fn resolve_type(
 fn resolver(program: &Program) -> Resolver<'_> {
     Resolver {
         source: program,
+        local_names: Vec::new(),
         constants: HashMap::new(),
         types: HashMap::new(),
         lengths: HashMap::new(),
@@ -53,6 +55,7 @@ fn resolver(program: &Program) -> Resolver<'_> {
 
 struct Resolver<'a> {
     source: &'a Program,
+    local_names: Vec<String>,
     constants: HashMap<String, ConstantDefinition>,
     types: HashMap<String, TypeDefinition>,
     lengths: HashMap<String, usize>,
@@ -150,7 +153,10 @@ impl Resolver<'_> {
         self.enter(format!("constant {name}"), span)?;
         self.ty(&mut definition.type_ref, true)?;
         let mut budget = 100_000;
-        self.constant_expr(&mut definition.value, &mut budget, 0)?;
+        let local_names = std::mem::take(&mut self.local_names);
+        let result = self.constant_expr(&mut definition.value, &mut budget, 0);
+        self.local_names = local_names;
+        result?;
         self.stack.pop();
         self.constants.insert(name.to_owned(), definition);
         Ok(())
@@ -235,7 +241,52 @@ impl Resolver<'_> {
                     expr.span,
                 ));
             }
-            ExprKind::Variable(name) => self.constant(name, expr.span)?,
+            ExprKind::Variable(name) => {
+                if !self.local_names.contains(name) {
+                    self.constant(name, expr.span)?;
+                }
+            }
+            ExprKind::Match { value, arms } => {
+                self.constant_expr(value, budget, depth + 1)?;
+                for arm in arms {
+                    if let Some((name, _)) = arm.variant.rsplit_once("::") {
+                        self.ty(
+                            &mut TypeRef {
+                                kind: TypeRefKind::Named(name.into()),
+                                span: arm.variant_span,
+                            },
+                            true,
+                        )?;
+                    }
+                    let previous = self.local_names.len();
+                    self.local_names
+                        .extend(arm.fields.iter().map(|f| f.binding.clone()));
+                    if let Some(guard) = &mut arm.guard {
+                        self.constant_expr(guard, budget, depth + 1)?;
+                    }
+                    if let Some(result) = &mut arm.result {
+                        self.constant_expr(result, budget, depth + 1)?;
+                    }
+                    self.local_names.truncate(previous);
+                }
+            }
+            ExprKind::Let {
+                name, value, body, ..
+            } => {
+                self.constant_expr(value, budget, depth + 1)?;
+                self.local_names.push(name.clone());
+                self.constant_expr(body, budget, depth + 1)?;
+                self.local_names.pop();
+            }
+            ExprKind::Conditional {
+                condition,
+                then_value,
+                else_value,
+            } => {
+                self.constant_expr(condition, budget, depth + 1)?;
+                self.constant_expr(then_value, budget, depth + 1)?;
+                self.constant_expr(else_value, budget, depth + 1)?;
+            }
             ExprKind::Call {
                 name, arguments, ..
             } => {
@@ -434,6 +485,12 @@ impl Resolver<'_> {
             StmtKind::Match { value, arms } => {
                 self.expr(value)?;
                 for arm in arms {
+                    if let Some(guard) = &mut arm.guard {
+                        self.expr(guard)?;
+                    }
+                    if let Some(result) = &mut arm.result {
+                        self.expr(result)?;
+                    }
                     self.statements(&mut arm.body)?;
                 }
             }
@@ -443,6 +500,26 @@ impl Resolver<'_> {
     }
     fn expr(&mut self, expr: &mut Expr) -> Result<(), Diagnostic> {
         match &mut expr.kind {
+            ExprKind::Match { value, arms } => {
+                let mut statement = Stmt {
+                    kind: StmtKind::Match {
+                        value: *value.clone(),
+                        arms: arms.clone(),
+                    },
+                    span: expr.span,
+                };
+                self.statement(&mut statement)?;
+                let StmtKind::Match {
+                    value: new_value,
+                    arms: new_arms,
+                } = statement.kind
+                else {
+                    unreachable!()
+                };
+                **value = new_value;
+                *arms = new_arms;
+            }
+
             ExprKind::Convert { target, value, .. } => {
                 self.ty(target, false)?;
                 self.expr(value)?;

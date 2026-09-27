@@ -1,4 +1,5 @@
 pub mod c;
+mod display;
 pub mod llvm;
 pub mod qbe;
 mod support;

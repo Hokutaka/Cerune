@@ -1,0 +1,28 @@
+enum Item { Value { n: i64 }, Empty, }
+fn subject(value: Item) -> Item { print("対象"); return value; }
+fn guard(label: string, yes: bool) -> bool { print(label); return yes; }
+mut saved: Item = Item::Value { n: 7 };
+match subject(saved) {
+    Item::Empty {} if guard("非選択", true) => { print("到達しない"); },
+    Item::Value { n: n } if guard("負数?", n < 0) => { print("負数"); },
+    Item::Value { n: n } if guard("正数?", n > 0) => {
+        saved = Item::Empty {};
+        print(n); // 対象のコピーから取り出した値は変更されません。
+    },
+    Item::Value { n: _ } => { print("ゼロ"); },
+    Item::Empty {} => { print("なし"); },
+}
+print(saved);
+print(false && (match subject(saved) {
+    Item::Value { n: _ } => true,
+    Item::Empty {} => false,
+}));
+// 分岐内のcontinue・breakは外側のループに作用します。
+for (n: i64 in [0, 1, 2, 3]) {
+    match (Item::Value { n: n }) {
+        Item::Value { n: n } if n == 0 => { continue; },
+        Item::Value { n: n } if n == 2 => { break; },
+        Item::Value { n: n } => { print(n); },
+        Item::Empty {} => {},
+    }
+}
