@@ -68,6 +68,12 @@ cargo run --quiet -- emit-c examples/linear_regression.ceru
 | --- | --- |
 | [truncating_conversions.ceru](truncating_conversions.ceru) | `3.7 → 3`、`-3.7 → -3`、`u8`の境界、`u64`、定数と型引数 |
 | [truncating_evaluation_order.ceru](truncating_evaluation_order.ceru) | 引数を左から一度だけ評価、短絡で変換を省略、配列コピーの独立性 |
+| [rounding_conversions.ceru](rounding_conversions.ceru) | 全5丸め方で、正負の中間値を比較 |
+| [rounding_quantities.ceru](rounding_quantities.ceru) | floorで区画、ceilで必要な箱数。定数の元の式と結果も観測 |
+| [saturating_conversions.ceru](saturating_conversions.ceru) | 色をu8へ収める、NaN・無限大・型の端 |
+| [rounding_evaluation_order.ceru](rounding_evaluation_order.ceru) | 引数の順序・短絡・配列コピーを保つ |
+
+[生成手順の確認](../docs/design/rounding-conversions.ja.md#試す)では、IR・bytecode・注釈付きLLVM/ASMを同じソースから出力します。
 
 ### 真偽値と文字列
 

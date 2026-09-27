@@ -1,0 +1,18 @@
+; Cerune IR v0.2
+; #N identifies one statement or expression in this compilation
+
+const %COUNT@0: i64 = #0 convert.ceil.f64->i64[explicit](#1 2.1f64) => #3 3i64 [compile-time]
+fn %value@0(%x@0: f64) -> f64 {
+  #4 return #5 %x@0:f64
+}
+
+#6 print.i64 #7 convert.floor.f64->i64[explicit](#8 call %value@0(#9 neg.f64(#10 2.5f64)):f64)
+#11 print.i64 #12 convert.ceil.f64->i64[explicit](#13 call %value@0(#14 neg.f64(#15 2.5f64)):f64)
+#16 print.i64 #17 convert.round.f64->i64[explicit](#18 call %value@0(#19 2.5f64):f64)
+#20 print.i64 #21 convert.round_ties_even.f64->i64[explicit](#22 call %value@0(#23 2.5f64):f64)
+#24 print.u8 #25 convert.saturating_trunc.f64->u8[explicit](#26 call %value@0(#27 300.0f64):f64)
+#28 print.u8 #29 convert.saturating_floor.f64->u8[explicit](#30 call %value@0(#31 neg.f64(#32 0.1f64)):f64)
+#33 print.u8 #34 convert.saturating_ceil.f64->u8[explicit](#35 call %value@0(#36 255.1f64):f64)
+#37 print.u8 #38 convert.saturating_round.f64->u8[explicit](#39 call %value@0(#40 255.5f64):f64)
+#41 print.u8 #42 convert.saturating_round_ties_even.f64->u8[explicit](#43 call %value@0(#44 254.5f64):f64)
+#45 print.i64 #46 const %COUNT@0 => #47 3i64

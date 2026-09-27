@@ -873,7 +873,24 @@ The input is evaluated once, then checked for nonfinite values and for the range
 
 It works in `const` evaluation and functions with explicit type arguments. `trunc` is not a keyword; ordinary function and variable names remain available. Built-in `trunc<T>(value)` is distinct from user-defined `trunc::<T>(value)`.
 
-IR and bytecode retain `convert.trunc`; backend IR retains `ConversionMode::Truncate` along with types and source origins. See the [design](../design/truncating-conversions.en.md) and [example](../../examples/truncating_conversions.ceru).
+IR and bytecode retain `convert.trunc`; backend IR retains `Rounded { rounding: Truncate, overflow: Checked }` along with types and source origins. See the [design](../design/truncating-conversions.en.md) and [example](../../examples/truncating_conversions.ceru).
+
+### Choosing rounding and saturation
+
+These operations accept the same inputs and destinations as `trunc<T>`. Evaluate the input once, round it, then check the integer range.
+
+| Operation | Rule | `2.5` / `-2.5` |
+| --- | --- | --- |
+| `floor<T>(x)` | Toward negative infinity | 2 / -3 |
+| `ceil<T>(x)` | Toward positive infinity | 3 / -2 |
+| `round<T>(x)` | Nearest; ties away from zero | 3 / -3 |
+| `round_ties_even<T>(x)` | Nearest; ties to even | 2 / -2 |
+
+Ordinary variants stop with `conversion-not-finite` for NaN/infinity and `conversion-out-of-range` when the rounded result exceeds the range. Negative zero becomes integer zero. Invalid types or argument counts are compile-time errors.
+
+All five operations also have `saturating_` variants. For example, `saturating_round<u8>(300.0)` yields 255. Values below the minimum and negative infinity become the minimum; values above the maximum and positive infinity become the maximum; NaN becomes zero. Failures while evaluating the input are not caught.
+
+Rounding and overflow policies remain in AST, IR, bytecode, and backend IR; textual output distinguishes `convert.round` from `convert.saturating_round`. Constant IR retains both the original expression and its evaluated result. See the [generation and observation design](../design/rounding-conversions.en.md), [rounding example](../../examples/rounding_conversions.ceru), and [saturation example](../../examples/saturating_conversions.ceru). Names are not keywords and remain available for ordinary functions, comparisons, and explicit generic calls.
 
 ### Observing conversions
 

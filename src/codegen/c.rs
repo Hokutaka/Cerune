@@ -4,6 +4,7 @@ mod failure;
 mod integer;
 pub mod ir;
 mod lower;
+mod rounding;
 mod sequence;
 mod string;
 mod unsigned;

@@ -875,7 +875,24 @@ print(f32(1.5));         // 1.5
 
 `const`の評価と型引数を指定する関数でも使えます。`trunc`はキーワードではなく、通常の関数名や変数名にも使えます。組み込みの`trunc<T>(value)`とユーザー関数の`trunc::<T>(value)`は構文で区別します。
 
-IR・bytecodeには`convert.trunc`、バックエンドIRには`ConversionMode::Truncate`を保持し、型・ソース位置とともに観測できます。[設計](../design/truncating-conversions.ja.md)と[実行例](../../examples/truncating_conversions.ceru)を参照してください。
+IR・bytecodeには`convert.trunc`、バックエンドIRには`Rounded { rounding: Truncate, overflow: Checked }`を保持し、型・ソース位置とともに観測できます。[設計](../design/truncating-conversions.ja.md)と[実行例](../../examples/truncating_conversions.ceru)を参照してください。
+
+### 丸め方と飽和を選ぶ
+
+`trunc<T>`と同じ入力・変換先の条件で、次の操作も使えます。入力を一度だけ評価し、丸めた後に整数型の範囲を調べます。
+
+| 操作 | 規則 | `2.5` / `-2.5` |
+| --- | --- | --- |
+| `floor<T>(x)` | 小さい整数へ | 2 / -3 |
+| `ceil<T>(x)` | 大きい整数へ | 3 / -2 |
+| `round<T>(x)` | 最寄り。同距離ならゼロから遠い方 | 3 / -3 |
+| `round_ties_even<T>(x)` | 最寄り。同距離なら偶数の方 | 2 / -2 |
+
+通常はNaN・無限大で`conversion-not-finite`、丸め後の範囲外で`conversion-out-of-range`となります。負のゼロは整数の0になります。型・引数個数の誤りはコンパイルエラーです。
+
+全5操作に`saturating_`付きの形もあります。例えば`saturating_round<u8>(300.0)`は255です。下限未満・負の無限大は最小値、上限超過・正の無限大は最大値、NaNは0へ写します。入力式自身の失敗は捕捉しません。
+
+丸め方と範囲外の方針はAST・IR・bytecode・backend IRで保持し、テキストにも`convert.round` / `convert.saturating_round`のように区別して出力します。定数評価では元の式と結果をIRに残します。[生成手順と観測の設計](../design/rounding-conversions.ja.md)、[丸め方](../../examples/rounding_conversions.ceru)、[飽和](../../examples/saturating_conversions.ceru)の例を参照してください。名前はキーワードではなく、通常の関数呼び出し・比較・ユーザー定義の型引数付き呼び出しでも使えます。
 
 ### 変換を観測する
 

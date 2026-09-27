@@ -1277,16 +1277,16 @@ fn type_of_expr_expected(
                     value.span,
                 ));
             }
-            if *mode == crate::types::ConversionMode::Truncate {
+            if mode.rounding().is_some() {
                 if !matches!(target_ty, Type::Integer(_)) {
                     return Err(Diagnostic::new(
-                        "trunc target must be an integer type",
+                        format!("{} target must be an integer type", mode.name()),
                         target.span,
                     ));
                 }
                 if !matches!(input_ty, Type::F32 | Type::F64) {
                     return Err(Diagnostic::new(
-                        "trunc requires an f32 or f64 value",
+                        format!("{} requires an f32 or f64 value", mode.name()),
                         value.span,
                     ));
                 }

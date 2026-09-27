@@ -5,6 +5,7 @@ mod failure;
 pub mod ir;
 mod lower;
 mod object;
+mod rounding;
 mod string;
 mod unsigned;
 

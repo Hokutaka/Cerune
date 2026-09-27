@@ -53,7 +53,7 @@ pub fn render_compact_with_sources(error: &VmError, sources: &SourceMap, span: S
 fn render_message(error: &VmError) -> String {
     match error.kind() {
         VmErrorKind::InvalidNumericConversion { from, to } => format!(
-            "invalid trunc conversion from {} to {}",
+            "invalid rounded conversion from {} to {}",
             from.name(),
             to.name()
         ),

@@ -20,6 +20,9 @@ pub mod constant_cases;
 #[path = "truncation_cases.rs"]
 pub mod truncation_cases;
 
+#[path = "rounding_cases.rs"]
+pub mod rounding_cases;
+
 pub const CASES: &[(&str, &str)] = &[
     (
         r#"
@@ -146,6 +149,13 @@ pub const PRODUCT_UPDATES: &[(&str, &str)] = &[
     truncation_cases::CASES[0],
     truncation_cases::CASES[1],
     truncation_cases::CASES[2],
+    rounding_cases::CASES[0],
+    rounding_cases::CASES[1],
+    rounding_cases::CASES[2],
+    rounding_cases::CASES[3],
+    rounding_cases::CASES[4],
+    rounding_cases::CASES[5],
+    rounding_cases::CASES[6],
 ];
 
 pub const UNUSED_DEFAULT: &str =

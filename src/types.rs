@@ -94,16 +94,78 @@ impl IntegerType {
     }
 }
 
+/// 丸め方と範囲外の扱いは独立した指定です。ソースから各生成先まで保持します。
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum RoundingMode {
+    Truncate,
+    Floor,
+    Ceil,
+    Round,
+    TiesEven,
+}
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+pub enum ConversionOverflow {
+    Checked,
+    Saturating,
+}
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum ConversionMode {
     Exact,
-    Truncate,
+    Rounded {
+        rounding: RoundingMode,
+        overflow: ConversionOverflow,
+    },
 }
 impl ConversionMode {
-    pub const fn name(self) -> &'static str {
+    pub const fn rounding(self) -> Option<RoundingMode> {
         match self {
-            Self::Exact => "exact",
-            Self::Truncate => "trunc",
+            Self::Exact => None,
+            Self::Rounded { rounding, .. } => Some(rounding),
+        }
+    }
+    pub const fn saturates(self) -> bool {
+        matches!(
+            self,
+            Self::Rounded {
+                overflow: ConversionOverflow::Saturating,
+                ..
+            }
+        )
+    }
+    pub fn from_name(name: &str) -> Option<Self> {
+        if name == "convert" {
+            return Some(Self::Exact);
+        }
+        let (name, overflow) = match name.strip_prefix("saturating_") {
+            Some(name) => (name, ConversionOverflow::Saturating),
+            None => (name, ConversionOverflow::Checked),
+        };
+        let rounding = match name {
+            "trunc" => RoundingMode::Truncate,
+            "floor" => RoundingMode::Floor,
+            "ceil" => RoundingMode::Ceil,
+            "round" => RoundingMode::Round,
+            "round_ties_even" => RoundingMode::TiesEven,
+            _ => return None,
+        };
+        Some(Self::Rounded { rounding, overflow })
+    }
+    pub const fn name(self) -> &'static str {
+        use RoundingMode::*;
+        let Self::Rounded { rounding, .. } = self else {
+            return "exact";
+        };
+        match (rounding, self.saturates()) {
+            (Truncate, false) => "trunc",
+            (Floor, false) => "floor",
+            (Ceil, false) => "ceil",
+            (Round, false) => "round",
+            (TiesEven, false) => "round_ties_even",
+            (Truncate, true) => "saturating_trunc",
+            (Floor, true) => "saturating_floor",
+            (Ceil, true) => "saturating_ceil",
+            (Round, true) => "saturating_round",
+            (TiesEven, true) => "saturating_round_ties_even",
         }
     }
 }

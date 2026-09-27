@@ -68,6 +68,12 @@ Integer overflow stops execution; values never wrap. Convert explicitly with `i6
 | --- | --- |
 | [truncating_conversions.ceru](truncating_conversions.ceru) | `3.7 → 3`, `-3.7 → -3`, `u8` boundaries, `u64`, constants and type arguments |
 | [truncating_evaluation_order.ceru](truncating_evaluation_order.ceru) | Arguments evaluated once from left to right, skipped conversions through short-circuiting, independent array copies |
+| [rounding_conversions.ceru](rounding_conversions.ceru) | Compare all five rounding modes at positive/negative midpoints |
+| [rounding_quantities.ceru](rounding_quantities.ceru) | Floor for cells, ceil for required boxes; observe constant expressions and results |
+| [saturating_conversions.ceru](saturating_conversions.ceru) | Clamp colors to u8; NaN, infinities, and type endpoints |
+| [rounding_evaluation_order.ceru](rounding_evaluation_order.ceru) | Preserve argument order, short-circuiting, and array copies |
+
+[Observe generation](../docs/design/rounding-conversions.en.md#try-it) from the same source through IR, bytecode, and annotated LLVM/ASM.
 
 ### Booleans and strings
 

@@ -1,0 +1,11 @@
+// 画像の色など、型の端へ収めたい場面では飽和を明示します。
+print("飽和");
+for (value: f64 in [-20.5, 127.5, 300.5]) { print(saturating_round<u8>(value)); }
+print(saturating_floor<i8>(-128.1));
+print(saturating_ceil<u8>(255.1));
+print(saturating_trunc<u8>(-0.9));
+print(saturating_round_ties_even<u8>(254.5));
+// NaNは0、無限大は型の端です。通常の変換なら停止します。
+print(saturating_round<i64>(0.0 / 0.0));
+print(saturating_round<u64>(1.0 / 0.0));
+print(saturating_round<i64>(-1.0 / 0.0));

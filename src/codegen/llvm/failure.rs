@@ -52,7 +52,8 @@ fn codes(instruction: &Instruction) -> Vec<Code> {
         Instruction::ArrayGet { .. } | Instruction::ArraySet { .. } => {
             vec![Code::ArrayIndexOutOfBounds]
         }
-        Instruction::ConvertNumeric { conversion, .. } if conversion.truncates() => {
+        Instruction::ConvertNumeric { conversion, .. } if conversion.mode.saturates() => vec![],
+        Instruction::ConvertNumeric { conversion, .. } if conversion.mode.rounding().is_some() => {
             vec![Code::ConversionNotFinite, Code::ConversionOutOfRange]
         }
         Instruction::ConvertNumeric { conversion, .. } => match (conversion.from, conversion.to) {

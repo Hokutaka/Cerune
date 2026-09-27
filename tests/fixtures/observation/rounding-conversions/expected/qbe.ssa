@@ -1,0 +1,579 @@
+section ".rodata" data $cerune_origin_7_79_102 = { b 32, b 110, b 111, b 100, b 101, b 61, b 55, b 32, b 98, b 121, b 116, b 101, b 115, b 61, b 55, b 57, b 46, b 46, b 49, b 48, b 50, b 10 }
+section ".rodata" data $cerune_origin_12_111_133 = { b 32, b 110, b 111, b 100, b 101, b 61, b 49, b 50, b 32, b 98, b 121, b 116, b 101, b 115, b 61, b 49, b 49, b 49, b 46, b 46, b 49, b 51, b 51, b 10 }
+section ".rodata" data $cerune_origin_17_142_164 = { b 32, b 110, b 111, b 100, b 101, b 61, b 49, b 55, b 32, b 98, b 121, b 116, b 101, b 115, b 61, b 49, b 52, b 50, b 46, b 46, b 49, b 54, b 52, b 10 }
+section ".rodata" data $cerune_origin_21_173_205 = { b 32, b 110, b 111, b 100, b 101, b 61, b 50, b 49, b 32, b 98, b 121, b 116, b 101, b 115, b 61, b 49, b 55, b 51, b 46, b 46, b 50, b 48, b 53, b 10 }
+section ".rodata" data $cerune_origin_25_214_248 = { b 32, b 110, b 111, b 100, b 101, b 61, b 50, b 53, b 32, b 98, b 121, b 116, b 101, b 115, b 61, b 50, b 49, b 52, b 46, b 46, b 50, b 52, b 56, b 10 }
+section ".rodata" data $cerune_origin_29_257_290 = { b 32, b 110, b 111, b 100, b 101, b 61, b 50, b 57, b 32, b 98, b 121, b 116, b 101, b 115, b 61, b 50, b 53, b 55, b 46, b 46, b 50, b 57, b 48, b 10 }
+section ".rodata" data $cerune_origin_34_299_332 = { b 32, b 110, b 111, b 100, b 101, b 61, b 51, b 52, b 32, b 98, b 121, b 116, b 101, b 115, b 61, b 50, b 57, b 57, b 46, b 46, b 51, b 51, b 50, b 10 }
+section ".rodata" data $cerune_origin_38_341_375 = { b 32, b 110, b 111, b 100, b 101, b 61, b 51, b 56, b 32, b 98, b 121, b 116, b 101, b 115, b 61, b 51, b 52, b 49, b 46, b 46, b 51, b 55, b 53, b 10 }
+section ".rodata" data $cerune_origin_42_384_428 = { b 32, b 110, b 111, b 100, b 101, b 61, b 52, b 50, b 32, b 98, b 121, b 116, b 101, b 115, b 61, b 51, b 56, b 52, b 46, b 46, b 52, b 50, b 56, b 10 }
+section ".rodata" data $cerune_code_integer_overflow = { b 99, b 101, b 114, b 117, b 110, b 101, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 105, b 110, b 116, b 101, b 103, b 101, b 114, b 45, b 111, b 118, b 101, b 114, b 102, b 108, b 111, b 119 }
+function $cerune_fail_integer_overflow(l %origin, l %origin_len) {
+@start
+  call $cerune_runtime_failure(l $cerune_code_integer_overflow, l 40, l %origin, l %origin_len)
+  hlt
+}
+
+section ".rodata" data $cerune_code_division_by_zero = { b 99, b 101, b 114, b 117, b 110, b 101, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 100, b 105, b 118, b 105, b 115, b 105, b 111, b 110, b 45, b 98, b 121, b 45, b 122, b 101, b 114, b 111 }
+function $cerune_fail_division_by_zero(l %origin, l %origin_len) {
+@start
+  call $cerune_runtime_failure(l $cerune_code_division_by_zero, l 40, l %origin, l %origin_len)
+  hlt
+}
+
+section ".rodata" data $cerune_code_division_overflow = { b 99, b 101, b 114, b 117, b 110, b 101, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 100, b 105, b 118, b 105, b 115, b 105, b 111, b 110, b 45, b 111, b 118, b 101, b 114, b 102, b 108, b 111, b 119 }
+function $cerune_fail_division_overflow(l %origin, l %origin_len) {
+@start
+  call $cerune_runtime_failure(l $cerune_code_division_overflow, l 41, l %origin, l %origin_len)
+  hlt
+}
+
+section ".rodata" data $cerune_code_remainder_by_zero = { b 99, b 101, b 114, b 117, b 110, b 101, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 114, b 101, b 109, b 97, b 105, b 110, b 100, b 101, b 114, b 45, b 98, b 121, b 45, b 122, b 101, b 114, b 111 }
+function $cerune_fail_remainder_by_zero(l %origin, l %origin_len) {
+@start
+  call $cerune_runtime_failure(l $cerune_code_remainder_by_zero, l 41, l %origin, l %origin_len)
+  hlt
+}
+
+section ".rodata" data $cerune_code_invalid_shift_count = { b 99, b 101, b 114, b 117, b 110, b 101, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 105, b 110, b 118, b 97, b 108, b 105, b 100, b 45, b 115, b 104, b 105, b 102, b 116, b 45, b 99, b 111, b 117, b 110, b 116 }
+function $cerune_fail_invalid_shift_count(l %origin, l %origin_len) {
+@start
+  call $cerune_runtime_failure(l $cerune_code_invalid_shift_count, l 43, l %origin, l %origin_len)
+  hlt
+}
+
+section ".rodata" data $cerune_code_integer_conversion_out_of_range = { b 99, b 101, b 114, b 117, b 110, b 101, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 105, b 110, b 116, b 101, b 103, b 101, b 114, b 45, b 99, b 111, b 110, b 118, b 101, b 114, b 115, b 105, b 111, b 110, b 45, b 111, b 117, b 116, b 45, b 111, b 102, b 45, b 114, b 97, b 110, b 103, b 101 }
+function $cerune_fail_integer_conversion_out_of_range(l %origin, l %origin_len) {
+@start
+  call $cerune_runtime_failure(l $cerune_code_integer_conversion_out_of_range, l 55, l %origin, l %origin_len)
+  hlt
+}
+
+section ".rodata" data $cerune_code_conversion_out_of_range = { b 99, b 101, b 114, b 117, b 110, b 101, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 99, b 111, b 110, b 118, b 101, b 114, b 115, b 105, b 111, b 110, b 45, b 111, b 117, b 116, b 45, b 111, b 102, b 45, b 114, b 97, b 110, b 103, b 101 }
+function $cerune_fail_conversion_out_of_range(l %origin, l %origin_len) {
+@start
+  call $cerune_runtime_failure(l $cerune_code_conversion_out_of_range, l 47, l %origin, l %origin_len)
+  hlt
+}
+
+section ".rodata" data $cerune_code_conversion_inexact = { b 99, b 101, b 114, b 117, b 110, b 101, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 99, b 111, b 110, b 118, b 101, b 114, b 115, b 105, b 111, b 110, b 45, b 105, b 110, b 101, b 120, b 97, b 99, b 116 }
+function $cerune_fail_conversion_inexact(l %origin, l %origin_len) {
+@start
+  call $cerune_runtime_failure(l $cerune_code_conversion_inexact, l 42, l %origin, l %origin_len)
+  hlt
+}
+
+section ".rodata" data $cerune_code_conversion_not_finite = { b 99, b 101, b 114, b 117, b 110, b 101, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 99, b 111, b 110, b 118, b 101, b 114, b 115, b 105, b 111, b 110, b 45, b 110, b 111, b 116, b 45, b 102, b 105, b 110, b 105, b 116, b 101 }
+function $cerune_fail_conversion_not_finite(l %origin, l %origin_len) {
+@start
+  call $cerune_runtime_failure(l $cerune_code_conversion_not_finite, l 45, l %origin, l %origin_len)
+  hlt
+}
+
+section ".rodata" data $cerune_code_conversion_nan = { b 99, b 101, b 114, b 117, b 110, b 101, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 99, b 111, b 110, b 118, b 101, b 114, b 115, b 105, b 111, b 110, b 45, b 110, b 97, b 110 }
+function $cerune_fail_conversion_nan(l %origin, l %origin_len) {
+@start
+  call $cerune_runtime_failure(l $cerune_code_conversion_nan, l 38, l %origin, l %origin_len)
+  hlt
+}
+
+section ".rodata" data $cerune_code_conversion_negative_zero = { b 99, b 101, b 114, b 117, b 110, b 101, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 99, b 111, b 110, b 118, b 101, b 114, b 115, b 105, b 111, b 110, b 45, b 110, b 101, b 103, b 97, b 116, b 105, b 118, b 101, b 45, b 122, b 101, b 114, b 111 }
+function $cerune_fail_conversion_negative_zero(l %origin, l %origin_len) {
+@start
+  call $cerune_runtime_failure(l $cerune_code_conversion_negative_zero, l 48, l %origin, l %origin_len)
+  hlt
+}
+
+section ".rodata" data $cerune_code_array_index_out_of_bounds = { b 99, b 101, b 114, b 117, b 110, b 101, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 97, b 114, b 114, b 97, b 121, b 45, b 105, b 110, b 100, b 101, b 120, b 45, b 111, b 117, b 116, b 45, b 111, b 102, b 45, b 98, b 111, b 117, b 110, b 100, b 115 }
+function $cerune_fail_array_index_out_of_bounds(l %origin, l %origin_len) {
+@start
+  call $cerune_runtime_failure(l $cerune_code_array_index_out_of_bounds, l 49, l %origin, l %origin_len)
+  hlt
+}
+
+function $cerune_runtime_failure(l %code, l %code_len, l %origin, l %origin_len) {
+@start
+  call $fflush(l 0)
+  call $write(w 2, l %code, l %code_len)
+  call $write(w 2, l %origin, l %origin_len)
+  call $abort()
+  hlt
+}
+
+data $fmt_i64 = { b "%lld", b 10, b 0 }
+data $fmt_f32 = { b "%.9g", b 10, b 0 }
+data $fmt_f64 = { b "%.17g", b 10, b 0 }
+
+function l $cerune_saturating_trunc_f64_u8(d %value, l %origin, l %origin_len) {
+@start
+  # policy: saturating_trunc
+  %bits =l cast %value
+  %magnitude =l and %bits, 9223372036854775807
+  %nonfinite =w cugel %magnitude, 9218868437227405312
+  jnz %nonfinite, @nonfinite, @finite
+@nonfinite
+  %nan =w cuod %value, %value
+  jnz %nan, @zero, @infinite
+@zero
+  ret 0
+@infinite
+  %positive =w cgtd %value, d_0
+  jnz %positive, @maximum, @minimum
+@finite
+  # round finite input; large values are already integral
+  %large_pos =w cged %value, d_4503599627370496
+  %large_neg =w cled %value, d_-4503599627370496
+  %large =w or %large_pos, %large_neg
+  jnz %large, @bounds, @round
+@round
+  %whole =l dtosi %value
+  %base =d sltof %whole
+  jmp @bounds
+@bounds
+  # range policy after rounding
+  %number =d phi @finite %value, @round %base
+  %below =w cltd %number, d_0
+  %above =w cged %number, d_256
+  jnz %below, @minimum, @upper
+@minimum
+  ret 0
+@upper
+  jnz %above, @maximum, @convert
+@maximum
+  ret 255
+@convert
+  %result =l dtosi %number
+  ret %result
+}
+
+function l $cerune_floor_f64_i64(d %value, l %origin, l %origin_len) {
+@start
+  # policy: floor
+  %bits =l cast %value
+  %magnitude =l and %bits, 9223372036854775807
+  %nonfinite =w cugel %magnitude, 9218868437227405312
+  jnz %nonfinite, @nonfinite, @finite
+@nonfinite
+  call $cerune_runtime_failure(l $cerune_code_conversion_not_finite, l 45, l %origin, l %origin_len)
+  hlt
+@finite
+  # round finite input; large values are already integral
+  %large_pos =w cged %value, d_4503599627370496
+  %large_neg =w cled %value, d_-4503599627370496
+  %large =w or %large_pos, %large_neg
+  jnz %large, @bounds, @round
+@round
+  %whole =l dtosi %value
+  %base =d sltof %whole
+  %fraction =d sub %value, %base
+  %up =w copy 0
+  %down =w cltd %fraction, d_0
+  %up64 =l extuw %up
+  %down64 =l extuw %down
+  %delta =l sub %up64, %down64
+  %adjusted =l add %whole, %delta
+  %small_result =d sltof %adjusted
+  jmp @bounds
+@bounds
+  # range policy after rounding
+  %number =d phi @finite %value, @round %small_result
+  %below =w cltd %number, d_-9223372036854775808
+  %above =w cged %number, d_9223372036854775808
+  %outside =w or %below, %above
+  jnz %outside, @range_failure, @convert
+@range_failure
+  call $cerune_runtime_failure(l $cerune_code_conversion_out_of_range, l 47, l %origin, l %origin_len)
+  hlt
+@convert
+  %result =l dtosi %number
+  ret %result
+}
+
+function l $cerune_saturating_floor_f64_u8(d %value, l %origin, l %origin_len) {
+@start
+  # policy: saturating_floor
+  %bits =l cast %value
+  %magnitude =l and %bits, 9223372036854775807
+  %nonfinite =w cugel %magnitude, 9218868437227405312
+  jnz %nonfinite, @nonfinite, @finite
+@nonfinite
+  %nan =w cuod %value, %value
+  jnz %nan, @zero, @infinite
+@zero
+  ret 0
+@infinite
+  %positive =w cgtd %value, d_0
+  jnz %positive, @maximum, @minimum
+@finite
+  # round finite input; large values are already integral
+  %large_pos =w cged %value, d_4503599627370496
+  %large_neg =w cled %value, d_-4503599627370496
+  %large =w or %large_pos, %large_neg
+  jnz %large, @bounds, @round
+@round
+  %whole =l dtosi %value
+  %base =d sltof %whole
+  %fraction =d sub %value, %base
+  %up =w copy 0
+  %down =w cltd %fraction, d_0
+  %up64 =l extuw %up
+  %down64 =l extuw %down
+  %delta =l sub %up64, %down64
+  %adjusted =l add %whole, %delta
+  %small_result =d sltof %adjusted
+  jmp @bounds
+@bounds
+  # range policy after rounding
+  %number =d phi @finite %value, @round %small_result
+  %below =w cltd %number, d_0
+  %above =w cged %number, d_256
+  jnz %below, @minimum, @upper
+@minimum
+  ret 0
+@upper
+  jnz %above, @maximum, @convert
+@maximum
+  ret 255
+@convert
+  %result =l dtosi %number
+  ret %result
+}
+
+function l $cerune_ceil_f64_i64(d %value, l %origin, l %origin_len) {
+@start
+  # policy: ceil
+  %bits =l cast %value
+  %magnitude =l and %bits, 9223372036854775807
+  %nonfinite =w cugel %magnitude, 9218868437227405312
+  jnz %nonfinite, @nonfinite, @finite
+@nonfinite
+  call $cerune_runtime_failure(l $cerune_code_conversion_not_finite, l 45, l %origin, l %origin_len)
+  hlt
+@finite
+  # round finite input; large values are already integral
+  %large_pos =w cged %value, d_4503599627370496
+  %large_neg =w cled %value, d_-4503599627370496
+  %large =w or %large_pos, %large_neg
+  jnz %large, @bounds, @round
+@round
+  %whole =l dtosi %value
+  %base =d sltof %whole
+  %fraction =d sub %value, %base
+  %up =w cgtd %fraction, d_0
+  %down =w copy 0
+  %up64 =l extuw %up
+  %down64 =l extuw %down
+  %delta =l sub %up64, %down64
+  %adjusted =l add %whole, %delta
+  %small_result =d sltof %adjusted
+  jmp @bounds
+@bounds
+  # range policy after rounding
+  %number =d phi @finite %value, @round %small_result
+  %below =w cltd %number, d_-9223372036854775808
+  %above =w cged %number, d_9223372036854775808
+  %outside =w or %below, %above
+  jnz %outside, @range_failure, @convert
+@range_failure
+  call $cerune_runtime_failure(l $cerune_code_conversion_out_of_range, l 47, l %origin, l %origin_len)
+  hlt
+@convert
+  %result =l dtosi %number
+  ret %result
+}
+
+function l $cerune_saturating_ceil_f64_u8(d %value, l %origin, l %origin_len) {
+@start
+  # policy: saturating_ceil
+  %bits =l cast %value
+  %magnitude =l and %bits, 9223372036854775807
+  %nonfinite =w cugel %magnitude, 9218868437227405312
+  jnz %nonfinite, @nonfinite, @finite
+@nonfinite
+  %nan =w cuod %value, %value
+  jnz %nan, @zero, @infinite
+@zero
+  ret 0
+@infinite
+  %positive =w cgtd %value, d_0
+  jnz %positive, @maximum, @minimum
+@finite
+  # round finite input; large values are already integral
+  %large_pos =w cged %value, d_4503599627370496
+  %large_neg =w cled %value, d_-4503599627370496
+  %large =w or %large_pos, %large_neg
+  jnz %large, @bounds, @round
+@round
+  %whole =l dtosi %value
+  %base =d sltof %whole
+  %fraction =d sub %value, %base
+  %up =w cgtd %fraction, d_0
+  %down =w copy 0
+  %up64 =l extuw %up
+  %down64 =l extuw %down
+  %delta =l sub %up64, %down64
+  %adjusted =l add %whole, %delta
+  %small_result =d sltof %adjusted
+  jmp @bounds
+@bounds
+  # range policy after rounding
+  %number =d phi @finite %value, @round %small_result
+  %below =w cltd %number, d_0
+  %above =w cged %number, d_256
+  jnz %below, @minimum, @upper
+@minimum
+  ret 0
+@upper
+  jnz %above, @maximum, @convert
+@maximum
+  ret 255
+@convert
+  %result =l dtosi %number
+  ret %result
+}
+
+function l $cerune_round_f64_i64(d %value, l %origin, l %origin_len) {
+@start
+  # policy: round
+  %bits =l cast %value
+  %magnitude =l and %bits, 9223372036854775807
+  %nonfinite =w cugel %magnitude, 9218868437227405312
+  jnz %nonfinite, @nonfinite, @finite
+@nonfinite
+  call $cerune_runtime_failure(l $cerune_code_conversion_not_finite, l 45, l %origin, l %origin_len)
+  hlt
+@finite
+  # round finite input; large values are already integral
+  %large_pos =w cged %value, d_4503599627370496
+  %large_neg =w cled %value, d_-4503599627370496
+  %large =w or %large_pos, %large_neg
+  jnz %large, @bounds, @round
+@round
+  %whole =l dtosi %value
+  %base =d sltof %whole
+  %fraction =d sub %value, %base
+  %up =w cged %fraction, d_0.5
+  %down =w cled %fraction, d_-0.5
+  %up64 =l extuw %up
+  %down64 =l extuw %down
+  %delta =l sub %up64, %down64
+  %adjusted =l add %whole, %delta
+  %small_result =d sltof %adjusted
+  jmp @bounds
+@bounds
+  # range policy after rounding
+  %number =d phi @finite %value, @round %small_result
+  %below =w cltd %number, d_-9223372036854775808
+  %above =w cged %number, d_9223372036854775808
+  %outside =w or %below, %above
+  jnz %outside, @range_failure, @convert
+@range_failure
+  call $cerune_runtime_failure(l $cerune_code_conversion_out_of_range, l 47, l %origin, l %origin_len)
+  hlt
+@convert
+  %result =l dtosi %number
+  ret %result
+}
+
+function l $cerune_saturating_round_f64_u8(d %value, l %origin, l %origin_len) {
+@start
+  # policy: saturating_round
+  %bits =l cast %value
+  %magnitude =l and %bits, 9223372036854775807
+  %nonfinite =w cugel %magnitude, 9218868437227405312
+  jnz %nonfinite, @nonfinite, @finite
+@nonfinite
+  %nan =w cuod %value, %value
+  jnz %nan, @zero, @infinite
+@zero
+  ret 0
+@infinite
+  %positive =w cgtd %value, d_0
+  jnz %positive, @maximum, @minimum
+@finite
+  # round finite input; large values are already integral
+  %large_pos =w cged %value, d_4503599627370496
+  %large_neg =w cled %value, d_-4503599627370496
+  %large =w or %large_pos, %large_neg
+  jnz %large, @bounds, @round
+@round
+  %whole =l dtosi %value
+  %base =d sltof %whole
+  %fraction =d sub %value, %base
+  %up =w cged %fraction, d_0.5
+  %down =w cled %fraction, d_-0.5
+  %up64 =l extuw %up
+  %down64 =l extuw %down
+  %delta =l sub %up64, %down64
+  %adjusted =l add %whole, %delta
+  %small_result =d sltof %adjusted
+  jmp @bounds
+@bounds
+  # range policy after rounding
+  %number =d phi @finite %value, @round %small_result
+  %below =w cltd %number, d_0
+  %above =w cged %number, d_256
+  jnz %below, @minimum, @upper
+@minimum
+  ret 0
+@upper
+  jnz %above, @maximum, @convert
+@maximum
+  ret 255
+@convert
+  %result =l dtosi %number
+  ret %result
+}
+
+function l $cerune_round_ties_even_f64_i64(d %value, l %origin, l %origin_len) {
+@start
+  # policy: round_ties_even
+  %bits =l cast %value
+  %magnitude =l and %bits, 9223372036854775807
+  %nonfinite =w cugel %magnitude, 9218868437227405312
+  jnz %nonfinite, @nonfinite, @finite
+@nonfinite
+  call $cerune_runtime_failure(l $cerune_code_conversion_not_finite, l 45, l %origin, l %origin_len)
+  hlt
+@finite
+  # round finite input; large values are already integral
+  %large_pos =w cged %value, d_4503599627370496
+  %large_neg =w cled %value, d_-4503599627370496
+  %large =w or %large_pos, %large_neg
+  jnz %large, @bounds, @round
+@round
+  %whole =l dtosi %value
+  %base =d sltof %whole
+  %fraction =d sub %value, %base
+  %low_bit =l and %whole, 1
+  %odd =w cnel %low_bit, 0
+  %above_half =w cgtd %fraction, d_0.5
+  %at_half =w ceqd %fraction, d_0.5
+  %up_tie =w and %at_half, %odd
+  %up =w or %above_half, %up_tie
+  %below_half =w cltd %fraction, d_-0.5
+  %at_negative_half =w ceqd %fraction, d_-0.5
+  %down_tie =w and %at_negative_half, %odd
+  %down =w or %below_half, %down_tie
+  %up64 =l extuw %up
+  %down64 =l extuw %down
+  %delta =l sub %up64, %down64
+  %adjusted =l add %whole, %delta
+  %small_result =d sltof %adjusted
+  jmp @bounds
+@bounds
+  # range policy after rounding
+  %number =d phi @finite %value, @round %small_result
+  %below =w cltd %number, d_-9223372036854775808
+  %above =w cged %number, d_9223372036854775808
+  %outside =w or %below, %above
+  jnz %outside, @range_failure, @convert
+@range_failure
+  call $cerune_runtime_failure(l $cerune_code_conversion_out_of_range, l 47, l %origin, l %origin_len)
+  hlt
+@convert
+  %result =l dtosi %number
+  ret %result
+}
+
+function l $cerune_saturating_round_ties_even_f64_u8(d %value, l %origin, l %origin_len) {
+@start
+  # policy: saturating_round_ties_even
+  %bits =l cast %value
+  %magnitude =l and %bits, 9223372036854775807
+  %nonfinite =w cugel %magnitude, 9218868437227405312
+  jnz %nonfinite, @nonfinite, @finite
+@nonfinite
+  %nan =w cuod %value, %value
+  jnz %nan, @zero, @infinite
+@zero
+  ret 0
+@infinite
+  %positive =w cgtd %value, d_0
+  jnz %positive, @maximum, @minimum
+@finite
+  # round finite input; large values are already integral
+  %large_pos =w cged %value, d_4503599627370496
+  %large_neg =w cled %value, d_-4503599627370496
+  %large =w or %large_pos, %large_neg
+  jnz %large, @bounds, @round
+@round
+  %whole =l dtosi %value
+  %base =d sltof %whole
+  %fraction =d sub %value, %base
+  %low_bit =l and %whole, 1
+  %odd =w cnel %low_bit, 0
+  %above_half =w cgtd %fraction, d_0.5
+  %at_half =w ceqd %fraction, d_0.5
+  %up_tie =w and %at_half, %odd
+  %up =w or %above_half, %up_tie
+  %below_half =w cltd %fraction, d_-0.5
+  %at_negative_half =w ceqd %fraction, d_-0.5
+  %down_tie =w and %at_negative_half, %odd
+  %down =w or %below_half, %down_tie
+  %up64 =l extuw %up
+  %down64 =l extuw %down
+  %delta =l sub %up64, %down64
+  %adjusted =l add %whole, %delta
+  %small_result =d sltof %adjusted
+  jmp @bounds
+@bounds
+  # range policy after rounding
+  %number =d phi @finite %value, @round %small_result
+  %below =w cltd %number, d_0
+  %above =w cged %number, d_256
+  jnz %below, @minimum, @upper
+@minimum
+  ret 0
+@upper
+  jnz %above, @maximum, @convert
+@maximum
+  ret 255
+@convert
+  %result =l dtosi %number
+  ret %result
+}
+
+function d $cerune_fn_value_0(d %arg0) {
+@start
+  %slot_x =l alloc8 8
+  stored %arg0, %slot_x
+  %tmp0 =d loadd %slot_x
+  ret %tmp0
+}
+
+export function w $main() {
+@start
+  %tmp0 =d neg d_2.5
+  %tmp1 =d call $cerune_fn_value_0(d %tmp0)
+  %tmp2 =l call $cerune_floor_f64_i64(d %tmp1, l $cerune_origin_7_79_102, l 22)
+  %tmp3 =w call $printf(l $fmt_i64, ..., l %tmp2)
+  %tmp4 =d neg d_2.5
+  %tmp5 =d call $cerune_fn_value_0(d %tmp4)
+  %tmp6 =l call $cerune_ceil_f64_i64(d %tmp5, l $cerune_origin_12_111_133, l 24)
+  %tmp7 =w call $printf(l $fmt_i64, ..., l %tmp6)
+  %tmp8 =d call $cerune_fn_value_0(d d_2.5)
+  %tmp9 =l call $cerune_round_f64_i64(d %tmp8, l $cerune_origin_17_142_164, l 24)
+  %tmp10 =w call $printf(l $fmt_i64, ..., l %tmp9)
+  %tmp11 =d call $cerune_fn_value_0(d d_2.5)
+  %tmp12 =l call $cerune_round_ties_even_f64_i64(d %tmp11, l $cerune_origin_21_173_205, l 24)
+  %tmp13 =w call $printf(l $fmt_i64, ..., l %tmp12)
+  %tmp14 =d call $cerune_fn_value_0(d d_300.0)
+  %tmp15 =l call $cerune_saturating_trunc_f64_u8(d %tmp14, l $cerune_origin_25_214_248, l 24)
+  %tmp16 =w call $printf(l $fmt_i64, ..., l %tmp15)
+  %tmp17 =d neg d_0.1
+  %tmp18 =d call $cerune_fn_value_0(d %tmp17)
+  %tmp19 =l call $cerune_saturating_floor_f64_u8(d %tmp18, l $cerune_origin_29_257_290, l 24)
+  %tmp20 =w call $printf(l $fmt_i64, ..., l %tmp19)
+  %tmp21 =d call $cerune_fn_value_0(d d_255.1)
+  %tmp22 =l call $cerune_saturating_ceil_f64_u8(d %tmp21, l $cerune_origin_34_299_332, l 24)
+  %tmp23 =w call $printf(l $fmt_i64, ..., l %tmp22)
+  %tmp24 =d call $cerune_fn_value_0(d d_255.5)
+  %tmp25 =l call $cerune_saturating_round_f64_u8(d %tmp24, l $cerune_origin_38_341_375, l 24)
+  %tmp26 =w call $printf(l $fmt_i64, ..., l %tmp25)
+  %tmp27 =d call $cerune_fn_value_0(d d_254.5)
+  %tmp28 =l call $cerune_saturating_round_ties_even_f64_u8(d %tmp27, l $cerune_origin_42_384_428, l 24)
+  %tmp29 =w call $printf(l $fmt_i64, ..., l %tmp28)
+  %tmp30 =w call $printf(l $fmt_i64, ..., l 3)
+  ret 0
+}

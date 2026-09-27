@@ -1,4 +1,12 @@
 use cerune_lang::run_vm;
+#[path = "support/rounding_cases.rs"]
+mod rounding_cases;
+#[test]
+fn rounding_examples() {
+    for &(source, expected) in &rounding_cases::CASES[..4] {
+        assert_eq!(run_vm(source).unwrap(), expected);
+    }
+}
 
 #[path = "support/truncation_cases.rs"]
 mod truncation_cases;

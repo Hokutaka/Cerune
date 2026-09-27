@@ -42,9 +42,32 @@ pub(super) fn convert_with_mode(
     };
     let fail = |reason| VmErrorKind::NumericConversionFailed { from, to, reason };
     if !number.is_finite() {
+        if mode.saturates() {
+            let result = if number.is_nan() {
+                0
+            } else if number.is_sign_positive() {
+                ty.maximum()
+            } else {
+                ty.minimum()
+            };
+            return Ok(Value::Integer(result, ty));
+        }
         return Err(fail(NumericConversionFailure::NotFinite));
     }
-    let number = number.trunc();
+    use crate::types::RoundingMode;
+    let number = match mode.rounding().unwrap() {
+        RoundingMode::Truncate => number.trunc(),
+        RoundingMode::Floor => number.floor(),
+        RoundingMode::Ceil => number.ceil(),
+        RoundingMode::Round => number.round(),
+        RoundingMode::TiesEven => number.round_ties_even(),
+    };
+    if mode.saturates() {
+        return Ok(Value::Integer(
+            (number as i128).clamp(ty.minimum(), ty.maximum()),
+            ty,
+        ));
+    }
     if number < ty.minimum() as f64 || number >= (ty.maximum() + 1) as f64 {
         return Err(fail(NumericConversionFailure::OutOfRange));
     }

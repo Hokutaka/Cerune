@@ -22,7 +22,7 @@ pub struct NumericConversion {
 
 impl NumericConversion {
     pub fn truncates(self) -> bool {
-        self.mode == crate::types::ConversionMode::Truncate
+        self.mode.rounding() == Some(crate::types::RoundingMode::Truncate) && !self.mode.saturates()
     }
     /// 下限と、その境界自体を拒否するかを返します。
     /// i64の最小値-1はf64で区別できないため、表せる最小値を含む境界にします。
@@ -47,10 +47,10 @@ impl NumericConversion {
     }
 
     pub fn helper(self) -> String {
-        let operation = if self.mode == crate::types::ConversionMode::Truncate {
-            "trunc"
-        } else {
+        let operation = if self.mode == crate::types::ConversionMode::Exact {
             "convert"
+        } else {
+            self.mode.name()
         };
         format!("cerune_{operation}_{}_{}", self.from.name(), self.to.name())
     }
