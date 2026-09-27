@@ -47,9 +47,13 @@ Language support does not imply equal observation detail. Language check failure
 
 | Order | Missing feature | First contract and example |
 | --- | --- | --- |
-| 1 | Dynamic data, recursion, external I/O | Define ownership, lifetimes, allocation failure, call storage, resource limits, and effects first. Introduce slices, concatenation, and files in stages |
-| 2 | Module distribution | Re-exports, dependencies/versions, reproducible builds; extend explicit imports |
+| 1 | Dynamic strings | Start with concatenation under the [ownership/lifetime proposal](dynamic-data.en.md); expose retain/release, allocation failure, and budgets across routes |
+| 2 | Dynamic arrays and ranges | Owned arrays/range copies first; borrowed slices need separate lifetime and mutation type rules |
+| 3 | Recursion and external I/O | Define call storage, resource limits, I/O failure, and cleanup |
+| 4 | Module distribution | Re-exports, dependencies/versions, reproducible builds; extend explicit imports |
 | Experiment | GPU numeric computation | Narrow the supported types, memory, synchronization, and diagnostics; compare independent element computations with the CPU |
+
+The [fixed-capacity used-length](../../examples/bounded_sequence.ceru) and [range-copy](../../examples/array_window.ceru) examples run with current features; they do not implement dynamic arrays or borrowed slices.
 
 Existing foundations are [common failure records](runtime-diagnostics.en.md), [file origins](source-files.en.md), [modules](modules.en.md), [constants](constants.en.md), [functions](functions.en.md), [product updates](product-updates.en.md), [sums](sum-types.en.md), and [fixed arrays](fixed-arrays.en.md). The [mixed-argument](../../examples/function_arguments.ceru) and [array-length](../../examples/array_length.ceru) examples check value passing and evaluation order.
 

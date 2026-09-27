@@ -1,0 +1,35 @@
+// 固定容量の配列と使用数を組み合わせた例です。動的配列・ヒープ確保ではありません。
+type Buffer { storage: [i64; 4], length: i64 }
+enum Append {
+    Added { value: Buffer },
+    Full { rejected: i64 },
+    InvalidLength { length: i64 },
+}
+fn append(buffer: Buffer, item: i64) -> Append {
+    capacity: i64 = array_len(buffer.storage);
+    if buffer.length < 0 || buffer.length > capacity {
+        return Append::InvalidLength { length: buffer.length };
+    }
+    if buffer.length == capacity { return Append::Full { rejected: item }; }
+    mut storage: [i64; 4] = buffer.storage;
+    storage[buffer.length] = item;
+    return Append::Added {
+        value: Buffer { storage: storage, length: buffer.length + 1 },
+    };
+}
+empty: Buffer = Buffer { storage: [0, 0, 0, 0], length: 0 };
+first: Buffer = match append(empty, 7) {
+    Append::Added { value: value } => value,
+    Append::Full { rejected: _ } => empty,
+    Append::InvalidLength { length: _ } => empty,
+};
+print(empty.length); // 0
+print(first.length); // 1
+mut copy: [i64; 4] = first.storage;
+copy[0] = 99;
+print(first.storage); // [7, 0, 0, 0]
+print(copy); // [99, 0, 0, 0]
+full: Buffer = Buffer { storage: [10, 20, 30, 40], length: 4 };
+print(append(full, 50)); // Full{rejected: 50}
+// 使用数の整合性は、この例の関数が検査します。
+print(append(Buffer { storage: [0, 0, 0, 0], length: -1 }, 7));

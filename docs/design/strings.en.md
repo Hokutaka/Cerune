@@ -38,6 +38,8 @@ All current strings originate from source literals. Their data is emitted as C s
 
 Assignment copies the pointer and byte count. Sharing the data preserves immutable value semantics because Cerune exposes no operation to change those contents. Equality compares contents, not sharing or addresses. No string-specific `malloc`, `free`, or reference counting is needed.
 
+Runtime concatenation, ownership, and release are discussed in the [dynamic-data proposal](dynamic-data.en.md); they are not implemented yet.
+
 This representation applies to the current feature set, which does not create new string contents at runtime. It does not cover memory management for concatenation or external input. The generated C struct is not a stable external-integration ABI.
 
 ## Bytes and evaluation order

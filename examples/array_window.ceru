@@ -1,0 +1,29 @@
+// [start, end)を固定容量の別の値へコピーします。借用スライスではありません。
+type Window { storage: [i64; 4], length: i64 }
+enum RangeCopy { Copied { value: Window }, Invalid { start: i64, end: i64 } }
+fn copy_range(values: [i64; 4], start: i64, end: i64) -> RangeCopy {
+    if start < 0 || end < start || end > array_len(values) {
+        return RangeCopy::Invalid { start: start, end: end };
+    }
+    mut storage: [i64; 4] = [0, 0, 0, 0];
+    for (mut i: i64 = start; i < end; i = i + 1) {
+        storage[i - start] = values[i];
+    }
+    return RangeCopy::Copied { value: Window { storage: storage, length: end - start } };
+}
+fn source(values: [i64; 4]) -> [i64; 4] { print("対象"); return values; }
+fn bound(label: string, value: i64) -> i64 { print(label); return value; }
+mut values: [i64; 4] = [10, 20, 30, 40];
+selected: RangeCopy = copy_range(source(values), bound("開始", 1), bound("終了", 3));
+values[1] = 99;
+print(selected); // コピーには20・30が残ります。
+print(values); // [10, 99, 30, 40]
+print(copy_range(values, 4, 4)); // 末尾の空範囲
+print(copy_range(values, -1, 2));
+print(copy_range(values, 3, 2));
+print(copy_range(values, 0, 5));
+// 短絡した右辺では、引数もコピー処理も実行しません。
+print(false && match copy_range(source(values), 0, 1) {
+    RangeCopy::Copied { value: _ } => true,
+    RangeCopy::Invalid { start: _, end: _ } => false,
+});
