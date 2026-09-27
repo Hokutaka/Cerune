@@ -1,0 +1,10 @@
+// 金額は整数の円単位で扱います。
+prices: [u64; 3] = [120, 250, 80];
+mut total: u64 = 0;
+for (price: u64 in prices) {
+    total = total + price;
+}
+
+print(total); // 合計450円
+paid: u64 = 500;
+print(paid - total); // お釣り50円（支払額が合計以上の場合）

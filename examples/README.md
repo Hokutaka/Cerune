@@ -147,6 +147,9 @@ cargo run --quiet -- emit-c examples/linear_regression.ceru
 | サンプル | 内容 |
 | --- | --- |
 | [hello.ceru](hello.ceru) | 整数に名前を付け、足し算の結果を`print`で表示する最初の例 |
+| [greeting.ceru](greeting.ceru) | `string`の名前を関数へ渡し、`concat`で挨拶を作る |
+| [shopping_total.ceru](shopping_total.ceru) | `u64`の価格配列を`for … in`で足し、合計とお釣りを表示 |
+| [countdown.ceru](countdown.ceru) | `mut i64`と`while`で3・2・1を表示して終了 |
 | [short_circuit.ceru](short_circuit.ceru) | `&&`・`\|\|`で条件を組み合わせ、不要な割り算・配列参照・関数呼び出しを省略する |
 | [conditional.ceru](conditional.ceru) | `if` / `else`とscope |
 | [loop_control.ceru](loop_control.ceru) | `while`、`break`、`continue` |

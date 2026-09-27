@@ -1,0 +1,7 @@
+// 関数で名前を受け取り、concatで挨拶を作ります。
+fn greet(name: string) -> string {
+    return concat("こんにちは、", name);
+}
+
+print(greet("世界"));   // こんにちは、世界
+print(greet("Cerune")); // こんにちは、Cerune
