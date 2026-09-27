@@ -77,7 +77,7 @@ fn string_statement(statement: &Statement) -> Option<Span> {
                 (contains_string(&target.ty) || contains_string(&target.root_ty))
                     .then_some(statement.span)
             }),
-        StatementKind::Print { value } => string_expr(value),
+        StatementKind::Print { value } | StatementKind::Write { value, .. } => string_expr(value),
         StatementKind::Call { arguments, .. } => arguments.iter().find_map(string_expr),
         StatementKind::Return { value } => value.as_ref().and_then(string_expr),
         StatementKind::If {
@@ -108,6 +108,9 @@ fn string_expr(expr: &Expr) -> Option<Span> {
         return Some(expr.span);
     }
     match &expr.kind {
+        ExprKind::Let { .. } | ExprKind::Conditional { .. } => {
+            unreachable!("match expressions are lowered before code generation")
+        }
         ExprKind::Constant { value, .. } => string_expr(value),
         ExprKind::ArrayLength { value }
         | ExprKind::StringByteLength { value }

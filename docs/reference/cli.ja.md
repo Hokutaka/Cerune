@@ -126,6 +126,8 @@ cc target/string_lookup.s -o target/string_lookup
 
 文字列を使うWATは`cerune.write_byte(i32) -> void`をimportし、各バイトと末尾LFを渡します。メモリは公開しません。数値・真偽値の既存のホスト関数も含め、ホストは[文字列の出力契約](../design/strings.ja.md#watの出力と外部との境界)を実装します。`emit-wat`自体はホストを起動しません。
 
+複合値を表示するWATは`cerune.write_i64`・`write_u64`・`write_f32`・`write_f64`もimportします。ホストは数値を既存の規則で改行せず出力します。引用した文字列と区切りは`write_byte`を使います。[複合値の出力契約](../design/aggregate-values.ja.md)を参照してください。
+
 実行時検査を持つWATは`cerune.write_error_byte(i32) -> void`もimportします。ホストはこのASCII診断をstderrとして出力し、`unreachable`で停止しても先行stdoutを保持します。[実行時診断の契約](../design/runtime-diagnostics.ja.md)を参照してください。
 
 Windows x64の直接アセンブリは`cerune emit-asm examples/string_lookup.ceru -o target/string_lookup.s`で生成し、`clang --target=x86_64-pc-windows-msvc target/string_lookup.s -o target/string_lookup.exe`でビルドできます。文字列の出力前に標準出力をバイナリモードへ切り替えます。

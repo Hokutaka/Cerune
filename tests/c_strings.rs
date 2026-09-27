@@ -402,3 +402,14 @@ fn constant_array_lengths_preserve_values_across_optimized_c() {
         native.matches_vm(source);
     }
 }
+
+#[path = "support/aggregate_cases.rs"]
+mod aggregate_cases;
+#[test]
+fn aggregate_values_match_optimized_c() {
+    let Some(native) = NativeC::new() else { return };
+    for &(source, expected) in aggregate_cases::CASES {
+        assert_eq!(run_vm(source).unwrap(), expected);
+        native.matches_vm(source);
+    }
+}

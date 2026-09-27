@@ -1,3 +1,6 @@
+#[path = "aggregate_cases.rs"]
+pub mod aggregate_cases;
+
 #[path = "generic_cases.rs"]
 pub mod generic_cases;
 
@@ -156,6 +159,11 @@ pub const PRODUCT_UPDATES: &[(&str, &str)] = &[
     rounding_cases::CASES[4],
     rounding_cases::CASES[5],
     rounding_cases::CASES[6],
+    aggregate_cases::CASES[0],
+    aggregate_cases::CASES[1],
+    aggregate_cases::CASES[2],
+    aggregate_cases::CASES[3],
+    aggregate_cases::CASES[4],
 ];
 
 pub const UNUSED_DEFAULT: &str =

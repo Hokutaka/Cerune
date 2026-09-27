@@ -32,6 +32,9 @@ pub fn emit(module: &Module) -> String {
         output.push_str(super::string::SUPPORT);
     }
 
+    if module.uses_write {
+        output.push_str(&crate::codegen::display::c());
+    }
     let mut emitted_array_types = Vec::new();
     for ty in &module.array_types {
         let Type::Array { element, .. } = ty else {
@@ -216,6 +219,11 @@ fn emit_statement(statement: &Statement, indent: usize, module: &Module, output:
             }
         }
 
+        Statement::Write { kind, value } => {
+            write!(output, "{prefix}cerune_write_{kind}(").unwrap();
+            emit_expr(value, module, output);
+            output.push_str(");\n");
+        }
         Statement::Print { format, value } => {
             emit_print(*format, value, &prefix, module, output);
         }
@@ -820,9 +828,9 @@ impl RuntimeSupport {
 
     fn include_statement(&mut self, statement: &Statement) {
         match statement {
-            Statement::Binding { value, .. } | Statement::Print { value, .. } => {
-                self.include_expr(value)
-            }
+            Statement::Binding { value, .. }
+            | Statement::Write { value, .. }
+            | Statement::Print { value, .. } => self.include_expr(value),
             Statement::Assignment { target, value } => {
                 self.include_expr(value);
                 for projection in &target.projections {
@@ -1148,7 +1156,9 @@ fn array_element_name(element: &Type, module: &Module) -> String {
 fn statement_uses_bool(statement: &Statement) -> bool {
     match statement {
         Statement::Binding { ty, value, .. } => *ty == Type::Bool || value.ty == Type::Bool,
-        Statement::Assignment { value, .. } => value.ty == Type::Bool,
+        Statement::Assignment { value, .. } | Statement::Write { value, .. } => {
+            value.ty == Type::Bool
+        }
         Statement::Print { format, value } => {
             *format == PrintFormat::Bool || value.ty == Type::Bool
         }

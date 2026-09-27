@@ -11,6 +11,7 @@ importによる分割と単一ファイル版を比較します。このディ�
 | [main.ceru](main.ceru) | `values::Reading`、配列、コピー、短絡評価 | 最大u64、コピーの独立性、文字列のバイト・等値比較、右辺の省略 |
 | [single.ceru](single.ceru) | 同じ処理を単一ファイルで記述 | 分割前後で値と出力順が一致 |
 | [sum_lookup.ceru](sum_lookup.ceru) | `values::Lookup::Found`、`match` | `空\0\r\n`、未登録、直接構築した文字列 |
+| [aggregate_match.ceru](aggregate_match.ceru) | `values::Lookup`、`match` | 公開enumの比較・配列表示、別ファイルのmatch式とガード |
 | [constant_array_lengths.ceru](constant_array_lengths.ceru) | 型の長さへ公開定数を使用 | `共有サイズ → 6 → 15`、最後に`保持\0\r\n` |
 | [generic_functions.ceru](generic_functions.ceru) | 型・長さを指定する公開関数 | 共有型の文字列バイト、非公開サイズ、最大u64 |
 | [constants.ceru](constants.ceru) | 定数のimportとコピー | `129 → 12 → 10 → 99`、最後に`設定\0\r\n`を表示 |
@@ -51,6 +52,7 @@ NodeIdとバイト位置は編集・改行方式で変わります。意図し�
 | --- | --- |
 | [values.ceru](values.ceru) | `u64`・`string`を持つ公開構造体と既定値、公開関数、非公開補助関数 |
 | [lookup_values.ceru](lookup_values.ceru) | `pub enum`・定数・関数。存在／不在を値で返す |
+| [aggregate_helpers.ceru](aggregate_helpers.ceru) | 公開enumを受け取り、ガード付きmatch式で文字列を返す公開関数 |
 | [generic_arrays.ceru](generic_arrays.ceru) | 公開する型・長さ付き関数、型・定数と非公開の実装サイズ |
 | [dimensions.ceru](dimensions.ceru) | 公開する行数・列数と、公開型の長さを定める非公開定数 |
 | [constant_settings.ceru](constant_settings.ceru) | `pub const`・構造体・非公開定数。設定と補正値をコンパイル時に評価 |

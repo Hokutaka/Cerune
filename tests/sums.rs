@@ -76,10 +76,7 @@ fn invalid_enums_patterns_and_constructors_are_rejected() {
             "enum E { A { x: i64 } } x: E = E::A { x: 1 }; print(x.x);",
             "no field",
         ),
-        (
-            "enum E { A } x: E = E::A {}; print(x == x);",
-            "cannot apply",
-        ),
+        ("enum E { A } x: E = E::A {}; print(x < x);", "cannot apply"),
         ("enum E { A { next: E }, B }", "infinite size"),
         (
             "enum E { A { next: E }, B } x: E = E::B {};",

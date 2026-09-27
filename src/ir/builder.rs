@@ -39,6 +39,7 @@ pub fn build(program: &ast::Program) -> Result<Program, Diagnostic> {
             .array_length_uses
             .push(usage.span);
     }
+    super::aggregates::lower(&mut ir);
     Ok(ir)
 }
 
@@ -59,7 +60,8 @@ pub(crate) fn build_with_model(
         .collect();
     let mut builder = Builder {
         scopes: vec![HashMap::new()],
-        next_binding_id: 0,
+        next_binding_id: Cell::new(0),
+        expression_bindings: RefCell::new(Vec::new()),
         next_node_id: Cell::new(0),
         current_return_type: None,
         model,
@@ -125,7 +127,8 @@ struct Builder<'a> {
     constant_cache: RefCell<Vec<Option<(super::ConstantDefinition, crate::vm::Value)>>>,
     constant_stack: RefCell<Vec<usize>>,
     scopes: Vec<HashMap<String, ResolvedBinding>>,
-    next_binding_id: usize,
+    next_binding_id: Cell<usize>,
+    expression_bindings: RefCell<Vec<HashMap<String, ResolvedBinding>>>,
     next_node_id: Cell<usize>,
     current_return_type: Option<semantic::ReturnType>,
     model: &'a SemanticModel,
@@ -148,8 +151,7 @@ impl Builder<'_> {
         let result = (|| {
             let mut parameters = Vec::new();
             for parameter in &definition.parameters {
-                let id = BindingId(self.next_binding_id);
-                self.next_binding_id += 1;
+                let id = self.allocate_binding_id();
                 self.scopes[0].insert(
                     parameter.name.clone(),
                     ResolvedBinding {
@@ -168,6 +170,7 @@ impl Builder<'_> {
                 });
             }
             Ok(FunctionDefinition {
+                lowering: None,
                 generic_origin: None,
                 id: FunctionId(definition.id.0),
                 name: definition.name.clone(),
@@ -254,8 +257,7 @@ impl Builder<'_> {
                     ast::TypeSpec::Infer => self.model.type_of_expr(value, &bindings)?,
                 };
                 let value = self.build_expr(value, Some(ty.clone()), &bindings)?;
-                let id = BindingId(self.next_binding_id);
-                self.next_binding_id += 1;
+                let id = self.allocate_binding_id();
 
                 self.scopes
                     .last_mut()
@@ -460,6 +462,48 @@ impl Builder<'_> {
                     }
                 }
             }
+            ast::ExprKind::Match { .. } => unreachable!("match is expanded before IR"),
+            ast::ExprKind::Let {
+                name,
+                type_ref,
+                value,
+                body,
+            } => {
+                let binding_ty = self.model.resolve_type_ref(type_ref)?;
+                let value = self.build_expr(value, Some(binding_ty.clone()), bindings)?;
+                let binding = self.allocate_binding_id();
+                let info = BindingInfo {
+                    ty: binding_ty,
+                    mutable: false,
+                };
+                let mut locals = bindings.clone();
+                locals.insert(name.clone(), info.clone());
+                self.expression_bindings.borrow_mut().push(HashMap::from([(
+                    name.clone(),
+                    ResolvedBinding { id: binding, info },
+                )]));
+                let result = self.build_expr(body, Some(ty.clone()), &locals);
+                self.expression_bindings.borrow_mut().pop();
+                ExprKind::Let {
+                    binding,
+                    name: name.clone(),
+                    value: Box::new(value),
+                    body: Box::new(result?),
+                }
+            }
+            ast::ExprKind::Conditional {
+                condition,
+                then_value,
+                else_value,
+            } => ExprKind::Conditional {
+                condition: Box::new(self.build_expr(
+                    condition,
+                    Some(semantic::Type::Bool),
+                    bindings,
+                )?),
+                then_value: Box::new(self.build_expr(then_value, Some(ty.clone()), bindings)?),
+                else_value: Box::new(self.build_expr(else_value, Some(ty.clone()), bindings)?),
+            },
             ast::ExprKind::GenericCall(_) => unreachable!("generic calls are lowered before IR"),
             ast::ExprKind::Boolean(value) => ExprKind::Boolean(*value),
             ast::ExprKind::String(value) => ExprKind::String(value.clone()),
@@ -683,7 +727,21 @@ impl Builder<'_> {
         NodeId(id)
     }
 
+    fn allocate_binding_id(&self) -> BindingId {
+        let id = self.next_binding_id.get();
+        self.next_binding_id.set(id + 1);
+        BindingId(id)
+    }
     fn resolve(&self, name: &str) -> Option<ResolvedBinding> {
+        if let Some(value) = self
+            .expression_bindings
+            .borrow()
+            .iter()
+            .rev()
+            .find_map(|scope| scope.get(name).cloned())
+        {
+            return Some(value);
+        }
         self.scopes
             .iter()
             .rev()

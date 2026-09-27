@@ -205,6 +205,16 @@ impl Parser {
     }
 
     fn parse_match(&mut self) -> ParseResult<Stmt> {
+        let (start, value, arms, end) = self.parse_match_parts(false)?;
+        Ok(Stmt {
+            kind: StmtKind::Match { value, arms },
+            span: self.span(start, end),
+        })
+    }
+    fn parse_match_parts(
+        &mut self,
+        expression: bool,
+    ) -> ParseResult<(usize, Expr, Vec<crate::ast::MatchArm>, usize)> {
         let start = self.advance().span.start();
         let value = self.parse_block_condition()?;
         self.expect_simple(TokenKind::LeftBrace)?;
@@ -229,9 +239,24 @@ impl Parser {
                 self.advance();
             }
             self.expect_simple(TokenKind::RightBrace)?;
+            let guard = if matches!(self.peek().kind, TokenKind::If) {
+                self.advance();
+                Some(self.parse_expression()?)
+            } else {
+                None
+            };
             self.expect_simple(TokenKind::FatArrow)?;
-            let (body, end) = self.parse_block()?;
+            let (body, result, end) = if expression {
+                let value = self.parse_expression()?;
+                let end = value.span.end();
+                (Vec::new(), Some(Box::new(value)), end)
+            } else {
+                let (body, end) = self.parse_block()?;
+                (body, None, end)
+            };
             arms.push(crate::ast::MatchArm {
+                guard,
+                result,
                 variant,
                 variant_span,
                 fields,
@@ -244,10 +269,7 @@ impl Parser {
             self.advance();
         }
         let end = self.expect_simple(TokenKind::RightBrace)?.end();
-        Ok(Stmt {
-            kind: StmtKind::Match { value, arms },
-            span: self.span(start, end),
-        })
+        Ok((start, value, arms, end))
     }
 
     fn parse_constant_definition(&mut self) -> ParseResult<crate::ast::ConstantDefinition> {
@@ -1184,6 +1206,16 @@ impl Parser {
     }
 
     fn parse_primary(&mut self) -> ParseResult<Expr> {
+        if matches!(self.peek().kind, TokenKind::Match) {
+            let (start, value, arms, end) = self.parse_match_parts(true)?;
+            return Ok(Expr {
+                kind: ExprKind::Match {
+                    value: Box::new(value),
+                    arms,
+                },
+                span: self.span(start, end),
+            });
+        }
         let token = self.advance().clone();
         let span = token.span;
 

@@ -184,6 +184,8 @@ pub struct VariantDefinition {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MatchArm {
+    pub guard: Option<Expr>,
+    pub result: Option<Box<Expr>>,
     pub variant: String,
     pub variant_span: Span,
     pub fields: Vec<PatternField>,
@@ -329,6 +331,22 @@ impl IntegerLiteral {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ExprKind {
+    Match {
+        value: Box<Expr>,
+        arms: Vec<MatchArm>,
+    },
+    /// matchのコピー束縛と分岐を表す、共通フロントエンド内の式です。
+    Let {
+        name: String,
+        type_ref: TypeRef,
+        value: Box<Expr>,
+        body: Box<Expr>,
+    },
+    Conditional {
+        condition: Box<Expr>,
+        then_value: Box<Expr>,
+        else_value: Box<Expr>,
+    },
     GenericCall(Box<GenericCall>),
     Logical {
         op: LogicalOp,

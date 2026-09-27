@@ -11,6 +11,7 @@ const OBSERVATION_CASES: &[&str] = &[
     "numeric-conversions",
     "truncating-conversions",
     "rounding-conversions",
+    "aggregate-values",
     "u64-values",
     "float-types",
     "float-output",
@@ -83,7 +84,11 @@ fn assert_observation(case_name: &str, command: &str, expected_file: &str) {
     let mut process = Command::new(env!("CARGO_BIN_EXE_cerune"));
     process.arg(command).arg(source_path(case_name));
     if command == "emit-llvm"
-        || (command == "emit-qbe" && matches!(case_name, "string-values" | "string-byte-length"))
+        || (command == "emit-qbe"
+            && matches!(
+                case_name,
+                "string-values" | "string-byte-length" | "aggregate-values"
+            ))
     {
         process.args(["--target", "x86_64-unknown-linux-gnu"]);
     }
@@ -239,4 +244,29 @@ fn emit_bytecode_matches_expected_output() {
 #[test]
 fn run_matches_expected_output() {
     assert_observation_cases("run", "run.stdout");
+}
+
+#[test]
+fn aggregate_and_match_origins_remain_visible_in_native_outputs() {
+    for (command, target, file) in [
+        ("emit-llvm", "x86_64-unknown-linux-gnu", "llvm.annotated.ll"),
+        ("emit-asm", "x86_64-unknown-linux-gnu", "linux.annotated.s"),
+        ("emit-asm", "x86_64-pc-windows-msvc", "windows.annotated.s"),
+    ] {
+        let output = Command::new(env!("CARGO_BIN_EXE_cerune"))
+            .arg(command)
+            .arg(source_path("aggregate-values"))
+            .args(["--target", target, "--annotate-origins"])
+            .output()
+            .unwrap();
+        assert!(
+            output.status.success(),
+            "{}",
+            String::from_utf8_lossy(&output.stderr)
+        );
+        assert_eq!(
+            String::from_utf8(output.stdout).unwrap(),
+            expected_output("aggregate-values", file).replace("\r\n", "\n")
+        );
+    }
 }

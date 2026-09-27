@@ -25,7 +25,7 @@ match lookup("sky") {
 | Type | Nominal value type declared with `enum`; at least one variant |
 | Construction | `Enum::Variant { field: value }`; empty variants still require `{}` |
 | Payloads | Named, explicitly typed fields containing numbers, bools, strings, arrays, products, or sums |
-| Branching | `match` is a statement; list every variant exactly once and bind each field or discard it with `field: _` |
+| Branching | `match` statements/expressions with `if` guards; each variant needs an unguarded arm; bind each field or discard it with `field: _` |
 | Bindings | Immutable copies scoped to the arm, not references into the subject |
 | Values | Supported in variables, arguments, returns, arrays, products, and constants |
 | Modules | `pub enum` exposes all variants and fields; importers use `alias::Enum::Variant` |
@@ -38,11 +38,11 @@ Parenthesize constructors used directly as subjects: `match (Lookup::Missing {})
 
 ## Checks and failures
 
-Missing or duplicate variants, mixed enum types, subject/pattern type mismatches, and missing, duplicate, or incorrectly typed fields are compile errors. Public enum payloads cannot contain private types. Recursive value types are rejected because their size would be infinite.
+Variants missing an unguarded arm, unreachable patterns after that arm, mixed enum types, subject/pattern type mismatches, and missing, duplicate, or incorrectly typed fields are compile errors. Public enum payloads cannot contain private types. Recursive value types are rejected because their size would be infinite.
 
 Programs can return a value such as `Error { ... }` to represent a recoverable failure. Match does not catch runtime stops such as overflow or division by zero. Failure while evaluating a subject or payload prevents subsequent evaluation and preserves the existing reason, expression span, and prior output.
 
-Whole-enum printing/equality, direct field access, and product updates on enums are unsupported. Extract values with match. Guards, whole-arm wildcards, nested patterns, match expressions, implicit error propagation, generics, and built-in Option/Result types are not introduced.
+Whole-enum printing/equality, guards, and match expressions are supported; see the [aggregate and match rules](aggregate-values.en.md). Direct field access, product updates on enums, whole-arm wildcards, nested patterns, implicit error propagation, generic enums, and built-in Option/Result types remain unsupported.
 
 ## Shared representation and observation
 

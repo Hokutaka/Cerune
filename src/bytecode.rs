@@ -193,6 +193,10 @@ pub enum InstructionKind {
     Negate(Type),
     Not,
 
+    Write {
+        ty: Type,
+        quoted: bool,
+    },
     Print(Type),
 
     JumpIfFalse(usize),
@@ -474,6 +478,18 @@ impl Compiler {
                 false
             }
 
+            StatementKind::Write { value, quoted } => {
+                self.emit_expr(value);
+                self.emit_source(
+                    InstructionKind::Write {
+                        ty: value.ty.clone().into(),
+                        quoted: *quoted,
+                    },
+                    statement.id,
+                    statement.span,
+                );
+                false
+            }
             StatementKind::Print { value } => {
                 self.emit_expr(value);
 
@@ -677,6 +693,9 @@ impl Compiler {
 
     fn emit_expr(&mut self, expr: &Expr) {
         match &expr.kind {
+            ExprKind::Let { .. } | ExprKind::Conditional { .. } => {
+                unreachable!("match expressions are lowered before code generation")
+            }
             ExprKind::Constant { value, .. } => self.emit_expr(value),
             ExprKind::ArrayLength { value } => {
                 let ir::Type::Array { element, length } = &value.ty else {
@@ -1052,6 +1071,7 @@ fn collect_slots(
                 collect_slots(body, slots, slot_map);
             }
             StatementKind::Assignment { .. }
+            | StatementKind::Write { .. }
             | StatementKind::Print { .. }
             | StatementKind::Call { .. }
             | StatementKind::Return { .. }
@@ -1317,6 +1337,15 @@ fn format_instruction(
             writeln!(output, "not.bool").unwrap();
         }
 
+        InstructionKind::Write { ty, quoted } => {
+            writeln!(
+                output,
+                "write{} {}",
+                if *quoted { ".quoted" } else { "" },
+                type_name(ty, program)
+            )
+            .unwrap();
+        }
         InstructionKind::Print(ty) => {
             writeln!(output, "print.{}", type_name(ty, program),).unwrap();
         }

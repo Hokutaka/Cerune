@@ -91,6 +91,8 @@ cargo run --quiet -- emit-c examples/linear_regression.ceru
 | 固定長配列 `[T; N]` | [fixed_arrays.ceru](fixed_arrays.ceru)、[bubble_sort.ceru](bubble_sort.ceru) | 添字、要素の更新、コピー後の独立性 |
 | 構造体 `type Point { ... }` | [product-point.ceru](product-point.ceru)、[product_arrays.ceru](product_arrays.ceru) | フィールド・既定値と、構造体を要素にする配列 |
 | 入れ子の配列・構造体 | [function_values.ceru](function_values.ceru)、[u64_values.ceru](u64_values.ceru)、[string_lookup.ceru](string_lookup.ceru) | 数値や文字列を組み合わせ、関数へ値として渡す |
+| 複合値の等値比較 | [aggregate_comparison.ceru](aggregate_comparison.ceru) | 配列・構造体・直和型、左右の評価順、定数とジェネリック関数 |
+| 複合値の表示 | [aggregate_display.ceru](aggregate_display.ceru) | 入れ子の値、最大u64、文字列の引用、NUL・CR/LFを保持 |
 
 ### 直和型：選択肢に応じた値
 
@@ -100,6 +102,11 @@ cargo run --quiet -- emit-c examples/linear_regression.ceru
 | [sum_divide.ceru](sum_divide.ceru) | `enum Division`：成功値・ゼロ除算・範囲外を値で返して処理を続ける |
 | [sum_values.ceru](sum_values.ceru) | 配列・構造体を持つ選択肢、コピー、構築順と分岐内の再代入 |
 | [modules/sum_lookup.ceru](modules/sum_lookup.ceru) | 公開enumのimport・構築・網羅的な分岐 |
+| [match_values.ceru](match_values.ceru) | match式の戻り値、ガード、型引数、定数で配列長を決める |
+| [match_guards.ceru](match_guards.ceru) | 対象を一度評価、ガードの順と省略、コピーの独立性、continue・break |
+| [modules/aggregate_match.ceru](modules/aggregate_match.ceru) | 公開enum・定数の比較と表示、別ファイルのmatch式 |
+
+[比較・表示・分岐の規則と生成手順](../docs/design/aggregate-values.ja.md)。
 
 ### コンパイル時定数
 

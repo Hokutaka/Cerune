@@ -1,3 +1,4 @@
+mod aggregates;
 pub mod builder;
 pub mod text;
 
@@ -58,6 +59,7 @@ pub enum ReturnType {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct FunctionDefinition {
+    pub lowering: Option<LoweringKind>,
     pub generic_origin: Option<crate::ast::GenericOrigin>,
     pub id: FunctionId,
     pub name: String,
@@ -65,6 +67,14 @@ pub struct FunctionDefinition {
     pub return_type: ReturnType,
     pub body: Vec<Statement>,
     pub span: Span,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LoweringKind {
+    AggregateEquality,
+    AggregateDisplay,
+    MatchBinding,
+    MatchSelect,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -119,6 +129,11 @@ pub enum StatementKind {
     Assignment {
         target: AssignmentTarget,
         value: Expr,
+    },
+    /// 複合値の表示を構成する、改行なしの値出力です。
+    Write {
+        value: Expr,
+        quoted: bool,
     },
     Print {
         value: Expr,
@@ -179,6 +194,18 @@ pub struct Expr {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ExprKind {
+    /// 共通lowering前の、matchに由来する局所束縛と値分岐です。
+    Let {
+        binding: BindingId,
+        name: String,
+        value: Box<Expr>,
+        body: Box<Expr>,
+    },
+    Conditional {
+        condition: Box<Expr>,
+        then_value: Box<Expr>,
+        else_value: Box<Expr>,
+    },
     Constant {
         id: usize,
         value: Box<Expr>,

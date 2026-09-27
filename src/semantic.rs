@@ -598,6 +598,20 @@ fn collect_calls_in_expr(expr: &Expr, model: &SemanticModel, calls: &mut Vec<(Fu
                 pending.push(right);
                 pending.push(left);
             }
+            ExprKind::Let { value, body, .. } => {
+                pending.push(body);
+                pending.push(value);
+            }
+            ExprKind::Conditional {
+                condition,
+                then_value,
+                else_value,
+            } => {
+                pending.push(else_value);
+                pending.push(then_value);
+                pending.push(condition);
+            }
+            ExprKind::Match { .. } => unreachable!("matches are lowered before recursion checks"),
             ExprKind::GenericCall(_) => {
                 unreachable!("generic calls are lowered before recursion checks")
             }
@@ -1045,13 +1059,7 @@ fn check_statements(
             }
 
             StmtKind::Print { value } => {
-                let ty = model.type_of_expr(value, &bindings)?;
-                if matches!(ty, Type::Named(_) | Type::Array { .. }) {
-                    return Err(Diagnostic::new(
-                        format!("cannot print value of type {}", model.type_name(ty)),
-                        value.span,
-                    ));
-                }
+                model.type_of_expr(value, &bindings)?;
             }
 
             StmtKind::Call { value } => {
@@ -1253,6 +1261,57 @@ fn type_of_expr_expected(
     model: &SemanticModel,
 ) -> SemanticResult<Type> {
     match &expr.kind {
+        ExprKind::Match { .. } => unreachable!("match is lowered before type checking"),
+        ExprKind::Let {
+            name,
+            type_ref,
+            value,
+            body,
+        } => {
+            let ty = model.resolve_type_ref(type_ref)?;
+            let actual = type_of_expr_expected(value, bindings, Some(ty.clone()), model)?;
+            if actual != ty {
+                return Err(Diagnostic::new(
+                    "match subject or payload type mismatch",
+                    value.span,
+                ));
+            }
+            if model.constants.contains_key(name) {
+                return Err(Diagnostic::new(
+                    format!("binding conflicts with constant {name}"),
+                    expr.span,
+                ));
+            }
+            let mut locals = bindings.clone();
+            locals.insert(name.clone(), BindingInfo { ty, mutable: false });
+            type_of_expr_expected(body, &locals, expected, model)
+        }
+        ExprKind::Conditional {
+            condition,
+            then_value,
+            else_value,
+        } => {
+            if type_of_expr_expected(condition, bindings, Some(Type::Bool), model)? != Type::Bool {
+                return Err(Diagnostic::new(
+                    "match guard must have type bool",
+                    condition.span,
+                ));
+            }
+            let ty = type_of_expr_expected(then_value, bindings, expected.clone(), model)?;
+            let other = type_of_expr_expected(
+                else_value,
+                bindings,
+                expected.or_else(|| Some(ty.clone())),
+                model,
+            )?;
+            if ty != other {
+                return Err(Diagnostic::new(
+                    "match expression arms must have the same type",
+                    else_value.span,
+                ));
+            }
+            Ok(ty)
+        }
         ExprKind::Convert {
             target,
             value,
@@ -1625,7 +1684,9 @@ fn type_of_expr_expected(
                 ));
             }
 
-            if matches!(left_type, Type::Named(_) | Type::Array { .. }) {
+            if matches!(left_type, Type::Named(_) | Type::Array { .. })
+                && !matches!(op, BinaryOp::Equal | BinaryOp::NotEqual)
+            {
                 return Err(Diagnostic::new(
                     format!(
                         "cannot apply `{}` to {}",

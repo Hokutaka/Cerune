@@ -1,0 +1,10 @@
+// 配列は添字順、構造体は宣言順、直和型は選択中の値を表示します。
+type Reading { value: f64, label: string, }
+enum Status { Ready { reading: Reading, flags: [bool; 2] }, Missing, }
+reading: Reading = Reading { label: "空\n\0\r\t\"\\", value: 1.5 };
+print([1.5f32, 2.5f32]);
+print(Status::Ready { flags: [true, false], reading: reading });
+print(Status::Missing {});
+print([[0u64, 18446744073709551615u64], [1u64, 2u64]]);
+// 表示は元のバイト列を変更しません。
+print(byte_len(reading.label));

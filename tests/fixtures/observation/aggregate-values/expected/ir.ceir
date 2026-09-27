@@ -1,0 +1,87 @@
+; Cerune IR v0.2
+; #N identifies one statement or expression in this compilation
+
+enum %Item@0 tags [Value=0, Empty=1]
+type %Item@0 {
+  field %$tag@0: i64
+  field %$Value$n@1: i64
+}
+
+; lower aggregate-equality [generated source=0 bytes=70..84]
+fn %$equal0@0(%$left@5: [i64; 2], %$right@6: [i64; 2]) -> bool {
+  #65 for.loop {
+    start {
+      #46 mut %$index@7: i64 = #45 0i64
+    }
+    condition.bool #49 lt.i64(#47 %$index@7:i64, #48 2i64)
+    body {
+      #60 if.bool #57 not.bool(#56 eq.i64(#52 index(#50 %$left@5:[i64; 2], #51 %$index@7:i64):i64, #55 index(#53 %$right@6:[i64; 2], #54 %$index@7:i64):i64)) {
+        #59 return #58 false:bool
+      }
+    }
+    update {
+      #64 set %$index@7:i64 = #63 add.i64(#61 %$index@7:i64, #62 1i64)
+    }
+  }
+  #67 return #66 true:bool
+}
+
+; lower match-binding [generated source=0 bytes=189..194]
+fn %$match_bind1@1(%$capture1@8: %Item@0) -> bool {
+  #69 %n@2: i64 = #26 field(#27 %$capture1@8:%Item@0, %$Value$n@1):i64
+  #70 return #28 gt.i64(#29 %n@2:i64, #30 0i64)
+}
+
+; lower match-binding [generated source=0 bytes=198..199]
+fn %$match_bind2@2(%$capture1@9: %Item@0) -> i64 {
+  #73 %n@3: i64 = #32 field(#33 %$capture1@9:%Item@0, %$Value$n@1):i64
+  #74 return #34 %n@3:i64
+}
+
+; lower match-selection [generated source=0 bytes=205..216]
+fn %$match_select3@3(%$capture1@10: %Item@0) -> i64 {
+  #79 if.bool #36 eq.i64(#37 field(#38 %$capture1@10:%Item@0, %$tag@0):i64, #39 0i64) {
+    #77 return #40 0i64
+  } else {
+    #78 return #41 neg.i64(#42 1i64)
+  }
+}
+
+; lower match-selection [generated source=0 bytes=165..176]
+fn %$match_select4@4(%$capture1@11: %Item@0) -> i64 {
+  #84 if.bool #20 and.short_circuit.bool(#21 eq.i64(#22 field(#23 %$capture1@11:%Item@0, %$tag@0):i64, #24 0i64), #25 call %$match_bind1@1(#71 %$capture1@11:%Item@0):bool) {
+    #82 return #31 call %$match_bind2@2(#75 %$capture1@11:%Item@0):i64
+  } else {
+    #83 return #35 call %$match_select3@3(#80 %$capture1@11:%Item@0):i64
+  }
+}
+
+; lower match-binding [generated source=0 bytes=130..259]
+fn %$match_bind5@5() -> i64 {
+  #87 %$match0@1: %Item@0 = #16 construct %Item@0 { field %$tag@0 = #17 0i64 [generated]; field %$Value$n@1 = #18 7i64 [explicit]; }
+  #88 return #19 call %$match_select4@4(#85 %$match0@1:%Item@0):i64
+}
+
+; lower aggregate-display [generated source=0 bytes=87..115]
+fn %$display6@6(%$value@12: %Item@0) -> void {
+  #105 if.bool #93 eq.i64(#91 field(#90 %$value@12:%Item@0, %$tag@0):i64, #92 0i64) {
+    #95 write #94 "Value":string
+    #97 write #96 "{":string
+    #99 write #98 "n: ":string
+    #102 write #101 field(#100 %$value@12:%Item@0, %$Value$n@1):i64
+    #104 write #103 "}":string
+  }
+  #116 if.bool #109 eq.i64(#107 field(#106 %$value@12:%Item@0, %$tag@0):i64, #108 1i64) {
+    #111 write #110 "Empty":string
+    #113 write #112 "{":string
+    #115 write #114 "}":string
+  }
+  #118 print.string #117 "":string
+  #119 return
+}
+
+#0 %left@0: [i64; 2] = #1 array[#2 1i64, #3 2i64]:[i64; 2]
+#4 print.bool #5 call %$equal0@0(#6 %left@0:[i64; 2], #7 array[#8 1i64, #9 3i64]:[i64; 2]):bool
+#10 call %$display6@6(#11 construct %Item@0 { field %$tag@0 = #12 0i64 [generated]; field %$Value$n@1 = #13 7i64 [explicit]; })
+#14 %result@4: i64 = #15 call %$match_bind5@5():i64
+#43 print.i64 #44 %result@4:i64

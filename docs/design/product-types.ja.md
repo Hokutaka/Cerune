@@ -429,14 +429,14 @@ aggregateを実装することと、`Secret`の最終的な構文や解除方法
 
 `check`、Cerune IR、bytecode、VM、C、LLVM、WAT、QBE、Windows x86-64のすべてで同じ言語上の意味を扱います。正常系、診断、八つの観測成果物をtestで固定しています。
 
+全体の`==`・`!=`と`print`も実装しています。[比較順と表示形式](aggregate-values.ja.md)を参照してください。
+
 ## 後続で検討する機能
 
 次は今回の仕様から排除せず、別の設計判断として後続へ分けます。
 
-- aggregate全体の`==`と`!=`
-- `print(aggregate)`と安定したformat
 - type aliasとnewtype
-- tuple、sum type、generic type
+- tuple、generic type（[sum type](sum-types.ja.md)は実装済み）
 - field visibilityとmodule境界
 - copy、move、borrow、reference
 - 参照を通した再帰型

@@ -12,6 +12,7 @@ pub enum Type {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Module {
+    pub uses_write: bool,
     pub uses_strings: bool,
     pub temporaries: Vec<Type>,
     pub array_types: Vec<Type>,
@@ -53,6 +54,10 @@ pub struct FieldDefinition {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Statement {
+    Write {
+        kind: &'static str,
+        value: Expr,
+    },
     Binding {
         name: String,
         ty: Type,

@@ -49,6 +49,7 @@ pub fn lower_with_target(program: &cerune_ir::Program, target: super::Target) ->
     float_constants.extend(lowered.float_constants);
 
     Module {
+        uses_write: crate::codegen::display::uses_write(program),
         origins: lowered.origins,
         target,
         uses_strings: crate::codegen::support::first_string_span(program).is_some(),
@@ -330,6 +331,12 @@ impl Lowerer<'_> {
                 false
             }
 
+            cerune_ir::StatementKind::Write { value, quoted } => {
+                let kind = crate::codegen::display::kind(&value.ty, *quoted);
+                self.lower_expr(value, 0);
+                self.push(Instruction::Write { kind });
+                false
+            }
             cerune_ir::StatementKind::Print { value } => {
                 let Value::Scalar(ty) = self.lower_expr(value, 0) else {
                     unreachable!("semantic analysis rejects aggregate printing")
@@ -551,6 +558,9 @@ impl Lowerer<'_> {
         }
 
         match &expr.kind {
+            cerune_ir::ExprKind::Let { .. } | cerune_ir::ExprKind::Conditional { .. } => {
+                unreachable!("match expressions are lowered before code generation")
+            }
             cerune_ir::ExprKind::Constant { value, .. } => self.lower_expr(value, depth),
             cerune_ir::ExprKind::ArrayLength { value } => {
                 let cerune_ir::Type::Array { length, .. } = &value.ty else {
@@ -1295,6 +1305,7 @@ fn collect_binding_slots(
                 collect_binding_slots(body, program, slots, next);
             }
             cerune_ir::StatementKind::Assignment { .. }
+            | cerune_ir::StatementKind::Write { .. }
             | cerune_ir::StatementKind::Print { .. }
             | cerune_ir::StatementKind::Call { .. }
             | cerune_ir::StatementKind::Return { .. }
@@ -1333,6 +1344,7 @@ fn count_statements_expr_nodes(statements: &[cerune_ir::Statement]) -> usize {
         .map(|statement| match &statement.kind {
             cerune_ir::StatementKind::Binding { value, .. }
             | cerune_ir::StatementKind::Assignment { value, .. }
+            | cerune_ir::StatementKind::Write { value, .. }
             | cerune_ir::StatementKind::Print { value } => count_expr_nodes(value),
             cerune_ir::StatementKind::If {
                 condition,
@@ -1370,6 +1382,9 @@ fn count_statements_expr_nodes(statements: &[cerune_ir::Statement]) -> usize {
 
 fn count_expr_nodes(expr: &cerune_ir::Expr) -> usize {
     match &expr.kind {
+        cerune_ir::ExprKind::Let { .. } | cerune_ir::ExprKind::Conditional { .. } => {
+            unreachable!("match expressions are lowered before code generation")
+        }
         cerune_ir::ExprKind::Constant { value, .. } => 1 + count_expr_nodes(value),
         cerune_ir::ExprKind::String(_)
         | cerune_ir::ExprKind::Boolean(_)
@@ -1411,6 +1426,7 @@ fn required_scratch_slots(statements: &[cerune_ir::Statement]) -> usize {
         .map(|statement| match &statement.kind {
             cerune_ir::StatementKind::Binding { value, .. }
             | cerune_ir::StatementKind::Assignment { value, .. }
+            | cerune_ir::StatementKind::Write { value, .. }
             | cerune_ir::StatementKind::Print { value } => required_expr_scratch(value, 0),
             cerune_ir::StatementKind::Call { arguments, .. } => arguments
                 .iter()
@@ -1448,6 +1464,9 @@ fn required_scratch_slots(statements: &[cerune_ir::Statement]) -> usize {
 
 fn required_expr_scratch(expr: &cerune_ir::Expr, depth: usize) -> usize {
     match &expr.kind {
+        cerune_ir::ExprKind::Let { .. } | cerune_ir::ExprKind::Conditional { .. } => {
+            unreachable!("match expressions are lowered before code generation")
+        }
         cerune_ir::ExprKind::Constant { value, .. } => required_expr_scratch(value, depth),
         cerune_ir::ExprKind::String(_)
         | cerune_ir::ExprKind::Boolean(_)

@@ -126,6 +126,8 @@ The artifact records the target in a comment. Invoking QBE and the C linker belo
 
 WAT using strings imports `cerune.write_byte(i32) -> void`, passing each byte and a trailing LF without exposing memory. Alongside the existing numeric and Boolean host functions, the host implements the [string output contract](../design/strings.en.md#wat-output-and-the-external-boundary). `emit-wat` does not launch a host.
 
+WAT displaying aggregates also imports `cerune.write_i64`, `write_u64`, `write_f32`, and `write_f64`. Hosts apply the existing numeric formats without a newline. Quoted strings and punctuation use `write_byte`. See the [aggregate output contract](../design/aggregate-values.en.md).
+
 WAT with runtime checks also imports `cerune.write_error_byte(i32) -> void`. Hosts write these ASCII diagnostics to stderr and preserve previous stdout when `unreachable` traps. See the [runtime diagnostic contract](../design/runtime-diagnostics.en.md).
 
 Generate Windows x64 direct assembly with `cerune emit-asm examples/string_lookup.ceru -o target/string_lookup.s` and build it with `clang --target=x86_64-pc-windows-msvc target/string_lookup.s -o target/string_lookup.exe`. Programs using strings switch standard output to binary mode before output.

@@ -23,7 +23,9 @@ variant     := IDENT ("{" payload_fields? "}")?
 payload_fields := (IDENT ":" type_ref) ("," IDENT ":" type_ref)* ","?
 variant_path := IDENT "::" IDENT | IDENT "::" IDENT "::" IDENT
 match_statement := "match" expression "{" match_arm ("," match_arm)* ","? "}"
-match_arm   := variant_path "{" pattern_fields? "}" "=>" block
+match_arm   := variant_path "{" pattern_fields? "}" ("if" expression)? "=>" block
+match_expression := "match" expression "{" match_value_arm ("," match_value_arm)* ","? "}"
+match_value_arm := variant_path "{" pattern_fields? "}" ("if" expression)? "=>" expression
 pattern_fields := (IDENT ":" IDENT) ("," IDENT ":" IDENT)* ","?
 
 constant_definition := "const" IDENT ":" type_ref "=" expression ";"
@@ -131,7 +133,8 @@ unary       := ("-" | "!" | "~") unary
 
 postfix     := primary (("." IDENT) | ("[" expression "]"))*
 
-primary     := "true"
+primary     := match_expression
+             | "true"
              | ("i8" | "u8" | "i16" | "u16" | "i32" | "u32" | "i64" | "u64" | "f32" | "f64") "(" expression ","? ")"
              | "convert" "<" type_ref ">" "(" expression ","? ")"
              | "false"
@@ -259,7 +262,7 @@ if (Flags { enabled: true, }).enabled {
 }
 ```
 
-Empty product types, empty construction expressions, infinitely sized recursion by value, product comparisons, and printing a whole product value are not currently supported.
+Empty product types, empty construction expressions, and infinitely sized recursion by value are unsupported. Whole-product equality and `print` follow the [aggregate rules](../design/aggregate-values.en.md).
 
 See [Named product type design](../design/product-types.en.md) for the detailed design and backend representations.
 
@@ -402,9 +405,19 @@ match value {
 }
 ```
 
-`match` is a statement. It evaluates and copies its subject once, then executes only the selected arm. List every variant exactly once. Bind each field as an immutable local with `field: binding` or discard it with `field: _`. Parenthesize constructors used directly as subjects. Constructor fields evaluate in source order; reassigning a copy does not alter other values.
+`match` supports statements and expressions. Evaluate and copy the subject once, then try arms in source order. An optional `if condition` after a pattern evaluates its `bool` condition only for a matching tag; false continues to the next arm. Every variant requires an unguarded arm, after which another arm for that variant is unreachable. Evaluate only the selected body/result. Bind each field as an immutable local with `field: binding` or discard it with `field: _`. Parenthesize constructors used directly as subjects. Constructor fields evaluate in source order; reassigning a copy does not alter other values.
 
-`enum` and `match` are keywords. `pub enum` exports all variants and fields; importers use `alias::Enum::Variant`. Enum payload defaults, recursive value types, whole-enum printing/equality, direct field access, product updates, guards, whole-arm wildcards, nested patterns, and match expressions are unsupported. Return, break, and continue retain their ordinary function/loop targets. Match does not catch runtime stops. See the [design and representation](../design/sum-types.en.md) and [example](../../examples/sum_lookup.ceru).
+`enum` and `match` are keywords. `pub enum` exports all variants and fields; importers use `alias::Enum::Variant`. Enum payload defaults, recursive value types, direct field access, product updates, whole-arm wildcards, and nested patterns are unsupported. Whole-enum display/equality follow the [aggregate rules](../design/aggregate-values.en.md). Return, break, and continue retain their ordinary function/loop targets. Match does not catch runtime stops. See the [design and representation](../design/sum-types.en.md) and [example](../../examples/sum_lookup.ceru).
+
+Statement arms use `=> { statements... }`; expression arms use `=> expression`. All result types agree. An expected type applies to every arm; otherwise the first result establishes the type. No implicit conversions or block expressions are added. Pattern bindings are scoped to their guard and arm.
+
+```cerune
+label: string = match value {
+    Lookup::Found { text: text } if byte_len(text) > 0 => text,
+    Lookup::Found { text: _ } => "空欄",
+    Lookup::Missing {} => "未登録",
+};
+```
 
 ## Compile-time constants
 
@@ -641,7 +654,7 @@ enabled: bool = true;
 disabled: bool = !enabled;
 ```
 
-`==` and `!=` compare numbers, booleans, or strings of the same type. Whole-array and whole-product comparison is not supported. Numeric types additionally support `<`, `<=`, `>`, and `>=`. A comparison always produces `bool`.
+`==` and `!=` compare numbers, booleans, strings, arrays, products, or sums of the same type. Evaluate operands once, left to right. Aggregates compare recursively in index/declaration order; sums compare tags and only the active payload. The first unequal member ends comparison. Numeric types additionally support `<`, `<=`, `>`, and `>=`. A comparison always produces `bool`.
 
 ```cerune
 same: bool = enabled == true;
@@ -904,7 +917,7 @@ Functions and types cannot be defined with the built-in type names `bool`, `i8`,
 
 ## Output
 
-`print(expression);` accepts booleans, numbers, and `string` across all routes. Print product fields or fixed-array elements individually; extract sum-type payloads with `match` before printing them.
+`print(expression);` accepts booleans, numbers, strings, fixed arrays, products, and sums across all routes. Aggregate formats include `[1, 2]`, `{x: 1}`, and `Found{text: "空"}`, quoting and escaping nested strings. Evaluate the entire argument before display, then append one LF. See [formats and generation](../design/aggregate-values.en.md).
 
 Cerune keeps floating-point output precise enough to expose the behavior being observed.
 
@@ -926,6 +939,8 @@ After rounding to the significant-digit limit, a decimal exponent below `-4` or 
 Printing does not change the value. `1.0 + 1e-20 == 1.0` is `true` because of arithmetic rounding, not because printing discards small values. See the [small-values example](../../examples/small_values.ceru).
 
 The VM formats values by these rules. C, LLVM, QBE, and Windows x86-64 generated code uses `printf` with `%.9g` and `%.17g`. WAT passes numeric values unchanged to host imports `cerune.print_f32` and `cerune.print_f64`; the host must provide the same formatting policy.
+
+For aggregate display, WAT hosts implement `cerune.write_i64`, `write_u64`, `write_f32`, and `write_f64` using the same numeric rules without a newline. Strings and punctuation use `write_byte`; internal memory is not exported.
 
 The VM prints infinities as `inf` and `-inf`, and NaN as `NaN`. Generated-code spellings of special values depend on the target runtime. Decimal `print` output does not distinguish NaN payloads.
 

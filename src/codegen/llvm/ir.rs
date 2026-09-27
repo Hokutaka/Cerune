@@ -11,6 +11,7 @@ pub enum Type {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Module {
+    pub uses_write: bool,
     pub target: Option<super::Target>,
     pub uses_strings: bool,
     pub strings: Vec<String>,
@@ -104,6 +105,10 @@ pub enum PrintFormat {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Instruction {
+    Write {
+        kind: &'static str,
+        value: Operand,
+    },
     PrintString {
         value: Operand,
     },

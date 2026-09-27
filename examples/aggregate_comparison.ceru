@@ -1,0 +1,15 @@
+// 入れ子の値を比較します。左右の式は一度ずつ、左から評価します。
+type Reading { id: u64, value: f64, label: string, }
+enum Status { Ready { reading: Reading }, Missing, }
+fn sample(label: string) -> Reading {
+    print(label);
+    return Reading { id: 18446744073709551615u64, value: 1.5, label: "空" };
+}
+fn same<T>(left: T, right: T) -> bool { return left == right; }
+print(sample("左") == sample("右"));
+a: Reading = sample("保存");
+b: Reading = Reading { ..a, label: "海" };
+print(same::<[Reading; 2]>([a, a], [a, b]));
+print(Status::Ready { reading: a } != Status::Missing {});
+const SAME: bool = [1, 2] == [1, 2];
+print(SAME);

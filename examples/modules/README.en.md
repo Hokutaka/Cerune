@@ -11,6 +11,7 @@ Compare imported modules with a single-file program. This directory is outside t
 | [main.ceru](main.ceru) | `values::Reading`, arrays, copies, short circuiting | Maximum u64, independent copies, string bytes/equality, skipped right operand |
 | [single.ceru](single.ceru) | The same program in one file | Identical values and output order after splitting |
 | [sum_lookup.ceru](sum_lookup.ceru) | `values::Lookup::Found`, `match` | `空\0\r\n`, missing entry, directly constructed text |
+| [aggregate_match.ceru](aggregate_match.ceru) | `values::Lookup`、`match` | Public-enum equality/array display, cross-file match expressions and guards |
 | [constant_array_lengths.ceru](constant_array_lengths.ceru) | Public constants in type lengths | `共有サイズ → 6 → 15`, then `保持\0\r\n` |
 | [generic_functions.ceru](generic_functions.ceru) | Public functions with explicit types/lengths | Shared-type string bytes, private sizes, maximum u64 |
 | [constants.ceru](constants.ceru) | Imported constants and copies | Print `129 → 12 → 10 → 99`, then `設定\0\r\n` |
@@ -51,6 +52,7 @@ NodeIds and byte ranges change with edits and line endings. Distinguish expected
 | --- | --- |
 | [values.ceru](values.ceru) | Public product with `u64`/`string` fields and defaults, public functions, private helpers |
 | [lookup_values.ceru](lookup_values.ceru) | `pub enum`, constants, and functions returning present/absent values |
+| [aggregate_helpers.ceru](aggregate_helpers.ceru) | Public function accepting a public enum and returning a string through guarded match |
 | [generic_arrays.ceru](generic_arrays.ceru) | Public generic functions, type/constant, and a private implementation size |
 | [dimensions.ceru](dimensions.ceru) | Public row/column counts and a private constant determining a public type length |
 | [constant_settings.ceru](constant_settings.ceru) | `pub const`, products, private constants; settings and calibration evaluated at compilation |

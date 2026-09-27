@@ -471,6 +471,12 @@ impl Expander<'_> {
                     for field in &arm.fields {
                         self.binding(&field.binding, field.binding_span)?;
                     }
+                    if let Some(guard) = &mut arm.guard {
+                        self.expr(guard)?;
+                    }
+                    if let Some(result) = &mut arm.result {
+                        self.expr(result)?;
+                    }
                     self.statements(&mut arm.body)?;
                 }
             }
@@ -480,6 +486,25 @@ impl Expander<'_> {
     }
     fn expr(&mut self, expr: &mut Expr) -> Result<(), Diagnostic> {
         match &mut expr.kind {
+            ExprKind::Match { value, arms } => {
+                let mut statement = Stmt {
+                    kind: StmtKind::Match {
+                        value: *value.clone(),
+                        arms: arms.clone(),
+                    },
+                    span: expr.span,
+                };
+                self.statement(&mut statement)?;
+                let StmtKind::Match {
+                    value: new_value,
+                    arms: new_arms,
+                } = statement.kind
+                else {
+                    unreachable!()
+                };
+                **value = new_value;
+                *arms = new_arms;
+            }
             ExprKind::GenericCall(call) => {
                 for argument in &mut call.arguments {
                     self.expr(argument)?;

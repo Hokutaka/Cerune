@@ -1,0 +1,828 @@
+# target: x86_64-unknown-linux-gnu (qbe -t amd64_sysv)
+
+data $write_i64 = { b "%lld", b 0 }
+data $write_u64 = { b "%llu", b 0 }
+data $write_f32 = { b "%.9g", b 0 }
+data $write_f64 = { b "%.17g", b 0 }
+data $write_true = { b "true", b 0 }
+data $write_false = { b "false", b 0 }
+data $write_bool = { b "%s", b 0 }
+function $cerune_write_i64(l %value) {
+@start
+  call $printf(l $write_i64, ..., l %value)
+  ret
+}
+function $cerune_write_u64(l %value) {
+@start
+  call $printf(l $write_u64, ..., l %value)
+  ret
+}
+function $cerune_write_f32(s %value) {
+@start
+  %wide =d exts %value
+  call $printf(l $write_f32, ..., d %wide)
+  ret
+}
+function $cerune_write_f64(d %value) {
+@start
+  call $printf(l $write_f64, ..., d %value)
+  ret
+}
+function $cerune_write_bool(w %value) {
+@start
+  jnz %value, @true, @false
+@true
+  call $printf(l $write_bool, ..., l $write_true)
+  ret
+@false
+  call $printf(l $write_bool, ..., l $write_false)
+  ret
+}
+function $cerune_write_escaped_byte(w %value) {
+@start
+  %is0 =w ceqw %value, 0
+  jnz %is0, @escape0, @next0
+@next0
+  %is1 =w ceqw %value, 1
+  jnz %is1, @escape1, @next1
+@next1
+  %is2 =w ceqw %value, 2
+  jnz %is2, @escape2, @next2
+@next2
+  %is3 =w ceqw %value, 3
+  jnz %is3, @escape3, @next3
+@next3
+  %is4 =w ceqw %value, 4
+  jnz %is4, @escape4, @next4
+@next4
+  %is5 =w ceqw %value, 5
+  jnz %is5, @escape5, @next5
+@next5
+  %is6 =w ceqw %value, 6
+  jnz %is6, @escape6, @next6
+@next6
+  %is7 =w ceqw %value, 7
+  jnz %is7, @escape7, @next7
+@next7
+  %is8 =w ceqw %value, 8
+  jnz %is8, @escape8, @next8
+@next8
+  %is9 =w ceqw %value, 9
+  jnz %is9, @escape9, @next9
+@next9
+  %is10 =w ceqw %value, 10
+  jnz %is10, @escape10, @next10
+@next10
+  %is11 =w ceqw %value, 11
+  jnz %is11, @escape11, @next11
+@next11
+  %is12 =w ceqw %value, 12
+  jnz %is12, @escape12, @next12
+@next12
+  %is13 =w ceqw %value, 13
+  jnz %is13, @escape13, @next13
+@next13
+  %is14 =w ceqw %value, 14
+  jnz %is14, @escape14, @next14
+@next14
+  %is15 =w ceqw %value, 15
+  jnz %is15, @escape15, @next15
+@next15
+  %is16 =w ceqw %value, 16
+  jnz %is16, @escape16, @next16
+@next16
+  %is17 =w ceqw %value, 17
+  jnz %is17, @escape17, @next17
+@next17
+  %is18 =w ceqw %value, 18
+  jnz %is18, @escape18, @next18
+@next18
+  %is19 =w ceqw %value, 19
+  jnz %is19, @escape19, @next19
+@next19
+  %is20 =w ceqw %value, 20
+  jnz %is20, @escape20, @next20
+@next20
+  %is21 =w ceqw %value, 21
+  jnz %is21, @escape21, @next21
+@next21
+  %is22 =w ceqw %value, 22
+  jnz %is22, @escape22, @next22
+@next22
+  %is23 =w ceqw %value, 23
+  jnz %is23, @escape23, @next23
+@next23
+  %is24 =w ceqw %value, 24
+  jnz %is24, @escape24, @next24
+@next24
+  %is25 =w ceqw %value, 25
+  jnz %is25, @escape25, @next25
+@next25
+  %is26 =w ceqw %value, 26
+  jnz %is26, @escape26, @next26
+@next26
+  %is27 =w ceqw %value, 27
+  jnz %is27, @escape27, @next27
+@next27
+  %is28 =w ceqw %value, 28
+  jnz %is28, @escape28, @next28
+@next28
+  %is29 =w ceqw %value, 29
+  jnz %is29, @escape29, @next29
+@next29
+  %is30 =w ceqw %value, 30
+  jnz %is30, @escape30, @next30
+@next30
+  %is31 =w ceqw %value, 31
+  jnz %is31, @escape31, @next31
+@next31
+  %is34 =w ceqw %value, 34
+  jnz %is34, @escape34, @next34
+@next34
+  %is92 =w ceqw %value, 92
+  jnz %is92, @escape92, @next92
+@next92
+  %is127 =w ceqw %value, 127
+  jnz %is127, @escape127, @next127
+@next127
+  call $putchar(w %value)
+  ret
+@escape0
+  call $putchar(w 92)
+  call $putchar(w 48)
+  ret
+@escape1
+  call $putchar(w 92)
+  call $putchar(w 117)
+  call $putchar(w 123)
+  call $putchar(w 48)
+  call $putchar(w 49)
+  call $putchar(w 125)
+  ret
+@escape2
+  call $putchar(w 92)
+  call $putchar(w 117)
+  call $putchar(w 123)
+  call $putchar(w 48)
+  call $putchar(w 50)
+  call $putchar(w 125)
+  ret
+@escape3
+  call $putchar(w 92)
+  call $putchar(w 117)
+  call $putchar(w 123)
+  call $putchar(w 48)
+  call $putchar(w 51)
+  call $putchar(w 125)
+  ret
+@escape4
+  call $putchar(w 92)
+  call $putchar(w 117)
+  call $putchar(w 123)
+  call $putchar(w 48)
+  call $putchar(w 52)
+  call $putchar(w 125)
+  ret
+@escape5
+  call $putchar(w 92)
+  call $putchar(w 117)
+  call $putchar(w 123)
+  call $putchar(w 48)
+  call $putchar(w 53)
+  call $putchar(w 125)
+  ret
+@escape6
+  call $putchar(w 92)
+  call $putchar(w 117)
+  call $putchar(w 123)
+  call $putchar(w 48)
+  call $putchar(w 54)
+  call $putchar(w 125)
+  ret
+@escape7
+  call $putchar(w 92)
+  call $putchar(w 117)
+  call $putchar(w 123)
+  call $putchar(w 48)
+  call $putchar(w 55)
+  call $putchar(w 125)
+  ret
+@escape8
+  call $putchar(w 92)
+  call $putchar(w 117)
+  call $putchar(w 123)
+  call $putchar(w 48)
+  call $putchar(w 56)
+  call $putchar(w 125)
+  ret
+@escape9
+  call $putchar(w 92)
+  call $putchar(w 116)
+  ret
+@escape10
+  call $putchar(w 92)
+  call $putchar(w 110)
+  ret
+@escape11
+  call $putchar(w 92)
+  call $putchar(w 117)
+  call $putchar(w 123)
+  call $putchar(w 48)
+  call $putchar(w 98)
+  call $putchar(w 125)
+  ret
+@escape12
+  call $putchar(w 92)
+  call $putchar(w 117)
+  call $putchar(w 123)
+  call $putchar(w 48)
+  call $putchar(w 99)
+  call $putchar(w 125)
+  ret
+@escape13
+  call $putchar(w 92)
+  call $putchar(w 114)
+  ret
+@escape14
+  call $putchar(w 92)
+  call $putchar(w 117)
+  call $putchar(w 123)
+  call $putchar(w 48)
+  call $putchar(w 101)
+  call $putchar(w 125)
+  ret
+@escape15
+  call $putchar(w 92)
+  call $putchar(w 117)
+  call $putchar(w 123)
+  call $putchar(w 48)
+  call $putchar(w 102)
+  call $putchar(w 125)
+  ret
+@escape16
+  call $putchar(w 92)
+  call $putchar(w 117)
+  call $putchar(w 123)
+  call $putchar(w 49)
+  call $putchar(w 48)
+  call $putchar(w 125)
+  ret
+@escape17
+  call $putchar(w 92)
+  call $putchar(w 117)
+  call $putchar(w 123)
+  call $putchar(w 49)
+  call $putchar(w 49)
+  call $putchar(w 125)
+  ret
+@escape18
+  call $putchar(w 92)
+  call $putchar(w 117)
+  call $putchar(w 123)
+  call $putchar(w 49)
+  call $putchar(w 50)
+  call $putchar(w 125)
+  ret
+@escape19
+  call $putchar(w 92)
+  call $putchar(w 117)
+  call $putchar(w 123)
+  call $putchar(w 49)
+  call $putchar(w 51)
+  call $putchar(w 125)
+  ret
+@escape20
+  call $putchar(w 92)
+  call $putchar(w 117)
+  call $putchar(w 123)
+  call $putchar(w 49)
+  call $putchar(w 52)
+  call $putchar(w 125)
+  ret
+@escape21
+  call $putchar(w 92)
+  call $putchar(w 117)
+  call $putchar(w 123)
+  call $putchar(w 49)
+  call $putchar(w 53)
+  call $putchar(w 125)
+  ret
+@escape22
+  call $putchar(w 92)
+  call $putchar(w 117)
+  call $putchar(w 123)
+  call $putchar(w 49)
+  call $putchar(w 54)
+  call $putchar(w 125)
+  ret
+@escape23
+  call $putchar(w 92)
+  call $putchar(w 117)
+  call $putchar(w 123)
+  call $putchar(w 49)
+  call $putchar(w 55)
+  call $putchar(w 125)
+  ret
+@escape24
+  call $putchar(w 92)
+  call $putchar(w 117)
+  call $putchar(w 123)
+  call $putchar(w 49)
+  call $putchar(w 56)
+  call $putchar(w 125)
+  ret
+@escape25
+  call $putchar(w 92)
+  call $putchar(w 117)
+  call $putchar(w 123)
+  call $putchar(w 49)
+  call $putchar(w 57)
+  call $putchar(w 125)
+  ret
+@escape26
+  call $putchar(w 92)
+  call $putchar(w 117)
+  call $putchar(w 123)
+  call $putchar(w 49)
+  call $putchar(w 97)
+  call $putchar(w 125)
+  ret
+@escape27
+  call $putchar(w 92)
+  call $putchar(w 117)
+  call $putchar(w 123)
+  call $putchar(w 49)
+  call $putchar(w 98)
+  call $putchar(w 125)
+  ret
+@escape28
+  call $putchar(w 92)
+  call $putchar(w 117)
+  call $putchar(w 123)
+  call $putchar(w 49)
+  call $putchar(w 99)
+  call $putchar(w 125)
+  ret
+@escape29
+  call $putchar(w 92)
+  call $putchar(w 117)
+  call $putchar(w 123)
+  call $putchar(w 49)
+  call $putchar(w 100)
+  call $putchar(w 125)
+  ret
+@escape30
+  call $putchar(w 92)
+  call $putchar(w 117)
+  call $putchar(w 123)
+  call $putchar(w 49)
+  call $putchar(w 101)
+  call $putchar(w 125)
+  ret
+@escape31
+  call $putchar(w 92)
+  call $putchar(w 117)
+  call $putchar(w 123)
+  call $putchar(w 49)
+  call $putchar(w 102)
+  call $putchar(w 125)
+  ret
+@escape34
+  call $putchar(w 92)
+  call $putchar(w 34)
+  ret
+@escape92
+  call $putchar(w 92)
+  call $putchar(w 92)
+  ret
+@escape127
+  call $putchar(w 92)
+  call $putchar(w 117)
+  call $putchar(w 123)
+  call $putchar(w 55)
+  call $putchar(w 102)
+  call $putchar(w 125)
+  ret
+}
+function $cerune_write_string(l %value) {
+@start
+  %length =l loadl %value
+  jmp @condition
+@condition
+  %index =l phi @start 0, @write %next
+  %done =w ceql %index, %length
+  jnz %done, @end, @write
+@write
+  %offset =l add %index, 8
+  %ptr =l add %value, %offset
+  %byte =w loadub %ptr
+  call $putchar(w %byte)
+  %next =l add %index, 1
+  jmp @condition
+@end
+  ret
+}
+function $cerune_write_quoted(l %value) {
+@start
+  %length =l loadl %value
+  call $putchar(w 34)
+  jmp @condition
+@condition
+  %index =l phi @start 0, @write %next
+  %done =w ceql %index, %length
+  jnz %done, @end, @write
+@write
+  %offset =l add %index, 8
+  %ptr =l add %value, %offset
+  %byte =w loadub %ptr
+  call $cerune_write_escaped_byte(w %byte)
+  %next =l add %index, 1
+  jmp @condition
+@end
+  call $putchar(w 34)
+  ret
+}
+section ".rodata" data $cerune_origin_52_70_84 = { b 32, b 110, b 111, b 100, b 101, b 61, b 53, b 50, b 32, b 98, b 121, b 116, b 101, b 115, b 61, b 55, b 48, b 46, b 46, b 56, b 52, b 10 }
+section ".rodata" data $cerune_origin_55_70_84 = { b 32, b 110, b 111, b 100, b 101, b 61, b 53, b 53, b 32, b 98, b 121, b 116, b 101, b 115, b 61, b 55, b 48, b 46, b 46, b 56, b 52, b 10 }
+section ".rodata" data $cerune_origin_63_70_84 = { b 32, b 110, b 111, b 100, b 101, b 61, b 54, b 51, b 32, b 98, b 121, b 116, b 101, b 115, b 61, b 55, b 48, b 46, b 46, b 56, b 52, b 10 }
+section ".rodata" data $cerune_origin_41_254_256 = { b 32, b 110, b 111, b 100, b 101, b 61, b 52, b 49, b 32, b 98, b 121, b 116, b 101, b 115, b 61, b 50, b 53, b 52, b 46, b 46, b 50, b 53, b 54, b 10 }
+section ".rodata" data $cerune_code_integer_overflow = { b 99, b 101, b 114, b 117, b 110, b 101, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 105, b 110, b 116, b 101, b 103, b 101, b 114, b 45, b 111, b 118, b 101, b 114, b 102, b 108, b 111, b 119 }
+function $cerune_fail_integer_overflow(l %origin, l %origin_len) {
+@start
+  call $cerune_runtime_failure(l $cerune_code_integer_overflow, l 40, l %origin, l %origin_len)
+  hlt
+}
+
+section ".rodata" data $cerune_code_division_by_zero = { b 99, b 101, b 114, b 117, b 110, b 101, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 100, b 105, b 118, b 105, b 115, b 105, b 111, b 110, b 45, b 98, b 121, b 45, b 122, b 101, b 114, b 111 }
+function $cerune_fail_division_by_zero(l %origin, l %origin_len) {
+@start
+  call $cerune_runtime_failure(l $cerune_code_division_by_zero, l 40, l %origin, l %origin_len)
+  hlt
+}
+
+section ".rodata" data $cerune_code_division_overflow = { b 99, b 101, b 114, b 117, b 110, b 101, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 100, b 105, b 118, b 105, b 115, b 105, b 111, b 110, b 45, b 111, b 118, b 101, b 114, b 102, b 108, b 111, b 119 }
+function $cerune_fail_division_overflow(l %origin, l %origin_len) {
+@start
+  call $cerune_runtime_failure(l $cerune_code_division_overflow, l 41, l %origin, l %origin_len)
+  hlt
+}
+
+section ".rodata" data $cerune_code_remainder_by_zero = { b 99, b 101, b 114, b 117, b 110, b 101, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 114, b 101, b 109, b 97, b 105, b 110, b 100, b 101, b 114, b 45, b 98, b 121, b 45, b 122, b 101, b 114, b 111 }
+function $cerune_fail_remainder_by_zero(l %origin, l %origin_len) {
+@start
+  call $cerune_runtime_failure(l $cerune_code_remainder_by_zero, l 41, l %origin, l %origin_len)
+  hlt
+}
+
+section ".rodata" data $cerune_code_invalid_shift_count = { b 99, b 101, b 114, b 117, b 110, b 101, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 105, b 110, b 118, b 97, b 108, b 105, b 100, b 45, b 115, b 104, b 105, b 102, b 116, b 45, b 99, b 111, b 117, b 110, b 116 }
+function $cerune_fail_invalid_shift_count(l %origin, l %origin_len) {
+@start
+  call $cerune_runtime_failure(l $cerune_code_invalid_shift_count, l 43, l %origin, l %origin_len)
+  hlt
+}
+
+section ".rodata" data $cerune_code_integer_conversion_out_of_range = { b 99, b 101, b 114, b 117, b 110, b 101, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 105, b 110, b 116, b 101, b 103, b 101, b 114, b 45, b 99, b 111, b 110, b 118, b 101, b 114, b 115, b 105, b 111, b 110, b 45, b 111, b 117, b 116, b 45, b 111, b 102, b 45, b 114, b 97, b 110, b 103, b 101 }
+function $cerune_fail_integer_conversion_out_of_range(l %origin, l %origin_len) {
+@start
+  call $cerune_runtime_failure(l $cerune_code_integer_conversion_out_of_range, l 55, l %origin, l %origin_len)
+  hlt
+}
+
+section ".rodata" data $cerune_code_conversion_out_of_range = { b 99, b 101, b 114, b 117, b 110, b 101, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 99, b 111, b 110, b 118, b 101, b 114, b 115, b 105, b 111, b 110, b 45, b 111, b 117, b 116, b 45, b 111, b 102, b 45, b 114, b 97, b 110, b 103, b 101 }
+function $cerune_fail_conversion_out_of_range(l %origin, l %origin_len) {
+@start
+  call $cerune_runtime_failure(l $cerune_code_conversion_out_of_range, l 47, l %origin, l %origin_len)
+  hlt
+}
+
+section ".rodata" data $cerune_code_conversion_inexact = { b 99, b 101, b 114, b 117, b 110, b 101, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 99, b 111, b 110, b 118, b 101, b 114, b 115, b 105, b 111, b 110, b 45, b 105, b 110, b 101, b 120, b 97, b 99, b 116 }
+function $cerune_fail_conversion_inexact(l %origin, l %origin_len) {
+@start
+  call $cerune_runtime_failure(l $cerune_code_conversion_inexact, l 42, l %origin, l %origin_len)
+  hlt
+}
+
+section ".rodata" data $cerune_code_conversion_not_finite = { b 99, b 101, b 114, b 117, b 110, b 101, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 99, b 111, b 110, b 118, b 101, b 114, b 115, b 105, b 111, b 110, b 45, b 110, b 111, b 116, b 45, b 102, b 105, b 110, b 105, b 116, b 101 }
+function $cerune_fail_conversion_not_finite(l %origin, l %origin_len) {
+@start
+  call $cerune_runtime_failure(l $cerune_code_conversion_not_finite, l 45, l %origin, l %origin_len)
+  hlt
+}
+
+section ".rodata" data $cerune_code_conversion_nan = { b 99, b 101, b 114, b 117, b 110, b 101, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 99, b 111, b 110, b 118, b 101, b 114, b 115, b 105, b 111, b 110, b 45, b 110, b 97, b 110 }
+function $cerune_fail_conversion_nan(l %origin, l %origin_len) {
+@start
+  call $cerune_runtime_failure(l $cerune_code_conversion_nan, l 38, l %origin, l %origin_len)
+  hlt
+}
+
+section ".rodata" data $cerune_code_conversion_negative_zero = { b 99, b 101, b 114, b 117, b 110, b 101, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 99, b 111, b 110, b 118, b 101, b 114, b 115, b 105, b 111, b 110, b 45, b 110, b 101, b 103, b 97, b 116, b 105, b 118, b 101, b 45, b 122, b 101, b 114, b 111 }
+function $cerune_fail_conversion_negative_zero(l %origin, l %origin_len) {
+@start
+  call $cerune_runtime_failure(l $cerune_code_conversion_negative_zero, l 48, l %origin, l %origin_len)
+  hlt
+}
+
+section ".rodata" data $cerune_code_array_index_out_of_bounds = { b 99, b 101, b 114, b 117, b 110, b 101, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 97, b 114, b 114, b 97, b 121, b 45, b 105, b 110, b 100, b 101, b 120, b 45, b 111, b 117, b 116, b 45, b 111, b 102, b 45, b 98, b 111, b 117, b 110, b 100, b 115 }
+function $cerune_fail_array_index_out_of_bounds(l %origin, l %origin_len) {
+@start
+  call $cerune_runtime_failure(l $cerune_code_array_index_out_of_bounds, l 49, l %origin, l %origin_len)
+  hlt
+}
+
+function $cerune_runtime_failure(l %code, l %code_len, l %origin, l %origin_len) {
+@start
+  call $fflush(l 0)
+  call $write(w 2, l %code, l %code_len)
+  call $write(w 2, l %origin, l %origin_len)
+  call $abort()
+  hlt
+}
+
+section ".rodata" data $cerune_string_0 = align 8 { l 5, b 86, b 97, b 108, b 117, b 101 }
+section ".rodata" data $cerune_string_1 = align 8 { l 1, b 123 }
+section ".rodata" data $cerune_string_2 = align 8 { l 3, b 110, b 58, b 32 }
+section ".rodata" data $cerune_string_3 = align 8 { l 1, b 125 }
+section ".rodata" data $cerune_string_4 = align 8 { l 5, b 69, b 109, b 112, b 116, b 121 }
+section ".rodata" data $cerune_string_5 = align 8 { l 1, b 123 }
+section ".rodata" data $cerune_string_6 = align 8 { l 1, b 125 }
+section ".rodata" data $cerune_string_7 = align 8 { l 0 }
+
+function w $cerune_string_equal(l %left, l %right) {
+@start
+  %length =l loadl %left
+  %right_length =l loadl %right
+  %same_length =w ceql %length, %right_length
+  jnz %same_length, @condition, @different
+@condition
+  %index =l phi @start 0, @advance %next
+  %done =w ceql %index, %length
+  jnz %done, @equal, @compare
+@compare
+  %offset =l add %index, 8
+  %lp =l add %left, %offset
+  %rp =l add %right, %offset
+  %lb =w loadub %lp
+  %rb =w loadub %rp
+  %same_byte =w ceqw %lb, %rb
+  jnz %same_byte, @advance, @different
+@advance
+  %next =l add %index, 1
+  jmp @condition
+@equal
+  ret 1
+@different
+  ret 0
+}
+
+function $cerune_print_string(l %value) {
+@start
+  %length =l loadl %value
+  jmp @condition
+@condition
+  %index =l phi @start 0, @write %next
+  %done =w ceql %index, %length
+  jnz %done, @newline, @write
+@write
+  %offset =l add %index, 8
+  %address =l add %value, %offset
+  %byte =w loadub %address
+  call $putchar(w %byte)
+  %next =l add %index, 1
+  jmp @condition
+@newline
+  call $putchar(w 10)
+  ret
+}
+
+data $fmt_i64 = { b "%lld", b 10, b 0 }
+data $fmt_f32 = { b "%.9g", b 10, b 0 }
+data $fmt_f64 = { b "%.17g", b 10, b 0 }
+data $bool_false = { b "false", b 0 }
+data $bool_true = { b "true", b 0 }
+data $bool_texts = align 8 { l $bool_false, l $bool_true }
+
+function l $cerune_i64_add(l %left, l %right, l %origin, l %origin_len) {
+@start
+  %result =l add %left, %right
+  %left_changed =l xor %result, %left
+  %right_changed =l xor %result, %right
+  %sign_changed =l and %left_changed, %right_changed
+  %overflow =w csltl %sign_changed, 0
+  jnz %overflow, @trap, @ok
+@trap
+  call $cerune_fail_integer_overflow(l %origin, l %origin_len)
+  hlt
+@ok
+  ret %result
+}
+
+function l $cerune_i64_neg(l %value, l %origin, l %origin_len) {
+@start
+  %overflow =w ceql %value, -9223372036854775808
+  jnz %overflow, @trap, @ok
+@trap
+  call $cerune_fail_integer_overflow(l %origin, l %origin_len)
+  hlt
+@ok
+  %result =l neg %value
+  ret %result
+}
+
+function w $cerune_fn__equal0_0(l %arg0, l %arg1) {
+@start
+  %slot_$left =l alloc8 16
+  %slot_$right =l alloc8 16
+  %slot_$index =l alloc8 8
+  blit %arg0, %slot_$left, 16
+  blit %arg1, %slot_$right, 16
+  storel 0, %slot_$index
+  jmp @block0
+@block0 # for_condition
+  %tmp0 =l loadl %slot_$index
+  %tmp1 =w csltl %tmp0, 2
+  jnz %tmp1, @block1, @block3
+@block1 # for_body
+  %tmp2 =l loadl %slot_$index
+  %tmp3 =w csltl %tmp2, 0
+  jnz %tmp3, @block6, @block4
+@block4 # array_index_non_negative
+  %tmp4 =w csgel %tmp2, 2
+  jnz %tmp4, @block6, @block5
+@block6 # array_index_out_of_bounds
+  call $cerune_runtime_failure(l $cerune_code_array_index_out_of_bounds, l 49, l $cerune_origin_52_70_84, l 22)
+  hlt
+@block5 # array_index_in_bounds
+  %tmp5 =l mul %tmp2, 8
+  %tmp6 =l add %slot_$left, %tmp5
+  %tmp7 =l loadl %tmp6
+  %tmp8 =l loadl %slot_$index
+  %tmp9 =w csltl %tmp8, 0
+  jnz %tmp9, @block9, @block7
+@block7 # array_index_non_negative
+  %tmp10 =w csgel %tmp8, 2
+  jnz %tmp10, @block9, @block8
+@block9 # array_index_out_of_bounds
+  call $cerune_runtime_failure(l $cerune_code_array_index_out_of_bounds, l 49, l $cerune_origin_55_70_84, l 22)
+  hlt
+@block8 # array_index_in_bounds
+  %tmp11 =l mul %tmp8, 8
+  %tmp12 =l add %slot_$right, %tmp11
+  %tmp13 =l loadl %tmp12
+  %tmp14 =w ceql %tmp7, %tmp13
+  %tmp15 =w ceqw %tmp14, 0
+  jnz %tmp15, @block10, @block11
+@block10 # if_then
+  ret 0
+@block11 # if_else
+  jmp @block12
+@block12 # if_end
+  jmp @block2
+@block2 # for_update
+  %tmp16 =l loadl %slot_$index
+  %tmp17 =l call $cerune_i64_add(l %tmp16, l 1, l $cerune_origin_63_70_84, l 22)
+  storel %tmp17, %slot_$index
+  jmp @block0
+@block3 # for_end
+  ret 1
+}
+
+function w $cerune_fn__match_bind1_1(l %arg0) {
+@start
+  %slot_$capture1 =l alloc8 16
+  %slot_n =l alloc8 8
+  blit %arg0, %slot_$capture1, 16
+  %tmp0 =l add %slot_$capture1, 8
+  %tmp1 =l loadl %tmp0
+  storel %tmp1, %slot_n
+  %tmp2 =l loadl %slot_n
+  %tmp3 =w csgtl %tmp2, 0
+  ret %tmp3
+}
+
+function l $cerune_fn__match_bind2_2(l %arg0) {
+@start
+  %slot_$capture1 =l alloc8 16
+  %slot_n =l alloc8 8
+  blit %arg0, %slot_$capture1, 16
+  %tmp0 =l add %slot_$capture1, 8
+  %tmp1 =l loadl %tmp0
+  storel %tmp1, %slot_n
+  %tmp2 =l loadl %slot_n
+  ret %tmp2
+}
+
+function l $cerune_fn__match_select3_3(l %arg0) {
+@start
+  %slot_$capture1 =l alloc8 16
+  blit %arg0, %slot_$capture1, 16
+  %tmp0 =l loadl %slot_$capture1
+  %tmp1 =w ceql %tmp0, 0
+  jnz %tmp1, @block0, @block1
+@block0 # if_then
+  ret 0
+@block1 # if_else
+  %tmp2 =l call $cerune_i64_neg(l 1, l $cerune_origin_41_254_256, l 24)
+  ret %tmp2
+}
+
+function l $cerune_fn__match_select4_4(l %arg0) {
+@start
+  %slot_$capture1 =l alloc8 16
+  %slot_logical_result1 =l alloc8 8
+  blit %arg0, %slot_$capture1, 16
+  %tmp0 =l loadl %slot_$capture1
+  %tmp1 =w ceql %tmp0, 0
+  storew %tmp1, %slot_logical_result1
+  jnz %tmp1, @block0, @block1
+@block0 # logical_rhs
+  %tmp2 =w call $cerune_fn__match_bind1_1(l %slot_$capture1)
+  storew %tmp2, %slot_logical_result1
+  jmp @block1
+@block1 # logical_end
+  %tmp3 =w loadw %slot_logical_result1
+  jnz %tmp3, @block2, @block3
+@block2 # if_then
+  %tmp4 =l call $cerune_fn__match_bind2_2(l %slot_$capture1)
+  ret %tmp4
+@block3 # if_else
+  %tmp5 =l call $cerune_fn__match_select3_3(l %slot_$capture1)
+  ret %tmp5
+}
+
+function l $cerune_fn__match_bind5_5() {
+@start
+  %slot_$match0 =l alloc8 16
+  %slot_aggregate_tmp0 =l alloc8 16
+  storel 0, %slot_aggregate_tmp0
+  %tmp0 =l add %slot_aggregate_tmp0, 8
+  storel 7, %tmp0
+  blit %slot_aggregate_tmp0, %slot_$match0, 16
+  %tmp1 =l call $cerune_fn__match_select4_4(l %slot_$match0)
+  ret %tmp1
+}
+
+function $cerune_fn__display6_6(l %arg0) {
+@start
+  %slot_$value =l alloc8 16
+  blit %arg0, %slot_$value, 16
+  %tmp0 =l loadl %slot_$value
+  %tmp1 =w ceql %tmp0, 0
+  jnz %tmp1, @block0, @block1
+@block0 # if_then
+  call $cerune_write_string(l $cerune_string_0)
+  call $cerune_write_string(l $cerune_string_1)
+  call $cerune_write_string(l $cerune_string_2)
+  %tmp2 =l add %slot_$value, 8
+  %tmp3 =l loadl %tmp2
+  call $cerune_write_i64(l %tmp3)
+  call $cerune_write_string(l $cerune_string_3)
+  jmp @block2
+@block1 # if_else
+  jmp @block2
+@block2 # if_end
+  %tmp4 =l loadl %slot_$value
+  %tmp5 =w ceql %tmp4, 1
+  jnz %tmp5, @block3, @block4
+@block3 # if_then
+  call $cerune_write_string(l $cerune_string_4)
+  call $cerune_write_string(l $cerune_string_5)
+  call $cerune_write_string(l $cerune_string_6)
+  jmp @block5
+@block4 # if_else
+  jmp @block5
+@block5 # if_end
+  call $cerune_print_string(l $cerune_string_7)
+  ret
+}
+
+export function w $main() {
+@start
+  %slot_left =l alloc8 16
+  %slot_result =l alloc8 8
+  %slot_aggregate_tmp0 =l alloc8 16
+  %slot_aggregate_tmp1 =l alloc8 16
+  %slot_aggregate_tmp2 =l alloc8 16
+  storel 1, %slot_aggregate_tmp0
+  %tmp0 =l add %slot_aggregate_tmp0, 8
+  storel 2, %tmp0
+  blit %slot_aggregate_tmp0, %slot_left, 16
+  storel 1, %slot_aggregate_tmp1
+  %tmp1 =l add %slot_aggregate_tmp1, 8
+  storel 3, %tmp1
+  %tmp2 =w call $cerune_fn__equal0_0(l %slot_left, l %slot_aggregate_tmp1)
+  %tmp3 =l extsw %tmp2
+  %tmp4 =l mul %tmp3, 8
+  %tmp5 =l add $bool_texts, %tmp4
+  %tmp6 =l loadl %tmp5
+  %tmp7 =w call $puts(l %tmp6)
+  storel 0, %slot_aggregate_tmp2
+  %tmp8 =l add %slot_aggregate_tmp2, 8
+  storel 7, %tmp8
+  call $cerune_fn__display6_6(l %slot_aggregate_tmp2)
+  %tmp9 =l call $cerune_fn__match_bind5_5()
+  storel %tmp9, %slot_result
+  %tmp10 =l loadl %slot_result
+  %tmp11 =w call $printf(l $fmt_i64, ..., l %tmp10)
+  ret 0
+}

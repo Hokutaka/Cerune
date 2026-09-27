@@ -429,14 +429,14 @@ The following scope is implemented:
 
 `check`, Cerune IR, bytecode, the VM, C, LLVM, WAT, QBE, and Windows x86-64 all handle the same language-level semantics. Tests fix the successful behavior, diagnostics, and all eight observation artifacts.
 
+Whole-value `==` / `!=` and `print` are also implemented; see [comparison order and display formats](aggregate-values.en.md).
+
 ## Deferred features
 
 The following are not rejected. They are separated into later design decisions:
 
-- aggregate `==` and `!=`;
-- `print(aggregate)` and stable formatting;
 - type aliases and newtypes;
-- tuples, sum types, and generic types;
+- tuples and generic types ([sum types](sum-types.en.md) are implemented);
 - field visibility and module boundaries;
 - copy, move, borrow, and references;
 - recursive types through references;

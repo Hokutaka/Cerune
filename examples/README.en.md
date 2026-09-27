@@ -91,6 +91,8 @@ Integer overflow stops execution; values never wrap. Convert explicitly with `i6
 | Fixed array `[T; N]` | [fixed_arrays.ceru](fixed_arrays.ceru), [bubble_sort.ceru](bubble_sort.ceru) | indexing, element updates, and independent copies |
 | Product `type Point { ... }` | [product-point.ceru](product-point.ceru), [product_arrays.ceru](product_arrays.ceru) | fields, defaults, and arrays of products |
 | Nested arrays and products | [function_values.ceru](function_values.ceru), [u64_values.ceru](u64_values.ceru), [string_lookup.ceru](string_lookup.ceru) | combining numbers or strings and passing values to functions |
+| Aggregate equality | [aggregate_comparison.ceru](aggregate_comparison.ceru) | Arrays/products/sums, operand order, constants and generic functions |
+| Aggregate display | [aggregate_display.ceru](aggregate_display.ceru) | Nested values, maximum u64, quoted strings, preserved NUL/CR/LF |
 
 ### Sum types: values for each alternative
 
@@ -100,6 +102,11 @@ Integer overflow stops execution; values never wrap. Convert explicitly with `i6
 | [sum_divide.ceru](sum_divide.ceru) | `enum Division`: success/zero-divisor/overflow values allow processing to continue |
 | [sum_values.ceru](sum_values.ceru) | Array/product payloads, copies, construction order, reassignment inside an arm |
 | [modules/sum_lookup.ceru](modules/sum_lookup.ceru) | Imported public enum, construction, exhaustive branching |
+| [match_values.ceru](match_values.ceru) | Match results, guards, type arguments, constant array lengths |
+| [match_guards.ceru](match_guards.ceru) | One subject evaluation, ordered/skipped guards, independent copies, continue/break |
+| [modules/aggregate_match.ceru](modules/aggregate_match.ceru) | Compare/display public enums/constants; match expression in a separate file |
+
+[Comparison, display, branching, and generation rules](../docs/design/aggregate-values.en.md).
 
 ### Compile-time constants
 

@@ -165,11 +165,14 @@ impl Lowerer {
                             arm.variant_span,
                         ));
                     }
-                    if !seen.insert(index) {
+                    if seen.contains(&index) {
                         return Err(Diagnostic::new(
                             format!("duplicate match arm {}", arm.variant),
                             arm.variant_span,
                         ));
+                    }
+                    if arm.guard.is_none() {
+                        seen.insert(index);
                     }
                     let variant = &variants[index];
                     let mut fields = HashSet::new();
@@ -223,9 +226,15 @@ impl Lowerer {
                             arm.variant_span,
                         ));
                     }
+                    let guard = if let Some(guard) = &mut arm.guard {
+                        self.expr(guard)?;
+                        Some(bind_expression(&body, guard.clone()))
+                    } else {
+                        None
+                    };
                     self.statements(&mut arm.body)?;
                     body.extend(arm.body.clone());
-                    branches.push((index, body, arm.variant_span));
+                    branches.push((index, body, guard, arm.variant_span));
                 }
                 if seen.len() != variants.len() {
                     let missing = variants
@@ -240,12 +249,12 @@ impl Lowerer {
                         statement.span,
                     ));
                 }
-                let (_, last, span) = branches.pop().unwrap();
+                let (_, last, _, span) = branches.pop().unwrap();
                 let mut tail = vec![Stmt {
                     kind: StmtKind::Block(last),
                     span,
                 }];
-                for (index, body, span) in branches.into_iter().rev() {
+                for (index, body, guard, span) in branches.into_iter().rev() {
                     let condition = Expr {
                         kind: ExprKind::Binary {
                             op: BinaryOp::Equal,
@@ -253,6 +262,18 @@ impl Lowerer {
                             right: Box::new(integer(index, span)),
                         },
                         span,
+                    };
+                    let condition = if let Some(guard) = guard {
+                        Expr {
+                            kind: ExprKind::Logical {
+                                op: LogicalOp::And,
+                                left: Box::new(condition),
+                                right: Box::new(guard),
+                            },
+                            span,
+                        }
+                    } else {
+                        condition
                     };
                     tail = vec![Stmt {
                         kind: StmtKind::If {
@@ -324,6 +345,33 @@ impl Lowerer {
     }
     fn expr(&mut self, expr: &mut Expr) -> Result<(), Diagnostic> {
         match &mut expr.kind {
+            ExprKind::Match { value, arms } => {
+                let mut lowered_arms = arms.clone();
+                for arm in &mut lowered_arms {
+                    let result = *arm.result.take().expect("match expression arm");
+                    arm.body = vec![Stmt {
+                        span: result.span,
+                        kind: StmtKind::Return {
+                            value: Some(result),
+                        },
+                    }];
+                }
+                let mut statement = Stmt {
+                    kind: StmtKind::Match {
+                        value: *value.clone(),
+                        arms: lowered_arms,
+                    },
+                    span: expr.span,
+                };
+                self.statement(&mut statement)?;
+                let StmtKind::Block(body) = statement.kind else {
+                    unreachable!()
+                };
+                let span = expr.span;
+                *expr = match_expression(&body);
+                expr.span = span;
+            }
+
             ExprKind::Construct {
                 type_name,
                 type_name_span,
@@ -506,5 +554,53 @@ impl Lowerer {
             },
         };
         Ok(Expr { kind, span })
+    }
+}
+
+fn bind_expression(bindings: &[Stmt], mut body: Expr) -> Expr {
+    for binding in bindings.iter().rev() {
+        let StmtKind::Binding {
+            name,
+            type_spec: TypeSpec::Explicit(type_ref),
+            value,
+            ..
+        } = &binding.kind
+        else {
+            unreachable!()
+        };
+        let span = body.span;
+        body = Expr {
+            span,
+            kind: ExprKind::Let {
+                name: name.clone(),
+                type_ref: type_ref.clone(),
+                value: Box::new(value.clone()),
+                body: Box::new(body),
+            },
+        };
+    }
+    body
+}
+fn match_expression(body: &[Stmt]) -> Expr {
+    let first = &body[0];
+    match &first.kind {
+        StmtKind::Binding { .. } => {
+            bind_expression(std::slice::from_ref(first), match_expression(&body[1..]))
+        }
+        StmtKind::Return { value: Some(value) } => value.clone(),
+        StmtKind::Block(body) => match_expression(body),
+        StmtKind::If {
+            condition,
+            then_body,
+            else_body,
+        } => Expr {
+            span: first.span,
+            kind: ExprKind::Conditional {
+                condition: Box::new(condition.clone()),
+                then_value: Box::new(match_expression(then_body)),
+                else_value: Box::new(match_expression(else_body)),
+            },
+        },
+        _ => unreachable!("match expression lowering creates only bindings, returns and branches"),
     }
 }

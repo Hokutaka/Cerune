@@ -1,0 +1,8 @@
+import "lookup_values.ceru" as values;
+pub fn label(value: values::Lookup) -> string {
+    return match value {
+        values::Lookup::Found { text: text } if byte_len(text) > 0 => text,
+        values::Lookup::Found { text: _ } => "空欄",
+        values::Lookup::Missing {} => "未登録",
+    };
+}
