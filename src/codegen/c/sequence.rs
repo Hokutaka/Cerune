@@ -12,6 +12,7 @@ fn statements(body: &mut [Statement], temporaries: &mut Vec<Type>) {
     for statement in body {
         match statement {
             Statement::Binding { value, .. }
+            | Statement::StringManage { value, .. }
             | Statement::Write { value, .. }
             | Statement::Print { value, .. } => {
                 expression(value, temporaries);
@@ -84,7 +85,8 @@ fn expression(expr: &mut Expr, temporaries: &mut Vec<Type>) {
         return;
     }
     let mut children: Vec<&mut Expr> = match &mut expr.kind {
-        ExprKind::Binary { left, right, .. }
+        ExprKind::StringConcat { left, right }
+        | ExprKind::Binary { left, right, .. }
         | ExprKind::Index {
             base: left,
             index: right,
@@ -162,7 +164,8 @@ fn order(children: Vec<&mut Expr>, temporaries: &mut Vec<Type>) -> Vec<(usize, E
 
 fn observable(expr: &Expr) -> bool {
     match &expr.kind {
-        ExprKind::Call { .. }
+        ExprKind::StringConcat { .. }
+        | ExprKind::Call { .. }
         | ExprKind::Index { .. }
         | ExprKind::ConvertNumeric { .. }
         | ExprKind::CheckIntegerRange { .. }

@@ -44,7 +44,12 @@ pub fn lower(program: &cerune_ir::Program) -> Module {
     let mut instructions = Vec::new();
     context.lower_statements(&program.statements, &mut instructions);
 
+    if crate::codegen::support::string_heap_limit(program).is_some() {
+        context.next_address = context.next_address.div_ceil(8) * 8 + 8;
+    }
     Module {
+        string_heap_start: context.next_address,
+        string_heap_limit: crate::codegen::support::string_heap_limit(program),
         uses_write: crate::codegen::display::uses_write(program),
         uses_strings: crate::codegen::support::first_string_span(program).is_some(),
         memory_pages: if context.next_address == 0 {
@@ -351,6 +356,10 @@ impl LoweringContext<'_> {
                 }
             }
 
+            cerune_ir::StatementKind::StringManage { value, retain } => {
+                self.lower_expr(value, instructions);
+                instructions.push(Instruction::StringManage { retain: *retain });
+            }
             cerune_ir::StatementKind::Write { value, quoted } => {
                 let kind = crate::codegen::display::kind(&value.ty, *quoted);
                 self.lower_expr(value, instructions);
@@ -675,6 +684,12 @@ impl LoweringContext<'_> {
                 self.lower_expr(value, instructions);
                 instructions.push(Instruction::I64Const(*length as i64));
                 Value::Scalar(Type::I64)
+            }
+            cerune_ir::ExprKind::StringConcat { left, right } => {
+                self.lower_expr(left, instructions);
+                self.lower_expr(right, instructions);
+                instructions.push(Instruction::StringConcat.at(expr));
+                Value::Scalar(Type::String)
             }
             cerune_ir::ExprKind::StringByteLength { value } => {
                 self.lower_expr(value, instructions);
@@ -1408,6 +1423,7 @@ fn collect_locations(
                 collect_locations(body, program, locals, locations, name_counts, next_address);
             }
             cerune_ir::StatementKind::Assignment { .. }
+            | cerune_ir::StatementKind::StringManage { .. }
             | cerune_ir::StatementKind::Write { .. }
             | cerune_ir::StatementKind::Print { .. }
             | cerune_ir::StatementKind::Call { .. }

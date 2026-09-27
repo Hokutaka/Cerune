@@ -9,7 +9,7 @@ use crate::{
 };
 
 // 表の位置は生成物内だけの契約です。公開レコードには理由の文字列を使います。
-const CODES: [Code; 12] = [
+const CODES: [Code; 15] = [
     Code::IntegerOverflow,
     Code::DivisionByZero,
     Code::DivisionOverflow,
@@ -22,6 +22,9 @@ const CODES: [Code; 12] = [
     Code::ConversionNaN,
     Code::ConversionNegativeZero,
     Code::ArrayIndexOutOfBounds,
+    Code::AllocationSizeOverflow,
+    Code::AllocationLimitExceeded,
+    Code::AllocationFailed,
 ];
 
 pub(super) fn index(code: Code) -> usize {
@@ -33,6 +36,11 @@ pub(super) fn index(code: Code) -> usize {
 
 fn codes(instruction: &Instruction) -> Vec<Code> {
     match instruction {
+        Instruction::StringConcat { .. } => vec![
+            Code::AllocationSizeOverflow,
+            Code::AllocationLimitExceeded,
+            Code::AllocationFailed,
+        ],
         Instruction::Binary { op, .. } => match op {
             BinaryOp::CheckedI64Div => vec![Code::DivisionByZero, Code::DivisionOverflow],
             BinaryOp::CheckedI64Add | BinaryOp::CheckedI64Sub | BinaryOp::CheckedI64Mul => {
@@ -138,7 +146,12 @@ pub(super) fn emit_data(module: &Module, output: &mut String) {
             unreachable!()
         };
         let name = table_name(origin);
-        let mut lengths = [0; CODES.len()];
+        let count = if module.string_heap_limit.is_some() {
+            CODES.len()
+        } else {
+            12
+        };
+        let mut lengths = vec![0; count];
         for code in required {
             let id = index(code);
             let record = format!(
@@ -162,7 +175,11 @@ pub(super) fn emit_data(module: &Module, output: &mut String) {
             }
             output.push_str("\"\n");
         }
-        write!(output, "{name} = private constant [12 x {{ ptr, i64 }}] [").unwrap();
+        write!(
+            output,
+            "{name} = private constant [{count} x {{ ptr, i64 }}] ["
+        )
+        .unwrap();
         for (id, length) in lengths.into_iter().enumerate() {
             if id > 0 {
                 output.push_str(", ");

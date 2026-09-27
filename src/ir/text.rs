@@ -8,6 +8,18 @@ use super::{
 pub fn emit(program: &Program) -> String {
     let mut output = String::new();
     writeln!(output, "; Cerune IR v0.2").unwrap();
+    if program
+        .function_definitions
+        .iter()
+        .any(|f| matches!(f.lowering, Some(super::LoweringKind::OwnershipExpression)))
+    {
+        writeln!(
+            output,
+            "; string-heap-limit={} bytes (live dynamic payload)",
+            program.string_heap_limit
+        )
+        .unwrap();
+    }
     writeln!(
         output,
         "; #N identifies one statement or expression in this compilation"
@@ -97,6 +109,10 @@ pub fn emit(program: &Program) -> String {
                 super::LoweringKind::AggregateDisplay => "aggregate-display",
                 super::LoweringKind::MatchBinding => "match-binding",
                 super::LoweringKind::MatchSelect => "match-selection",
+                super::LoweringKind::OwnershipExpression => "ownership-expression",
+                super::LoweringKind::OwnershipRetain => "ownership-retain",
+                super::LoweringKind::OwnershipRelease => "ownership-release",
+                super::LoweringKind::OwnershipReplace => "ownership-replace",
             };
             writeln!(
                 output,
@@ -208,6 +224,16 @@ fn emit_statement(statement: &Statement, indent: usize, program: &Program, outpu
                 write!(output, ":{}", type_name(&target.ty, program)).unwrap();
             }
             output.push_str(" = ");
+            emit_expr(value, program, output);
+            writeln!(output).unwrap();
+        }
+        StatementKind::StringManage { value, retain } => {
+            write!(
+                output,
+                "{prefix}{node}string.{} ",
+                if *retain { "retain" } else { "release" }
+            )
+            .unwrap();
             emit_expr(value, program, output);
             writeln!(output).unwrap();
         }
@@ -353,6 +379,13 @@ fn emit_expr(expr: &Expr, program: &Program, output: &mut String) {
         ExprKind::ArrayLength { value } => {
             output.push_str("array_len(");
             emit_expr(value, program, output);
+            output.push(')');
+        }
+        ExprKind::StringConcat { left, right } => {
+            output.push_str("string.concat.allocate-copy(");
+            emit_expr(left, program, output);
+            output.push_str(", ");
+            emit_expr(right, program, output);
             output.push(')');
         }
         ExprKind::StringByteLength { value } => {

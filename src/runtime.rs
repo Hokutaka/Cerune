@@ -4,6 +4,9 @@ use crate::{ir::NodeId, source::Span, vm::VmErrorKind};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum FailureCode {
+    AllocationSizeOverflow,
+    AllocationLimitExceeded,
+    AllocationFailed,
     IntegerOverflow,
     DivisionByZero,
     DivisionOverflow,
@@ -21,6 +24,9 @@ pub enum FailureCode {
 impl FailureCode {
     pub const fn name(self) -> &'static str {
         match self {
+            Self::AllocationSizeOverflow => "allocation-size-overflow",
+            Self::AllocationLimitExceeded => "allocation-limit-exceeded",
+            Self::AllocationFailed => "allocation-failed",
             Self::IntegerOverflow => "integer-overflow",
             Self::DivisionByZero => "division-by-zero",
             Self::DivisionOverflow => "division-overflow",
@@ -40,6 +46,9 @@ impl FailureCode {
     pub fn from_vm(kind: VmErrorKind) -> Option<Self> {
         use crate::vm::NumericConversionFailure as C;
         Some(match kind {
+            VmErrorKind::AllocationSizeOverflow => Self::AllocationSizeOverflow,
+            VmErrorKind::AllocationLimitExceeded => Self::AllocationLimitExceeded,
+            VmErrorKind::AllocationFailed => Self::AllocationFailed,
             VmErrorKind::IntegerOverflow { .. } => Self::IntegerOverflow,
             VmErrorKind::DivisionByZero => Self::DivisionByZero,
             VmErrorKind::DivisionOverflow => Self::DivisionOverflow,

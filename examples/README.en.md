@@ -80,7 +80,7 @@ Integer overflow stops execution; values never wrap. Convert explicitly with `i6
 | Type | Values | Example | What to observe |
 | --- | --- | --- | --- |
 | `bool` | `true` / `false` | [boolean_comparisons.ceru](boolean_comparisons.ceru), [short_circuit.ceru](short_circuit.ceru) | comparison, negation, and skipped evaluation through short-circuiting |
-| `string` | immutable UTF-8 content | [string_values.ceru](string_values.ceru), [string_byte_length.ceru](string_byte_length.ceru) | Japanese text, equality, copies, and UTF-8 byte length rather than character count |
+| `string` | immutable UTF-8 content | [string_values.ceru](string_values.ceru), [string_byte_length.ceru](string_byte_length.ceru), [string_concat.ceru](string_concat.ceru) | Japanese text, equality, byte length, concatenation, and independent copies after reassignment |
 
 [string_origins.ceru](string_origins.ceru) traces string operations through Cerune IR and annotated LLVM. String content is immutable; mutable bindings can be reassigned.
 

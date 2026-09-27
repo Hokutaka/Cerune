@@ -235,7 +235,7 @@ pub(crate) fn analyze_lowered(program: &Program) -> SemanticResult<SemanticModel
     for item in &program.items {
         if let Item::ConstantDefinition(d) = item {
             if ast::Type::from_name(&d.name).is_some()
-                || matches!(d.name.as_str(), "byte_len" | "array_len")
+                || matches!(d.name.as_str(), "byte_len" | "array_len" | "concat")
                 || model.function_names.contains_key(&d.name)
                 || model.type_names.contains_key(&d.name)
             {
@@ -329,7 +329,10 @@ fn register_function_names(program: &Program) -> SemanticResult<HashMap<String, 
         let Item::FunctionDefinition(definition) = item else {
             continue;
         };
-        if matches!(definition.name.as_str(), "byte_len" | "array_len") {
+        if matches!(
+            definition.name.as_str(),
+            "byte_len" | "array_len" | "concat"
+        ) {
             return Err(Diagnostic::new(
                 format!(
                     "function name `{}` is reserved for a built-in operation",
@@ -1799,6 +1802,24 @@ fn check_call(
     bindings: &Bindings,
     model: &SemanticModel,
 ) -> SemanticResult<ReturnType> {
+    if name == "concat" {
+        if arguments.len() != 2 {
+            return Err(Diagnostic::new(
+                format!("concat expects 2 arguments, found {}", arguments.len()),
+                name_span,
+            ));
+        }
+        for argument in arguments {
+            let actual = model.type_of_expr(argument, bindings)?;
+            if actual != Type::String {
+                return Err(Diagnostic::new(
+                    format!("concat expects string, found {}", model.type_name(actual)),
+                    argument.span,
+                ));
+            }
+        }
+        return Ok(ReturnType::Value(Type::String));
+    }
     if name == "array_len" {
         if arguments.len() != 1 {
             return Err(Diagnostic::new(

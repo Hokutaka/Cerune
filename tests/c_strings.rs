@@ -413,3 +413,14 @@ fn aggregate_values_match_optimized_c() {
         native.matches_vm(source);
     }
 }
+
+#[path = "support/concat_cases.rs"]
+mod concat_cases;
+#[test]
+fn dynamic_strings_match_optimized_c() {
+    let Some(native) = NativeC::new() else { return };
+    for &(source, expected) in concat_cases::CASES {
+        assert_eq!(run_vm(source).unwrap(), expected);
+        native.matches_vm(source);
+    }
+}

@@ -40,6 +40,7 @@ pub fn build(program: &ast::Program) -> Result<Program, Diagnostic> {
             .push(usage.span);
     }
     super::aggregates::lower(&mut ir);
+    super::ownership::lower(&mut ir);
     Ok(ir)
 }
 
@@ -109,6 +110,7 @@ pub(crate) fn build_with_model(
 
     let statements = statements.into_iter().flatten().collect();
     Ok(Program {
+        string_heap_limit: super::DEFAULT_STRING_HEAP_LIMIT,
         constant_definitions,
         type_definitions,
         function_definitions,
@@ -413,7 +415,7 @@ impl Builder<'_> {
         bindings: &Bindings,
     ) -> Result<Expr, Diagnostic> {
         if !self.constant_stack.borrow().is_empty()
-            && matches!(&expr.kind, ast::ExprKind::Call { name, .. } if !matches!(name.as_str(), "byte_len" | "array_len"))
+            && matches!(&expr.kind, ast::ExprKind::Call { name, .. } if !matches!(name.as_str(), "byte_len" | "array_len" | "concat"))
         {
             return Err(Diagnostic::new(
                 "function calls are not allowed in constant expressions",
@@ -424,6 +426,20 @@ impl Builder<'_> {
         let ty = self.model.type_of_expr_expected(expr, bindings, expected)?;
 
         let kind = match &expr.kind {
+            ast::ExprKind::Call {
+                name, arguments, ..
+            } if name == "concat" => ExprKind::StringConcat {
+                left: Box::new(self.build_expr(
+                    &arguments[0],
+                    Some(semantic::Type::String),
+                    bindings,
+                )?),
+                right: Box::new(self.build_expr(
+                    &arguments[1],
+                    Some(semantic::Type::String),
+                    bindings,
+                )?),
+            },
             ast::ExprKind::Call {
                 name, arguments, ..
             } if name == "array_len" => ExprKind::ArrayLength {

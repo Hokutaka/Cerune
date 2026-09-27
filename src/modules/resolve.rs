@@ -34,7 +34,8 @@ pub(super) fn resolve(units: &[Unit]) -> Result<Program, Diagnostic> {
                 _ => continue,
             };
             if Type::from_name(name).is_some()
-                || (kind != Kind::Type && matches!(name.as_str(), "byte_len" | "array_len"))
+                || (kind != Kind::Type
+                    && matches!(name.as_str(), "byte_len" | "array_len" | "concat"))
             {
                 return Err(Diagnostic::new(
                     format!("definition name `{name}` is reserved"),
@@ -449,7 +450,7 @@ impl Resolver<'_> {
                 name_span,
                 arguments,
             } => {
-                if !matches!(name.as_str(), "byte_len" | "array_len") {
+                if !matches!(name.as_str(), "byte_len" | "array_len" | "concat") {
                     *name = self.name(name, *name_span, Kind::Function, false)?;
                 }
                 for argument in arguments {

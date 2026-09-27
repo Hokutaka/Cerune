@@ -23,6 +23,17 @@ cerune run <file> [--diagnostic-format runtime-v1]
 cerune --version
 ```
 
+## Dynamic string budget
+
+`run`, `emit-ir`, `emit-bytecode`, `emit-c`, `emit-llvm`, `emit-qbe`, `emit-wat`, `emit-asm`, and `emit-obj` accept `--string-heap-limit <bytes>`. The default is 67108864 (64 MiB). Values are decimal integers from 0 through 9223372036854775807; missing, duplicate, and negative values are rejected. `check` and `emit-sources` do not accept this option.
+
+The budget counts live dynamic string payload, shared allocations once, and static strings never. Old and new values both count while reassignment keeps them alive. Compile-time evaluation has an independent 64 MiB budget unaffected by this setting. This is not a physical-memory cap. Generated artifacts fix the value; no API changes it during execution.
+
+```sh
+cerune run examples/string_concat.ceru --string-heap-limit 1024
+cerune emit-llvm examples/string_concat.ceru --target x86_64-unknown-linux-gnu --string-heap-limit 1024 -o concat.ll
+```
+
 ## Validation
 
 `<file>` is the entry file for every command. [Module imports](../design/modules.en.md) resolve from the declaring file's directory, and all dependencies are checked. Changing the CLI working directory does not change resolution. Existing backend `--target` requirements remain in effect.

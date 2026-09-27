@@ -196,13 +196,27 @@ Supported escapes inside strings are:
 
 `==` and `!=` compare the entire contents. Comparison is case-sensitive and does not normalize Unicode. Visually identical text with different character sequences remains distinct. `"a\0b"` is not treated as `"a"`.
 
-Concatenation, string indexing, character counts, ordering, and numeric conversions are not implemented. Strings do not implicitly convert to or from other types.
+String indexing, character counts, ordering, and numeric conversions are not implemented. Strings do not implicitly convert to or from other types.
 
 `print` writes the contents unchanged and appends LF. In contrast, textual Cerune IR and bytecode escape line breaks and control characters. Decoded values are kept distinct from the UTF-8 byte range (Span) of the original quoted spelling.
 
 Strings are supported by every output route. LLVM and QBE require [CLI target selection](cli.en.md#llvm-target-selection); omitting it produces a source-located diagnostic before lowering, including strings in unused types, functions, and branches. Direct assembly supports Windows x64 and Linux x86-64; native objects require an explicit target. WAT uses the WebAssembly output host contract.
 
-C emission uses read-only data retained until process exit, paired with a byte count. Generated programs using strings set standard output to binary mode on Windows, preventing automatic LF or CR translation. See [String design](../design/strings.en.md) for representation and lifetime details.
+C emission pairs a data pointer with a byte count. Static content lasts until process exit; dynamic content lasts until its final release. Generated programs using strings set standard output to binary mode on Windows, preventing automatic LF or CR translation. See [String design](../design/strings.en.md) for representation and lifetime details.
+
+### Concatenating strings
+
+`concat(left, right)` evaluates exactly two strings once from left to right and returns their concatenated immutable contents. NUL, CR/LF, and Unicode spellings retain their exact bytes. It works with function results, arrays, products, enums, defaults, and `const`. The built-in name cannot be redefined as a function.
+
+```cerune
+mut text: string = concat("こんにちは、", "世界");
+saved: string = text;
+text = concat(text, "！");
+print(saved); // こんにちは、世界
+print(text);  // こんにちは、世界！
+```
+
+An empty result uses static storage; every nonempty result allocates. Reassignment releases the old value after evaluating the RHS, allowing self-assignment and use of the old value as an argument. The default live payload budget is 64 MiB, configurable before execution with `--string-heap-limit <bytes>`. Constant evaluation has an independent 64 MiB budget. See the [ownership, lifetime, and failure contract](../design/dynamic-data.en.md).
 
 ### UTF-8 byte length
 

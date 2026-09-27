@@ -12,6 +12,8 @@ pub enum Type {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Module {
+    pub string_heap_start: usize,
+    pub string_heap_limit: Option<u64>,
     pub uses_write: bool,
     pub uses_strings: bool,
     pub strings: Vec<(usize, String)>,
@@ -46,6 +48,10 @@ pub enum LoopKind {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Instruction {
+    StringConcat,
+    StringManage {
+        retain: bool,
+    },
     Write {
         kind: &'static str,
     },

@@ -11,6 +11,7 @@ pub enum Type {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Module {
+    pub string_heap_limit: Option<u64>,
     pub uses_write: bool,
     pub target: Option<super::Target>,
     pub uses_strings: bool,
@@ -105,6 +106,15 @@ pub enum PrintFormat {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Instruction {
+    StringConcat {
+        dest: Temp,
+        left: Operand,
+        right: Operand,
+    },
+    StringManage {
+        value: Operand,
+        retain: bool,
+    },
     Write {
         kind: &'static str,
         value: Operand,

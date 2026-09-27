@@ -1,0 +1,418 @@
+# target: x86_64-unknown-linux-gnu (qbe -t amd64_sysv)
+
+section ".rodata" data $cerune_origin_1_19_39 = { b 32, b 110, b 111, b 100, b 101, b 61, b 49, b 32, b 98, b 121, b 116, b 101, b 115, b 61, b 49, b 57, b 46, b 46, b 51, b 57, b 10 }
+section ".rodata" data $cerune_origin_7_70_87 = { b 32, b 110, b 111, b 100, b 101, b 61, b 55, b 32, b 98, b 121, b 116, b 101, b 115, b 61, b 55, b 48, b 46, b 46, b 56, b 55, b 10 }
+section ".rodata" data $cerune_code_integer_overflow = { b 99, b 101, b 114, b 117, b 110, b 101, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 105, b 110, b 116, b 101, b 103, b 101, b 114, b 45, b 111, b 118, b 101, b 114, b 102, b 108, b 111, b 119 }
+function $cerune_fail_integer_overflow(l %origin, l %origin_len) {
+@start
+  call $cerune_runtime_failure(l $cerune_code_integer_overflow, l 40, l %origin, l %origin_len)
+  hlt
+}
+
+section ".rodata" data $cerune_code_division_by_zero = { b 99, b 101, b 114, b 117, b 110, b 101, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 100, b 105, b 118, b 105, b 115, b 105, b 111, b 110, b 45, b 98, b 121, b 45, b 122, b 101, b 114, b 111 }
+function $cerune_fail_division_by_zero(l %origin, l %origin_len) {
+@start
+  call $cerune_runtime_failure(l $cerune_code_division_by_zero, l 40, l %origin, l %origin_len)
+  hlt
+}
+
+section ".rodata" data $cerune_code_division_overflow = { b 99, b 101, b 114, b 117, b 110, b 101, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 100, b 105, b 118, b 105, b 115, b 105, b 111, b 110, b 45, b 111, b 118, b 101, b 114, b 102, b 108, b 111, b 119 }
+function $cerune_fail_division_overflow(l %origin, l %origin_len) {
+@start
+  call $cerune_runtime_failure(l $cerune_code_division_overflow, l 41, l %origin, l %origin_len)
+  hlt
+}
+
+section ".rodata" data $cerune_code_remainder_by_zero = { b 99, b 101, b 114, b 117, b 110, b 101, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 114, b 101, b 109, b 97, b 105, b 110, b 100, b 101, b 114, b 45, b 98, b 121, b 45, b 122, b 101, b 114, b 111 }
+function $cerune_fail_remainder_by_zero(l %origin, l %origin_len) {
+@start
+  call $cerune_runtime_failure(l $cerune_code_remainder_by_zero, l 41, l %origin, l %origin_len)
+  hlt
+}
+
+section ".rodata" data $cerune_code_invalid_shift_count = { b 99, b 101, b 114, b 117, b 110, b 101, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 105, b 110, b 118, b 97, b 108, b 105, b 100, b 45, b 115, b 104, b 105, b 102, b 116, b 45, b 99, b 111, b 117, b 110, b 116 }
+function $cerune_fail_invalid_shift_count(l %origin, l %origin_len) {
+@start
+  call $cerune_runtime_failure(l $cerune_code_invalid_shift_count, l 43, l %origin, l %origin_len)
+  hlt
+}
+
+section ".rodata" data $cerune_code_integer_conversion_out_of_range = { b 99, b 101, b 114, b 117, b 110, b 101, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 105, b 110, b 116, b 101, b 103, b 101, b 114, b 45, b 99, b 111, b 110, b 118, b 101, b 114, b 115, b 105, b 111, b 110, b 45, b 111, b 117, b 116, b 45, b 111, b 102, b 45, b 114, b 97, b 110, b 103, b 101 }
+function $cerune_fail_integer_conversion_out_of_range(l %origin, l %origin_len) {
+@start
+  call $cerune_runtime_failure(l $cerune_code_integer_conversion_out_of_range, l 55, l %origin, l %origin_len)
+  hlt
+}
+
+section ".rodata" data $cerune_code_conversion_out_of_range = { b 99, b 101, b 114, b 117, b 110, b 101, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 99, b 111, b 110, b 118, b 101, b 114, b 115, b 105, b 111, b 110, b 45, b 111, b 117, b 116, b 45, b 111, b 102, b 45, b 114, b 97, b 110, b 103, b 101 }
+function $cerune_fail_conversion_out_of_range(l %origin, l %origin_len) {
+@start
+  call $cerune_runtime_failure(l $cerune_code_conversion_out_of_range, l 47, l %origin, l %origin_len)
+  hlt
+}
+
+section ".rodata" data $cerune_code_conversion_inexact = { b 99, b 101, b 114, b 117, b 110, b 101, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 99, b 111, b 110, b 118, b 101, b 114, b 115, b 105, b 111, b 110, b 45, b 105, b 110, b 101, b 120, b 97, b 99, b 116 }
+function $cerune_fail_conversion_inexact(l %origin, l %origin_len) {
+@start
+  call $cerune_runtime_failure(l $cerune_code_conversion_inexact, l 42, l %origin, l %origin_len)
+  hlt
+}
+
+section ".rodata" data $cerune_code_conversion_not_finite = { b 99, b 101, b 114, b 117, b 110, b 101, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 99, b 111, b 110, b 118, b 101, b 114, b 115, b 105, b 111, b 110, b 45, b 110, b 111, b 116, b 45, b 102, b 105, b 110, b 105, b 116, b 101 }
+function $cerune_fail_conversion_not_finite(l %origin, l %origin_len) {
+@start
+  call $cerune_runtime_failure(l $cerune_code_conversion_not_finite, l 45, l %origin, l %origin_len)
+  hlt
+}
+
+section ".rodata" data $cerune_code_conversion_nan = { b 99, b 101, b 114, b 117, b 110, b 101, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 99, b 111, b 110, b 118, b 101, b 114, b 115, b 105, b 111, b 110, b 45, b 110, b 97, b 110 }
+function $cerune_fail_conversion_nan(l %origin, l %origin_len) {
+@start
+  call $cerune_runtime_failure(l $cerune_code_conversion_nan, l 38, l %origin, l %origin_len)
+  hlt
+}
+
+section ".rodata" data $cerune_code_conversion_negative_zero = { b 99, b 101, b 114, b 117, b 110, b 101, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 99, b 111, b 110, b 118, b 101, b 114, b 115, b 105, b 111, b 110, b 45, b 110, b 101, b 103, b 97, b 116, b 105, b 118, b 101, b 45, b 122, b 101, b 114, b 111 }
+function $cerune_fail_conversion_negative_zero(l %origin, l %origin_len) {
+@start
+  call $cerune_runtime_failure(l $cerune_code_conversion_negative_zero, l 48, l %origin, l %origin_len)
+  hlt
+}
+
+section ".rodata" data $cerune_code_array_index_out_of_bounds = { b 99, b 101, b 114, b 117, b 110, b 101, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 97, b 114, b 114, b 97, b 121, b 45, b 105, b 110, b 100, b 101, b 120, b 45, b 111, b 117, b 116, b 45, b 111, b 102, b 45, b 98, b 111, b 117, b 110, b 100, b 115 }
+function $cerune_fail_array_index_out_of_bounds(l %origin, l %origin_len) {
+@start
+  call $cerune_runtime_failure(l $cerune_code_array_index_out_of_bounds, l 49, l %origin, l %origin_len)
+  hlt
+}
+
+section ".rodata" data $cerune_code_allocation_size_overflow = { b 99, b 101, b 114, b 117, b 110, b 101, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 97, b 108, b 108, b 111, b 99, b 97, b 116, b 105, b 111, b 110, b 45, b 115, b 105, b 122, b 101, b 45, b 111, b 118, b 101, b 114, b 102, b 108, b 111, b 119 }
+function $cerune_fail_allocation_size_overflow(l %origin, l %origin_len) {
+@start
+  call $cerune_runtime_failure(l $cerune_code_allocation_size_overflow, l 48, l %origin, l %origin_len)
+  hlt
+}
+
+section ".rodata" data $cerune_code_allocation_limit_exceeded = { b 99, b 101, b 114, b 117, b 110, b 101, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 97, b 108, b 108, b 111, b 99, b 97, b 116, b 105, b 111, b 110, b 45, b 108, b 105, b 109, b 105, b 116, b 45, b 101, b 120, b 99, b 101, b 101, b 100, b 101, b 100 }
+function $cerune_fail_allocation_limit_exceeded(l %origin, l %origin_len) {
+@start
+  call $cerune_runtime_failure(l $cerune_code_allocation_limit_exceeded, l 49, l %origin, l %origin_len)
+  hlt
+}
+
+section ".rodata" data $cerune_code_allocation_failed = { b 99, b 101, b 114, b 117, b 110, b 101, b 58, b 32, b 114, b 117, b 110, b 116, b 105, b 109, b 101, b 45, b 118, b 49, b 32, b 99, b 111, b 100, b 101, b 61, b 97, b 108, b 108, b 111, b 99, b 97, b 116, b 105, b 111, b 110, b 45, b 102, b 97, b 105, b 108, b 101, b 100 }
+function $cerune_fail_allocation_failed(l %origin, l %origin_len) {
+@start
+  call $cerune_runtime_failure(l $cerune_code_allocation_failed, l 41, l %origin, l %origin_len)
+  hlt
+}
+
+function $cerune_runtime_failure(l %code, l %code_len, l %origin, l %origin_len) {
+@start
+  call $fflush(l 0)
+  call $write(w 2, l %code, l %code_len)
+  call $write(w 2, l %origin, l %origin_len)
+  call $abort()
+  hlt
+}
+
+section ".rodata" data $cerune_string_0 = align 8 { l 3, b 230, b 151, b 165 }
+section ".rodata" data $cerune_string_1 = align 8 { l 3, b 230, b 156, b 172 }
+section ".rodata" data $cerune_string_2 = align 8 { l 1, b 33 }
+
+function w $cerune_string_equal(l %left, l %right) {
+@start
+  %length =l loadl %left
+  %right_length =l loadl %right
+  %same_length =w ceql %length, %right_length
+  jnz %same_length, @condition, @different
+@condition
+  %index =l phi @start 0, @advance %next
+  %done =w ceql %index, %length
+  jnz %done, @equal, @compare
+@compare
+  %offset =l add %index, 8
+  %lp =l add %left, %offset
+  %rp =l add %right, %offset
+  %lb =w loadub %lp
+  %rb =w loadub %rp
+  %same_byte =w ceqw %lb, %rb
+  jnz %same_byte, @advance, @different
+@advance
+  %next =l add %index, 1
+  jmp @condition
+@equal
+  ret 1
+@different
+  ret 0
+}
+
+function $cerune_print_string(l %value) {
+@start
+  %length =l loadl %value
+  jmp @condition
+@condition
+  %index =l phi @start 0, @write %next
+  %done =w ceql %index, %length
+  jnz %done, @newline, @write
+@write
+  %offset =l add %index, 8
+  %address =l add %value, %offset
+  %byte =w loadub %address
+  call $putchar(w %byte)
+  %next =l add %index, 1
+  jmp @condition
+@newline
+  call $putchar(w 10)
+  ret
+}
+
+
+data $cerune_string_owners = align 8 { l 0 }
+data $cerune_string_live = align 8 { l 0 }
+section ".rodata" data $cerune_string_empty = align 8 { l 0 }
+function $cerune_string_retain(l %value) {
+@start
+  %head =l loadl $cerune_string_owners
+  jmp @search
+@search
+  %p =l phi @start %head, @advance %next
+  %end =w ceql %p, 0
+  jnz %end, @done, @compare
+@compare
+  %string =l add %p, 16
+  %match =w ceql %string, %value
+  jnz %match, @retain, @advance
+@advance
+  %next =l loadl %p
+  jmp @search
+@retain
+  %ref =l add %p, 8
+  %count =l loadl %ref
+  %more =l add %count, 1
+  storel %more, %ref
+@done
+  ret
+}
+function $cerune_string_release(l %value) {
+@start
+  jmp @search
+@search
+  %link =l phi @start $cerune_string_owners, @advance %p
+  %p =l loadl %link
+  %end =w ceql %p, 0
+  jnz %end, @done, @compare
+@compare
+  %string =l add %p, 16
+  %match =w ceql %string, %value
+  jnz %match, @release, @advance
+@advance
+  jmp @search
+@release
+  %ref =l add %p, 8
+  %count =l loadl %ref
+  %less =l sub %count, 1
+  storel %less, %ref
+  %last =w ceql %less, 0
+  jnz %last, @destroy, @done
+@destroy
+  %next =l loadl %p
+  storel %next, %link
+  %length =l loadl %string
+  %live =l loadl $cerune_string_live
+  %remaining =l sub %live, %length
+  storel %remaining, $cerune_string_live
+  call $free(l %p)
+@done
+  ret
+}
+function l $cerune_string_concat(l %left, l %right, l %origin, l %origin_len) {
+@start
+  %left_len =l loadl %left
+  %right_len =l loadl %right
+  %space =l sub 9223372036854775783, %left_len
+  %overflow =w cugtl %right_len, %space
+  jnz %overflow, @size_fail, @sum
+@sum
+  %length =l add %left_len, %right_len
+  %empty =w ceql %length, 0
+  jnz %empty, @zero, @budget
+@zero
+  ret $cerune_string_empty
+@budget
+  %live =l loadl $cerune_string_live
+  %available =l sub 67108864, %live
+  %over =w cugtl %length, %available
+  jnz %over, @limit_fail, @allocate
+@allocate
+  %size =l add %length, 24
+  %p =l call $malloc(l %size)
+  %failed =w ceql %p, 0
+  jnz %failed, @allocation_fail, @copy
+@copy
+  %head =l loadl $cerune_string_owners
+  storel %head, %p
+  %ref =l add %p, 8
+  storel 1, %ref
+  %string =l add %p, 16
+  storel %length, %string
+  %data =l add %p, 24
+  %left_data =l add %left, 8
+  %right_data =l add %right, 8
+  call $memcpy(l %data, l %left_data, l %left_len)
+  %suffix =l add %data, %left_len
+  call $memcpy(l %suffix, l %right_data, l %right_len)
+  storel %p, $cerune_string_owners
+  %total =l add %live, %length
+  storel %total, $cerune_string_live
+  ret %string
+@size_fail
+  call $cerune_fail_allocation_size_overflow(l %origin, l %origin_len)
+  hlt
+@limit_fail
+  call $cerune_fail_allocation_limit_exceeded(l %origin, l %origin_len)
+  hlt
+@allocation_fail
+  call $cerune_fail_allocation_failed(l %origin, l %origin_len)
+  hlt
+}
+data $fmt_i64 = { b "%lld", b 10, b 0 }
+data $fmt_f32 = { b "%.9g", b 10, b 0 }
+data $fmt_f64 = { b "%.17g", b 10, b 0 }
+
+function l $cerune_fn__ownership0_0() {
+@start
+  %slot_$owned2 =l alloc8 8
+  %slot_$owned3 =l alloc8 8
+  %slot_$owned4 =l alloc8 8
+  storel $cerune_string_0, %slot_$owned2
+  %tmp0 =l loadl %slot_$owned2
+  call $cerune_string_retain(l %tmp0)
+  storel $cerune_string_1, %slot_$owned3
+  %tmp1 =l loadl %slot_$owned3
+  call $cerune_string_retain(l %tmp1)
+  %tmp2 =l loadl %slot_$owned2
+  %tmp3 =l loadl %slot_$owned3
+  %tmp4 =l call $cerune_string_concat(l %tmp2, l %tmp3, l $cerune_origin_1_19_39, l 21)
+  storel %tmp4, %slot_$owned4
+  %tmp5 =l loadl %slot_$owned3
+  call $cerune_string_release(l %tmp5)
+  %tmp6 =l loadl %slot_$owned2
+  call $cerune_string_release(l %tmp6)
+  %tmp7 =l loadl %slot_$owned4
+  ret %tmp7
+}
+
+function l $cerune_fn__ownership1_1(l %arg0) {
+@start
+  %slot_$owned5 =l alloc8 8
+  %slot_$owned6 =l alloc8 8
+  storel %arg0, %slot_$owned5
+  %tmp0 =l loadl %slot_$owned5
+  storel %tmp0, %slot_$owned6
+  %tmp1 =l loadl %slot_$owned6
+  call $cerune_string_retain(l %tmp1)
+  %tmp2 =l loadl %slot_$owned6
+  ret %tmp2
+}
+
+function l $cerune_fn__ownership2_2(l %arg0) {
+@start
+  %slot_$owned7 =l alloc8 8
+  %slot_$owned8 =l alloc8 8
+  %slot_$owned9 =l alloc8 8
+  %slot_$owned10 =l alloc8 8
+  storel %arg0, %slot_$owned7
+  %tmp0 =l loadl %slot_$owned7
+  storel %tmp0, %slot_$owned8
+  %tmp1 =l loadl %slot_$owned8
+  call $cerune_string_retain(l %tmp1)
+  storel $cerune_string_2, %slot_$owned9
+  %tmp2 =l loadl %slot_$owned9
+  call $cerune_string_retain(l %tmp2)
+  %tmp3 =l loadl %slot_$owned8
+  %tmp4 =l loadl %slot_$owned9
+  %tmp5 =l call $cerune_string_concat(l %tmp3, l %tmp4, l $cerune_origin_7_70_87, l 21)
+  storel %tmp5, %slot_$owned10
+  %tmp6 =l loadl %slot_$owned9
+  call $cerune_string_release(l %tmp6)
+  %tmp7 =l loadl %slot_$owned8
+  call $cerune_string_release(l %tmp7)
+  %tmp8 =l loadl %slot_$owned10
+  ret %tmp8
+}
+
+function l $cerune_fn__ownership3_3(l %arg0, l %arg1) {
+@start
+  %slot_$owned11 =l alloc8 8
+  %slot_$owned12 =l alloc8 8
+  storel %arg0, %slot_$owned11
+  storel %arg1, %slot_$owned12
+  %tmp0 =l loadl %slot_$owned11
+  call $cerune_string_release(l %tmp0)
+  %tmp1 =l loadl %slot_$owned12
+  ret %tmp1
+}
+
+function l $cerune_fn__ownership4_4(l %arg0) {
+@start
+  %slot_$owned13 =l alloc8 8
+  %slot_$owned14 =l alloc8 8
+  storel %arg0, %slot_$owned13
+  %tmp0 =l loadl %slot_$owned13
+  storel %tmp0, %slot_$owned14
+  %tmp1 =l loadl %slot_$owned14
+  call $cerune_string_retain(l %tmp1)
+  %tmp2 =l loadl %slot_$owned14
+  ret %tmp2
+}
+
+function l $cerune_fn__ownership5_5(l %arg0) {
+@start
+  %slot_$owned16 =l alloc8 8
+  %slot_$owned17 =l alloc8 8
+  storel %arg0, %slot_$owned16
+  %tmp0 =l loadl %slot_$owned16
+  storel %tmp0, %slot_$owned17
+  %tmp1 =l loadl %slot_$owned17
+  call $cerune_string_retain(l %tmp1)
+  %tmp2 =l loadl %slot_$owned17
+  ret %tmp2
+}
+
+export function w $main() {
+@start
+  %slot_text =l alloc8 8
+  %slot_saved =l alloc8 8
+  %slot_$owned15 =l alloc8 8
+  %slot_$owned18 =l alloc8 8
+  %tmp0 =l call $cerune_fn__ownership0_0()
+  storel %tmp0, %slot_text
+  %tmp1 =l loadl %slot_text
+  %tmp2 =l call $cerune_fn__ownership1_1(l %tmp1)
+  storel %tmp2, %slot_saved
+  %tmp3 =l loadl %slot_text
+  %tmp4 =l loadl %slot_text
+  %tmp5 =l call $cerune_fn__ownership2_2(l %tmp4)
+  %tmp6 =l call $cerune_fn__ownership3_3(l %tmp3, l %tmp5)
+  storel %tmp6, %slot_text
+  %tmp7 =l loadl %slot_saved
+  %tmp8 =l call $cerune_fn__ownership4_4(l %tmp7)
+  storel %tmp8, %slot_$owned15
+  %tmp9 =l loadl %slot_$owned15
+  call $cerune_print_string(l %tmp9)
+  %tmp10 =l loadl %slot_$owned15
+  call $cerune_string_release(l %tmp10)
+  %tmp11 =l loadl %slot_text
+  %tmp12 =l call $cerune_fn__ownership5_5(l %tmp11)
+  storel %tmp12, %slot_$owned18
+  %tmp13 =l loadl %slot_$owned18
+  call $cerune_print_string(l %tmp13)
+  %tmp14 =l loadl %slot_$owned18
+  call $cerune_string_release(l %tmp14)
+  %tmp15 =l loadl %slot_saved
+  call $cerune_string_release(l %tmp15)
+  %tmp16 =l loadl %slot_text
+  call $cerune_string_release(l %tmp16)
+  ret 0
+}

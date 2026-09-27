@@ -48,6 +48,9 @@ Records exclude paths, source text, and runtime values. Interpret them with the 
 | `conversion-not-finite` | NaN or infinity cannot convert to an integer |
 | `conversion-nan` | Changing float types cannot preserve NaN |
 | `conversion-negative-zero` | Integer conversion cannot preserve negative zero's sign |
+| `allocation-size-overflow` | String length or allocation layout is unrepresentable |
+| `allocation-limit-exceeded` | Live dynamic string payload exceeds its configured budget |
+| `allocation-failed` | Allocation reports failure after validation |
 | `array-index-out-of-bounds` | Array index is outside its bounds |
 
 For array assignments, the NodeId identifies the assignment and the range identifies the failing `[...]`. Nested indices are checked left to right; failure prevents right-hand-side evaluation. An integer-to-float conversion that rounds beyond a range still reports `conversion-inexact`: it cannot preserve the original integer value.

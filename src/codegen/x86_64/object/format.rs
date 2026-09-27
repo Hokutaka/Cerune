@@ -33,7 +33,11 @@ fn elf(object: &Object) -> Vec<u8> {
         append(&mut symbols, string(&mut names, &symbol.name), 4);
         symbols.push(if symbol.global { 0x10 } else { 0 });
         symbols.push(0);
-        append(&mut symbols, symbol.section.map_or(0, |s| s + 1) as u64, 2);
+        append(
+            &mut symbols,
+            symbol.section.map_or(0, |s| if s == 2 { 8 } else { s + 1 }) as u64,
+            2,
+        );
         append(&mut symbols, symbol.offset as u64, 8);
         append(&mut symbols, 0, 8);
     }
@@ -55,7 +59,7 @@ fn elf(object: &Object) -> Vec<u8> {
         append(&mut relocations, relocation.addend as u64, 8);
     }
     let mut section_names = vec![0];
-    let section_offsets: Vec<_> = [
+    let mut section_offsets: Vec<_> = [
         ".text",
         ".rodata",
         ".rela.text",
@@ -67,7 +71,11 @@ fn elf(object: &Object) -> Vec<u8> {
     .iter()
     .map(|s| string(&mut section_names, s))
     .collect();
-    let data = [
+    let has_data = !object.sections[2].is_empty();
+    if has_data {
+        section_offsets.push(string(&mut section_names, ".data"));
+    }
+    let mut data = vec![
         object.sections[0].as_slice(),
         object.sections[1].as_slice(),
         relocations.as_slice(),
@@ -76,17 +84,22 @@ fn elf(object: &Object) -> Vec<u8> {
         section_names.as_slice(),
         &[],
     ];
-    let alignments = [16, 16, 8, 8, 1, 1, 1];
+    let mut alignments = vec![16, 16, 8, 8, 1, 1, 1];
+    if has_data {
+        data.push(&object.sections[2]);
+        alignments.push(16);
+    }
+    let section_count = data.len() + 1;
     let mut bytes = vec![0; 64];
     let mut offsets = Vec::new();
-    for (section, alignment) in data.iter().zip(alignments) {
+    for (section, alignment) in data.iter().zip(alignments.iter().copied()) {
         bytes.resize(bytes.len().next_multiple_of(alignment), 0);
         offsets.push(bytes.len());
         bytes.extend_from_slice(section);
     }
     bytes.resize(bytes.len().next_multiple_of(8), 0);
     let shoff = bytes.len();
-    bytes.resize(shoff + 8 * 64, 0);
+    bytes.resize(shoff + section_count * 64, 0);
     bytes[..7].copy_from_slice(b"\x7fELF\x02\x01\x01");
     put(&mut bytes, 16, 1, 2);
     put(&mut bytes, 18, 62, 2);
@@ -94,7 +107,7 @@ fn elf(object: &Object) -> Vec<u8> {
     put(&mut bytes, 40, shoff as u64, 8);
     put(&mut bytes, 52, 64, 2);
     put(&mut bytes, 58, 64, 2);
-    put(&mut bytes, 60, 8, 2);
+    put(&mut bytes, 60, section_count as u64, 2);
     put(&mut bytes, 62, 6, 2);
     let first_global = object
         .symbols
@@ -102,7 +115,7 @@ fn elf(object: &Object) -> Vec<u8> {
         .position(|s| s.global)
         .unwrap_or(object.symbols.len())
         + 1;
-    for index in 0..7 {
+    for index in 0..data.len() {
         let header = shoff + (index + 1) * 64;
         put(&mut bytes, header, section_offsets[index], 4);
         put(
@@ -122,6 +135,7 @@ fn elf(object: &Object) -> Vec<u8> {
             match index {
                 0 => 6,
                 1 => 2,
+                7 => 3,
                 _ => 0,
             },
             8,
@@ -163,7 +177,9 @@ fn coff(object: &Object) -> Result<Vec<u8>, String> {
     if object.relocations.len() > u16::MAX as usize {
         return Err("COFF relocation count exceeds 65535".into());
     }
-    let length = 104u64
+    let section_count = if object.sections[2].is_empty() { 2 } else { 3 };
+    let length = 24u64
+        + section_count as u64 * 40
         + object
             .sections
             .iter()
@@ -180,9 +196,9 @@ fn coff(object: &Object) -> Result<Vec<u8>, String> {
     if length > u32::MAX as u64 {
         return Err("COFF object positions exceed 32 bits".into());
     }
-    let mut bytes = vec![0; 100];
+    let mut bytes = vec![0; 20 + section_count * 40];
     let mut offsets = Vec::new();
-    for section in &object.sections {
+    for section in &object.sections[..section_count] {
         offsets.push(bytes.len());
         bytes.extend_from_slice(section);
     }
@@ -227,16 +243,16 @@ fn coff(object: &Object) -> Result<Vec<u8>, String> {
     put(&mut names, 0, length, 4);
     bytes.extend(names);
     put(&mut bytes, 0, 0x8664, 2);
-    put(&mut bytes, 2, 2, 2);
+    put(&mut bytes, 2, section_count as u64, 2);
     // TimeDateStampは0固定。入力とターゲットだけで成果物を再現できます。
     put(&mut bytes, 8, symbol_offset as u64, 4);
     put(&mut bytes, 12, object.symbols.len() as u64, 4);
     for (index, offset) in offsets.iter().enumerate() {
         let start = 20 + index * 40;
-        let name = if index == 0 {
-            b".text".as_slice()
-        } else {
-            b".rdata".as_slice()
+        let name = match index {
+            0 => b".text".as_slice(),
+            1 => b".rdata".as_slice(),
+            _ => b".data".as_slice(),
         };
         bytes[start..start + name.len()].copy_from_slice(name);
         put(
@@ -253,7 +269,11 @@ fn coff(object: &Object) -> Result<Vec<u8>, String> {
         put(
             &mut bytes,
             start + 36,
-            if index == 0 { 0x60500020 } else { 0x40500040 },
+            match index {
+                0 => 0x60500020,
+                1 => 0x40500040,
+                _ => 0xc0500040,
+            },
             4,
         );
     }

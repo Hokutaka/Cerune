@@ -82,7 +82,7 @@ fn node_id_max(stmt: &Statement, binding: &mut usize) {
 }
 
 // 定数の初期化式・既定値も、実行される式と同じ展開を受けます。
-fn visit_program(
+pub(super) fn visit_program(
     p: &mut Program,
     expr: &mut impl FnMut(&mut Expr),
     stmt: &mut impl FnMut(&mut Statement),
@@ -103,14 +103,15 @@ fn visit_program(
     }
     visit_body(&mut p.statements, expr, stmt);
 }
-fn visit_body(
+pub(super) fn visit_body(
     body: &mut [Statement],
     f: &mut impl FnMut(&mut Expr),
     s: &mut impl FnMut(&mut Statement),
 ) {
     for stmt in body {
         match &mut stmt.kind {
-            StatementKind::Binding { value, .. }
+            StatementKind::StringManage { value, .. }
+            | StatementKind::Binding { value, .. }
             | StatementKind::Print { value }
             | StatementKind::Write { value, .. } => visit_expr(value, f),
             StatementKind::Assignment { target, value } => {
@@ -158,7 +159,7 @@ fn visit_body(
         s(stmt);
     }
 }
-fn visit_expr(expr: &mut Expr, f: &mut impl FnMut(&mut Expr)) {
+pub(super) fn visit_expr(expr: &mut Expr, f: &mut impl FnMut(&mut Expr)) {
     match &mut expr.kind {
         ExprKind::Let { value, body, .. } => {
             visit_expr(value, f);
@@ -180,7 +181,8 @@ fn visit_expr(expr: &mut Expr, f: &mut impl FnMut(&mut Expr)) {
         | ExprKind::ConvertInteger { value, .. }
         | ExprKind::Unary { value, .. }
         | ExprKind::FieldAccess { base: value, .. } => visit_expr(value, f),
-        ExprKind::Logical { left, right, .. }
+        ExprKind::StringConcat { left, right }
+        | ExprKind::Logical { left, right, .. }
         | ExprKind::Binary { left, right, .. }
         | ExprKind::Index {
             base: left,

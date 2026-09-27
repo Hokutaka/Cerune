@@ -112,3 +112,24 @@ fn origins_preserve_encoded_sections_and_relocations_for_all_examples() {
         }
     }
 }
+
+#[test]
+fn writable_data_is_separate_from_code_and_read_only_literals() {
+    let object=parse::assemble(".data\n.p2align 3\nstate:\n.quad 0\n.section .rodata\nliteral:\n.quad 7\n.text\nmovq state(%rip), %rax\nmovq %rax, state(%rip)\nretq\n").unwrap();
+    assert_eq!(object.sections[2], [0; 8]);
+    assert_eq!(object.sections[1], [7, 0, 0, 0, 0, 0, 0, 0]);
+    fn number(bytes: &[u8], at: usize, width: usize) -> u64 {
+        bytes[at..at + width]
+            .iter()
+            .enumerate()
+            .fold(0, |n, (i, b)| n | ((*b as u64) << (i * 8)))
+    }
+    let elf = super::format::write(&object, Target::X86_64UnknownLinuxGnu).unwrap();
+    let headers = number(&elf, 40, 8) as usize;
+    assert_eq!(number(&elf, headers + 8 * 64 + 8, 8), 3); // SHF_ALLOC | SHF_WRITE、実行不可
+    assert_eq!(number(&elf, headers + 2 * 64 + 8, 8), 2); // 読み取り専用
+    let coff = super::format::write(&object, Target::X86_64PcWindowsMsvc).unwrap();
+    assert_eq!(number(&coff, 2, 2), 3);
+    assert_eq!(number(&coff, 20 + 2 * 40 + 36, 4) & 0xe0000000, 0xc0000000); // READ | WRITE
+    assert_eq!(number(&coff, 20 + 40 + 36, 4) & 0xe0000000, 0x40000000);
+}

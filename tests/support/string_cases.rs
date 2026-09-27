@@ -26,6 +26,9 @@ pub mod truncation_cases;
 #[path = "rounding_cases.rs"]
 pub mod rounding_cases;
 
+#[path = "concat_cases.rs"]
+pub mod concat_cases;
+
 pub const CASES: &[(&str, &str)] = &[
     (
         r#"
@@ -111,6 +114,10 @@ pub const CASES: &[(&str, &str)] = &[
     generic_cases::CASES[2],
     length_constant_cases::CASES[0],
     length_constant_cases::CASES[1],
+    concat_cases::CASES[0],
+    concat_cases::CASES[1],
+    concat_cases::CASES[2],
+    concat_cases::CASES[3],
 ];
 
 pub const PRODUCT_UPDATES: &[(&str, &str)] = &[

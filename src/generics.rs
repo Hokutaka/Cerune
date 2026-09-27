@@ -80,8 +80,10 @@ pub(crate) fn lower(program: &Program) -> Result<Lowered, Diagnostic> {
             if d.generic_parameters.is_empty() {
                 continue;
             }
-            if matches!(d.name.as_str(), "main" | "byte_len" | "array_len")
-                || Type::from_name(&d.name).is_some()
+            if matches!(
+                d.name.as_str(),
+                "main" | "byte_len" | "array_len" | "concat"
+            ) || Type::from_name(&d.name).is_some()
             {
                 return Err(Diagnostic::new(
                     "this function cannot have generic parameters",
@@ -95,7 +97,7 @@ pub(crate) fn lower(program: &Program) -> Result<Lowered, Diagnostic> {
                     || Type::from_name(&p.name).is_some()
                     || matches!(
                         p.name.as_str(),
-                        "infer" | "byte_len" | "array_len" | "convert"
+                        "infer" | "byte_len" | "array_len" | "concat" | "convert"
                     )
                 {
                     return Err(Diagnostic::new(

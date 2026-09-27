@@ -26,7 +26,7 @@ struct Fixup {
 }
 
 struct Object {
-    sections: [Vec<u8>; 2],
+    sections: [Vec<u8>; 3],
     symbols: Vec<Symbol>,
     relocations: Vec<Fixup>,
 }

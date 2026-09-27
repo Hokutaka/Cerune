@@ -46,7 +46,7 @@ During development, replace `cerune` with `cargo run --quiet --`.
 | Unsigned integers | `u8`, `u16`, `u32`, `u64` |
 | Floating point | `f32`, `f64` |
 | Boolean | `bool` (`true` / `false`) |
-| Strings | Immutable UTF-8 `string`; printing, equality, byte count with `byte_len` |
+| Strings | Immutable UTF-8 `string`; printing, equality, `byte_len`, concatenation with `concat` |
 
 ### Syntax and Operations
 
@@ -67,7 +67,7 @@ During development, replace `cerune` with `cargo run --quiet --`.
 
 **Arithmetic rules:** No implicit numeric conversions. Integer overflow, invalid integer division, out-of-bounds access, failed exact conversions, and out-of-range rounded results stop execution. Explicit saturation clamps to the type's endpoints. Floating-point arithmetic rounds.
 
-**Not implemented:** Recursion, dynamic arrays, string concatenation/indexing, catching runtime stops.
+**Not implemented:** Recursion, dynamic arrays, string indexing, catching runtime stops.
 
 ## Execution and Output
 

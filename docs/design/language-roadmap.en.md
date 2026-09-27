@@ -22,7 +22,7 @@ Cerune prioritizes explaining a computation's meaning and its transformation int
 | Unsigned integers | `u8`, `u16`, `u32`, `u64` | `u64` covers 0–18446744073709551615; no implicit signedness changes or wrapping | [u64_values](../../examples/u64_values.ceru), [packet_counter](../../examples/packet_counter.ceru) |
 | Floating point | `f32`, `f64` | Arithmetic rounds at the selected precision; `convert` preserves values; float-to-integer rounding and saturation are explicit | [floating_point](../../examples/floating_point.ceru) |
 | Booleans | `bool`, comparisons, `!`, short-circuiting `&&` and `||` | No implicit numeric conversion | [short_circuit](../../examples/short_circuit.ceru) |
-| Strings | `string`, printing, `==`, `!=`, `byte_len` | No concatenation, indexing, character count, or numeric conversion | [string_byte_length](../../examples/string_byte_length.ceru), [string_lookup](../../examples/string_lookup.ceru) |
+| Strings | `string`, printing, `==`, `!=`, `byte_len`, `concat` | No indexing, character count, or numeric conversion | [string_byte_length](../../examples/string_byte_length.ceru), [string_lookup](../../examples/string_lookup.ceru) |
 | Fixed arrays | `[T; N]`, `array_len`, `for … in`, nesting, value passing, updates through `mut` | Length belongs to the type; indices are `i64`; no dynamic lengths or slices | [array_iteration](../../examples/array_iteration.ceru), [heat_diffusion](../../examples/heat_diffusion.ceru) |
 | Named product types | Fields, defaults, update expressions, nesting, value passing | No direct field assignment; construct a new value and reassign the whole binding | [product-point](../../examples/product-point.ceru), [packet_counter](../../examples/packet_counter.ceru) |
 | Functions and control flow | Typed parameters/results, explicit type/length parameters, `void`, `if`/`else`, `while`/`for`, `break`/`continue`/`return` | No fixed parameter-count limit; no recursion | [function_values](../../examples/function_values.ceru), [loop_control](../../examples/loop_control.ceru) |
@@ -43,14 +43,13 @@ Language support does not imply equal observation detail. Language check failure
 
 ## Proposed priorities
 
-`array_len`, array `for … in`, constant lengths `[T; COUNT]`, and [functions with type/length parameters](generic-functions.en.md) are implemented, along with [explicit rounding and saturation](rounding-conversions.en.md) and [aggregate operations, match expressions, and guards](aggregate-values.en.md). Add missing features in the order below, pairing a small design with examples and cross-route comparisons. Each stage determines its syntax and adoption.
+`array_len`, array `for … in`, constant lengths `[T; COUNT]`, and [functions with type/length parameters](generic-functions.en.md) are implemented, along with [explicit rounding and saturation](rounding-conversions.en.md) and [aggregate operations, match expressions, and guards](aggregate-values.en.md). [Dynamic string concatenation and ownership](dynamic-data.en.md) are also implemented. Add missing features in the order below, pairing a small design with examples and cross-route comparisons. Each stage determines its syntax and adoption.
 
 | Order | Missing feature | First contract and example |
 | --- | --- | --- |
-| 1 | Dynamic strings | Start with concatenation under the [ownership/lifetime proposal](dynamic-data.en.md); expose retain/release, allocation failure, and budgets across routes |
-| 2 | Dynamic arrays and ranges | Owned arrays/range copies first; borrowed slices need separate lifetime and mutation type rules |
-| 3 | Recursion and external I/O | Define call storage, resource limits, I/O failure, and cleanup |
-| 4 | Module distribution | Re-exports, dependencies/versions, reproducible builds; extend explicit imports |
+| 1 | Dynamic arrays and ranges | Owned arrays/range copies first; borrowed slices need separate lifetime and mutation type rules |
+| 2 | Recursion and external I/O | Define call storage, resource limits, I/O failure, and cleanup |
+| 3 | Module distribution | Re-exports, dependencies/versions, reproducible builds; extend explicit imports |
 | Experiment | GPU numeric computation | Narrow the supported types, memory, synchronization, and diagnostics; compare independent element computations with the CPU |
 
 The [fixed-capacity used-length](../../examples/bounded_sequence.ceru) and [range-copy](../../examples/array_window.ceru) examples run with current features; they do not implement dynamic arrays or borrowed slices.

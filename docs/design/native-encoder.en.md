@@ -21,6 +21,7 @@ The encoder covers the forms needed by all current language features: eight inte
 - Instructions contain the required legacy prefixes, REX, ModR/M, SIB, displacements, and immediates. Register classes and widths, address scales, and immediate ranges are checked.
 - Local branches use fixed 32-bit relative displacements. References within `.text` are resolved; displacements outside their representable range are rejected.
 - Constants and strings occupy a read-only section. ELF uses PC32 for RIP-relative data and PLT32 for external calls; COFF uses REL32. Addends account for immediates following a displacement.
+- Dynamic string management state occupies non-executable writable `.data`; static strings remain read-only.
 - ELF includes an empty `.note.GNU-stack` and does not request executable stack memory. COFF timestamps are fixed at zero. Symbol and section ordering is deterministic.
 - COFF supports up to 65,535 relocations. Positions, values, and displacements are not silently truncated into narrower fields.
 

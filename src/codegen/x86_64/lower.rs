@@ -49,6 +49,7 @@ pub fn lower_with_target(program: &cerune_ir::Program, target: super::Target) ->
     float_constants.extend(lowered.float_constants);
 
     Module {
+        string_heap_limit: crate::codegen::support::string_heap_limit(program),
         uses_write: crate::codegen::display::uses_write(program),
         origins: lowered.origins,
         target,
@@ -331,6 +332,11 @@ impl Lowerer<'_> {
                 false
             }
 
+            cerune_ir::StatementKind::StringManage { value, retain } => {
+                self.lower_expr(value, 0);
+                self.push(Instruction::StringManage { retain: *retain });
+                false
+            }
             cerune_ir::StatementKind::Write { value, quoted } => {
                 let kind = crate::codegen::display::kind(&value.ty, *quoted);
                 self.lower_expr(value, 0);
@@ -569,6 +575,15 @@ impl Lowerer<'_> {
                 self.lower_expr(value, depth);
                 self.push(Instruction::MovI64ImmediateToRax(*length as i64));
                 Value::Scalar(Type::I64)
+            }
+            cerune_ir::ExprKind::StringConcat { left, right } => {
+                self.lower_expr(left, depth + 1);
+                let left_offset = self.scratch_offset(depth);
+                self.store_scalar(Type::String, left_offset);
+                self.lower_expr(right, depth + 1);
+                let label = self.next_label();
+                self.push(Instruction::StringConcat { left_offset, label });
+                Value::Scalar(Type::String)
             }
             cerune_ir::ExprKind::StringByteLength { value } => {
                 self.lower_expr(value, depth);
@@ -1305,6 +1320,7 @@ fn collect_binding_slots(
                 collect_binding_slots(body, program, slots, next);
             }
             cerune_ir::StatementKind::Assignment { .. }
+            | cerune_ir::StatementKind::StringManage { .. }
             | cerune_ir::StatementKind::Write { .. }
             | cerune_ir::StatementKind::Print { .. }
             | cerune_ir::StatementKind::Call { .. }
@@ -1344,6 +1360,7 @@ fn count_statements_expr_nodes(statements: &[cerune_ir::Statement]) -> usize {
         .map(|statement| match &statement.kind {
             cerune_ir::StatementKind::Binding { value, .. }
             | cerune_ir::StatementKind::Assignment { value, .. }
+            | cerune_ir::StatementKind::StringManage { value, .. }
             | cerune_ir::StatementKind::Write { value, .. }
             | cerune_ir::StatementKind::Print { value } => count_expr_nodes(value),
             cerune_ir::StatementKind::If {
@@ -1397,6 +1414,7 @@ fn count_expr_nodes(expr: &cerune_ir::Expr) -> usize {
         | cerune_ir::ExprKind::StringByteLength { value }
         | cerune_ir::ExprKind::Unary { value, .. } => 1 + count_expr_nodes(value),
         cerune_ir::ExprKind::Binary { left, right, .. }
+        | cerune_ir::ExprKind::StringConcat { left, right }
         | cerune_ir::ExprKind::Logical { left, right, .. } => {
             1 + count_expr_nodes(left) + count_expr_nodes(right)
         }
@@ -1426,6 +1444,7 @@ fn required_scratch_slots(statements: &[cerune_ir::Statement]) -> usize {
         .map(|statement| match &statement.kind {
             cerune_ir::StatementKind::Binding { value, .. }
             | cerune_ir::StatementKind::Assignment { value, .. }
+            | cerune_ir::StatementKind::StringManage { value, .. }
             | cerune_ir::StatementKind::Write { value, .. }
             | cerune_ir::StatementKind::Print { value } => required_expr_scratch(value, 0),
             cerune_ir::StatementKind::Call { arguments, .. } => arguments
@@ -1492,7 +1511,8 @@ fn required_expr_scratch(expr: &cerune_ir::Expr, depth: usize) -> usize {
         cerune_ir::ExprKind::Logical { left, right, .. } => {
             required_expr_scratch(left, depth).max(required_expr_scratch(right, depth))
         }
-        cerune_ir::ExprKind::Binary { left, right, .. } => (depth + 1)
+        cerune_ir::ExprKind::StringConcat { left, right }
+        | cerune_ir::ExprKind::Binary { left, right, .. } => (depth + 1)
             .max(required_expr_scratch(left, depth + 1))
             .max(required_expr_scratch(right, depth + 1)),
         cerune_ir::ExprKind::Construct { base, fields, .. } => base

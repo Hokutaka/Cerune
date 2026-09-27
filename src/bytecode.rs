@@ -33,6 +33,7 @@ impl From<crate::types::NumericType> for Type {
 
 #[derive(Debug, Clone)]
 pub struct BytecodeProgram {
+    pub string_heap_limit: u64,
     pub type_definitions: Vec<TypeDefinition>,
     pub functions: Vec<BytecodeFunction>,
     pub slots: Vec<Slot>,
@@ -120,6 +121,10 @@ pub enum InstructionKind {
         length: usize,
     },
     StringByteLength,
+    StringConcat,
+    StringManage {
+        retain: bool,
+    },
     ConvertNumeric {
         mode: crate::types::ConversionMode,
         from: crate::types::NumericType,
@@ -314,6 +319,7 @@ pub fn lower(program: &Program) -> Result<BytecodeProgram, Diagnostic> {
         .push(Instruction::synthetic(InstructionKind::Halt));
 
     Ok(BytecodeProgram {
+        string_heap_limit: program.string_heap_limit,
         type_definitions,
         functions,
         slots,
@@ -325,6 +331,19 @@ pub fn format_program(program: &BytecodeProgram) -> String {
     let mut output = String::new();
 
     writeln!(output, "; Cerune bytecode v0.1").unwrap();
+    if program
+        .instructions
+        .iter()
+        .chain(program.functions.iter().flat_map(|f| &f.instructions))
+        .any(|i| matches!(i.kind, InstructionKind::StringConcat))
+    {
+        writeln!(
+            output,
+            "; string-heap-limit={} bytes (live dynamic payload)",
+            program.string_heap_limit
+        )
+        .unwrap();
+    }
 
     for (type_id, definition) in program.type_definitions.iter().enumerate() {
         writeln!(output, "\n.type {type_id} {}", definition.name).unwrap();
@@ -478,6 +497,15 @@ impl Compiler {
                 false
             }
 
+            StatementKind::StringManage { value, retain } => {
+                self.emit_expr(value);
+                self.emit_source(
+                    InstructionKind::StringManage { retain: *retain },
+                    statement.id,
+                    statement.span,
+                );
+                false
+            }
             StatementKind::Write { value, quoted } => {
                 self.emit_expr(value);
                 self.emit_source(
@@ -710,6 +738,11 @@ impl Compiler {
                     expr.id,
                     expr.span,
                 );
+            }
+            ExprKind::StringConcat { left, right } => {
+                self.emit_expr(left);
+                self.emit_expr(right);
+                self.emit_source(InstructionKind::StringConcat, expr.id, expr.span);
             }
             ExprKind::StringByteLength { value } => {
                 self.emit_expr(value);
@@ -1071,6 +1104,7 @@ fn collect_slots(
                 collect_slots(body, slots, slot_map);
             }
             StatementKind::Assignment { .. }
+            | StatementKind::StringManage { .. }
             | StatementKind::Write { .. }
             | StatementKind::Print { .. }
             | StatementKind::Call { .. }
@@ -1113,6 +1147,17 @@ fn format_instruction(
                 output,
                 "array_len [{}; {length}]",
                 type_name(element, program)
+            )
+            .unwrap();
+        }
+        InstructionKind::StringConcat => {
+            writeln!(output, "string.concat.allocate-copy").unwrap();
+        }
+        InstructionKind::StringManage { retain } => {
+            writeln!(
+                output,
+                "string.{}",
+                if *retain { "retain" } else { "release" }
             )
             .unwrap();
         }

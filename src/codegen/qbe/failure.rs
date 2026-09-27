@@ -6,7 +6,8 @@ use super::ir::{BinaryOp, FailureOrigin, Instruction, Module};
 
 fn origin(instruction: &Instruction) -> Option<FailureOrigin> {
     match instruction {
-        Instruction::ConvertNumeric { origin, .. }
+        Instruction::StringConcat { origin, .. }
+        | Instruction::ConvertNumeric { origin, .. }
         | Instruction::IntegerBinary { origin, .. }
         | Instruction::CheckIntegerRange { origin, .. }
         | Instruction::CheckedI64Negate { origin, .. }
@@ -85,14 +86,14 @@ pub(super) fn emit(module: &Module, output: &mut String) {
             origins.push(item);
         }
     }
-    if origins.is_empty() {
+    if origins.is_empty() && module.string_heap_limit.is_none() {
         return;
     }
     for origin in origins {
         data(&symbol(origin), &suffix(origin), output);
     }
     use FailureCode::*;
-    for code in [
+    let mut codes = vec![
         IntegerOverflow,
         DivisionByZero,
         DivisionOverflow,
@@ -105,7 +106,15 @@ pub(super) fn emit(module: &Module, output: &mut String) {
         ConversionNaN,
         ConversionNegativeZero,
         ArrayIndexOutOfBounds,
-    ] {
+    ];
+    if module.string_heap_limit.is_some() {
+        codes.extend([
+            AllocationSizeOverflow,
+            AllocationLimitExceeded,
+            AllocationFailed,
+        ]);
+    }
+    for code in codes {
         data(
             &format!("cerune_code_{}", code.name().replace('-', "_")),
             &prefix(code),

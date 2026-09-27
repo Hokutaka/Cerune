@@ -40,6 +40,7 @@ pub fn lower(program: &cerune_ir::Program) -> Module {
     lowerer.lower_statements(&program.statements);
 
     Module {
+        string_heap_limit: crate::codegen::support::string_heap_limit(program),
         uses_write: crate::codegen::display::uses_write(program),
         target: None,
         uses_strings: crate::codegen::support::first_string_span(program).is_some(),
@@ -243,6 +244,16 @@ impl Lowerer<'_> {
                 false
             }
 
+            cerune_ir::StatementKind::StringManage { value, retain } => {
+                let Value::Scalar { operand, .. } = self.lower_expr(value) else {
+                    unreachable!()
+                };
+                self.instructions.push(Instruction::StringManage {
+                    value: operand,
+                    retain: *retain,
+                });
+                false
+            }
             cerune_ir::StatementKind::Write { value, quoted } => {
                 let kind = crate::codegen::display::kind(&value.ty, *quoted);
                 let Value::Scalar { operand, .. } = self.lower_expr(value) else {
@@ -516,6 +527,28 @@ impl Lowerer<'_> {
                 Value::Scalar {
                     ty: Type::I64,
                     operand: Operand::Integer(*length as i64),
+                }
+            }
+            cerune_ir::ExprKind::StringConcat { left, right } => {
+                let Value::Scalar { operand: left, .. } = self.lower_expr(left) else {
+                    unreachable!()
+                };
+                let Value::Scalar { operand: right, .. } = self.lower_expr(right) else {
+                    unreachable!()
+                };
+                let dest = self.next_temp();
+                self.instructions.push(Instruction::StringConcat {
+                    dest,
+                    left,
+                    right,
+                    origin: FailureOrigin {
+                        node: expr.id,
+                        span: expr.span,
+                    },
+                });
+                Value::Scalar {
+                    ty: Type::String,
+                    operand: Operand::Temp(dest),
                 }
             }
             cerune_ir::ExprKind::StringByteLength { value } => {
@@ -1327,6 +1360,7 @@ fn collect_slots(
                 collect_slots(body, program, slots, slot_map, name_counts);
             }
             cerune_ir::StatementKind::Assignment { .. }
+            | cerune_ir::StatementKind::StringManage { .. }
             | cerune_ir::StatementKind::Write { .. }
             | cerune_ir::StatementKind::Print { .. }
             | cerune_ir::StatementKind::Call { .. }

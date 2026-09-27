@@ -439,3 +439,11 @@ fn aggregate_values_match_optimized_c_and_llvm() {
         native.matches(source, expected);
     }
 }
+
+#[test]
+fn dynamic_strings_match_optimized_llvm() {
+    let Some(native) = Native::new() else { return };
+    for &(source, expected) in string_cases::concat_cases::CASES {
+        native.matches(source, expected);
+    }
+}

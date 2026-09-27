@@ -22,7 +22,7 @@ Ceruneでは、書いた計算の意味と、それが実行される表現へ�
 | 符号なし整数 | `u8`、`u16`、`u32`、`u64` | `u64`は0〜18446744073709551615。暗黙の符号変換や折り返しなし | [u64_values](../../examples/u64_values.ceru)、[packet_counter](../../examples/packet_counter.ceru) |
 | 浮動小数点 | `f32`、`f64` | 演算には各精度の丸めがある。`convert`は値を保持、整数化では丸め方と飽和を明示 | [floating_point](../../examples/floating_point.ceru) |
 | 真偽値 | `bool`、比較、`!`、短絡評価する`&&`・`||` | 数値との暗黙変換なし | [short_circuit](../../examples/short_circuit.ceru) |
-| 文字列 | `string`、表示、`==`・`!=`、`byte_len` | 連結・添字参照・文字数・数値変換は未実装 | [string_byte_length](../../examples/string_byte_length.ceru)、[string_lookup](../../examples/string_lookup.ceru) |
+| 文字列 | `string`、表示、`==`・`!=`、`byte_len`、`concat` | 添字参照・文字数・数値変換は未実装 | [string_byte_length](../../examples/string_byte_length.ceru)、[string_lookup](../../examples/string_lookup.ceru) |
 | 固定長配列 | `[T; N]`、`array_len`、`for … in`、入れ子、値渡し、`mut`な要素の更新 | 長さは型の一部。添字は`i64`。動的長・スライスなし | [array_iteration](../../examples/array_iteration.ceru)、[heat_diffusion](../../examples/heat_diffusion.ceru) |
 | 名前付きproduct type | フィールド、既定値、更新式、入れ子、値渡し | フィールドの直接代入なし。新しい値を構築して全体を再代入 | [product-point](../../examples/product-point.ceru)、[packet_counter](../../examples/packet_counter.ceru) |
 | 関数と制御構文 | 型付き引数・戻り値、型・長さの明示パラメーター、`void`、`if`・`else`、`while`・`for`、`break`・`continue`・`return` | 引数数の固定上限なし。再帰なし | [function_values](../../examples/function_values.ceru)、[loop_control](../../examples/loop_control.ceru) |
@@ -43,14 +43,13 @@ Ceruneでは、書いた計算の意味と、それが実行される表現へ�
 
 ## 次に持つべきもの：提案する順序
 
-`array_len`、配列の`for … in`、配列型の定数長`[T; COUNT]`、[型・長さを指定する関数](generic-functions.ja.md)と[明示的な丸め・飽和](rounding-conversions.ja.md)、[複合値の比較・表示とmatch式・ガード](aggregate-values.ja.md)を実装しました。未対応機能は次の順で、小さな設計・example・全経路の比較を一組として追加します。構文や採用は各段階の設計で確定します。
+`array_len`、配列の`for … in`、配列型の定数長`[T; COUNT]`、[型・長さを指定する関数](generic-functions.ja.md)と[明示的な丸め・飽和](rounding-conversions.ja.md)、[複合値の比較・表示とmatch式・ガード](aggregate-values.ja.md)、[動的文字列の連結・保持・解放](dynamic-data.ja.md)を実装しました。未対応機能は次の順で、小さな設計・example・全経路の比較を一組として追加します。構文や採用は各段階の設計で確定します。
 
 | 順序 | 未対応機能 | 最初に決める契約・確認例 |
 | --- | --- | --- |
-| 1 | 動的文字列 | [所有・寿命の設計案](dynamic-data.ja.md)を基に連結から実装。保持・解放・確保失敗・予算を全経路で観測 |
-| 2 | 動的配列と範囲 | 所有する配列・範囲コピーを先行。借用スライスは寿命と更新の型規則を別途定義 |
-| 3 | 再帰・外部入出力 | 呼び出し領域・資源上限・入出力失敗・終了処理を定義 |
-| 4 | モジュールの配布 | 再export、依存・版・再現可能なビルド。現行の明示importを基準に拡張 |
+| 1 | 動的配列と範囲 | 所有する配列・範囲コピーを先行。借用スライスは寿命と更新の型規則を別途定義 |
+| 2 | 再帰・外部入出力 | 呼び出し領域・資源上限・入出力失敗・終了処理を定義 |
+| 3 | モジュールの配布 | 再export、依存・版・再現可能なビルド。現行の明示importを基準に拡張 |
 | 実験枠 | GPUの数値計算 | 対応型・メモリ・同期・診断を限定し、要素ごとの独立した計算をCPUと比較 |
 
 [固定容量の使用数](../../examples/bounded_sequence.ceru)と[範囲コピー](../../examples/array_window.ceru)の例は現行機能で実行できます。動的配列や借用スライスの実装済みサンプルではありません。

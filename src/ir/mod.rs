@@ -1,4 +1,7 @@
 mod aggregates;
+mod ownership;
+
+pub const DEFAULT_STRING_HEAP_LIMIT: u64 = 64 * 1024 * 1024;
 pub mod builder;
 pub mod text;
 
@@ -20,6 +23,8 @@ pub enum Type {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Program {
+    /// 実行ごとの、生存する動的文字列のバイト数の上限です。
+    pub string_heap_limit: u64,
     pub constant_definitions: Vec<ConstantDefinition>,
     pub type_definitions: Vec<TypeDefinition>,
     pub function_definitions: Vec<FunctionDefinition>,
@@ -75,6 +80,10 @@ pub enum LoweringKind {
     AggregateDisplay,
     MatchBinding,
     MatchSelect,
+    OwnershipExpression,
+    OwnershipRetain,
+    OwnershipRelease,
+    OwnershipReplace,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -119,6 +128,11 @@ pub struct Statement {
 /// Cerune IRの文の種類を表します。
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum StatementKind {
+    /// 不変の動的文字列の共有／解放。静的文字列には作用しません。
+    StringManage {
+        value: Expr,
+        retain: bool,
+    },
     Binding {
         id: BindingId,
         mutable: bool,
@@ -194,6 +208,11 @@ pub struct Expr {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ExprKind {
+    /// 左から右へ評価し、新しい不変のバイト列を確保・コピーします。
+    StringConcat {
+        left: Box<Expr>,
+        right: Box<Expr>,
+    },
     /// 共通lowering前の、matchに由来する局所束縛と値分岐です。
     Let {
         binding: BindingId,
