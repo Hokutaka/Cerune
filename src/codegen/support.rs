@@ -77,7 +77,9 @@ fn string_statement(statement: &Statement) -> Option<Span> {
                 (contains_string(&target.ty) || contains_string(&target.root_ty))
                     .then_some(statement.span)
             }),
-        StatementKind::Print { value } | StatementKind::Write { value, .. } => string_expr(value),
+        StatementKind::StringManage { value, .. }
+        | StatementKind::Print { value }
+        | StatementKind::Write { value, .. } => string_expr(value),
         StatementKind::Call { arguments, .. } => arguments.iter().find_map(string_expr),
         StatementKind::Return { value } => value.as_ref().and_then(string_expr),
         StatementKind::If {
@@ -118,7 +120,8 @@ fn string_expr(expr: &Expr) -> Option<Span> {
         | ExprKind::ConvertInteger { value, .. }
         | ExprKind::Unary { value, .. }
         | ExprKind::FieldAccess { base: value, .. } => string_expr(value),
-        ExprKind::Logical { left, right, .. }
+        ExprKind::StringConcat { left, right }
+        | ExprKind::Logical { left, right, .. }
         | ExprKind::Binary { left, right, .. }
         | ExprKind::Index {
             base: left,
@@ -138,4 +141,17 @@ fn string_expr(expr: &Expr) -> Option<Span> {
         | ExprKind::Variable { .. }
         | ExprKind::String(_) => None,
     }
+}
+
+pub(super) fn string_heap_limit(program: &crate::ir::Program) -> Option<u64> {
+    program
+        .function_definitions
+        .iter()
+        .any(|f| {
+            matches!(
+                f.lowering,
+                Some(crate::ir::LoweringKind::OwnershipExpression)
+            )
+        })
+        .then_some(program.string_heap_limit)
 }

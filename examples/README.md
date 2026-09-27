@@ -80,7 +80,7 @@ cargo run --quiet -- emit-c examples/linear_regression.ceru
 | 型 | 値 | サンプル | 確認すること |
 | --- | --- | --- | --- |
 | `bool` | `true` / `false` | [boolean_comparisons.ceru](boolean_comparisons.ceru)、[short_circuit.ceru](short_circuit.ceru) | 比較・否定と、評価を省く短絡評価 |
-| `string` | 内容が不変のUTF-8文字列 | [string_values.ceru](string_values.ceru)、[string_byte_length.ceru](string_byte_length.ceru) | 日本語・等値比較・コピーと、文字数とは異なるUTF-8バイト数 |
+| `string` | 内容が不変のUTF-8文字列 | [string_values.ceru](string_values.ceru)、[string_byte_length.ceru](string_byte_length.ceru)、[string_concat.ceru](string_concat.ceru) | 日本語・比較・バイト数・連結・再代入とコピーの独立性 |
 
 [string_origins.ceru](string_origins.ceru)は文字列の処理をCerune IRと出自注釈付きLLVMで辿る例です。文字列の内容は不変ですが、mutな束縛への再代入はできます。
 

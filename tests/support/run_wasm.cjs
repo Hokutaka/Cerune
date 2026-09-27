@@ -26,7 +26,9 @@ const imports = { cerune: {
 } };
 WebAssembly.instantiate(fs.readFileSync(process.argv[2]), imports).then(({ instance }) => {
   if (Object.keys(instance.exports).join(',') !== 'main') throw new Error('unexpected public export');
-  instance.exports.main();
+  const repeats = Number(process.argv[3] || 1);
+  if (!Number.isInteger(repeats) || repeats < 1 || repeats > 1000) throw new Error('invalid repeat count');
+  for (let i = 0; i < repeats; ++i) instance.exports.main();
   if (diagnostics.length) throw new Error('runtime diagnostic without a trap');
   process.stdout.write(Buffer.concat(output));
 }).catch(error => {

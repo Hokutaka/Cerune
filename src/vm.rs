@@ -1,4 +1,6 @@
 mod float_output;
+mod string_heap;
+use string_heap::{StringHeap, StringValue};
 mod numeric;
 pub mod render;
 pub use numeric::NumericConversionFailure;
@@ -19,6 +21,11 @@ pub enum IntegerOperation {
 /// Cerune VMの実行中に発生した問題の種類を表します。
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum VmErrorKind {
+    AllocationSizeOverflow,
+    AllocationLimitExceeded,
+    AllocationFailed,
+    /// bytecodeが既に解放した動的文字列を管理しようとしました。
+    InvalidStringOwnership,
     /// bytecodeが対応しない型の組み合わせで切り捨てを要求しました。
     InvalidNumericConversion {
         from: crate::types::NumericType,
@@ -189,7 +196,7 @@ impl VmError {
 #[derive(Debug, Clone)]
 pub(crate) enum Value {
     Bool(bool),
-    String(String),
+    String(StringValue),
     Integer(i128, IntegerType),
     F32(f32),
     F64(f64),
@@ -228,7 +235,9 @@ enum Frame {
 
 pub fn run(program: &BytecodeProgram) -> Result<String, VmError> {
     let mut output = String::new();
-    if let Err(mut error) = execute_frame(program, Frame::Entry, Vec::new(), &mut output) {
+    let mut heap = StringHeap::new(program.string_heap_limit);
+    if let Err(mut error) = execute_frame(program, Frame::Entry, Vec::new(), &mut output, &mut heap)
+    {
         error.output = output.into_boxed_str();
         return Err(error);
     }
@@ -257,8 +266,9 @@ pub(crate) fn execute_function(
         Frame::Function(function_id),
         arguments,
         &mut output,
+        &mut StringHeap::new(program.string_heap_limit),
     ) {
-        Ok(value) => Ok((value, output)),
+        Ok(value) => Ok((value.map(string_heap::freeze), output)),
         Err(mut error) => {
             error.output = output.into_boxed_str();
             Err(error)
@@ -271,8 +281,9 @@ fn execute_frame(
     frame: Frame,
     arguments: Vec<Value>,
     output: &mut String,
+    heap: &mut StringHeap,
 ) -> Result<Option<Value>, VmError> {
-    let result = execute_frame_inner(program, frame, arguments, output);
+    let result = execute_frame_inner(program, frame, arguments, output, heap);
     match (frame, result) {
         (Frame::Function(function_id), Err(error)) => Err(error.in_function(function_id)),
         (_, result) => result,
@@ -284,6 +295,7 @@ fn execute_frame_inner(
     frame: Frame,
     arguments: Vec<Value>,
     output: &mut String,
+    heap: &mut StringHeap,
 ) -> Result<Option<Value>, VmError> {
     let (instructions, slot_info, parameter_count, return_type) = match frame {
         Frame::Entry => (
@@ -358,6 +370,16 @@ fn execute_frame_inner(
                 }
                 stack.push(Value::Integer(*length as i128, IntegerType::I64));
             }
+            InstructionKind::StringConcat => {
+                let right = at_instruction(string_heap::pop(&mut stack), pc)?;
+                let left = at_instruction(string_heap::pop(&mut stack), pc)?;
+                let value = at_instruction(heap.concat(&left, &right), pc)?;
+                stack.push(Value::String(value));
+            }
+            InstructionKind::StringManage { retain } => {
+                let value = at_instruction(string_heap::pop(&mut stack), pc)?;
+                at_instruction(heap.manage(&value, *retain), pc)?;
+            }
             InstructionKind::StringByteLength => {
                 let value = at_instruction(pop_string(&mut stack), pc)?;
                 // 対応する32/64ビット環境のRust文字列はisize::MAXを超えません。
@@ -387,7 +409,7 @@ fn execute_frame_inner(
                 stack.push(Value::Bool(*value));
             }
             InstructionKind::PushString(value) => {
-                stack.push(Value::String(value.clone()));
+                stack.push(Value::String(value.clone().into()));
             }
 
             InstructionKind::PushInteger(value, ty) => {
@@ -771,9 +793,13 @@ fn execute_frame_inner(
                 }
                 arguments.reverse();
 
-                if let Some(value) =
-                    execute_frame(program, Frame::Function(*function_id), arguments, output)?
-                {
+                if let Some(value) = execute_frame(
+                    program,
+                    Frame::Function(*function_id),
+                    arguments,
+                    output,
+                    heap,
+                )? {
                     stack.push(value);
                 }
             }
@@ -1356,7 +1382,7 @@ fn pop_bool(stack: &mut Vec<Value>) -> VmResult<bool> {
     }
 }
 
-fn pop_string(stack: &mut Vec<Value>) -> VmResult<String> {
+fn pop_string(stack: &mut Vec<Value>) -> VmResult<StringValue> {
     match pop_value(stack)? {
         Value::String(value) => Ok(value),
         other => Err(VmErrorKind::TypeMismatch {
@@ -1391,7 +1417,7 @@ fn pop_f64(stack: &mut Vec<Value>) -> VmResult<f64> {
 fn format_value(value: Value, expected: Type) -> VmResult<String> {
     match (value, expected) {
         (Value::Bool(value), Type::Bool) => Ok(value.to_string()),
-        (Value::String(value), Type::String) => Ok(value),
+        (Value::String(value), Type::String) => Ok(value.text()),
 
         (Value::Integer(value, actual), Type::Integer(expected)) if actual == expected => {
             Ok(value.to_string())
@@ -1444,6 +1470,7 @@ mod tests {
     #[test]
     fn distinguishes_integer_division_overflow() {
         let program = BytecodeProgram {
+            string_heap_limit: crate::ir::DEFAULT_STRING_HEAP_LIMIT,
             type_definitions: Vec::new(),
             functions: Vec::new(),
             slots: Vec::new(),
@@ -1483,6 +1510,7 @@ mod tests {
     #[test]
     fn reports_integer_subtraction_overflow_at_instruction() {
         let program = BytecodeProgram {
+            string_heap_limit: crate::ir::DEFAULT_STRING_HEAP_LIMIT,
             type_definitions: Vec::new(),
             functions: Vec::new(),
             slots: Vec::new(),
@@ -1528,6 +1556,7 @@ mod tests {
     #[test]
     fn reports_integer_negation_overflow_at_instruction() {
         let program = BytecodeProgram {
+            string_heap_limit: crate::ir::DEFAULT_STRING_HEAP_LIMIT,
             type_definitions: Vec::new(),
             functions: Vec::new(),
             slots: Vec::new(),
@@ -1572,6 +1601,7 @@ mod tests {
     #[test]
     fn rejects_bytecode_assignment_to_immutable_slot() {
         let program = BytecodeProgram {
+            string_heap_limit: crate::ir::DEFAULT_STRING_HEAP_LIMIT,
             type_definitions: Vec::new(),
             functions: Vec::new(),
             slots: vec![Slot {
@@ -1600,6 +1630,7 @@ mod tests {
     #[test]
     fn rejects_distinct_initializers_for_the_same_slot() {
         let program = BytecodeProgram {
+            string_heap_limit: crate::ir::DEFAULT_STRING_HEAP_LIMIT,
             type_definitions: Vec::new(),
             functions: Vec::new(),
             slots: vec![Slot {
@@ -1628,6 +1659,7 @@ mod tests {
     #[test]
     fn reports_missing_instruction_without_panicking() {
         let program = BytecodeProgram {
+            string_heap_limit: crate::ir::DEFAULT_STRING_HEAP_LIMIT,
             type_definitions: Vec::new(),
             functions: Vec::new(),
             slots: Vec::new(),

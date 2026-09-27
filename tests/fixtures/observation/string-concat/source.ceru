@@ -1,0 +1,5 @@
+mut text: string = concat("日", "本");
+saved: string = text;
+text = concat(text, "!");
+print(saved);
+print(text);

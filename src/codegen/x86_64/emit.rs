@@ -45,6 +45,10 @@ pub fn emit_with_origins(module: &Module, annotate: bool) -> String {
         });
     }
 
+    if let Some(limit) = module.string_heap_limit {
+        output.push_str(&super::heap::support(limit, module.target.is_linux()));
+    }
+
     for function in &module.functions {
         emit_function(function, module, annotate, &mut reporter, &mut output);
         output.push('\n');
@@ -244,6 +248,36 @@ fn emit_instruction(
                     "  movq %rax, %rdx\n  leaq .Lcerune_fmt_u64(%rip), %rcx\n  callq printf\n",
                 );
             }
+        }
+        Instruction::StringManage { retain } => {
+            output.push_str(if module.target.is_linux() {
+                "  movq %rax, %rdi\n"
+            } else {
+                "  movq %rax, %rcx\n"
+            });
+            output.push_str(if *retain {
+                "  callq cerune_string_retain\n"
+            } else {
+                "  callq cerune_string_release\n"
+            });
+        }
+        Instruction::StringConcat { left_offset, label } => {
+            if module.target.is_linux() {
+                output.push_str(&format!(
+                    "  movq %rax, %rsi\n  movq {left_offset}(%rbp), %rdi\n"
+                ));
+            } else {
+                output.push_str(&format!(
+                    "  movq %rax, %rdx\n  movq {left_offset}(%rbp), %rcx\n"
+                ));
+            }
+            output.push_str(&format!("  callq cerune_string_concat\n  testq %rdx, %rdx\n  je .L{label_prefix}_concat_ok_{label}\n  cmpq $1, %rdx\n  jne .L{label_prefix}_concat_limit_{label}\n"));
+            reporter.emit(Failure::AllocationSizeOverflow, output);
+            output.push_str(&format!(".L{label_prefix}_concat_limit_{label}:\n  cmpq $2, %rdx\n  jne .L{label_prefix}_concat_failed_{label}\n"));
+            reporter.emit(Failure::AllocationLimitExceeded, output);
+            output.push_str(&format!(".L{label_prefix}_concat_failed_{label}:\n"));
+            reporter.emit(Failure::AllocationFailed, output);
+            output.push_str(&format!(".L{label_prefix}_concat_ok_{label}:\n"));
         }
         Instruction::CompareU64(op) => {
             output.push_str("  cmpq %rcx, %rax\n");

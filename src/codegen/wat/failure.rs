@@ -6,6 +6,7 @@ use super::ir::{Instruction, Origin};
 
 pub(super) fn helper_name(instruction: &Instruction, origin: Origin) -> String {
     let base = match instruction {
+        Instruction::StringConcat => "cerune_string_concat".into(),
         Instruction::ConvertNumeric { conversion } => conversion.helper(),
         Instruction::IntegerBinary { op, ty } => op.helper(*ty),
         Instruction::CheckIntegerRange { ty, failure } => {

@@ -28,6 +28,7 @@ pub enum CompareOp {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Module {
+    pub string_heap_limit: Option<u64>,
     pub uses_write: bool,
     pub origins: Vec<Origin>,
     pub target: super::Target,
@@ -85,6 +86,13 @@ pub enum FloatConstant {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Instruction {
+    StringConcat {
+        left_offset: isize,
+        label: usize,
+    },
+    StringManage {
+        retain: bool,
+    },
     Write {
         kind: &'static str,
     },

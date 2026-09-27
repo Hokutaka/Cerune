@@ -1,6 +1,7 @@
 mod conversion;
 mod emit;
 mod failure;
+mod heap;
 mod integer;
 pub mod ir;
 mod lower;

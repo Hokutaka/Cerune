@@ -38,6 +38,9 @@ pub fn emit(module: &Module) -> String {
     }
     if module.uses_strings {
         super::string::emit(module, &mut output);
+        if let Some(limit) = module.string_heap_limit {
+            output.push_str(&super::heap::support(limit));
+        }
     }
 
     // printf format strings.
@@ -311,6 +314,31 @@ fn emit_instruction(
     output: &mut String,
 ) {
     match instruction {
+        Instruction::StringConcat {
+            dest,
+            left,
+            right,
+            origin,
+        } => {
+            writeln!(
+                output,
+                "  {} =l call $cerune_string_concat(l {}, l {}, {})",
+                temp(*dest),
+                operand(left, slots),
+                operand(right, slots),
+                super::failure::arguments(*origin)
+            )
+            .unwrap();
+        }
+        Instruction::StringManage { value, retain } => {
+            writeln!(
+                output,
+                "  call $cerune_string_{}(l {})",
+                if *retain { "retain" } else { "release" },
+                operand(value, slots)
+            )
+            .unwrap();
+        }
         Instruction::Write { kind, value } => {
             writeln!(
                 output,

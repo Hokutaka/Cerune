@@ -14,12 +14,12 @@ Comparison uses the entire contents without Unicode normalization or case conver
 | --- | --- |
 | Cerune IR | The `string` type and decoded contents; Span identifies the original quoted spelling |
 | Bytecode | `push.string`, typed storage, comparison, and output instructions; source-derived instructions retain NodeId and Span |
-| VM | Owned Rust `String`; copying a value clones its contents |
+| VM | Shared immutable content handles; dynamic allocations have separate logical retain/release accounting |
 | C | A struct containing a read-only data pointer and a UTF-8 byte count |
-| LLVM | `%cerune.string = type { ptr, i64 }` and static module byte arrays |
-| QBE | A 64-bit reference to read-only storage containing an eight-byte length and UTF-8 data |
+| LLVM | `%cerune.string = type { ptr, i64 }` and static/dynamic byte storage |
+| QBE | A 64-bit reference to immutable storage containing an eight-byte length and UTF-8 data |
 | WAT | A 32-bit reference to length-prefixed data in private linear memory |
-| Windows x64 direct assembly | A read-only data reference held in registers and stack slots |
+| Windows/Linux x86-64 direct assembly | A reference to immutable contents held in registers and stack slots |
 
 Textual IR and bytecode escape line breaks and control characters. `print` writes the contents unchanged. Presentation does not alter the value.
 
@@ -34,13 +34,13 @@ typedef struct cerune_string {
 } cerune_string;
 ```
 
-All current strings originate from source literals. Their data is emitted as C string literals with static storage duration, retained until process exit. Returning strings or arrays containing strings from functions does not invalidate the data.
+Static strings originate from source literals or compile-time evaluation. Their data is emitted as C string literals with static storage duration, retained until process exit. Returning strings or arrays containing strings from functions does not invalidate the data.
 
-Assignment copies the pointer and byte count. Sharing the data preserves immutable value semantics because Cerune exposes no operation to change those contents. Equality compares contents, not sharing or addresses. No string-specific `malloc`, `free`, or reference counting is needed.
+Assignment copies the pointer and byte count. Sharing the data preserves immutable value semantics because Cerune exposes no operation to change those contents. Equality compares contents, not sharing or addresses. Static strings need no ownership management; `concat` results use `malloc`, `free`, and reference counting.
 
-Runtime concatenation, ownership, and release are discussed in the [dynamic-data proposal](dynamic-data.en.md); they are not implemented yet.
+Runtime concatenation, budgets, retain, and release are implemented as described in the [dynamic-data design](dynamic-data.en.md). Common IR determines lifetime; each target manages storage.
 
-This representation applies to the current feature set, which does not create new string contents at runtime. It does not cover memory management for concatenation or external input. The generated C struct is not a stable external-integration ABI.
+External input remains unimplemented. The generated C struct is not a stable external-integration ABI.
 
 ## Bytes and evaluation order
 
@@ -52,9 +52,9 @@ Where C does not guarantee evaluation order and multiple operands can produce ef
 
 ## LLVM representation and targets
 
-LLVM string data is constant and lasts until process exit. Each literal is stored in lowering order as `private unnamed_addr constant [N x i8]`, using fixed two-digit hexadecimal escapes for every UTF-8 byte. No terminator is added; the original byte count is retained as `i64`. Empty strings never dereference their data.
+Static LLVM string data is constant and lasts until process exit. Each literal is stored in lowering order as `private unnamed_addr constant [N x i8]`, using fixed two-digit hexadecimal escapes for every UTF-8 byte. No terminator is added; the original byte count is retained as `i64`. Empty strings never dereference their data.
 
-Strings, products containing strings, and nested arrays are copied as LLVM aggregate values, including function parameters and results. Contents are never written and require no dynamic allocation. Equality checks length and every byte regardless of sharing or constant merging. This internal representation does not guarantee external C ABI compatibility.
+Strings, products containing strings, and nested arrays are copied as LLVM aggregate values, including function parameters and results. Finalized contents are never modified. Dynamic strings preserve this value representation and identify owned allocations through an internal list. Equality checks length and every byte regardless of sharing or constant merging. This internal representation does not guarantee external C ABI compatibility.
 
 Printing calls `putchar` for each byte and appends LF. Bytes are zero-extended to `i32`, preserving the high bits of UTF-8. This uses the same standard output as numeric `printf` and Boolean `puts`, preserving mixed output order. Comparison and output loops remain readable in generated LLVM. Optimizing large string output is future work.
 
@@ -77,13 +77,13 @@ References: [LLVM constants](https://www.llvm.org/docs/LangRef.html#constants), 
 
 These routes statically place an eight-byte length followed by the original UTF-8 bytes for each literal, and retain a reference to its beginning as the string value. Function parameters and results, product fields, and array elements use that reference. Neither length nor contents change at runtime; no terminating NUL is added. Cerune does not silently optimize by merging string literals.
 
-Reassignment replaces the reference in a binding or array element. Shared storage is immutable, so previous copies remain unchanged. Product and array copies retain existing `blit`, memory load/store, and stack-slot copying. No dynamic allocation or reference counting is needed. These internal references do not add a Cerune pointer type or an external ABI.
+Reassignment replaces the reference in a binding or array element. Shared storage is immutable, so previous copies remain unchanged. Product and array copies retain existing `blit`, memory load/store, and stack-slot copying. Common IR generates retain/release for dynamic strings; these operations have no effect on static storage. These internal references do not add a Cerune pointer type or an external ABI.
 
-QBE puts data in read-only `.rodata`, using `loadl` for length and `loadub` for bytes. Strings require `--target x86_64-unknown-linux-gnu`; the artifact records the target and its `qbe -t amd64_sysv` mapping in a comment. This is the combination currently supported by Cerune for QBE strings. Selecting another downstream QBE target does not translate Cerune's runtime assumptions.
+QBE puts static data in read-only `.rodata`, using `loadl` for length and `loadub` for bytes. Strings require `--target x86_64-unknown-linux-gnu`; the artifact records the target and its `qbe -t amd64_sysv` mapping in a comment. This is the combination currently supported by Cerune for QBE strings. Selecting another downstream QBE target does not translate Cerune's runtime assumptions.
 
-Direct assembly supports Windows/Linux x86-64 targets. Linux uses SysV byte output without the Windows stdout initialization described below. Length and bytes reside in read-only storage, and references travel through `RAX` or eight-byte stack slots. Comparisons save the left operand before evaluating the right and passing both to a helper. The output helper follows Windows x64 shadow-space, stack-alignment, and register-preservation rules. `_setmode` runs before the first Cerune operation and exits with code 1 on failure.
+Direct assembly supports Windows/Linux x86-64 targets. Linux uses SysV byte output without the Windows stdout initialization described below. Static lengths and bytes reside in read-only storage, and references travel through `RAX` or eight-byte stack slots. Comparisons save the left operand before evaluating the right and passing both to a helper. The output helper follows Windows x64 shadow-space, stack-alignment, and register-preservation rules. `_setmode` runs before the first Cerune operation and exits with code 1 on failure.
 
-WAT puts data in private linear memory and uses 32-bit addresses. Its eight-byte length header is little-endian; current wasm32 operations read the low 32 bits. Lowering selects memory regions and page counts without allocating string data at runtime. Equality becomes `i32.load8_u` and branches.
+WAT puts data in private linear memory and uses 32-bit addresses. Its eight-byte length header is little-endian; current wasm32 operations read the low 32 bits. Lowering selects static regions and the initial page count. Dynamic strings reuse private blocks and grow memory when necessary; growth failure is checked. Equality becomes `i32.load8_u` and branches.
 
 ### WAT output and the external boundary
 
@@ -107,7 +107,7 @@ Development tools can be selected through `CERUNE_TEST_QBE`, `CERUNE_TEST_ASM_CL
 
 ## Reading byte length
 
-`byte_len(value) -> i64` reads the stored UTF-8 byte count. It does not scan or normalize contents or allocate memory. Values currently originate from static literals; representable lengths on supported 32/64-bit platforms fit in `i64`.
+`byte_len(value) -> i64` reads the stored UTF-8 byte count. It does not scan or normalize contents or allocate memory. Both static and dynamic values are supported; representable lengths on supported 32/64-bit platforms fit in `i64`.
 
 The frontend resolves arity, input type, and result type into a dedicated Cerune IR `StringByteLength` operation. In ordinary expressions, even literal lengths remain observable operations without implicit constant folding. An explicit const evaluates the operation during compilation and retains its initializer and result in IR. IR renders `byte_len.string(...)`; bytecode uses `byte_len.string`.
 

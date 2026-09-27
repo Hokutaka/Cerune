@@ -38,6 +38,7 @@ pub fn lower(program: &cerune_ir::Program) -> Module {
     lowerer.lower_statements(&program.statements);
 
     Module {
+        string_heap_limit: crate::codegen::support::string_heap_limit(program),
         uses_write: crate::codegen::display::uses_write(program),
         target: None,
         uses_strings: crate::codegen::support::first_string_span(program).is_some(),
@@ -285,6 +286,14 @@ impl Lowerer<'_> {
                 false
             }
 
+            cerune_ir::StatementKind::StringManage { value, retain } => {
+                let value = self.lower_expr(value);
+                self.push(Instruction::StringManage {
+                    value: value.operand,
+                    retain: *retain,
+                });
+                false
+            }
             cerune_ir::StatementKind::Write { value, quoted } => {
                 let kind = crate::codegen::display::kind(&value.ty, *quoted);
                 let value = self.lower_expr(value);
@@ -571,6 +580,16 @@ impl Lowerer<'_> {
                 Value {
                     ty: Type::I64,
                     operand: Operand::Integer(*length as i64),
+                }
+            }
+            cerune_ir::ExprKind::StringConcat { left, right } => {
+                let left = self.lower_expr(left).operand;
+                let right = self.lower_expr(right).operand;
+                let dest = self.next_temp();
+                self.push(Instruction::StringConcat { dest, left, right });
+                Value {
+                    ty: Type::String,
+                    operand: Operand::Temp(dest),
                 }
             }
             cerune_ir::ExprKind::StringByteLength { value } => {
@@ -1079,6 +1098,7 @@ fn collect_slots(
                 collect_slots(body, slots, slot_map, name_counts);
             }
             cerune_ir::StatementKind::Assignment { .. }
+            | cerune_ir::StatementKind::StringManage { .. }
             | cerune_ir::StatementKind::Write { .. }
             | cerune_ir::StatementKind::Print { .. }
             | cerune_ir::StatementKind::Call { .. }

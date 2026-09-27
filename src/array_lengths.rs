@@ -290,7 +290,7 @@ impl Resolver<'_> {
             ExprKind::Call {
                 name, arguments, ..
             } => {
-                if !matches!(name.as_str(), "byte_len" | "array_len") {
+                if !matches!(name.as_str(), "byte_len" | "array_len" | "concat") {
                     return Err(Diagnostic::new(
                         "function calls are not allowed in constant expressions",
                         expr.span,

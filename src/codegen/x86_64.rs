@@ -2,6 +2,7 @@ mod abi;
 mod conversion;
 mod emit;
 mod failure;
+mod heap;
 pub mod ir;
 mod lower;
 mod object;

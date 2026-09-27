@@ -19,17 +19,22 @@ pub fn emit(module: &Module) -> String {
         output.push_str("#include <stddef.h>\n#include <string.h>\n");
         output.push_str("#ifdef _WIN32\n#include <io.h>\n#include <fcntl.h>\n#endif\n");
     }
-    if !module.array_types.is_empty() || support.any_numeric() {
+    if module.string_heap_limit.is_some() || !module.array_types.is_empty() || support.any_numeric()
+    {
         output.push_str("#include <stdlib.h>\n");
     }
     output.push('\n');
 
-    if !module.array_types.is_empty() || support.any_numeric() {
+    if module.string_heap_limit.is_some() || !module.array_types.is_empty() || support.any_numeric()
+    {
         output.push_str(super::failure::SUPPORT);
     }
     emit_i64_operation_support(support, &mut output);
     if strings {
         output.push_str(super::string::SUPPORT);
+        if let Some(limit) = module.string_heap_limit {
+            output.push_str(&super::heap::support(limit));
+        }
     }
 
     if module.uses_write {
@@ -155,6 +160,16 @@ fn emit_statement(statement: &Statement, indent: usize, module: &Module, output:
     let prefix = "    ".repeat(indent);
 
     match statement {
+        Statement::StringManage { value, retain } => {
+            write!(
+                output,
+                "{prefix}cerune_string_{}(",
+                if *retain { "retain" } else { "release" }
+            )
+            .unwrap();
+            emit_expr(value, module, output);
+            output.push_str(");\n");
+        }
         Statement::Binding { name, ty, value } => {
             output.push_str(&prefix);
             output.push_str(&c_type(ty, module));
@@ -303,9 +318,18 @@ fn emit_statement(statement: &Statement, indent: usize, module: &Module, output:
             update,
             body,
         } => {
+            // ループを抜けた直後の所有解放から初期化束縛を参照できるようにします。
+            // 名前はBindingIdで一意なので、Ceruneの可視範囲は広がりません。
+            let lifted = module.string_heap_limit.is_some()
+                && matches!(initializer.as_ref(), Statement::Binding { .. });
+            if lifted {
+                emit_statement(initializer, indent, module, output);
+            }
             output.push_str(&prefix);
             output.push_str("for (");
-            emit_for_clause(initializer, module, output);
+            if !lifted {
+                emit_for_clause(initializer, module, output);
+            }
             output.push_str("; ");
             emit_expr(condition, module, output);
             output.push_str("; ");
@@ -437,6 +461,14 @@ fn emit_expr(expr: &Expr, module: &Module, output: &mut String) {
             output.push_str("((void)(");
             emit_expr(value, module, output);
             write!(output, "), INT64_C({length}))").unwrap();
+        }
+        ExprKind::StringConcat { left, right } => {
+            output.push_str("cerune_string_concat(");
+            emit_expr(left, module, output);
+            output.push_str(", ");
+            emit_expr(right, module, output);
+            super::failure::argument(expr.origin, output);
+            output.push(')');
         }
         ExprKind::StringByteLength { value } => {
             output.push_str("((int64_t)(");
@@ -803,7 +835,11 @@ impl RuntimeSupport {
                     self.include_expr(value);
                 }
             }
-            ExprKind::Logical {
+            ExprKind::StringConcat {
+                left: base,
+                right: index,
+            }
+            | ExprKind::Logical {
                 left: base,
                 right: index,
                 ..
@@ -829,6 +865,7 @@ impl RuntimeSupport {
     fn include_statement(&mut self, statement: &Statement) {
         match statement {
             Statement::Binding { value, .. }
+            | Statement::StringManage { value, .. }
             | Statement::Write { value, .. }
             | Statement::Print { value, .. } => self.include_expr(value),
             Statement::Assignment { target, value } => {
@@ -1156,9 +1193,9 @@ fn array_element_name(element: &Type, module: &Module) -> String {
 fn statement_uses_bool(statement: &Statement) -> bool {
     match statement {
         Statement::Binding { ty, value, .. } => *ty == Type::Bool || value.ty == Type::Bool,
-        Statement::Assignment { value, .. } | Statement::Write { value, .. } => {
-            value.ty == Type::Bool
-        }
+        Statement::StringManage { value, .. }
+        | Statement::Assignment { value, .. }
+        | Statement::Write { value, .. } => value.ty == Type::Bool,
         Statement::Print { format, value } => {
             *format == PrintFormat::Bool || value.ty == Type::Bool
         }

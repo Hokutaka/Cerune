@@ -44,7 +44,7 @@ impl Builder<'_> {
                     ast::ExprKind::Call {
                         name, arguments, ..
                     } => {
-                        if !matches!(name.as_str(), "byte_len" | "array_len") {
+                        if !matches!(name.as_str(), "byte_len" | "array_len" | "concat") {
                             return Err(Diagnostic::new(
                                 "function calls are not allowed in constant expressions",
                                 expr.span,
@@ -188,6 +188,7 @@ impl Builder<'_> {
                 })
                 .collect();
             let mut program = Program {
+                string_heap_limit: super::super::DEFAULT_STRING_HEAP_LIMIT,
                 constant_definitions: Vec::new(),
                 type_definitions: types,
                 function_definitions: vec![FunctionDefinition {
@@ -209,6 +210,7 @@ impl Builder<'_> {
                 statements: Vec::new(),
             };
             super::super::aggregates::lower(&mut program);
+            super::super::ownership::lower(&mut program);
             let bytecode = crate::bytecode::lower(&program)?;
             let evaluated = crate::vm::evaluate_constant(&bytecode).map_err(|error| {
                 let function_id = error.function_id().unwrap_or(0);
@@ -249,7 +251,7 @@ impl Builder<'_> {
         let id = self.allocate_node_id();
         let kind = match value {
             Value::Bool(v) => ExprKind::Boolean(v),
-            Value::String(v) => ExprKind::String(v),
+            Value::String(v) => ExprKind::String(v.text()),
             Value::Integer(v, _) => ExprKind::Integer(v),
             Value::F32(v) => ExprKind::Float {
                 text: float_text(f64::from(v)),

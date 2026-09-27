@@ -52,6 +52,14 @@ pub fn render_compact_with_sources(error: &VmError, sources: &SourceMap, span: S
 
 fn render_message(error: &VmError) -> String {
     match error.kind() {
+        VmErrorKind::AllocationSizeOverflow => "string allocation size overflow".into(),
+        VmErrorKind::AllocationLimitExceeded => {
+            "live string payload exceeds the configured heap limit".into()
+        }
+        VmErrorKind::InvalidStringOwnership => {
+            "invalid dynamic string ownership in bytecode".into()
+        }
+        VmErrorKind::AllocationFailed => "string allocation failed".into(),
         VmErrorKind::InvalidNumericConversion { from, to } => format!(
             "invalid rounded conversion from {} to {}",
             from.name(),

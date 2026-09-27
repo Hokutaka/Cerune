@@ -16,7 +16,8 @@ pub fn emit_with_origins(module: &Module, annotate_origins: bool) -> String {
     }
     emit_origin(Origin::Synthetic, annotate_origins, &mut output);
     let i64_operations = i64_operations(module);
-    let runtime_failures = super::failure::first_failure_span(module).is_some();
+    let runtime_failures =
+        module.string_heap_limit.is_some() || super::failure::first_failure_span(module).is_some();
     if let Some(target) = module.target {
         writeln!(output, "target triple = \"{}\"\n", target.triple()).unwrap();
     }
@@ -78,7 +79,7 @@ pub fn emit_with_origins(module: &Module, annotate_origins: bool) -> String {
 
     let array_types = array_types(module);
     let array_set_types = array_set_types(module);
-    if !array_types.is_empty() || i64_operations.any() {
+    if module.string_heap_limit.is_some() || !array_types.is_empty() || i64_operations.any() {
         output.push_str("declare void @llvm.trap()\n");
     }
 
@@ -100,6 +101,9 @@ pub fn emit_with_origins(module: &Module, annotate_origins: bool) -> String {
     emit_i64_operation_support(i64_operations, &mut output);
     if module.uses_strings {
         super::string::emit_support(module, &mut output);
+        if let Some(limit) = module.string_heap_limit {
+            output.push_str(&super::heap::support(limit));
+        }
     }
 
     if module.uses_write {
@@ -227,6 +231,19 @@ fn emit_instruction(
 ) {
     let failure = super::failure::argument(instruction, origin);
     match instruction {
+        Instruction::StringConcat { dest, left, right } => {
+            writeln!(output, "  {} = call %cerune.string @cerune.string.concat(%cerune.string {}, %cerune.string {}, ptr {failure})",
+                temp(*dest), operand(*left), operand(*right)).unwrap();
+        }
+        Instruction::StringManage { value, retain } => {
+            writeln!(
+                output,
+                "  call void @cerune.string.{}(%cerune.string {})",
+                if *retain { "retain" } else { "release" },
+                operand(*value)
+            )
+            .unwrap();
+        }
         Instruction::Write { kind, value } => {
             writeln!(
                 output,

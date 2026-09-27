@@ -23,6 +23,17 @@ cerune run <file> [--diagnostic-format runtime-v1]
 cerune --version
 ```
 
+## 動的文字列の予算
+
+`run`・`emit-ir`・`emit-bytecode`・`emit-c`・`emit-llvm`・`emit-qbe`・`emit-wat`・`emit-asm`・`emit-obj`では`--string-heap-limit <bytes>`を指定できます。既定は67108864（64 MiB）。値は0〜9223372036854775807の十進整数で、省略・重複・負数を拒否します。`check`・`emit-sources`では受け付けません。
+
+生存する動的文字列の内容を数え、共有領域は一度だけ、静的文字列は数えません。再代入中に共存する旧値・新値は両方数えます。コンパイル時評価には独立した64 MiBがあり、この設定では変更しません。物理メモリ全体の上限ではありません。値は生成物に固定され、実行中に変更するAPIはありません。
+
+```sh
+cerune run examples/string_concat.ceru --string-heap-limit 1024
+cerune emit-llvm examples/string_concat.ceru --target x86_64-unknown-linux-gnu --string-heap-limit 1024 -o concat.ll
+```
+
 ## 検証
 
 各コマンドの`<file>`は入口ファイルです。[モジュール](../design/modules.ja.md)のimportは宣言元のディレクトリから解決し、全依存を検査します。CLIを別ディレクトリから起動してもimport先は変わりません。対象の生成経路に必要な`--target`指定は従来通りです。

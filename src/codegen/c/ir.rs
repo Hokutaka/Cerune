@@ -12,6 +12,7 @@ pub enum Type {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Module {
+    pub string_heap_limit: Option<u64>,
     pub uses_write: bool,
     pub uses_strings: bool,
     pub temporaries: Vec<Type>,
@@ -54,6 +55,10 @@ pub struct FieldDefinition {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Statement {
+    StringManage {
+        value: Expr,
+        retain: bool,
+    },
     Write {
         kind: &'static str,
         value: Expr,
@@ -146,6 +151,10 @@ impl From<&crate::ir::Expr> for Origin {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ExprKind {
+    StringConcat {
+        left: Box<Expr>,
+        right: Box<Expr>,
+    },
     ArrayLength {
         value: Box<Expr>,
         length: usize,

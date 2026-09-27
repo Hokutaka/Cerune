@@ -71,6 +71,9 @@ pub fn emit(module: &Module) -> String {
 
     if module.uses_strings {
         super::string::emit(module, &mut output);
+        if let Some(limit) = module.string_heap_limit {
+            output.push_str(&super::heap::support(limit, module.string_heap_start));
+        }
     }
 
     if module.uses_write {
@@ -168,6 +171,7 @@ fn collect_helpers<'a>(
 
 fn emit_helper(instruction: &Instruction, origin: Origin, name: &str, output: &mut String) {
     match instruction {
+        Instruction::StringConcat => super::heap::concat(origin, name, output),
         Instruction::ConvertNumeric { conversion } => {
             super::conversion::emit_support(*conversion, origin, name, output)
         }
@@ -267,6 +271,15 @@ fn emit_instruction(
         Instruction::I64LeU => writeln!(output, "{prefix}i64.le_u").unwrap(),
         Instruction::I64GtU => writeln!(output, "{prefix}i64.gt_u").unwrap(),
         Instruction::I64GeU => writeln!(output, "{prefix}i64.ge_u").unwrap(),
+        Instruction::StringConcat => unreachable!("concat carries its source origin"),
+        Instruction::StringManage { retain } => {
+            writeln!(
+                output,
+                "{prefix}call $cerune_string_{}",
+                if *retain { "retain" } else { "release" }
+            )
+            .unwrap();
+        }
         Instruction::StringEqual => writeln!(output, "{prefix}call $cerune_string_equal").unwrap(),
         Instruction::StringNotEqual => {
             writeln!(output, "{prefix}call $cerune_string_equal\n{prefix}i32.eqz").unwrap()

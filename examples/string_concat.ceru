@@ -1,0 +1,29 @@
+// 動的に作った文字列は不変。再代入しても、保存した値は変わりません。
+fn greeting(name: string) -> string {
+    return concat("こんにちは、", name);
+}
+mut current: string = greeting("世界");
+saved: string = current;
+current = concat(current, "！");
+print(saved);
+print(current);
+
+// 配列は独立した値で、不変の文字列内容だけを共有します。
+mut labels: [string; 2] = [saved, current];
+copy: [string; 2] = labels;
+labels[0] = concat("新しい", "挨拶");
+print(copy);
+print(labels);
+
+// 改行・NUL・結合文字もバイトのまま保持します。
+bytes: string = concat("日\0\r", "\n本");
+print(byte_len(bytes));
+print(bytes == "日\0\r\n本");
+print(concat("e", "\u{301}") != "\u{e9}");
+
+// ループ内の一時値は各反復で解放します。
+for (mut i: i64 = 0; i < 3; i = i + 1) {
+    value: string = concat("反復", "中");
+    if i == 1 { continue; }
+    print(value);
+}

@@ -87,7 +87,7 @@ fn assert_observation(case_name: &str, command: &str, expected_file: &str) {
         || (command == "emit-qbe"
             && matches!(
                 case_name,
-                "string-values" | "string-byte-length" | "aggregate-values"
+                "string-values" | "string-byte-length" | "string-concat" | "aggregate-values"
             ))
     {
         process.args(["--target", "x86_64-unknown-linux-gnu"]);
@@ -143,6 +143,7 @@ fn string_observations_match_ir_bytecode_and_vm_output() {
     ] {
         assert_observation("string-values", command, file);
         assert_observation("string-byte-length", command, file);
+        assert_observation("string-concat", command, file);
     }
 }
 
@@ -267,6 +268,28 @@ fn aggregate_and_match_origins_remain_visible_in_native_outputs() {
         assert_eq!(
             String::from_utf8(output.stdout).unwrap(),
             expected_output("aggregate-values", file).replace("\r\n", "\n")
+        );
+    }
+}
+
+#[test]
+fn concatenation_origins_and_generated_ownership_are_stable() {
+    for (command, target, file) in [
+        ("emit-llvm", "x86_64-unknown-linux-gnu", "llvm.annotated.ll"),
+        ("emit-asm", "x86_64-unknown-linux-gnu", "linux.annotated.s"),
+        ("emit-asm", "x86_64-pc-windows-msvc", "windows.annotated.s"),
+    ] {
+        let result = Command::new(env!("CARGO_BIN_EXE_cerune"))
+            .arg(command)
+            .arg(source_path("string-concat"))
+            .args(["--target", target, "--annotate-origins"])
+            .output()
+            .unwrap();
+        assert!(result.status.success());
+        assert!(result.stderr.is_empty());
+        assert_eq!(
+            String::from_utf8(result.stdout).unwrap(),
+            expected_output("string-concat", file).replace("\r\n", "\n")
         );
     }
 }

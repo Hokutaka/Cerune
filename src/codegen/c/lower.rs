@@ -7,6 +7,7 @@ use super::ir::{
 
 pub fn lower(program: &cerune_ir::Program) -> Module {
     let mut module = Module {
+        string_heap_limit: crate::codegen::support::string_heap_limit(program),
         uses_write: crate::codegen::display::uses_write(program),
         uses_strings: crate::codegen::support::first_string_span(program).is_some(),
         temporaries: Vec::new(),
@@ -84,6 +85,7 @@ fn collect_array_assignment_types(program: &cerune_ir::Program) -> Vec<Type> {
                     visit(body, result);
                 }
                 cerune_ir::StatementKind::Binding { .. }
+                | cerune_ir::StatementKind::StringManage { .. }
                 | cerune_ir::StatementKind::Write { .. }
                 | cerune_ir::StatementKind::Print { .. }
                 | cerune_ir::StatementKind::Call { .. }
@@ -196,6 +198,10 @@ fn lower_statement(statement: &cerune_ir::Statement) -> Statement {
             value: lower_expr(value),
         },
 
+        cerune_ir::StatementKind::StringManage { value, retain } => Statement::StringManage {
+            value: lower_expr(value),
+            retain: *retain,
+        },
         cerune_ir::StatementKind::Write { value, quoted } => Statement::Write {
             kind: crate::codegen::display::kind(&value.ty, *quoted),
             value: lower_expr(value),
@@ -318,6 +324,10 @@ fn lower_expr_unchecked(expr: &cerune_ir::Expr) -> Expr {
                 length: *length,
             }
         }
+        cerune_ir::ExprKind::StringConcat { left, right } => ExprKind::StringConcat {
+            left: Box::new(lower_expr(left)),
+            right: Box::new(lower_expr(right)),
+        },
         cerune_ir::ExprKind::StringByteLength { value } => ExprKind::StringByteLength {
             value: Box::new(lower_expr(value)),
         },
@@ -504,7 +514,11 @@ fn collect_array_types(program: &cerune_ir::Program) -> Vec<Type> {
                     visit_expr(value, types);
                 }
             }
-            cerune_ir::ExprKind::Index { base, index }
+            cerune_ir::ExprKind::StringConcat {
+                left: base,
+                right: index,
+            }
+            | cerune_ir::ExprKind::Index { base, index }
             | cerune_ir::ExprKind::Logical {
                 left: base,
                 right: index,
@@ -556,7 +570,8 @@ fn collect_array_types(program: &cerune_ir::Program) -> Vec<Type> {
                 }
                 visit_expr(value, types);
             }
-            cerune_ir::StatementKind::Write { value, .. }
+            cerune_ir::StatementKind::StringManage { value, .. }
+            | cerune_ir::StatementKind::Write { value, .. }
             | cerune_ir::StatementKind::Print { value }
             | cerune_ir::StatementKind::Return { value: Some(value) } => visit_expr(value, types),
             cerune_ir::StatementKind::Call { arguments, .. } => {

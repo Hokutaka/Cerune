@@ -2,7 +2,7 @@ use super::{Fixup, Object, Symbol, encode};
 use std::collections::{BTreeMap, BTreeSet};
 
 pub(super) fn assemble(assembly: &str) -> Result<Object, String> {
-    let mut sections = [Vec::new(), Vec::new()];
+    let mut sections = [Vec::new(), Vec::new(), Vec::new()];
     let mut current = 1;
     let mut symbols = BTreeMap::new();
     let mut globals = BTreeSet::new();
@@ -20,6 +20,10 @@ pub(super) fn assemble(assembly: &str) -> Result<Object, String> {
                 {
                     return Err(format!("duplicate label {name}"));
                 }
+                return Ok(());
+            }
+            if line == ".data" {
+                current = 2;
                 return Ok(());
             }
             if line == ".text" {
