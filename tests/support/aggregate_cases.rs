@@ -41,4 +41,8 @@ pub const CASES: &[(&str, &str)] = &[
         include_str!("../../examples/array_window.ceru"),
         "対象\n開始\n終了\nCopied{value: {storage: [20, 30, 0, 0], length: 2}}\n[10, 99, 30, 40]\nCopied{value: {storage: [0, 0, 0, 0], length: 0}}\nInvalid{start: -1, end: 2}\nInvalid{start: 3, end: 2}\nInvalid{start: 0, end: 5}\nfalse\n",
     ),
+    (
+        include_str!("../../examples/array_copy_lifetimes.ceru"),
+        "対象\n開始\n終了\n[\"日本\", \"一\"]\n[\"保存\", \"二\"]\n[\"保存\", \"二\"]\n[\"変更\", \"二\"]\n2\nfalse\n0\n3\nInvalid{start: -1, end: 1}\nInvalid{start: 2, end: 1}\nInvalid{start: 0, end: 4}\nfalse\n",
+    ),
 ];

@@ -47,7 +47,7 @@ Language support does not imply equal observation detail. Language check failure
 
 | Order | Missing feature | First contract and example |
 | --- | --- | --- |
-| 1 | Dynamic arrays and ranges | Owned arrays/range copies first; borrowed slices need separate lifetime and mutation type rules |
+| 1 | [Dynamic arrays and ranges](owned-arrays.en.md) (proposal) | Owned arrays/range copies first; borrowed slices need separate lifetime and mutation type rules |
 | 2 | Recursion and external I/O | Define call storage, resource limits, I/O failure, and cleanup |
 | 3 | Module distribution | Re-exports, dependencies/versions, reproducible builds; extend explicit imports |
 | Experiment | GPU numeric computation | Narrow the supported types, memory, synchronization, and diagnostics; compare independent element computations with the CPU |
