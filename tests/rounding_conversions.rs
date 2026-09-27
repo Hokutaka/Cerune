@@ -187,3 +187,81 @@ fn exact_conversion_still_rejects_loss_and_negative_zero() {
         assert!(matches!(run_vm(source), Err(RunError::Execution(_))));
     }
 }
+
+#[test]
+fn embedding_reuses_rounding_bytecode_with_host_inputs() {
+    use cerune_lang::embedding::{HostValue, invoke_function, resolve_function};
+    use std::sync::Arc;
+
+    let program = Arc::new(
+        cerune_lang::compile_to_bytecode(
+            "fn rounded(x: f64) -> f64 { return f64(round_ties_even<i64>(x)); }
+         fn saturated(x: f64) -> f64 { return f64(saturating_round<u8>(x)); }",
+        )
+        .unwrap(),
+    );
+    for (name, inputs) in [
+        (
+            "rounded",
+            &[
+                (2.5, 2.0),
+                (3.5, 4.0),
+                (-2.5, -2.0),
+                (0.49999999999999994, 0.0),
+            ][..],
+        ),
+        (
+            "saturated",
+            &[
+                (f64::NAN, 0.0),
+                (f64::INFINITY, 255.0),
+                (f64::NEG_INFINITY, 0.0),
+                (254.5, 255.0),
+                (-0.5, 0.0),
+            ][..],
+        ),
+    ] {
+        let function = resolve_function(Arc::clone(&program), name).unwrap();
+        for &(input, expected) in inputs {
+            let result = invoke_function(&function, &[HostValue::F64(input)]).unwrap();
+            assert_eq!(
+                result.return_value(),
+                Some(&HostValue::F64(expected)),
+                "{name}({input})"
+            );
+            assert_eq!(result.output(), "");
+        }
+    }
+}
+
+#[test]
+fn embedding_checked_rounding_preserves_failure_and_isolates_calls() {
+    use cerune_lang::embedding::{
+        FunctionInvocationError, HostValue, invoke_function, resolve_function,
+    };
+    use std::sync::Arc;
+
+    let source = "fn checked(x: f64) -> f64 { print(\"before\"); return f64(ceil<u8>(x)); }";
+    let program = Arc::new(cerune_lang::compile_to_bytecode(source).unwrap());
+    let function = resolve_function(program, "checked").unwrap();
+    let first = invoke_function(&function, &[HostValue::F64(255.0)]).unwrap();
+    assert_eq!(first.return_value(), Some(&HostValue::F64(255.0)));
+    assert_eq!(first.output(), "before\n");
+
+    let FunctionInvocationError::Execution(error) =
+        invoke_function(&function, &[HostValue::F64(255.1)]).unwrap_err()
+    else {
+        panic!("expected a checked rounding failure");
+    };
+    let record = error.runtime_failure().unwrap();
+    assert_eq!(record.code.name(), "conversion-out-of-range");
+    assert_eq!(
+        &source[record.span.start()..record.span.end()],
+        "ceil<u8>(x)"
+    );
+    assert_eq!(error.vm_error().output(), "before\n");
+
+    let next = invoke_function(&function, &[HostValue::F64(2.1)]).unwrap();
+    assert_eq!(next.return_value(), Some(&HostValue::F64(3.0)));
+    assert_eq!(next.output(), "before\n");
+}
