@@ -91,6 +91,8 @@ cargo run --quiet -- emit-c examples/linear_regression.ceru
 | 固定長配列 `[T; N]` | [fixed_arrays.ceru](fixed_arrays.ceru)、[bubble_sort.ceru](bubble_sort.ceru) | 添字、要素の更新、コピー後の独立性 |
 | 構造体 `type Point { ... }` | [product-point.ceru](product-point.ceru)、[product_arrays.ceru](product_arrays.ceru) | フィールド・既定値と、構造体を要素にする配列 |
 | 入れ子の配列・構造体 | [function_values.ceru](function_values.ceru)、[u64_values.ceru](u64_values.ceru)、[string_lookup.ceru](string_lookup.ceru) | 数値や文字列を組み合わせ、関数へ値として渡す |
+| 固定容量と使用数 | [bounded_sequence.ceru](bounded_sequence.ceru) | 空・満杯・不正な使用数を扱う。動的配列ではなく容量4の値 |
+| 固定容量への範囲コピー | [array_window.ceru](array_window.ceru) | 空・不正範囲、評価順・短絡、元の更新後も独立。借用スライスではない |
 | 複合値の等値比較 | [aggregate_comparison.ceru](aggregate_comparison.ceru) | 配列・構造体・直和型、左右の評価順、定数とジェネリック関数 |
 | 複合値の表示 | [aggregate_display.ceru](aggregate_display.ceru) | 入れ子の値、最大u64、文字列の引用、NUL・CR/LFを保持 |
 

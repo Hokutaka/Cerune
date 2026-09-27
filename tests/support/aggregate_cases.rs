@@ -33,4 +33,12 @@ pub const CASES: &[(&str, &str)] = &[
         include_str!("../../examples/match_guards.ceru"),
         "対象\n負数?\n正数?\n7\nEmpty{}\nfalse\n1\n",
     ),
+    (
+        include_str!("../../examples/bounded_sequence.ceru"),
+        "0\n1\n[7, 0, 0, 0]\n[99, 0, 0, 0]\nFull{rejected: 50}\nInvalidLength{length: -1}\n",
+    ),
+    (
+        include_str!("../../examples/array_window.ceru"),
+        "対象\n開始\n終了\nCopied{value: {storage: [20, 30, 0, 0], length: 2}}\n[10, 99, 30, 40]\nCopied{value: {storage: [0, 0, 0, 0], length: 0}}\nInvalid{start: -1, end: 2}\nInvalid{start: 3, end: 2}\nInvalid{start: 0, end: 5}\nfalse\n",
+    ),
 ];

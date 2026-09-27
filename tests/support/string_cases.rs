@@ -164,6 +164,8 @@ pub const PRODUCT_UPDATES: &[(&str, &str)] = &[
     aggregate_cases::CASES[2],
     aggregate_cases::CASES[3],
     aggregate_cases::CASES[4],
+    aggregate_cases::CASES[5],
+    aggregate_cases::CASES[6],
 ];
 
 pub const UNUSED_DEFAULT: &str =

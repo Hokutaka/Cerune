@@ -14,6 +14,7 @@ Cerune documentation is divided into `design`, which records design decisions, a
 | Runtime diagnostics / 実行時停止の共通記録 | [日本語](design/runtime-diagnostics.ja.md) | [English](design/runtime-diagnostics.en.md) |
 | VM embedding / VMの埋め込み実行 | [日本語](design/vm-embedding.ja.md) | [English](design/vm-embedding.en.md) |
 | Output routes and targets / 出力経路とターゲット | [日本語](design/targets.ja.md) | [English](design/targets.en.md) |
+| Dynamic data proposal / 動的データの設計案 | [日本語](design/dynamic-data.ja.md) | [English](design/dynamic-data.en.md) |
 | Language capabilities and roadmap / 言語機能と今後の順序 | [日本語](design/language-roadmap.ja.md) | [English](design/language-roadmap.en.md) |
 | Rounding and saturation / 丸め方と飽和 | [日本語](design/rounding-conversions.ja.md) | [English](design/rounding-conversions.en.md) |
 | Truncating conversions / 小数部分の切り捨て | [日本語](design/truncating-conversions.ja.md) | [English](design/truncating-conversions.en.md) |
