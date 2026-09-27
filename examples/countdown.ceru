@@ -1,0 +1,7 @@
+// mutな整数を1ずつ減らし、0になったらループを抜けます。
+mut remaining: i64 = 3;
+while remaining > 0 {
+    print(remaining); // 3、2、1を1行ずつ表示
+    remaining = remaining - 1;
+}
+print("スタート！");

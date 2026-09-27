@@ -1,4 +1,22 @@
 use cerune_lang::run_vm;
+
+#[test]
+fn simple_examples_match_known_outputs() {
+    for (source, expected) in [
+        (
+            include_str!("../examples/greeting.ceru"),
+            "こんにちは、世界\nこんにちは、Cerune\n",
+        ),
+        (include_str!("../examples/shopping_total.ceru"), "450\n50\n"),
+        (
+            include_str!("../examples/countdown.ceru"),
+            "3\n2\n1\nスタート！\n",
+        ),
+    ] {
+        assert_eq!(run_vm(source).unwrap(), expected);
+    }
+}
+
 #[path = "support/rounding_cases.rs"]
 mod rounding_cases;
 #[test]

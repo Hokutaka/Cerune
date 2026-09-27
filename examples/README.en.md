@@ -147,6 +147,9 @@ Argument counts and types must match the declaration; there is no fixed count li
 | Example | Demonstrates |
 | --- | --- |
 | [hello.ceru](hello.ceru) | a first example: name two integers, add them, and show the result with `print` |
+| [greeting.ceru](greeting.ceru) | Pass a `string` name to a function and build a greeting with `concat` |
+| [shopping_total.ceru](shopping_total.ceru) | Sum a `u64` price array with `for … in` and print the total and change |
+| [countdown.ceru](countdown.ceru) | Use a mutable `i64` and `while` to print 3, 2, 1 and finish |
 | [short_circuit.ceru](short_circuit.ceru) | combining conditions with `&&`/`\|\|` to skip unnecessary division, indexing, and function calls |
 | [conditional.ceru](conditional.ceru) | `if` / `else` and scope |
 | [loop_control.ceru](loop_control.ceru) | `while`, `break`, and `continue` |
