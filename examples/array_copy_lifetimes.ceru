@@ -1,0 +1,57 @@
+// 動的配列の実装前に、コピーと寿命の基準を固定長配列で確認します。
+// storageは常に3要素。length=0も空の動的配列を意味するものではありません。
+type Window { storage: [[string; 2]; 3], length: i64 }
+enum Selection { Copied { value: Window }, Invalid { start: i64, end: i64 } }
+
+fn empty() -> Window {
+    return Window { storage: [["", ""], ["", ""], ["", ""]], length: 0 };
+}
+fn select_range(values: [[string; 2]; 3], start: i64, end: i64) -> Selection {
+    if start < 0 || end < start || end > array_len(values) {
+        return Selection::Invalid { start: start, end: end };
+    }
+    mut storage: [[string; 2]; 3] = empty().storage;
+    for (mut i: i64 = start; i < end; i = i + 1) {
+        storage[i - start] = values[i];
+    }
+    return Selection::Copied { value: Window { storage: storage, length: end - start } };
+}
+fn source() -> [[string; 2]; 3] {
+    print("対象");
+    mut values: [[string; 2]; 3] = [
+        [concat("日", "本"), "一"], [concat("保", "存"), "二"], [concat("末", "尾"), "三"]
+    ];
+    saved: infer = values;
+    values[0][0] = concat("更", "新");
+    return saved; // 局所値の解放後も、返却した文字列は生存します。
+}
+fn bound(label: string, value: i64) -> i64 { print(label); return value; }
+
+original: [[string; 2]; 3] = source();
+selected: Window = match select_range(original, bound("開始", 1), bound("終了", 3)) {
+    Selection::Copied { value: value } => value,
+    Selection::Invalid { start: _, end: _ } => empty(),
+};
+mut edited: infer = selected.storage;
+edited[0][0] = concat("変", "更");
+edited = edited;
+print(original[0]);
+print(original[1]);
+print(selected.storage[0]);
+print(edited[0]);
+print(selected.length);
+print(selected.storage == edited);
+
+at_end: Window = match select_range(original, 3, 3) {
+    Selection::Copied { value: value } => value,
+    Selection::Invalid { start: _, end: _ } => empty(),
+};
+print(at_end.length);
+print(array_len(at_end.storage)); // 使用数0でも固定容量は3です。
+print(select_range(original, -1, 1));
+print(select_range(original, 2, 1));
+print(select_range(original, 0, 4));
+print(false && match select_range(source(), 0, 1) {
+    Selection::Copied { value: _ } => true,
+    Selection::Invalid { start: _, end: _ } => false,
+});

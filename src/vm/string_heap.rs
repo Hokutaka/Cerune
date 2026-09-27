@@ -210,6 +210,7 @@ mod lifetime_tests {
     fn compiled_scope_cleanup_releases_every_live_entry_allocation() {
         let sources = [
             include_str!("../../examples/string_concat.ceru"),
+            include_str!("../../examples/array_copy_lifetimes.ceru"),
             r#"enum E{A{text:string},B} fn make()->E {v:E=E::A{text:concat("a","b")};return v;} mut e:E=make(); saved:E=e; e=E::B{}; print(saved);"#,
             r#"for (item:string in [concat("a","b"),concat("c","d")]) {print(item);break;}"#,
         ];

@@ -96,3 +96,35 @@ fn match_helpers_report_guard_and_result_failures_with_prior_output() {
 #[allow(dead_code)]
 #[path = "support/runtime_cases.rs"]
 mod runtime_cases;
+
+#[test]
+fn nested_copy_baseline_shares_string_bytes_and_keeps_failure_origin() {
+    use cerune_lang::{bytecode, compile_to_ir, vm};
+    let (source, expected) = cases::CASES[7];
+    let text = compile_to_ir_text(source).unwrap();
+    for operation in [
+        "string.concat.allocate-copy",
+        "ownership-retain",
+        "ownership-release",
+        "for.loop",
+    ] {
+        assert!(text.contains(operation), "missing {operation}");
+    }
+    let mut ir = compile_to_ir(source).unwrap();
+    ir.string_heap_limit = 24;
+    assert_eq!(vm::run(&bytecode::lower(&ir).unwrap()).unwrap(), expected);
+
+    // 元の3領域18バイトと変更用6バイトが共存する時点を検査します。
+    ir.string_heap_limit = 23;
+    let code = bytecode::lower(&ir).unwrap();
+    let error = vm::run(&code).unwrap_err();
+    assert_eq!(error.kind(), vm::VmErrorKind::AllocationLimitExceeded);
+    assert_eq!(error.output(), "対象\n");
+    let instructions = &code.functions[error.function_id().unwrap()].instructions;
+    let bytecode::InstructionOrigin::Source { span, .. } =
+        instructions[error.instruction_index()].origin
+    else {
+        panic!("source origin must survive ownership lowering");
+    };
+    assert_eq!(&source[span.start()..span.end()], r#"concat("更", "新")"#);
+}
