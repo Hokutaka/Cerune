@@ -8,8 +8,8 @@ A nonzero exit alone cannot distinguish an intended language stop from an access
 
 | Route | Current runtime diagnostics |
 | --- | --- |
-| IR Executor | `run-ir`: source-aware diagnostics or explicit `runtime-v1`; CLI exits with code 1 |
-| VM | Default human-readable diagnostics and explicit `runtime-v1` format |
+| IR Executor | `run` / `run-ir`: source-aware diagnostics or explicit `runtime-v1`; CLI exits with code 1 |
+| VM | `run-vm`: default human-readable diagnostics and explicit `runtime-v1` format |
 | Windows/Linux direct assembly | Language checks write `runtime-v1` to stderr, then terminate with an illegal instruction |
 | Internal COFF/ELF encoder | Encodes the same assembly lowering and diagnostics |
 | C | `runtime-v1` on C standard stderr, followed by `abort` |
@@ -64,7 +64,7 @@ This format does not classify compilation diagnostics, invalid-bytecode internal
 cerune run examples/runtime_failures/function_division.ceru --diagnostic-format runtime-v1
 ```
 
-Ordinary `run` keeps the existing source/bytecode-position diagnostics. `--diagnostic-format runtime-v1` selects common records for language check failures. The VM exits with code 1. `ExecutionError::runtime_failure()` exposes structured reasons and ranges.
+`run` / `run-ir` show the reason and source location; `run-vm` keeps the existing source/bytecode-position diagnostics. `--diagnostic-format runtime-v1` selects common records for language check failures. The VM exits with code 1. `ExecutionError::runtime_failure()` exposes structured reasons and ranges.
 
 Previously executed `print` operations are not rolled back. The VM retains their output in `VmError::output()`, and the CLI writes it to stdout. Native failures flush existing stdout buffers, write the stderr record, and stop with `ud2`. This does not guarantee the display order of merged stdout/stderr. Windows programs containing strings retain their existing binary stdout behavior.
 

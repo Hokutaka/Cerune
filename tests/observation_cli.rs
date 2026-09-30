@@ -140,6 +140,8 @@ fn string_observations_match_ir_bytecode_and_vm_output() {
         ("emit-asm", "asm.s"),
         ("emit-bytecode", "bytecode.cebc"),
         ("run", "run.stdout"),
+        ("run-ir", "run.stdout"),
+        ("run-vm", "run.stdout"),
     ] {
         assert_observation("string-values", command, file);
         assert_observation("string-byte-length", command, file);
@@ -244,7 +246,9 @@ fn emit_bytecode_matches_expected_output() {
 
 #[test]
 fn run_matches_expected_output() {
-    assert_observation_cases("run", "run.stdout");
+    for command in ["run", "run-ir", "run-vm"] {
+        assert_observation_cases(command, "run.stdout");
+    }
 }
 
 #[test]

@@ -38,7 +38,7 @@ IR ExecutorとVMでは成功時の局所値を解放し、失敗時も呼び出�
 
 既定の予算は**生存している動的文字列の内容64 MiB（67108864バイト）**です。共有領域は一度だけ数え、静的リテラルは除きます。再代入中に旧値と新値が共存すれば両方数えます。
 
-`run`とコード生成コマンドに`--string-heap-limit <bytes>`を渡して変更できます。0も有効です。コンパイル時評価は独立した64 MiBの上限を持ち、このオプションでは変更しません。Rust APIでは生成・bytecode化の前に`ir::Program::string_heap_limit`を設定します。実行中の状態へ介入する設定ではありません。
+`run`・`run-ir`・`run-vm`とコード生成コマンドに`--string-heap-limit <bytes>`を渡して変更できます。0も有効です。コンパイル時評価は独立した64 MiBの上限を持ち、このオプションでは変更しません。Rust APIでは生成・bytecode化の前に`ir::Program::string_heap_limit`を設定します。実行中の状態へ介入する設定ではありません。
 
 ```sh
 cerune run examples/string_concat.ceru --string-heap-limit 1024

@@ -90,7 +90,7 @@ fn budgets_cleanup_and_failure_origins_match_all_available_routes() {
         let source_path = w.0.join("source.ceru");
         fs::write(&source_path, source).unwrap();
         let budget = limit.to_string();
-        let vm = output(&w, Command::new(cerune).arg("run").arg(&source_path).args(["--string-heap-limit", &budget, "--diagnostic-format", "runtime-v1"]), "vm");
+        let vm = output(&w, Command::new(cerune).arg("run-vm").arg(&source_path).args(["--string-heap-limit", &budget, "--diagnostic-format", "runtime-v1"]), "vm");
         if let Some(expected) = expected { assert!(vm.status.success()); assert_eq!(vm.stdout, expected.as_bytes()); }
         else { assert!(!vm.status.success()); assert!(vm.stderr.starts_with(b"cerune: runtime-v1 code=")); }
         let direct = output(&w, Command::new(cerune).arg("run-ir").arg(&source_path).args(["--string-heap-limit", &budget, "--diagnostic-format", "runtime-v1"]), "ir-executor");
@@ -172,7 +172,7 @@ fn allocator_failures_remain_distinct_from_budget_failures() {
     let cerune = env!("CARGO_BIN_EXE_cerune");
     let vm = output(
         &w,
-        Command::new(cerune).arg("run").arg(&source).args([
+        Command::new(cerune).arg("run-vm").arg(&source).args([
             "--string-heap-limit",
             "1",
             "--diagnostic-format",

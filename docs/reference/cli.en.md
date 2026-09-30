@@ -19,14 +19,15 @@ cerune emit-qbe <file> [--target <triple>] [-o <output.ssa>]
 cerune emit-asm <file> [--target <triple>] [--annotate-origins] [-o <output.s>]
 cerune emit-obj <file> --target <triple> [--annotate-origins] -o <output.o>
 cerune emit-bytecode <file> [-o <output.cebc>]
-cerune run-ir <file> [--diagnostic-format runtime-v1]
 cerune run <file> [--diagnostic-format runtime-v1]
+cerune run-ir <file> [--diagnostic-format runtime-v1]
+cerune run-vm <file> [--diagnostic-format runtime-v1]
 cerune --version
 ```
 
 ## Dynamic string budget
 
-`run-ir`, `run`, `emit-ir`, `emit-bytecode`, `emit-c`, `emit-llvm`, `emit-qbe`, `emit-wat`, `emit-asm`, and `emit-obj` accept `--string-heap-limit <bytes>`. The default is 67108864 (64 MiB). Values are decimal integers from 0 through 9223372036854775807; missing, duplicate, and negative values are rejected. `check` and `emit-sources` do not accept this option.
+`run`, `run-ir`, `run-vm`, `emit-ir`, `emit-bytecode`, `emit-c`, `emit-llvm`, `emit-qbe`, `emit-wat`, `emit-asm`, and `emit-obj` accept `--string-heap-limit <bytes>`. The default is 67108864 (64 MiB). Values are decimal integers from 0 through 9223372036854775807; missing, duplicate, and negative values are rejected. `check` and `emit-sources` do not accept this option.
 
 The budget counts live dynamic string payload, shared allocations once, and static strings never. Old and new values both count while reassignment keeps them alive. Compile-time evaluation has an independent 64 MiB budget unaffected by this setting. This is not a physical-memory cap. Generated artifacts fix the value; no API changes it during execution.
 
@@ -47,7 +48,7 @@ cerune emit-sources examples/modules/main.ceru -o sources.json
 
 This explicitly outputs names and source contents. JSON schema `cerune-sources-v1` contains a registration-ordered `files` array with `id`, `name`, and `text`. JSON escaping preserves the exact UTF-8 text without normalization. Inputs without import/pub retain anonymous source ID 0; module inputs start with entry ID 1. Resolve runtime `file` and file-local `bytes` against these contents. This does not embed source text in generated programs. Without `-o`, the JSON goes to stdout.
 
-Default `run-ir` and `run` diagnostics show the dependency filename, line, and column. `--diagnostic-format runtime-v1` emits numeric file IDs. Compilation failures do not replace output artifacts.
+Default `run`, `run-ir`, and `run-vm` diagnostics show the dependency filename, line, and column. `--diagnostic-format runtime-v1` emits numeric file IDs. Compilation failures do not replace output artifacts.
 
 ### Syntax and type validation
 
@@ -62,13 +63,15 @@ A successful `check` does not guarantee that every output route supports the pro
 ## Direct Cerune IR execution
 
 ```sh
-cerune run-ir examples/ir_execution.ceru
+cerune run examples/ir_execution.ceru
 cerune run-ir examples/modules/failure.ceru --diagnostic-format runtime-v1
 ```
 
-`run-ir` builds common IR from source and directly executes its statements and expressions. It supports current language features without lowering to Bytecode or delegating to the VM. It does not parse textual `.ceir` files or accept `--target` or `-o`.
+`run` builds common IR from source (`.ceru`) and directly executes its statements and expressions. `run-ir` is an alias with identical behavior and options. It supports current language features without lowering to Bytecode or delegating to the VM. It does not parse textual `.ceir` files or accept `--target` or `-o`.
 
 Successful output goes to stdout. Failures preserve prior output, write a diagnostic to stderr, and exit with code 1. Default diagnostics report the reason and source location; `runtime-v1` uses the same FailureCode, NodeId, and Span as other routes. There is no instruction index.
+
+Update scripts and performance measurements that used the previous VM behavior of `run` to use `run-vm`. Language output and failure records are shared, but only the VM route includes bytecode instruction indices in default diagnostics.
 
 Rust callers use `run_ir(source)` or `ir_executor::run(&program)` for completed IR. `IrRunError` distinguishes construction and execution failures; execution errors expose `output()`, `origin()`, and `runtime_failure()`. For imports, use `modules::load(path)?.to_ir()`. See [responsibilities and limits](../design/ir-executor.en.md).
 
@@ -157,13 +160,13 @@ WAT with runtime checks also imports `cerune.write_error_byte(i32) -> void`. Hos
 
 Generate Windows x64 direct assembly with `cerune emit-asm examples/string_lookup.ceru -o target/string_lookup.s` and build it with `clang --target=x86_64-pc-windows-msvc target/string_lookup.s -o target/string_lookup.exe`. Programs using strings switch standard output to binary mode before output.
 
-## Execution
+## VM execution
 
 ```text
-cerune run <file>
+cerune run-vm <file>
 ```
 
-`cerune run` lowers the program to Cerune bytecode and executes the resulting `BytecodeProgram` in the Cerune VM.
+`cerune run-vm` lowers the program to Cerune bytecode and executes the resulting `BytecodeProgram` in the Cerune VM.
 
 Runtime output is useful for validation and experiments, but it is distinct from the two compiler observation boundaries defined in the [compiler design](../design/architecture.en.md).
 
@@ -175,7 +178,7 @@ cerune: cannot divide an integer by zero at 1:7 (bytecode instruction 0002)
 
 The bytecode instruction index is still displayed when no source location is available. Compact diagnostics do not include source text or the input file path.
 
-`run --diagnostic-format runtime-v1` emits language check failures as a single record containing the reason, NodeId, and UTF-8 byte range. Compilation diagnostics and VM internal errors retain their existing format. Previously executed `print` output remains on stdout. C, LLVM, QBE, WAT, Windows/Linux assembly, and internal objects use the same failure records. See the [common diagnostic contract](../design/runtime-diagnostics.en.md) and [expected-failure examples](../../examples/runtime_failures/README.en.md).
+`run-vm --diagnostic-format runtime-v1` emits language check failures as a single record containing the reason, NodeId, and UTF-8 byte range. Compilation diagnostics and VM internal errors retain their existing format. Previously executed `print` output remains on stdout. C, LLVM, QBE, WAT, Windows/Linux assembly, and internal objects use the same failure records. See the [common diagnostic contract](../design/runtime-diagnostics.en.md) and [expected-failure examples](../../examples/runtime_failures/README.en.md).
 
 ## Version
 

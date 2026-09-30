@@ -1,5 +1,5 @@
-// 同じソースを run-ir と run で実行し、emit-ir で処理を確認できます。
-// Run with run-ir or run; inspect the shared program with emit-ir.
+// run（run-ir）で直接実行し、run-vm と比較、emit-ir で処理を確認できます。
+// Run with run (alias run-ir), compare with run-vm, and inspect with emit-ir.
 fn greet(name: string) -> string {
     return concat("Hello, ", name);
 }

@@ -22,7 +22,7 @@ IR Executorは、既存のCerune IRの意味を直接実行する公式の基準
 
 `ir_executor::run(&ir::Program) -> Result<String, ExecutionError>`を入口とします。再度コンパイルせず同じIRを繰り返し実行でき、実行状態は呼び出しごとに独立します。IRを書き換えたり、隠れた最適化・実行用IRの構築をしたりしません。
 
-CLIは`run-ir <file>`で選び、既存の`run`はVMのまま維持します。import・診断・文字列予算は既存の共通フロントエンドと設定を使い、`--diagnostic-format runtime-v1`に対応します。ソースからのAPIは`run_ir(source) -> Result<String, IrRunError>`です。`IrRunError`はコンパイル失敗と実行失敗を区別します。実行先を黙って変更しません。
+CLIは`run <file>`または同じ意味の`run-ir <file>`で選びます。VM実行は`run-vm <file>`で明示します。import・診断・文字列予算は既存の共通フロントエンドと設定を使い、`--diagnostic-format runtime-v1`に対応します。ソースからのAPIは`run_ir(source) -> Result<String, IrRunError>`です。`IrRunError`はコンパイル失敗と実行失敗を区別します。実行先を黙って変更しません。
 
 - 文・式を直接辿り、関数ごとの束縛をBindingIdで管理する。
 - if/while/forを構造のまま実行し、return/break/continueを区別する。forのcontinueでも更新部を実行する。

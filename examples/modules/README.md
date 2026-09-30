@@ -32,7 +32,7 @@ cargo run -- emit-sources examples/modules/main.ceru -o target/module-sources.js
 
 ## 意図して停止する例
 
-VMでは終了コード1になります。停止理由・位置・先行出力が一致することを確認します。
+`run`／`run-ir`／`run-vm`では終了コード1になります。停止理由・位置・先行出力が一致することを確認します。
 
 | 入口 | 停止前のstdout | 理由と位置・省略される処理 |
 | --- | --- | --- |

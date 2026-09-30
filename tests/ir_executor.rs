@@ -218,7 +218,11 @@ fn cli_runs_examples_and_preserves_failure_records() {
                 limit,
             ];
             let direct = Command::new(exe).arg("run-ir").args(args).output().unwrap();
-            let vm = Command::new(exe).arg("run").args(args).output().unwrap();
+            let vm = Command::new(exe).arg("run-vm").args(args).output().unwrap();
+            let default = Command::new(exe).arg("run").args(args).output().unwrap();
+            assert_eq!(default.status, direct.status, "{file}");
+            assert_eq!(default.stdout, direct.stdout, "{file}");
+            assert_eq!(default.stderr, direct.stderr, "{file}");
             assert_eq!(direct.status, vm.status, "{file}");
             assert_eq!(direct.stdout, vm.stdout, "{file}");
             assert_eq!(direct.stderr, vm.stderr, "{file}");
@@ -239,10 +243,26 @@ fn cli_runs_examples_and_preserves_failure_records() {
         .unwrap();
     assert!(!error.status.success());
     assert!(
-        String::from_utf8(error.stderr)
+        String::from_utf8(error.stderr.clone())
             .unwrap()
             .contains("values.ceru")
     );
+    let default = Command::new(exe)
+        .args(["run", "examples/modules/failure.ceru"])
+        .output()
+        .unwrap();
+    assert_eq!(default.status, error.status);
+    assert_eq!(default.stdout, error.stdout);
+    assert_eq!(default.stderr, error.stderr);
+    let vm = Command::new(exe)
+        .args(["run-vm", "examples/modules/failure.ceru"])
+        .output()
+        .unwrap();
+    assert_eq!(vm.status.code(), Some(1));
+    assert_eq!(vm.stdout, error.stdout);
+    assert!(String::from_utf8_lossy(&vm.stderr).contains("bytecode instruction"));
+    assert!(!String::from_utf8_lossy(&default.stderr).contains("bytecode instruction"));
+
     for args in [
         vec!["run-ir"],
         vec![
@@ -272,9 +292,15 @@ fn cli_runs_examples_and_preserves_failure_records() {
             "2",
         ],
     ] {
-        let output = Command::new(exe).args(args).output().unwrap();
-        assert!(!output.status.success());
-        assert!(output.stdout.is_empty());
+        for command in ["run", "run-ir", "run-vm"] {
+            let output = Command::new(exe)
+                .arg(command)
+                .args(&args[1..])
+                .output()
+                .unwrap();
+            assert!(!output.status.success(), "{command}");
+            assert!(output.stdout.is_empty(), "{command}");
+        }
     }
 }
 

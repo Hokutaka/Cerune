@@ -8,8 +8,8 @@
 
 | 経路 | 現在の実行時診断 |
 | --- | --- |
-| IR Executor | `run-ir`でソース位置付き診断、明示的な`runtime-v1`形式。CLI終了コード1 |
-| VM | 既定の人向け診断と、明示的な`runtime-v1`形式 |
+| IR Executor | `run`／`run-ir`でソース位置付き診断、明示的な`runtime-v1`形式。CLI終了コード1 |
+| VM | `run-vm`で既定の人向け診断と、明示的な`runtime-v1`形式 |
 | Windows/Linux直接ASM | 言語の検査失敗時に`runtime-v1`をstderrへ出し、不正命令で停止 |
 | 自前エンコーダのCOFF/ELF | ASMと同じlowering・診断処理を符号化 |
 | C | `runtime-v1`をC標準のstderrへ出し、`abort`で停止 |
@@ -64,7 +64,7 @@ cerune: runtime-v1 code=division-by-zero node=1 bytes=6..11
 cerune run examples/runtime_failures/function_division.ceru --diagnostic-format runtime-v1
 ```
 
-通常の`run`は従来のソース位置・bytecode位置付き診断を使います。`--diagnostic-format runtime-v1`で言語の検査失敗を共通形式にします。VMは終了コード1です。`ExecutionError::runtime_failure()`で構造化された理由と範囲を取得できます。
+`run`／`run-ir`は停止理由とソース位置、`run-vm`は従来のソース位置・bytecode位置付き診断を使います。`--diagnostic-format runtime-v1`で言語の検査失敗を共通形式にします。VMは終了コード1です。`ExecutionError::runtime_failure()`で構造化された理由と範囲を取得できます。
 
 失敗より前に実行した`print`は取り消しません。VMは`VmError::output()`にその出力を保持し、CLIもstdoutへ表示します。ネイティブでは失敗時に既存のstdoutバッファをflushしてからstderrへレコードを書き、不正命令`ud2`で停止します。stdoutとstderrを混ぜた表示順までは保証しません。Windowsで文字列を含むプログラムのstdoutは従来通りバイナリ出力です。
 

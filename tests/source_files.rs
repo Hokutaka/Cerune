@@ -573,7 +573,7 @@ fn module_cli_artifacts_execute_with_the_same_values_order_and_failure_origins()
             &program,
             w.run(
                 Command::new(env!("CARGO_BIN_EXE_cerune"))
-                    .arg("run")
+                    .arg("run-vm")
                     .arg(&entry)
                     .args(["--diagnostic-format", "runtime-v1"]),
                 "cli/vm",

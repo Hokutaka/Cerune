@@ -32,7 +32,7 @@ cargo run -- emit-sources examples/modules/main.ceru -o target/module-sources.js
 
 ## Expected stops
 
-These exit with code 1 in the VM. Check the reason, location, and prior output together.
+These exit with code 1 through `run`, `run-ir`, or `run-vm`. Check the reason, location, and prior output together.
 
 | Entry | stdout before stopping | Reason, location, and skipped work |
 | --- | --- | --- |
