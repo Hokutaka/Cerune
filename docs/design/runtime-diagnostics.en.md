@@ -8,6 +8,7 @@ A nonzero exit alone cannot distinguish an intended language stop from an access
 
 | Route | Current runtime diagnostics |
 | --- | --- |
+| IR Executor | `run-ir`: source-aware diagnostics or explicit `runtime-v1`; CLI exits with code 1 |
 | VM | Default human-readable diagnostics and explicit `runtime-v1` format |
 | Windows/Linux direct assembly | Language checks write `runtime-v1` to stderr, then terminate with an illegal instruction |
 | Internal COFF/ELF encoder | Encodes the same assembly lowering and diagnostics |
@@ -16,7 +17,7 @@ A nonzero exit alone cannot distinguish an intended language stop from an access
 | QBE | `runtime-v1` using the Linux/SysV output ABI, followed by `abort` |
 | WAT | `runtime-v1` bytes through `cerune.write_error_byte`, followed by `unreachable` |
 
-VM, C, LLVM, QBE, WAT, direct assembly, and internal objects expose comparable reasons and source locations for language check failures. Verification requires both the record and each route's intended termination; OS and host exit codes remain route-specific.
+IR Executor, VM, C, LLVM, QBE, WAT, direct assembly, and internal objects expose comparable reasons and source locations for language check failures. Verification requires both the record and each route's intended termination; OS and host exit codes remain route-specific.
 
 ## Record
 

@@ -4,7 +4,7 @@
 
 日本語 | [English](README.en.md)
 
-Ceruneは、静的型付け・VM実行・複数形式へのコード生成に対応する実験用プログラミング言語です。
+Ceruneは、静的型付け・IR直接実行・VM実行・複数形式へのコード生成に対応する実験用プログラミング言語です。
 
 ## まず試す
 
@@ -74,6 +74,7 @@ cerune emit-c examples/floating_point.ceru -o floating_point.c
 | コマンド | 結果・成果物 | 用途・対象 |
 | --- | --- | --- |
 | `check` | 構文・型検査 | Ceruneソース（`.ceru`）を検証 |
+| `run-ir` | IR直接実行 | Ceruneソース（`.ceru`）を共通IRから実行 |
 | `run` | VM実行 | Ceruneソース（`.ceru`）を実行 |
 | `emit-sources` | ソース一覧（JSON） | 読み込んだファイル名・本文を出力 |
 | `emit-ir` | Cerune IR（`.ceir`） | 型・演算を確認 |

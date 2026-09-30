@@ -1,15 +1,13 @@
 #[path = "support/llvm.rs"]
 mod llvm;
-use cerune_lang::{
-    compile_to_c, compile_to_qbe, compile_to_wat, compile_to_x86_64_win_asm, run_vm,
-};
+use cerune_lang::{compile_to_c, compile_to_qbe, compile_to_wat, compile_to_x86_64_win_asm};
 
 const SOURCE: &str = include_str!("fixtures/observation/float-output/source.ceru");
 
 #[test]
 fn tiny_and_large_values_remain_observable_through_the_vm() {
     assert_eq!(
-        run_vm(SOURCE).unwrap(),
+        run_both(SOURCE).unwrap(),
         concat!(
             "9.99999968e-21\n",
             "9.9999999999999995e-21\n",
@@ -58,7 +56,13 @@ fn printing_does_not_change_the_value_used_by_later_computation() {
         print(show(small) * 1e20);
     ";
     assert_eq!(
-        run_vm(source).unwrap(),
+        run_both(source).unwrap(),
         "9.9999999999999995e-21\ntrue\n9.9999999999999995e-21\n1\n"
     );
+}
+
+fn run_both(source: &str) -> Result<String, cerune_lang::RunError> {
+    let output = cerune_lang::run_vm(source)?;
+    assert_eq!(cerune_lang::run_ir(source).unwrap(), output);
+    Ok(output)
 }

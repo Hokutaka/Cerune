@@ -69,6 +69,10 @@ fn assert_failure(output: Output, source: &str, expected_code: &str, route: &str
         panic!("invalid failure source")
     };
     let failure = error.runtime_failure().unwrap();
+    let program = cerune_lang::compile_to_ir(source).unwrap();
+    let direct = cerune_lang::ir_executor::run(&program).unwrap_err();
+    assert_eq!(direct.runtime_failure(), Some(failure), "{route}");
+    assert_eq!(direct.output(), error.vm_error().output(), "{route}");
     assert_eq!(failure.code.name(), expected_code, "{source}");
     match route {
         "wat" => assert_eq!(output.status.code(), Some(1), "{source}"),

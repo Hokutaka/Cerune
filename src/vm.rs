@@ -1,4 +1,4 @@
-mod float_output;
+use crate::runtime::float_output;
 mod string_heap;
 use string_heap::{StringHeap, StringValue};
 mod numeric;
@@ -373,12 +373,13 @@ fn execute_frame_inner(
             InstructionKind::StringConcat => {
                 let right = at_instruction(string_heap::pop(&mut stack), pc)?;
                 let left = at_instruction(string_heap::pop(&mut stack), pc)?;
-                let value = at_instruction(heap.concat(&left, &right), pc)?;
+                let value =
+                    at_instruction(heap.concat(&left, &right).map_err(string_heap::error), pc)?;
                 stack.push(Value::String(value));
             }
             InstructionKind::StringManage { retain } => {
                 let value = at_instruction(string_heap::pop(&mut stack), pc)?;
-                at_instruction(heap.manage(&value, *retain), pc)?;
+                at_instruction(heap.manage(&value, *retain).map_err(string_heap::error), pc)?;
             }
             InstructionKind::StringByteLength => {
                 let value = at_instruction(pop_string(&mut stack), pc)?;

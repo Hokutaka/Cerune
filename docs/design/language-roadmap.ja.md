@@ -35,7 +35,7 @@ Ceruneでは、書いた計算の意味と、それが実行される表現へ�
 
 ## 言語機能と出力経路を分ける
 
-現在、上記の言語機能をVM、生成C、LLVM、QBE、WAT、Windows/Linuxの直接ASM、および自前エンコーダのオブジェクトで扱えます。Windows/Linuxはターゲットの違い、ASM/オブジェクトは成果物の違いです。[経路とターゲットの表](targets.ja.md#現在の構成)を基準に数えます。
+現在、上記の言語機能を[IR Executor](ir-executor.ja.md)、VM、生成C、LLVM、QBE、WAT、Windows/Linuxの直接ASM、および自前エンコーダのオブジェクトで扱えます。Windows/Linuxはターゲットの違い、ASM/オブジェクトは成果物の違いです。[経路とターゲットの表](targets.ja.md#現在の構成)を基準に数えます。
 
 自前エンコーダはx86-64命令とCOFF/ELFを生成します。ASMと共通のloweringを使い、現在は内部ASM表現を読み取って符号化します。リンクは外部ツールです。将来の型付き機械命令IRや自前リンカはコンパイラ実装の候補であり、新しい言語機能ではありません。[自前エンコーダの設計](native-encoder.ja.md)を参照してください。
 

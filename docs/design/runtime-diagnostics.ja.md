@@ -8,6 +8,7 @@
 
 | 経路 | 現在の実行時診断 |
 | --- | --- |
+| IR Executor | `run-ir`でソース位置付き診断、明示的な`runtime-v1`形式。CLI終了コード1 |
 | VM | 既定の人向け診断と、明示的な`runtime-v1`形式 |
 | Windows/Linux直接ASM | 言語の検査失敗時に`runtime-v1`をstderrへ出し、不正命令で停止 |
 | 自前エンコーダのCOFF/ELF | ASMと同じlowering・診断処理を符号化 |
@@ -16,7 +17,7 @@
 | QBE | Linux/SysVの出力ABIで`runtime-v1`を出し、`abort`で停止 |
 | WAT | `cerune.write_error_byte`へ`runtime-v1`の各バイトを渡し、`unreachable`で停止 |
 
-VM・C・LLVM・QBE・WAT・直接ASM・自前オブジェクトで、言語の検査失敗の理由とソース位置を照合できます。OSやホストの終了コード自体を統一せず、各経路の意図した停止方法とレコードの両方を検証します。
+IR Executor・VM・C・LLVM・QBE・WAT・直接ASM・自前オブジェクトで、言語の検査失敗の理由とソース位置を照合できます。OSやホストの終了コード自体を統一せず、各経路の意図した停止方法とレコードの両方を検証します。
 
 ## レコード
 

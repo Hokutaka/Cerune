@@ -300,6 +300,15 @@ fn bytes_equality_and_mixed_output_match_vm_and_c() {
 }
 
 #[test]
+fn direct_ir_example_matches_known_output_across_c_and_llvm() {
+    let Some(native) = Native::new() else { return };
+    native.matches(
+        include_str!("../examples/ir_execution.ceru"),
+        "Hello, IR\nHello, 世界\n[\"Cerune\", \"世界\"]\n",
+    );
+}
+
+#[test]
 fn return_values_arrays_products_and_copies_remain_independent() {
     let Some(native) = Native::new() else { return };
     native.matches(string_cases::CASES[1].0, string_cases::CASES[1].1);

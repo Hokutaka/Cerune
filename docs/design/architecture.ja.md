@@ -43,6 +43,7 @@ Cerune IR
   - backend independent
       │
       ├── Observation 1: emit-ir / .ceir
+      ├── IR Executor: run-ir (direct structured execution)
       │
       ↓
 Backend Lowering
@@ -56,7 +57,7 @@ Backend Artifact
       └── Observation 2
 ```
 
-この構成で中心となる境界はCerune IRです。
+この構成で中心となる境界はCerune IRです。[IR Executor](ir-executor.ja.md)は完成済みIRの文・式を直接実行します。lowering・emitterを持つ生成バックエンドとは責務が異なり、共通展開後の制御構造と出自をそのまま使います。
 
 フロントエンドはCeruneプログラムの意味を決定します。バックエンドは、すでに解決された意味を対象の表現へ変換する方法を決定します。
 

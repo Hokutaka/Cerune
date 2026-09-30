@@ -43,6 +43,7 @@ Cerune IR
   - backend independent
       │
       ├── Observation 1: emit-ir / .ceir
+      ├── IR Executor: run-ir (direct structured execution)
       │
       ↓
 Backend Lowering
@@ -56,7 +57,7 @@ Backend Artifact
       └── Observation 2
 ```
 
-The key architectural boundary is Cerune IR.
+The key architectural boundary is Cerune IR. The [IR Executor](ir-executor.en.md) directly walks completed IR statements and expressions. Unlike generating backends with lowerers and emitters, it uses common expanded control structures and origins as they stand.
 
 The frontend decides what the Cerune program means. Backends decide how that already-resolved meaning is represented for a target.
 

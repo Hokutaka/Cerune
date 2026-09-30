@@ -2,7 +2,7 @@
 
 [日本語](dynamic-data.ja.md)
 
-**String concatenation is implemented. Dynamic arrays and borrowed slices remain proposals.** The VM, C, LLVM, QBE, WAT, Windows/Linux ASM, and native COFF/ELF routes share value semantics and ownership lowering.
+**String concatenation is implemented. Dynamic arrays and borrowed slices remain proposals.** The IR Executor, VM, C, LLVM, QBE, WAT, Windows/Linux ASM, and native COFF/ELF routes share value semantics and ownership lowering.
 
 ## String concatenation
 
@@ -32,7 +32,7 @@ Explicit `const` evaluation applies the same rules, then freezes the result into
 
 Both `s = concat(s, suffix)` and `s = s` are valid. Previously saved copies retain their contents. There is no user-facing `free`, implicit move, pointer type, GC, or shared mutable reference. Observation does not expose mutation of ownership metadata.
 
-The VM releases locals on success and reclaims remaining content at the call boundary on failure before returning to its host. Existing embedding API value types remain unchanged. Native failure terminates the process, whose remaining allocations the OS reclaims. Successful WAT calls reuse released storage; discard an instance after a trap instead of reusing it.
+The IR Executor and VM release locals on success and reclaims remaining content at the call boundary on failure before returning to its host. Existing embedding API value types remain unchanged. Native failure terminates the process, whose remaining allocations the OS reclaims. Successful WAT calls reuse released storage; discard an instance after a trap instead of reusing it.
 
 ## Budget and failures
 
@@ -63,7 +63,7 @@ Backend IR and artifacts retain size calculations, budget checks, allocation cal
 
 | Route | Dynamic storage |
 | --- | --- |
-| VM | Separate shared handles from logical reference counts; reclaim bytes at last release or a failed call boundary |
+| IR Executor / VM | Separate shared handles from logical reference counts; reclaim bytes at last release or a failed call boundary |
 | C / LLVM | Preserve pointer-plus-length values; identify dynamic allocations through a list and use `malloc` / `free` |
 | QBE / ASM / native objects | Preserve references to length headers; maintain ownership headers, counts, and a list |
 | WAT | Reuse free blocks in private memory; check `memory.grow` only when expansion is needed |
