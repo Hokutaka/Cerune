@@ -74,6 +74,34 @@ pub struct FunctionDefinition {
     pub span: Span,
 }
 
+/// 呼び出し境界の論理的な所有です。ABI上の値コピーや参照渡しとは区別します。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ArgumentOwnership {
+    /// 呼び出し側が準備した所有値を受け取り、calleeが解放または返却します。
+    Owned,
+    /// 呼び出し中だけ読み取り、引数自体の所有は受け取りません。
+    Borrowed,
+}
+
+impl FunctionDefinition {
+    /// 所有展開と表示に使う契約です。実行器は本文の明示操作を実行します。
+    pub fn argument_ownership(&self) -> ArgumentOwnership {
+        match self.lowering {
+            None | Some(LoweringKind::OwnershipRelease | LoweringKind::OwnershipReplace) => {
+                ArgumentOwnership::Owned
+            }
+            Some(
+                LoweringKind::AggregateEquality
+                | LoweringKind::AggregateDisplay
+                | LoweringKind::MatchBinding
+                | LoweringKind::MatchSelect
+                | LoweringKind::OwnershipExpression
+                | LoweringKind::OwnershipRetain,
+            ) => ArgumentOwnership::Borrowed,
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum LoweringKind {
     AggregateEquality,

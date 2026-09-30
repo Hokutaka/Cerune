@@ -148,3 +148,39 @@ fn cli_budget_validation_precedes_artifact_writes() {
     assert!(result.stderr.is_empty());
     fs::remove_dir_all(dir).unwrap();
 }
+
+#[test]
+fn owned_arguments_release_on_return_and_preserve_failure_order() {
+    let (source, expected) = cases::OWNED_ARGUMENTS;
+    let mut program = compile_to_ir(source).unwrap();
+    program.string_heap_limit = 22;
+    assert_eq!(cerune_lang::ir_executor::run(&program).unwrap(), expected);
+    assert_eq!(run(source, 22).unwrap(), expected);
+    for (limit, prior) in [
+        (15, "[\"保存\"]\n[\"変更\"]\n左\n"),
+        (19, "[\"保存\"]\n[\"変更\"]\n左\n右\n"),
+    ] {
+        program.string_heap_limit = limit;
+        let direct = cerune_lang::ir_executor::run(&program).unwrap_err();
+        let vm = run(source, limit).unwrap_err();
+        assert_eq!(direct.output(), prior);
+        assert_eq!(vm.output(), prior);
+        assert_eq!(vm.kind(), vm::VmErrorKind::AllocationLimitExceeded);
+        let failure = direct.runtime_failure().unwrap();
+        assert_eq!(
+            failure.code,
+            cerune_lang::runtime::FailureCode::AllocationLimitExceeded
+        );
+        assert_eq!(
+            &source[failure.span.start()..failure.span.end()],
+            "concat(label, \"!\")"
+        );
+    }
+
+    // 未使用の引数もcalleeが解放し、返却した所有だけを呼び出し元に残します。
+    let source = include_str!("fixtures/observation/owned-arguments/source.ceru");
+    assert_eq!(run(source, 2).unwrap(), "cd\n");
+    let mut program = compile_to_ir(source).unwrap();
+    program.string_heap_limit = 2;
+    assert_eq!(cerune_lang::ir_executor::run(&program).unwrap(), "cd\n");
+}

@@ -54,6 +54,8 @@ print(moved.x);    // 7
 
 The `point` received by `move_x` is a value separate from the caller's `original`. A returned product or array also becomes a new value in the caller. The function and its caller never acquire an implicit shared mutable location.
 
+For programs with dynamic strings, the caller prepares each owned argument and transfers ownership to the callee once. The callee releases unused arguments too, acquiring the return value before cleanup. See [ownership across calls](dynamic-data.en.md#ownership-across-calls) and the [example](../../examples/owned_arguments.ceru).
+
 ## Observable information
 
 | Stage | Preserved information |

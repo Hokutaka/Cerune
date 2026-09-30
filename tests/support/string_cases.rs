@@ -114,6 +114,7 @@ pub const CASES: &[(&str, &str)] = &[
     generic_cases::CASES[2],
     length_constant_cases::CASES[0],
     length_constant_cases::CASES[1],
+    concat_cases::OWNED_ARGUMENTS,
     concat_cases::CASES[0],
     concat_cases::CASES[1],
     concat_cases::CASES[2],

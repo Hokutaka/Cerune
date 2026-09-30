@@ -3,6 +3,7 @@
 ; #N identifies one statement or expression in this compilation
 
 ; lower ownership-expression [generated source=0 bytes=19..39]
+; ownership arguments=borrowed
 fn %$ownership0@0() -> string {
   #14 %$owned2@2: string = #2 "日":string
   #16 string.retain #15 %$owned2@2:string
@@ -15,6 +16,7 @@ fn %$ownership0@0() -> string {
 }
 
 ; lower ownership-expression [generated source=0 bytes=57..61]
+; ownership arguments=borrowed
 fn %$ownership1@1(%$owned5@5: string) -> string {
   #30 %$owned6@6: string = #5 %$owned5@5:string
   #32 string.retain #31 %$owned6@6:string
@@ -22,6 +24,7 @@ fn %$ownership1@1(%$owned5@5: string) -> string {
 }
 
 ; lower ownership-expression [generated source=0 bytes=70..87]
+; ownership arguments=borrowed
 fn %$ownership2@2(%$owned7@7: string) -> string {
   #38 %$owned8@8: string = #8 %$owned7@7:string
   #40 string.retain #39 %$owned8@8:string
@@ -34,12 +37,14 @@ fn %$ownership2@2(%$owned7@7: string) -> string {
 }
 
 ; lower ownership-replace [generated source=0 bytes=70..87]
+; ownership arguments=owned
 fn %$ownership3@3(%$owned11@11: string, %$owned12@12: string) -> string {
   #56 string.release #55 %$owned11@11:string
   #58 return #57 %$owned12@12:string
 }
 
 ; lower ownership-expression [generated source=0 bytes=95..100]
+; ownership arguments=borrowed
 fn %$ownership4@4(%$owned13@13: string) -> string {
   #60 %$owned14@14: string = #11 %$owned13@13:string
   #62 string.retain #61 %$owned14@14:string
@@ -47,6 +52,7 @@ fn %$ownership4@4(%$owned13@13: string) -> string {
 }
 
 ; lower ownership-expression [generated source=0 bytes=109..113]
+; ownership arguments=borrowed
 fn %$ownership5@5(%$owned16@16: string) -> string {
   #71 %$owned17@17: string = #13 %$owned16@16:string
   #73 string.retain #72 %$owned17@17:string

@@ -1,0 +1,36 @@
+// 引数を左から準備し、関数へ渡した所有と返却値の寿命を確認します。
+// Check argument order, independent array values, and cleanup after calls.
+fn forward<T>(value: T) -> T { return value; }
+
+fn edit(values: [string; 1]) -> [string; 1] {
+    mut result: infer = values;
+    result[0] = concat("変", "更");
+    return result;
+}
+fn make(label: string) -> [string; 1] {
+    print(label);
+    return [concat(label, "!")];
+}
+fn select(first: [string; 1], second: [string; 1]) -> [string; 1] {
+    print(first);
+    return second;
+}
+fn discard(values: [string; 1], early: bool) -> void {
+    if early { return; }
+    print(values);
+}
+
+mut original: [string; 1] = [concat("保", "存")];
+saved: infer = forward::<[string; 1]>(original);
+original = edit(original);
+print(saved);
+print(original);
+chosen: [string; 1] = select(make("左"), make("右"));
+print(chosen);
+
+// 各returnで一時文字列を解放するため、22バイトの予算で反復できます。
+for (mut i: i64 = 0; i < 100; i = i + 1) {
+    discard([concat("一", "時")], true);
+}
+print(saved == forward::<[string; 1]>(saved));
+print(array_len(chosen));

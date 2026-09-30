@@ -8,11 +8,11 @@ use super::{
 pub fn emit(program: &Program) -> String {
     let mut output = String::new();
     writeln!(output, "; Cerune IR v0.2").unwrap();
-    if program
+    let ownership_lowered = program
         .function_definitions
         .iter()
-        .any(|f| matches!(f.lowering, Some(super::LoweringKind::OwnershipExpression)))
-    {
+        .any(|f| matches!(f.lowering, Some(super::LoweringKind::OwnershipExpression)));
+    if ownership_lowered {
         writeln!(
             output,
             "; string-heap-limit={} bytes (live dynamic payload)",
@@ -144,6 +144,13 @@ pub fn emit(program: &Program) -> String {
                 )
                 .unwrap();
             }
+        }
+        if ownership_lowered {
+            let arguments = match function.argument_ownership() {
+                super::ArgumentOwnership::Owned => "owned",
+                super::ArgumentOwnership::Borrowed => "borrowed",
+            };
+            writeln!(output, "; ownership arguments={arguments}").unwrap();
         }
         write!(output, "fn %{}@{}(", function.name, function.id.0).unwrap();
         for (parameter_index, parameter) in function.parameters.iter().enumerate() {

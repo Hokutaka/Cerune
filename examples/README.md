@@ -102,6 +102,7 @@ cargo run --quiet -- emit-c examples/linear_regression.ceru
 | 構造体 `type Point { ... }` | [product-point.ceru](product-point.ceru)、[product_arrays.ceru](product_arrays.ceru) | フィールド・既定値と、構造体を要素にする配列 |
 | 入れ子の配列・構造体 | [function_values.ceru](function_values.ceru)、[u64_values.ceru](u64_values.ceru)、[string_lookup.ceru](string_lookup.ceru) | 数値や文字列を組み合わせ、関数へ値として渡す |
 | 固定容量と使用数 | [bounded_sequence.ceru](bounded_sequence.ceru) | 空・満杯・不正な使用数を扱う。動的配列ではなく容量4の値 |
+| 関数へ渡す所有と寿命 | [owned_arguments.ceru](owned_arguments.ceru) | 固定長配列の独立性、引数の評価順、未使用引数と返却値の寿命。文字列予算22バイトで反復 |
 | 入れ子のコピーと寿命 | [array_copy_lifetimes.ceru](array_copy_lifetimes.ceru) | 固定長配列に動的文字列を格納し、返却後の生存・範囲コピー・更新の独立性を確認 |
 | 固定容量への範囲コピー | [array_window.ceru](array_window.ceru) | 空・不正範囲、評価順・短絡、元の更新後も独立。借用スライスではない |
 | 複合値の等値比較 | [aggregate_comparison.ceru](aggregate_comparison.ceru) | 配列・構造体・直和型、左右の評価順、定数とジェネリック関数 |

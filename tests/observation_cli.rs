@@ -36,6 +36,19 @@ const OBSERVATION_CASES: &[&str] = &[
 ];
 
 #[test]
+fn owned_call_observations_match_ir_bytecode_and_execution() {
+    for (command, expected) in [
+        ("emit-ir", "ir.ceir"),
+        ("emit-bytecode", "bytecode.cebc"),
+        ("run", "run.stdout"),
+        ("run-ir", "run.stdout"),
+        ("run-vm", "run.stdout"),
+    ] {
+        assert_observation("owned-arguments", command, expected);
+    }
+}
+
+#[test]
 fn rounding_origins_are_visible_in_llvm_and_both_assemblies() {
     for (command, target, file) in [
         ("emit-llvm", "x86_64-unknown-linux-gnu", "llvm.annotated.ll"),
