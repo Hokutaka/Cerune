@@ -1,0 +1,221 @@
+; Cerune bytecode v0.1
+; string-heap-limit=67108864 bytes (live dynamic payload)
+
+.function 0 $equal0(0:$left:[string; 1], 1:$right:[string; 1]) -> bool
+.slot 0 $left [string; 1]
+.slot 1 $right [string; 1]
+.slot 2 mut $index i64
+.slot 3 $owned27 bool
+.slot 4 $owned29 bool
+0000  call 1 0  ; $ownership1
+0001  store 2       ; $index
+0002  load 2        ; $index
+0003  call 2 1  ; $ownership2
+0004  jump-if-false 0018
+0005  load 0        ; $left
+0006  load 2        ; $index
+0007  load 1        ; $right
+0008  call 4 3  ; $ownership4
+0009  jump-if-false 0014
+0010  call 5 0  ; $ownership5
+0011  store 3       ; $owned27
+0012  load 3        ; $owned27
+0013  return.value
+0014  load 2        ; $index
+0015  call 3 1  ; $ownership3
+0016  assign 2      ; $index
+0017  jump 0002
+0018  call 6 0  ; $ownership6
+0019  store 4       ; $owned29
+0020  load 4        ; $owned29
+0021  return.value
+.end
+
+.function 1 $ownership1() -> i64
+.slot 0 $owned4 i64
+0000  push.i64 0
+0001  store 0       ; $owned4
+0002  load 0        ; $owned4
+0003  return.value
+.end
+
+.function 2 $ownership2(0:$owned5:i64) -> bool
+.slot 0 $owned5 i64
+.slot 1 $read6 i64
+.slot 2 $read7 i64
+.slot 3 $owned8 bool
+0000  load 0        ; $owned5
+0001  store 1       ; $read6
+0002  push.i64 1
+0003  store 2       ; $read7
+0004  load 1        ; $read6
+0005  load 2        ; $read7
+0006  lt.i64
+0007  store 3       ; $owned8
+0008  load 3        ; $owned8
+0009  return.value
+.end
+
+.function 3 $ownership3(0:$owned9:i64) -> i64
+.slot 0 $owned9 i64
+.slot 1 $read10 i64
+.slot 2 $read11 i64
+.slot 3 $owned12 i64
+0000  load 0        ; $owned9
+0001  store 1       ; $read10
+0002  push.i64 1
+0003  store 2       ; $read11
+0004  load 1        ; $read10
+0005  load 2        ; $read11
+0006  add.i64
+0007  store 3       ; $owned12
+0008  load 3        ; $owned12
+0009  return.value
+.end
+
+.function 4 $ownership4(0:$owned13:[string; 1], 1:$owned14:i64, 2:$owned15:[string; 1]) -> bool
+.slot 0 $owned13 [string; 1]
+.slot 1 $owned14 i64
+.slot 2 $owned15 [string; 1]
+.slot 3 $read16 [string; 1]
+.slot 4 $read17 i64
+.slot 5 $owned18 i64
+.slot 6 $read19 string
+.slot 7 $read20 [string; 1]
+.slot 8 $read21 i64
+.slot 9 $owned22 i64
+.slot 10 $read23 string
+.slot 11 $owned24 bool
+.slot 12 $owned25 bool
+0000  load 0        ; $owned13
+0001  store 3       ; $read16
+0002  load 1        ; $owned14
+0003  store 4       ; $read17
+0004  load 4        ; $read17
+0005  store 5       ; $owned18
+0006  load 3        ; $read16
+0007  load 5        ; $owned18
+0008  array.get string 1
+0009  store 6       ; $read19
+0010  load 2        ; $owned15
+0011  store 7       ; $read20
+0012  load 1        ; $owned14
+0013  store 8       ; $read21
+0014  load 8        ; $read21
+0015  store 9       ; $owned22
+0016  load 7        ; $read20
+0017  load 9        ; $owned22
+0018  array.get string 1
+0019  store 10       ; $read23
+0020  load 6        ; $read19
+0021  load 10        ; $read23
+0022  eq.string
+0023  store 11       ; $owned24
+0024  load 11        ; $owned24
+0025  not.bool
+0026  store 12       ; $owned25
+0027  load 12        ; $owned25
+0028  return.value
+.end
+
+.function 5 $ownership5() -> bool
+.slot 0 $owned26 bool
+0000  push.bool false
+0001  store 0       ; $owned26
+0002  load 0        ; $owned26
+0003  return.value
+.end
+
+.function 6 $ownership6() -> bool
+.slot 0 $owned28 bool
+0000  push.bool true
+0001  store 0       ; $owned28
+0002  load 0        ; $owned28
+0003  return.value
+.end
+
+.function 7 $ownership7() -> [string; 1]
+.slot 0 $read30 string
+.slot 1 $read31 string
+.slot 2 $owned32 string
+.slot 3 $owned33 [string; 1]
+0000  push.string "a"
+0001  store 0       ; $read30
+0002  push.string "b"
+0003  store 1       ; $read31
+0004  load 0        ; $read30
+0005  load 1        ; $read31
+0006  string.concat.allocate-copy
+0007  store 2       ; $owned32
+0008  load 2        ; $owned32
+0009  array.new string 1
+0010  store 3       ; $owned33
+0011  load 3        ; $owned33
+0012  return.value
+.end
+
+.function 8 $ownership8(0:$owned42:[string; 1]) -> void
+.slot 0 $owned42 [string; 1]
+.slot 1 mut $owned43 i64
+0000  push.i64 1
+0001  store 1       ; $owned43
+0002  load 1        ; $owned43
+0003  push.i64 0
+0004  gt.i64
+0005  jump-if-false 0017
+0006  load 0        ; $owned42
+0007  load 1        ; $owned43
+0008  push.i64 1
+0009  sub.i64
+0010  array.get string 1
+0011  string.release
+0012  load 1        ; $owned43
+0013  push.i64 1
+0014  sub.i64
+0015  assign 1      ; $owned43
+0016  jump 0002
+0017  return
+.end
+
+.slot 0 a [string; 1]
+.slot 1 $read34 [string; 1]
+.slot 2 $owned35 i64
+.slot 3 $read36 [string; 1]
+.slot 4 $owned37 i64
+.slot 5 $read38 string
+.slot 6 $read39 [string; 1]
+.slot 7 $read40 [string; 1]
+.slot 8 $owned41 bool
+
+0000  call 7 0  ; $ownership7
+0001  store 0       ; a
+0002  load 0        ; a
+0003  store 1       ; $read34
+0004  load 1        ; $read34
+0005  array_len [string; 1]
+0006  store 2       ; $owned35
+0007  load 2        ; $owned35
+0008  print.i64
+0009  load 0        ; a
+0010  store 3       ; $read36
+0011  push.i64 0
+0012  store 4       ; $owned37
+0013  load 3        ; $read36
+0014  load 4        ; $owned37
+0015  array.get string 1
+0016  store 5       ; $read38
+0017  load 5        ; $read38
+0018  print.string
+0019  load 0        ; a
+0020  store 6       ; $read39
+0021  load 0        ; a
+0022  store 7       ; $read40
+0023  load 6        ; $read39
+0024  load 7        ; $read40
+0025  call 0 2  ; $equal0
+0026  store 8       ; $owned41
+0027  load 8        ; $owned41
+0028  print.bool
+0029  load 0        ; a
+0030  call 8 1  ; $ownership8
+0031  halt

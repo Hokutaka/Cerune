@@ -4,54 +4,40 @@
 
 ; ownership arguments=owned
 fn %forward@0(%text@0: string) -> string {
-  #18 %$owned4@4: string = #17 call %$ownership2@2(#16 %text@0:string):string
-  #21 string.release #20 %text@0:string
-  #0 return #19 %$owned4@4:string
+  #20 %$owned5@5: string = #19 call %$ownership2@2(#18 %text@0:string):string
   #23 string.release #22 %text@0:string
+  #0 return #21 %$owned5@5:string
+  #25 string.release #24 %text@0:string
 }
 
 ; ownership arguments=owned
 fn %discard@1(%text@1: string) -> void {
-  #25 string.release #24 %text@1:string
+  #27 string.release #26 %text@1:string
 }
 
 ; lower ownership-expression [generated source=0 bytes=44..48]
 ; ownership arguments=borrowed
 fn %$ownership2@2(%$owned2@2: string) -> string {
-  #11 %$owned3@3: string = #1 %$owned2@2:string
-  #13 string.retain #12 %$owned3@3:string
-  #15 return #14 %$owned3@3:string
+  #11 read %$read3@3: string = #1 %$owned2@2:string
+  #13 %$owned4@4: string = #12 %$read3@3:string
+  #15 string.retain #14 %$owned4@4:string
+  #17 return #16 %$owned4@4:string
 }
 
 ; lower ownership-expression [generated source=0 bytes=96..121]
 ; ownership arguments=borrowed
 fn %$ownership3@3() -> string {
-  #26 %$owned5@5: string = #5 "a":string
-  #28 string.retain #27 %$owned5@5:string
-  #31 %$owned6@6: string = #6 "b":string
-  #33 string.retain #32 %$owned6@6:string
-  #36 %$owned7@7: string = #4 string.concat.allocate-copy(#29 %$owned5@5:string, #34 %$owned6@6:string)
-  #37 string.release #35 %$owned6@6:string
-  #38 string.release #30 %$owned5@5:string
-  #41 %$owned8@8: string = #3 call %forward@0(#39 %$owned7@7:string):string
-  #43 return #42 %$owned8@8:string
+  #28 read %$read6@6: string = #5 "a":string
+  #30 read %$read7@7: string = #6 "b":string
+  #32 %$owned8@8: string = #4 string.concat.allocate-copy(#29 %$read6@6:string, #31 %$read7@7:string)
+  #35 %$owned9@9: string = #3 call %forward@0(#33 %$owned8@8:string):string
+  #37 return #36 %$owned9@9:string
 }
 
-; lower ownership-expression [generated source=0 bytes=130..146]
-; ownership arguments=borrowed
-fn %$ownership4@4() -> string {
-  #47 %$owned10@10: string = #9 "c":string
-  #49 string.retain #48 %$owned10@10:string
-  #52 %$owned11@11: string = #10 "d":string
-  #54 string.retain #53 %$owned11@11:string
-  #57 %$owned12@12: string = #8 string.concat.allocate-copy(#50 %$owned10@10:string, #55 %$owned11@11:string)
-  #58 string.release #56 %$owned11@11:string
-  #59 string.release #51 %$owned10@10:string
-  #61 return #60 %$owned12@12:string
-}
-
-#45 %$owned9@9: string = #44 call %$ownership3@3():string
-#2 call %discard@1(#46 %$owned9@9:string)
-#63 %$owned13@13: string = #62 call %$ownership4@4():string
-#7 print.string #64 %$owned13@13:string
-#66 string.release #65 %$owned13@13:string
+#39 %$owned10@10: string = #38 call %$ownership3@3():string
+#2 call %discard@1(#40 %$owned10@10:string)
+#41 read %$read11@11: string = #9 "c":string
+#43 read %$read12@12: string = #10 "d":string
+#45 %$owned13@13: string = #8 string.concat.allocate-copy(#42 %$read11@11:string, #44 %$read12@12:string)
+#7 print.string #47 %$owned13@13:string
+#48 string.release #46 %$owned13@13:string

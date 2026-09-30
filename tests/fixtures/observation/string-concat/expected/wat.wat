@@ -1199,94 +1199,61 @@
     i32.const 0
   )
   (func $cerune_fn__ownership0_0 (result i32)
-    (local $cerune_$owned2 i32)
-    (local $cerune_$owned3 i32)
+    (local $cerune_$read2 i32)
+    (local $cerune_$read3 i32)
     (local $cerune_$owned4 i32)
 
     i32.const 0
-    local.set $cerune_$owned2
-    local.get $cerune_$owned2
-    call $cerune_string_retain
+    local.set $cerune_$read2
     i32.const 11
-    local.set $cerune_$owned3
-    local.get $cerune_$owned3
-    call $cerune_string_retain
-    local.get $cerune_$owned2
-    local.get $cerune_$owned3
+    local.set $cerune_$read3
+    local.get $cerune_$read2
+    local.get $cerune_$read3
     call $cerune_string_concat_n1_b19_39
     local.set $cerune_$owned4
-    local.get $cerune_$owned3
-    call $cerune_string_release
-    local.get $cerune_$owned2
-    call $cerune_string_release
     local.get $cerune_$owned4
     return
   )
   (func $cerune_fn__ownership1_1 (param $cerune_$owned5 i32) (result i32)
-    (local $cerune_$owned6 i32)
+    (local $cerune_$read6 i32)
+    (local $cerune_$owned7 i32)
 
     local.get $cerune_$owned5
-    local.set $cerune_$owned6
-    local.get $cerune_$owned6
-    call $cerune_string_retain
-    local.get $cerune_$owned6
-    return
-  )
-  (func $cerune_fn__ownership2_2 (param $cerune_$owned7 i32) (result i32)
-    (local $cerune_$owned8 i32)
-    (local $cerune_$owned9 i32)
-    (local $cerune_$owned10 i32)
-
+    local.set $cerune_$read6
+    local.get $cerune_$read6
+    local.set $cerune_$owned7
     local.get $cerune_$owned7
-    local.set $cerune_$owned8
-    local.get $cerune_$owned8
     call $cerune_string_retain
+    local.get $cerune_$owned7
+    return
+  )
+  (func $cerune_fn__ownership2_2 (param $cerune_$owned8 i32) (result i32)
+    (local $cerune_$read9 i32)
+    (local $cerune_$read10 i32)
+    (local $cerune_$owned11 i32)
+
+    local.get $cerune_$owned8
+    local.set $cerune_$read9
     i32.const 22
-    local.set $cerune_$owned9
-    local.get $cerune_$owned9
-    call $cerune_string_retain
-    local.get $cerune_$owned8
-    local.get $cerune_$owned9
+    local.set $cerune_$read10
+    local.get $cerune_$read9
+    local.get $cerune_$read10
     call $cerune_string_concat_n7_b70_87
-    local.set $cerune_$owned10
-    local.get $cerune_$owned9
-    call $cerune_string_release
-    local.get $cerune_$owned8
-    call $cerune_string_release
-    local.get $cerune_$owned10
-    return
-  )
-  (func $cerune_fn__ownership3_3 (param $cerune_$owned11 i32) (param $cerune_$owned12 i32) (result i32)
+    local.set $cerune_$owned11
     local.get $cerune_$owned11
-    call $cerune_string_release
+    return
+  )
+  (func $cerune_fn__ownership3_3 (param $cerune_$owned12 i32) (param $cerune_$owned13 i32) (result i32)
     local.get $cerune_$owned12
-    return
-  )
-  (func $cerune_fn__ownership4_4 (param $cerune_$owned13 i32) (result i32)
-    (local $cerune_$owned14 i32)
-
+    call $cerune_string_release
     local.get $cerune_$owned13
-    local.set $cerune_$owned14
-    local.get $cerune_$owned14
-    call $cerune_string_retain
-    local.get $cerune_$owned14
-    return
-  )
-  (func $cerune_fn__ownership5_5 (param $cerune_$owned16 i32) (result i32)
-    (local $cerune_$owned17 i32)
-
-    local.get $cerune_$owned16
-    local.set $cerune_$owned17
-    local.get $cerune_$owned17
-    call $cerune_string_retain
-    local.get $cerune_$owned17
     return
   )
   (func $main
     (local $cerune_text i32)
     (local $cerune_saved i32)
-    (local $cerune_$owned15 i32)
-    (local $cerune_$owned18 i32)
+    (local $cerune_$read14 i32)
+    (local $cerune_$read15 i32)
 
     call $cerune_fn__ownership0_0
     local.set $cerune_text
@@ -1299,19 +1266,13 @@
     call $cerune_fn__ownership3_3
     local.set $cerune_text
     local.get $cerune_saved
-    call $cerune_fn__ownership4_4
-    local.set $cerune_$owned15
-    local.get $cerune_$owned15
+    local.set $cerune_$read14
+    local.get $cerune_$read14
     call $cerune_print_string
-    local.get $cerune_$owned15
-    call $cerune_string_release
     local.get $cerune_text
-    call $cerune_fn__ownership5_5
-    local.set $cerune_$owned18
-    local.get $cerune_$owned18
+    local.set $cerune_$read15
+    local.get $cerune_$read15
     call $cerune_print_string
-    local.get $cerune_$owned18
-    call $cerune_string_release
     local.get $cerune_saved
     call $cerune_string_release
     local.get $cerune_text

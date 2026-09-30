@@ -38,7 +38,8 @@ main:
   leaq .Lcerune_failure_0(%rip), %rdx
   movl $61, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_integer_ok_0:
   movq %rax, %rdx
   leaq .Lcerune_fmt_i64(%rip), %rcx
@@ -56,7 +57,8 @@ main:
   leaq .Lcerune_failure_1(%rip), %rdx
   movl $61, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_integer_ok_1:
   movq %rax, %rdx
   leaq .Lcerune_fmt_i64(%rip), %rcx
@@ -74,7 +76,8 @@ main:
   leaq .Lcerune_failure_2(%rip), %rdx
   movl $62, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_integer_ok_2:
   movq %rax, %rdx
   leaq .Lcerune_fmt_i64(%rip), %rcx
@@ -97,7 +100,8 @@ main:
   leaq .Lcerune_failure_3(%rip), %rdx
   movl $63, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_division_trap_3:
   xorl %ecx, %ecx
   callq fflush
@@ -105,7 +109,8 @@ main:
   leaq .Lcerune_failure_4(%rip), %rdx
   movl $62, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_division_ok_3:
   cqto
   idivq %rcx
@@ -121,7 +126,8 @@ main:
   leaq .Lcerune_failure_5(%rip), %rdx
   movl $63, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_integer_ok_4:
   movq %rax, %rdx
   leaq .Lcerune_fmt_i64(%rip), %rcx

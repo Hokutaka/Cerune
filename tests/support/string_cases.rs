@@ -115,6 +115,8 @@ pub const CASES: &[(&str, &str)] = &[
     length_constant_cases::CASES[0],
     length_constant_cases::CASES[1],
     concat_cases::OWNED_ARGUMENTS,
+    concat_cases::BORROWED_READS,
+    (concat_cases::PROJECTED_TEMPORARIES, "true\n"),
     concat_cases::CASES[0],
     concat_cases::CASES[1],
     concat_cases::CASES[2],

@@ -65,7 +65,8 @@ main:
   leaq .Lcerune_failure_0(%rip), %rdx
   movl $61, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_u64_done_0:
   movq %rax, %rdx
   leaq .Lcerune_fmt_u64(%rip), %rcx
@@ -86,7 +87,8 @@ main:
   leaq .Lcerune_failure_1(%rip), %rdx
   movl $66, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_u64_done_1:
   movq %rax, %rdx
   leaq .Lcerune_fmt_u64(%rip), %rcx
@@ -102,7 +104,8 @@ main:
   leaq .Lcerune_failure_2(%rip), %rdx
   movl $79, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_u64_convert_2_done:
   movq %rax, %rdx
   leaq .Lcerune_fmt_u64(%rip), %rcx

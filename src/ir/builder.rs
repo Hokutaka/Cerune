@@ -276,6 +276,7 @@ impl Builder<'_> {
                     );
 
                 StatementKind::Binding {
+                    borrowed: false,
                     id,
                     mutable: *mutable,
                     name: name.clone(),

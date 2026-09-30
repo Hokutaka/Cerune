@@ -2,100 +2,65 @@
 ; string-heap-limit=67108864 bytes (live dynamic payload)
 
 .function 0 $ownership0() -> string
-.slot 0 $owned2 string
-.slot 1 $owned3 string
+.slot 0 $read2 string
+.slot 1 $read3 string
 .slot 2 $owned4 string
 0000  push.string "日"
-0001  store 0       ; $owned2
-0002  load 0        ; $owned2
-0003  string.retain
-0004  push.string "本"
-0005  store 1       ; $owned3
-0006  load 1        ; $owned3
-0007  string.retain
-0008  load 0        ; $owned2
-0009  load 1        ; $owned3
-0010  string.concat.allocate-copy
-0011  store 2       ; $owned4
-0012  load 1        ; $owned3
-0013  string.release
-0014  load 0        ; $owned2
-0015  string.release
-0016  load 2        ; $owned4
-0017  return.value
+0001  store 0       ; $read2
+0002  push.string "本"
+0003  store 1       ; $read3
+0004  load 0        ; $read2
+0005  load 1        ; $read3
+0006  string.concat.allocate-copy
+0007  store 2       ; $owned4
+0008  load 2        ; $owned4
+0009  return.value
 .end
 
 .function 1 $ownership1(0:$owned5:string) -> string
 .slot 0 $owned5 string
-.slot 1 $owned6 string
+.slot 1 $read6 string
+.slot 2 $owned7 string
 0000  load 0        ; $owned5
-0001  store 1       ; $owned6
-0002  load 1        ; $owned6
-0003  string.retain
-0004  load 1        ; $owned6
-0005  return.value
+0001  store 1       ; $read6
+0002  load 1        ; $read6
+0003  store 2       ; $owned7
+0004  load 2        ; $owned7
+0005  string.retain
+0006  load 2        ; $owned7
+0007  return.value
 .end
 
-.function 2 $ownership2(0:$owned7:string) -> string
-.slot 0 $owned7 string
-.slot 1 $owned8 string
-.slot 2 $owned9 string
-.slot 3 $owned10 string
-0000  load 0        ; $owned7
-0001  store 1       ; $owned8
-0002  load 1        ; $owned8
-0003  string.retain
-0004  push.string "!"
-0005  store 2       ; $owned9
-0006  load 2        ; $owned9
-0007  string.retain
-0008  load 1        ; $owned8
-0009  load 2        ; $owned9
-0010  string.concat.allocate-copy
-0011  store 3       ; $owned10
-0012  load 2        ; $owned9
-0013  string.release
-0014  load 1        ; $owned8
-0015  string.release
-0016  load 3        ; $owned10
-0017  return.value
+.function 2 $ownership2(0:$owned8:string) -> string
+.slot 0 $owned8 string
+.slot 1 $read9 string
+.slot 2 $read10 string
+.slot 3 $owned11 string
+0000  load 0        ; $owned8
+0001  store 1       ; $read9
+0002  push.string "!"
+0003  store 2       ; $read10
+0004  load 1        ; $read9
+0005  load 2        ; $read10
+0006  string.concat.allocate-copy
+0007  store 3       ; $owned11
+0008  load 3        ; $owned11
+0009  return.value
 .end
 
-.function 3 $ownership3(0:$owned11:string, 1:$owned12:string) -> string
-.slot 0 $owned11 string
-.slot 1 $owned12 string
-0000  load 0        ; $owned11
+.function 3 $ownership3(0:$owned12:string, 1:$owned13:string) -> string
+.slot 0 $owned12 string
+.slot 1 $owned13 string
+0000  load 0        ; $owned12
 0001  string.release
-0002  load 1        ; $owned12
+0002  load 1        ; $owned13
 0003  return.value
-.end
-
-.function 4 $ownership4(0:$owned13:string) -> string
-.slot 0 $owned13 string
-.slot 1 $owned14 string
-0000  load 0        ; $owned13
-0001  store 1       ; $owned14
-0002  load 1        ; $owned14
-0003  string.retain
-0004  load 1        ; $owned14
-0005  return.value
-.end
-
-.function 5 $ownership5(0:$owned16:string) -> string
-.slot 0 $owned16 string
-.slot 1 $owned17 string
-0000  load 0        ; $owned16
-0001  store 1       ; $owned17
-0002  load 1        ; $owned17
-0003  string.retain
-0004  load 1        ; $owned17
-0005  return.value
 .end
 
 .slot 0 mut text string
 .slot 1 saved string
-.slot 2 $owned15 string
-.slot 3 $owned18 string
+.slot 2 $read14 string
+.slot 3 $read15 string
 
 0000  call 0 0  ; $ownership0
 0001  store 0       ; text
@@ -108,21 +73,15 @@
 0008  call 3 2  ; $ownership3
 0009  assign 0      ; text
 0010  load 1        ; saved
-0011  call 4 1  ; $ownership4
-0012  store 2       ; $owned15
-0013  load 2        ; $owned15
-0014  print.string
-0015  load 2        ; $owned15
-0016  string.release
-0017  load 0        ; text
-0018  call 5 1  ; $ownership5
-0019  store 3       ; $owned18
-0020  load 3        ; $owned18
-0021  print.string
-0022  load 3        ; $owned18
-0023  string.release
-0024  load 1        ; saved
-0025  string.release
-0026  load 0        ; text
-0027  string.release
-0028  halt
+0011  store 2       ; $read14
+0012  load 2        ; $read14
+0013  print.string
+0014  load 0        ; text
+0015  store 3       ; $read15
+0016  load 3        ; $read15
+0017  print.string
+0018  load 1        ; saved
+0019  string.release
+0020  load 0        ; text
+0021  string.release
+0022  halt

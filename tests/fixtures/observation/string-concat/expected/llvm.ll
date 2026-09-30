@@ -207,110 +207,71 @@ allocation.fail:
 }
 define %cerune.string @cerune.fn._ownership0.0() {
 entry:
-  %cerune_$owned2 = alloca %cerune.string
-  %cerune_$owned3 = alloca %cerune.string
+  %cerune_$read2 = alloca %cerune.string
+  %cerune_$read3 = alloca %cerune.string
   %cerune_$owned4 = alloca %cerune.string
-  store %cerune.string { ptr @cerune.string.0, i64 3 }, ptr %cerune_$owned2
-  %tmp0 = load %cerune.string, ptr %cerune_$owned2
-  call void @cerune.string.retain(%cerune.string %tmp0)
-  store %cerune.string { ptr @cerune.string.1, i64 3 }, ptr %cerune_$owned3
-  %tmp1 = load %cerune.string, ptr %cerune_$owned3
-  call void @cerune.string.retain(%cerune.string %tmp1)
-  %tmp2 = load %cerune.string, ptr %cerune_$owned2
-  %tmp3 = load %cerune.string, ptr %cerune_$owned3
-  %tmp4 = call %cerune.string @cerune.string.concat(%cerune.string %tmp2, %cerune.string %tmp3, ptr @cerune.failure.1.19.39)
-  store %cerune.string %tmp4, ptr %cerune_$owned4
-  %tmp5 = load %cerune.string, ptr %cerune_$owned3
-  call void @cerune.string.release(%cerune.string %tmp5)
-  %tmp6 = load %cerune.string, ptr %cerune_$owned2
-  call void @cerune.string.release(%cerune.string %tmp6)
-  %tmp7 = load %cerune.string, ptr %cerune_$owned4
-  ret %cerune.string %tmp7
+  store %cerune.string { ptr @cerune.string.0, i64 3 }, ptr %cerune_$read2
+  store %cerune.string { ptr @cerune.string.1, i64 3 }, ptr %cerune_$read3
+  %tmp0 = load %cerune.string, ptr %cerune_$read2
+  %tmp1 = load %cerune.string, ptr %cerune_$read3
+  %tmp2 = call %cerune.string @cerune.string.concat(%cerune.string %tmp0, %cerune.string %tmp1, ptr @cerune.failure.1.19.39)
+  store %cerune.string %tmp2, ptr %cerune_$owned4
+  %tmp3 = load %cerune.string, ptr %cerune_$owned4
+  ret %cerune.string %tmp3
 }
 
 define %cerune.string @cerune.fn._ownership1.1(%cerune.string %arg0) {
 entry:
   %cerune_$owned5 = alloca %cerune.string
-  %cerune_$owned6 = alloca %cerune.string
+  %cerune_$read6 = alloca %cerune.string
+  %cerune_$owned7 = alloca %cerune.string
   store %cerune.string %arg0, ptr %cerune_$owned5
   %tmp0 = load %cerune.string, ptr %cerune_$owned5
-  store %cerune.string %tmp0, ptr %cerune_$owned6
-  %tmp1 = load %cerune.string, ptr %cerune_$owned6
-  call void @cerune.string.retain(%cerune.string %tmp1)
-  %tmp2 = load %cerune.string, ptr %cerune_$owned6
-  ret %cerune.string %tmp2
+  store %cerune.string %tmp0, ptr %cerune_$read6
+  %tmp1 = load %cerune.string, ptr %cerune_$read6
+  store %cerune.string %tmp1, ptr %cerune_$owned7
+  %tmp2 = load %cerune.string, ptr %cerune_$owned7
+  call void @cerune.string.retain(%cerune.string %tmp2)
+  %tmp3 = load %cerune.string, ptr %cerune_$owned7
+  ret %cerune.string %tmp3
 }
 
 define %cerune.string @cerune.fn._ownership2.2(%cerune.string %arg0) {
 entry:
-  %cerune_$owned7 = alloca %cerune.string
   %cerune_$owned8 = alloca %cerune.string
-  %cerune_$owned9 = alloca %cerune.string
-  %cerune_$owned10 = alloca %cerune.string
-  store %cerune.string %arg0, ptr %cerune_$owned7
-  %tmp0 = load %cerune.string, ptr %cerune_$owned7
-  store %cerune.string %tmp0, ptr %cerune_$owned8
-  %tmp1 = load %cerune.string, ptr %cerune_$owned8
-  call void @cerune.string.retain(%cerune.string %tmp1)
-  store %cerune.string { ptr @cerune.string.2, i64 1 }, ptr %cerune_$owned9
-  %tmp2 = load %cerune.string, ptr %cerune_$owned9
-  call void @cerune.string.retain(%cerune.string %tmp2)
-  %tmp3 = load %cerune.string, ptr %cerune_$owned8
-  %tmp4 = load %cerune.string, ptr %cerune_$owned9
-  %tmp5 = call %cerune.string @cerune.string.concat(%cerune.string %tmp3, %cerune.string %tmp4, ptr @cerune.failure.7.70.87)
-  store %cerune.string %tmp5, ptr %cerune_$owned10
-  %tmp6 = load %cerune.string, ptr %cerune_$owned9
-  call void @cerune.string.release(%cerune.string %tmp6)
-  %tmp7 = load %cerune.string, ptr %cerune_$owned8
-  call void @cerune.string.release(%cerune.string %tmp7)
-  %tmp8 = load %cerune.string, ptr %cerune_$owned10
-  ret %cerune.string %tmp8
+  %cerune_$read9 = alloca %cerune.string
+  %cerune_$read10 = alloca %cerune.string
+  %cerune_$owned11 = alloca %cerune.string
+  store %cerune.string %arg0, ptr %cerune_$owned8
+  %tmp0 = load %cerune.string, ptr %cerune_$owned8
+  store %cerune.string %tmp0, ptr %cerune_$read9
+  store %cerune.string { ptr @cerune.string.2, i64 1 }, ptr %cerune_$read10
+  %tmp1 = load %cerune.string, ptr %cerune_$read9
+  %tmp2 = load %cerune.string, ptr %cerune_$read10
+  %tmp3 = call %cerune.string @cerune.string.concat(%cerune.string %tmp1, %cerune.string %tmp2, ptr @cerune.failure.7.70.87)
+  store %cerune.string %tmp3, ptr %cerune_$owned11
+  %tmp4 = load %cerune.string, ptr %cerune_$owned11
+  ret %cerune.string %tmp4
 }
 
 define %cerune.string @cerune.fn._ownership3.3(%cerune.string %arg0, %cerune.string %arg1) {
 entry:
-  %cerune_$owned11 = alloca %cerune.string
   %cerune_$owned12 = alloca %cerune.string
-  store %cerune.string %arg0, ptr %cerune_$owned11
-  store %cerune.string %arg1, ptr %cerune_$owned12
-  %tmp0 = load %cerune.string, ptr %cerune_$owned11
-  call void @cerune.string.release(%cerune.string %tmp0)
-  %tmp1 = load %cerune.string, ptr %cerune_$owned12
-  ret %cerune.string %tmp1
-}
-
-define %cerune.string @cerune.fn._ownership4.4(%cerune.string %arg0) {
-entry:
   %cerune_$owned13 = alloca %cerune.string
-  %cerune_$owned14 = alloca %cerune.string
-  store %cerune.string %arg0, ptr %cerune_$owned13
-  %tmp0 = load %cerune.string, ptr %cerune_$owned13
-  store %cerune.string %tmp0, ptr %cerune_$owned14
-  %tmp1 = load %cerune.string, ptr %cerune_$owned14
-  call void @cerune.string.retain(%cerune.string %tmp1)
-  %tmp2 = load %cerune.string, ptr %cerune_$owned14
-  ret %cerune.string %tmp2
-}
-
-define %cerune.string @cerune.fn._ownership5.5(%cerune.string %arg0) {
-entry:
-  %cerune_$owned16 = alloca %cerune.string
-  %cerune_$owned17 = alloca %cerune.string
-  store %cerune.string %arg0, ptr %cerune_$owned16
-  %tmp0 = load %cerune.string, ptr %cerune_$owned16
-  store %cerune.string %tmp0, ptr %cerune_$owned17
-  %tmp1 = load %cerune.string, ptr %cerune_$owned17
-  call void @cerune.string.retain(%cerune.string %tmp1)
-  %tmp2 = load %cerune.string, ptr %cerune_$owned17
-  ret %cerune.string %tmp2
+  store %cerune.string %arg0, ptr %cerune_$owned12
+  store %cerune.string %arg1, ptr %cerune_$owned13
+  %tmp0 = load %cerune.string, ptr %cerune_$owned12
+  call void @cerune.string.release(%cerune.string %tmp0)
+  %tmp1 = load %cerune.string, ptr %cerune_$owned13
+  ret %cerune.string %tmp1
 }
 
 define i32 @main() {
 entry:
   %cerune_text = alloca %cerune.string
   %cerune_saved = alloca %cerune.string
-  %cerune_$owned15 = alloca %cerune.string
-  %cerune_$owned18 = alloca %cerune.string
+  %cerune_$read14 = alloca %cerune.string
+  %cerune_$read15 = alloca %cerune.string
   %tmp0 = call %cerune.string @cerune.fn._ownership0.0()
   store %cerune.string %tmp0, ptr %cerune_text
   %tmp1 = load %cerune.string, ptr %cerune_text
@@ -322,22 +283,16 @@ entry:
   %tmp6 = call %cerune.string @cerune.fn._ownership3.3(%cerune.string %tmp3, %cerune.string %tmp5)
   store %cerune.string %tmp6, ptr %cerune_text
   %tmp7 = load %cerune.string, ptr %cerune_saved
-  %tmp8 = call %cerune.string @cerune.fn._ownership4.4(%cerune.string %tmp7)
-  store %cerune.string %tmp8, ptr %cerune_$owned15
-  %tmp9 = load %cerune.string, ptr %cerune_$owned15
-  call void @cerune.print.string(%cerune.string %tmp9)
-  %tmp10 = load %cerune.string, ptr %cerune_$owned15
-  call void @cerune.string.release(%cerune.string %tmp10)
-  %tmp11 = load %cerune.string, ptr %cerune_text
-  %tmp12 = call %cerune.string @cerune.fn._ownership5.5(%cerune.string %tmp11)
-  store %cerune.string %tmp12, ptr %cerune_$owned18
-  %tmp13 = load %cerune.string, ptr %cerune_$owned18
-  call void @cerune.print.string(%cerune.string %tmp13)
-  %tmp14 = load %cerune.string, ptr %cerune_$owned18
-  call void @cerune.string.release(%cerune.string %tmp14)
-  %tmp15 = load %cerune.string, ptr %cerune_saved
-  call void @cerune.string.release(%cerune.string %tmp15)
-  %tmp16 = load %cerune.string, ptr %cerune_text
-  call void @cerune.string.release(%cerune.string %tmp16)
+  store %cerune.string %tmp7, ptr %cerune_$read14
+  %tmp8 = load %cerune.string, ptr %cerune_$read14
+  call void @cerune.print.string(%cerune.string %tmp8)
+  %tmp9 = load %cerune.string, ptr %cerune_text
+  store %cerune.string %tmp9, ptr %cerune_$read15
+  %tmp10 = load %cerune.string, ptr %cerune_$read15
+  call void @cerune.print.string(%cerune.string %tmp10)
+  %tmp11 = load %cerune.string, ptr %cerune_saved
+  call void @cerune.string.release(%cerune.string %tmp11)
+  %tmp12 = load %cerune.string, ptr %cerune_text
+  call void @cerune.string.release(%cerune.string %tmp12)
   ret i32 0
 }

@@ -45,7 +45,8 @@ cerune_fn_measure_0:
   leaq .Lcerune_failure_0(%rip), %rdx
   movl $63, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_fn_0_convert_done_0:
   movsd %xmm0, -16(%rbp)
   movabsq $2, %rax
@@ -67,7 +68,8 @@ cerune_fn_measure_0:
   leaq .Lcerune_failure_1(%rip), %rdx
   movl $63, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_fn_0_convert_done_1:
   movapd %xmm0, %xmm1
   movsd -16(%rbp), %xmm0
@@ -103,7 +105,8 @@ main:
   leaq .Lcerune_failure_2(%rip), %rdx
   movl $64, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_convert_done_0:
   movsd %xmm0, -16(%rbp)
   movsd -16(%rbp), %xmm0
@@ -139,7 +142,8 @@ main:
   leaq .Lcerune_failure_3(%rip), %rdx
   movl $66, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_convert_bad_1_range:
   xorl %ecx, %ecx
   callq fflush
@@ -147,7 +151,8 @@ main:
   leaq .Lcerune_failure_4(%rip), %rdx
   movl $71, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_convert_bad_1_nan:
   xorl %ecx, %ecx
   callq fflush
@@ -155,7 +160,8 @@ main:
   leaq .Lcerune_failure_5(%rip), %rdx
   movl $62, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_convert_done_1:
   movss %xmm0, -24(%rbp)
   movss -24(%rbp), %xmm0
@@ -180,7 +186,8 @@ main:
   leaq .Lcerune_failure_6(%rip), %rdx
   movl $72, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_convert_bad_2_nonfinite:
   xorl %ecx, %ecx
   callq fflush
@@ -188,7 +195,8 @@ main:
   leaq .Lcerune_failure_7(%rip), %rdx
   movl $69, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_convert_bad_2_finite:
   movabsq $-4548635623644200960, %r11
   movq %r11, %xmm1
@@ -210,7 +218,8 @@ main:
   leaq .Lcerune_failure_8(%rip), %rdx
   movl $66, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_convert_bad_2_range:
   xorl %ecx, %ecx
   callq fflush
@@ -218,7 +227,8 @@ main:
   leaq .Lcerune_failure_9(%rip), %rdx
   movl $71, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_convert_bad_2_nan:
   xorl %ecx, %ecx
   callq fflush
@@ -226,7 +236,8 @@ main:
   leaq .Lcerune_failure_10(%rip), %rdx
   movl $62, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_convert_done_2:
   movq %rax, %rdx
   leaq .Lcerune_fmt_i64(%rip), %rcx
@@ -253,7 +264,8 @@ main:
   leaq .Lcerune_failure_11(%rip), %rdx
   movl $72, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_convert_bad_3_nonfinite:
   xorl %ecx, %ecx
   callq fflush
@@ -261,7 +273,8 @@ main:
   leaq .Lcerune_failure_12(%rip), %rdx
   movl $69, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_convert_bad_3_finite:
   movabsq $-4332462841530417152, %r11
   movq %r11, %xmm1
@@ -283,7 +296,8 @@ main:
   leaq .Lcerune_failure_13(%rip), %rdx
   movl $66, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_convert_bad_3_range:
   xorl %ecx, %ecx
   callq fflush
@@ -291,7 +305,8 @@ main:
   leaq .Lcerune_failure_14(%rip), %rdx
   movl $71, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_convert_bad_3_nan:
   xorl %ecx, %ecx
   callq fflush
@@ -299,7 +314,8 @@ main:
   leaq .Lcerune_failure_15(%rip), %rdx
   movl $62, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_convert_done_3:
   movq %rax, %rdx
   leaq .Lcerune_fmt_i64(%rip), %rcx
@@ -316,7 +332,8 @@ main:
   leaq .Lcerune_failure_16(%rip), %rdx
   movl $66, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_convert_bad_4_range:
   xorl %ecx, %ecx
   callq fflush
@@ -324,7 +341,8 @@ main:
   leaq .Lcerune_failure_17(%rip), %rdx
   movl $71, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_convert_bad_4_nan:
   xorl %ecx, %ecx
   callq fflush
@@ -332,7 +350,8 @@ main:
   leaq .Lcerune_failure_18(%rip), %rdx
   movl $62, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_convert_done_4:
   movsd %xmm0, %xmm1
   movq %xmm1, %rdx
@@ -357,7 +376,8 @@ main:
   leaq .Lcerune_failure_19(%rip), %rdx
   movl $66, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_convert_done_5:
   cvtss2sd %xmm0, %xmm1
   movq %xmm1, %rdx
@@ -405,7 +425,8 @@ main:
   leaq .Lcerune_failure_20(%rip), %rdx
   movl $66, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_convert_bad_6_range:
   xorl %ecx, %ecx
   callq fflush
@@ -413,7 +434,8 @@ main:
   leaq .Lcerune_failure_21(%rip), %rdx
   movl $71, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_convert_bad_6_nan:
   xorl %ecx, %ecx
   callq fflush
@@ -421,7 +443,8 @@ main:
   leaq .Lcerune_failure_22(%rip), %rdx
   movl $62, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_convert_done_6:
   cvtss2sd %xmm0, %xmm1
   movq %xmm1, %rdx

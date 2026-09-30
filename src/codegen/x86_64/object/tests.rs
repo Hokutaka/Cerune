@@ -32,6 +32,7 @@ fn instruction_bytes_match_independent_llvm_assembler_reference() {
         ("idivq %r9", "49f7f9"),
         ("cqto", "4899"),
         ("ud2", "0f0b"),
+        ("int $0x29", "cd29"),
         ("retq", "c3"),
     ] {
         let (bytes, fixup) = encode::instruction(source).unwrap();
@@ -53,6 +54,9 @@ fn invalid_forms_and_unresolved_internal_labels_are_diagnostics() {
         "movq 2147483648(%rbp), %rax",
         "movabsq $18446744073709551616, %rax",
         "setne %rax",
+        "int $256",
+        "int %rcx",
+        "int $0x80",
     ] {
         assert!(encode::instruction(instruction).is_err(), "{instruction}");
     }

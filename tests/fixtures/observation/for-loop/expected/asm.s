@@ -63,7 +63,8 @@ main:
   leaq .Lcerune_failure_0(%rip), %rdx
   movl $64, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_integer_ok_5:
   movq %rax, -8(%rbp)
   jmp .Lcerune_block_1
@@ -81,7 +82,8 @@ main:
   leaq .Lcerune_failure_1(%rip), %rdx
   movl $62, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_integer_ok_6:
   movq %rax, -16(%rbp)
   jmp .Lcerune_block_0

@@ -9,10 +9,11 @@
 | Stage | Status |
 | --- | --- |
 | Argument ownership transfer | Implemented: pass caller-prepared ownership once; the callee releases it. IR distinguishes ownership from internal reading |
-| Dynamic array types, reads versus value copies, and storage management | Not implemented; the next implementation step |
+| Reads and owned-value preparation | Implemented: common IR marks `read` bindings and preserves temporary projection/release order |
+| Dynamic array types, allocation, and independent copies | Not implemented; the next implementation step |
 | Dynamic arrays across backends and the completion criteria below | Not implemented |
 
-The first stage is validated with existing strings and fixed arrays. See [ownership across calls](dynamic-data.en.md#ownership-across-calls) and the [example](../../examples/owned_arguments.ceru). This does not mark `[T]` or the array budget as supported.
+Implemented stages are validated with existing strings and fixed arrays. See [call ownership](dynamic-data.en.md#ownership-across-calls), [read preparation](dynamic-data.en.md#reads-and-owned-value-preparation), and the [argument](../../examples/owned_arguments.ceru) and [read](../../examples/borrowed_reads.ceru) examples. This does not mark `[T]` or the array budget as supported.
 
 ## Types and initial operations
 

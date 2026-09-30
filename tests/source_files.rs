@@ -278,8 +278,10 @@ fn check_execution(program: &ir::Program, output: Output, route: &str) {
                 #[cfg(windows)]
                 {
                     let code = output.status.code().map(|c| c as u32);
-                    if illegal {
+                    if route == "llvm" {
                         assert_eq!(code, Some(0xc000001d), "{route}");
+                    } else if illegal {
+                        assert_eq!(code, Some(0xc0000409), "{route}");
                     } else {
                         assert!(matches!(code, Some(3 | 0xc0000409)), "{route}: {code:?}");
                     }

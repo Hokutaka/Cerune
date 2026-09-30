@@ -210,162 +210,95 @@ allocation.fail:
 ; cerune-origin: synthetic
 define %cerune.string @cerune.fn._ownership0.0() {
 entry:
-  %cerune_$owned2 = alloca %cerune.string
-  %cerune_$owned3 = alloca %cerune.string
+  %cerune_$read2 = alloca %cerune.string
+  %cerune_$read3 = alloca %cerune.string
   %cerune_$owned4 = alloca %cerune.string
 ; cerune-origin: #14 bytes 26..31
-  store %cerune.string { ptr @cerune.string.0, i64 3 }, ptr %cerune_$owned2
+  store %cerune.string { ptr @cerune.string.0, i64 3 }, ptr %cerune_$read2
+; cerune-origin: #16 bytes 33..38
+  store %cerune.string { ptr @cerune.string.1, i64 3 }, ptr %cerune_$read3
 ; cerune-origin: #15 bytes 26..31
-  %tmp0 = load %cerune.string, ptr %cerune_$owned2
-; cerune-origin: #16 bytes 26..31
-  call void @cerune.string.retain(%cerune.string %tmp0)
-; cerune-origin: #19 bytes 33..38
-  store %cerune.string { ptr @cerune.string.1, i64 3 }, ptr %cerune_$owned3
-; cerune-origin: #20 bytes 33..38
-  %tmp1 = load %cerune.string, ptr %cerune_$owned3
-; cerune-origin: #21 bytes 33..38
-  call void @cerune.string.retain(%cerune.string %tmp1)
-; cerune-origin: #17 bytes 26..31
-  %tmp2 = load %cerune.string, ptr %cerune_$owned2
-; cerune-origin: #22 bytes 33..38
-  %tmp3 = load %cerune.string, ptr %cerune_$owned3
+  %tmp0 = load %cerune.string, ptr %cerune_$read2
+; cerune-origin: #17 bytes 33..38
+  %tmp1 = load %cerune.string, ptr %cerune_$read3
 ; cerune-origin: #1 bytes 19..39
-  %tmp4 = call %cerune.string @cerune.string.concat(%cerune.string %tmp2, %cerune.string %tmp3, ptr @cerune.failure.1.19.39)
-; cerune-origin: #24 bytes 19..39
-  store %cerune.string %tmp4, ptr %cerune_$owned4
-; cerune-origin: #23 bytes 33..38
-  %tmp5 = load %cerune.string, ptr %cerune_$owned3
-; cerune-origin: #25 bytes 33..38
-  call void @cerune.string.release(%cerune.string %tmp5)
-; cerune-origin: #18 bytes 26..31
-  %tmp6 = load %cerune.string, ptr %cerune_$owned2
-; cerune-origin: #26 bytes 26..31
-  call void @cerune.string.release(%cerune.string %tmp6)
-; cerune-origin: #27 bytes 19..39
-  %tmp7 = load %cerune.string, ptr %cerune_$owned4
-; cerune-origin: #28 bytes 19..39
-  ret %cerune.string %tmp7
+  %tmp2 = call %cerune.string @cerune.string.concat(%cerune.string %tmp0, %cerune.string %tmp1, ptr @cerune.failure.1.19.39)
+; cerune-origin: #18 bytes 19..39
+  store %cerune.string %tmp2, ptr %cerune_$owned4
+; cerune-origin: #19 bytes 19..39
+  %tmp3 = load %cerune.string, ptr %cerune_$owned4
+; cerune-origin: #20 bytes 19..39
+  ret %cerune.string %tmp3
 }
 
 ; cerune-origin: synthetic
 define %cerune.string @cerune.fn._ownership1.1(%cerune.string %arg0) {
 entry:
   %cerune_$owned5 = alloca %cerune.string
-  %cerune_$owned6 = alloca %cerune.string
+  %cerune_$read6 = alloca %cerune.string
+  %cerune_$owned7 = alloca %cerune.string
   store %cerune.string %arg0, ptr %cerune_$owned5
 ; cerune-origin: #5 bytes 57..61
   %tmp0 = load %cerune.string, ptr %cerune_$owned5
-; cerune-origin: #30 bytes 57..61
-  store %cerune.string %tmp0, ptr %cerune_$owned6
-; cerune-origin: #31 bytes 57..61
-  %tmp1 = load %cerune.string, ptr %cerune_$owned6
-; cerune-origin: #32 bytes 57..61
-  call void @cerune.string.retain(%cerune.string %tmp1)
-; cerune-origin: #33 bytes 57..61
-  %tmp2 = load %cerune.string, ptr %cerune_$owned6
-; cerune-origin: #34 bytes 57..61
-  ret %cerune.string %tmp2
+; cerune-origin: #22 bytes 57..61
+  store %cerune.string %tmp0, ptr %cerune_$read6
+; cerune-origin: #23 bytes 57..61
+  %tmp1 = load %cerune.string, ptr %cerune_$read6
+; cerune-origin: #24 bytes 57..61
+  store %cerune.string %tmp1, ptr %cerune_$owned7
+; cerune-origin: #25 bytes 57..61
+  %tmp2 = load %cerune.string, ptr %cerune_$owned7
+; cerune-origin: #26 bytes 57..61
+  call void @cerune.string.retain(%cerune.string %tmp2)
+; cerune-origin: #27 bytes 57..61
+  %tmp3 = load %cerune.string, ptr %cerune_$owned7
+; cerune-origin: #28 bytes 57..61
+  ret %cerune.string %tmp3
 }
 
 ; cerune-origin: synthetic
 define %cerune.string @cerune.fn._ownership2.2(%cerune.string %arg0) {
 entry:
-  %cerune_$owned7 = alloca %cerune.string
   %cerune_$owned8 = alloca %cerune.string
-  %cerune_$owned9 = alloca %cerune.string
-  %cerune_$owned10 = alloca %cerune.string
-  store %cerune.string %arg0, ptr %cerune_$owned7
+  %cerune_$read9 = alloca %cerune.string
+  %cerune_$read10 = alloca %cerune.string
+  %cerune_$owned11 = alloca %cerune.string
+  store %cerune.string %arg0, ptr %cerune_$owned8
 ; cerune-origin: #8 bytes 77..81
-  %tmp0 = load %cerune.string, ptr %cerune_$owned7
-; cerune-origin: #38 bytes 77..81
-  store %cerune.string %tmp0, ptr %cerune_$owned8
-; cerune-origin: #39 bytes 77..81
-  %tmp1 = load %cerune.string, ptr %cerune_$owned8
-; cerune-origin: #40 bytes 77..81
-  call void @cerune.string.retain(%cerune.string %tmp1)
-; cerune-origin: #43 bytes 83..86
-  store %cerune.string { ptr @cerune.string.2, i64 1 }, ptr %cerune_$owned9
-; cerune-origin: #44 bytes 83..86
-  %tmp2 = load %cerune.string, ptr %cerune_$owned9
-; cerune-origin: #45 bytes 83..86
-  call void @cerune.string.retain(%cerune.string %tmp2)
-; cerune-origin: #41 bytes 77..81
-  %tmp3 = load %cerune.string, ptr %cerune_$owned8
-; cerune-origin: #46 bytes 83..86
-  %tmp4 = load %cerune.string, ptr %cerune_$owned9
+  %tmp0 = load %cerune.string, ptr %cerune_$owned8
+; cerune-origin: #32 bytes 77..81
+  store %cerune.string %tmp0, ptr %cerune_$read9
+; cerune-origin: #34 bytes 83..86
+  store %cerune.string { ptr @cerune.string.2, i64 1 }, ptr %cerune_$read10
+; cerune-origin: #33 bytes 77..81
+  %tmp1 = load %cerune.string, ptr %cerune_$read9
+; cerune-origin: #35 bytes 83..86
+  %tmp2 = load %cerune.string, ptr %cerune_$read10
 ; cerune-origin: #7 bytes 70..87
-  %tmp5 = call %cerune.string @cerune.string.concat(%cerune.string %tmp3, %cerune.string %tmp4, ptr @cerune.failure.7.70.87)
-; cerune-origin: #48 bytes 70..87
-  store %cerune.string %tmp5, ptr %cerune_$owned10
-; cerune-origin: #47 bytes 83..86
-  %tmp6 = load %cerune.string, ptr %cerune_$owned9
-; cerune-origin: #49 bytes 83..86
-  call void @cerune.string.release(%cerune.string %tmp6)
-; cerune-origin: #42 bytes 77..81
-  %tmp7 = load %cerune.string, ptr %cerune_$owned8
-; cerune-origin: #50 bytes 77..81
-  call void @cerune.string.release(%cerune.string %tmp7)
-; cerune-origin: #51 bytes 70..87
-  %tmp8 = load %cerune.string, ptr %cerune_$owned10
-; cerune-origin: #52 bytes 70..87
-  ret %cerune.string %tmp8
+  %tmp3 = call %cerune.string @cerune.string.concat(%cerune.string %tmp1, %cerune.string %tmp2, ptr @cerune.failure.7.70.87)
+; cerune-origin: #36 bytes 70..87
+  store %cerune.string %tmp3, ptr %cerune_$owned11
+; cerune-origin: #37 bytes 70..87
+  %tmp4 = load %cerune.string, ptr %cerune_$owned11
+; cerune-origin: #38 bytes 70..87
+  ret %cerune.string %tmp4
 }
 
 ; cerune-origin: synthetic
 define %cerune.string @cerune.fn._ownership3.3(%cerune.string %arg0, %cerune.string %arg1) {
 entry:
-  %cerune_$owned11 = alloca %cerune.string
   %cerune_$owned12 = alloca %cerune.string
-  store %cerune.string %arg0, ptr %cerune_$owned11
-  store %cerune.string %arg1, ptr %cerune_$owned12
-; cerune-origin: #55 bytes 70..87
-  %tmp0 = load %cerune.string, ptr %cerune_$owned11
-; cerune-origin: #56 bytes 70..87
-  call void @cerune.string.release(%cerune.string %tmp0)
-; cerune-origin: #57 bytes 70..87
-  %tmp1 = load %cerune.string, ptr %cerune_$owned12
-; cerune-origin: #58 bytes 70..87
-  ret %cerune.string %tmp1
-}
-
-; cerune-origin: synthetic
-define %cerune.string @cerune.fn._ownership4.4(%cerune.string %arg0) {
-entry:
   %cerune_$owned13 = alloca %cerune.string
-  %cerune_$owned14 = alloca %cerune.string
-  store %cerune.string %arg0, ptr %cerune_$owned13
-; cerune-origin: #11 bytes 95..100
-  %tmp0 = load %cerune.string, ptr %cerune_$owned13
-; cerune-origin: #60 bytes 95..100
-  store %cerune.string %tmp0, ptr %cerune_$owned14
-; cerune-origin: #61 bytes 95..100
-  %tmp1 = load %cerune.string, ptr %cerune_$owned14
-; cerune-origin: #62 bytes 95..100
-  call void @cerune.string.retain(%cerune.string %tmp1)
-; cerune-origin: #63 bytes 95..100
-  %tmp2 = load %cerune.string, ptr %cerune_$owned14
-; cerune-origin: #64 bytes 95..100
-  ret %cerune.string %tmp2
-}
-
-; cerune-origin: synthetic
-define %cerune.string @cerune.fn._ownership5.5(%cerune.string %arg0) {
-entry:
-  %cerune_$owned16 = alloca %cerune.string
-  %cerune_$owned17 = alloca %cerune.string
-  store %cerune.string %arg0, ptr %cerune_$owned16
-; cerune-origin: #13 bytes 109..113
-  %tmp0 = load %cerune.string, ptr %cerune_$owned16
-; cerune-origin: #71 bytes 109..113
-  store %cerune.string %tmp0, ptr %cerune_$owned17
-; cerune-origin: #72 bytes 109..113
-  %tmp1 = load %cerune.string, ptr %cerune_$owned17
-; cerune-origin: #73 bytes 109..113
-  call void @cerune.string.retain(%cerune.string %tmp1)
-; cerune-origin: #74 bytes 109..113
-  %tmp2 = load %cerune.string, ptr %cerune_$owned17
-; cerune-origin: #75 bytes 109..113
-  ret %cerune.string %tmp2
+  store %cerune.string %arg0, ptr %cerune_$owned12
+  store %cerune.string %arg1, ptr %cerune_$owned13
+; cerune-origin: #41 bytes 70..87
+  %tmp0 = load %cerune.string, ptr %cerune_$owned12
+; cerune-origin: #42 bytes 70..87
+  call void @cerune.string.release(%cerune.string %tmp0)
+; cerune-origin: #43 bytes 70..87
+  %tmp1 = load %cerune.string, ptr %cerune_$owned13
+; cerune-origin: #44 bytes 70..87
+  ret %cerune.string %tmp1
 }
 
 ; cerune-origin: synthetic
@@ -373,64 +306,52 @@ define i32 @main() {
 entry:
   %cerune_text = alloca %cerune.string
   %cerune_saved = alloca %cerune.string
-  %cerune_$owned15 = alloca %cerune.string
-  %cerune_$owned18 = alloca %cerune.string
-; cerune-origin: #29 bytes 19..39
+  %cerune_$read14 = alloca %cerune.string
+  %cerune_$read15 = alloca %cerune.string
+; cerune-origin: #21 bytes 19..39
   %tmp0 = call %cerune.string @cerune.fn._ownership0.0()
 ; cerune-origin: #0 bytes 0..40
   store %cerune.string %tmp0, ptr %cerune_text
-; cerune-origin: #35 bytes 57..61
+; cerune-origin: #29 bytes 57..61
   %tmp1 = load %cerune.string, ptr %cerune_text
-; cerune-origin: #36 bytes 57..61
+; cerune-origin: #30 bytes 57..61
   %tmp2 = call %cerune.string @cerune.fn._ownership1.1(%cerune.string %tmp1)
 ; cerune-origin: #4 bytes 41..62
   store %cerune.string %tmp2, ptr %cerune_saved
-; cerune-origin: #37 bytes 63..88
+; cerune-origin: #31 bytes 63..88
   %tmp3 = load %cerune.string, ptr %cerune_text
-; cerune-origin: #53 bytes 77..81
+; cerune-origin: #39 bytes 77..81
   %tmp4 = load %cerune.string, ptr %cerune_text
-; cerune-origin: #54 bytes 70..87
+; cerune-origin: #40 bytes 70..87
   %tmp5 = call %cerune.string @cerune.fn._ownership2.2(%cerune.string %tmp4)
-; cerune-origin: #59 bytes 70..87
+; cerune-origin: #45 bytes 70..87
   %tmp6 = call %cerune.string @cerune.fn._ownership3.3(%cerune.string %tmp3, %cerune.string %tmp5)
 ; cerune-origin: #6 bytes 63..88
   store %cerune.string %tmp6, ptr %cerune_text
-; cerune-origin: #65 bytes 95..100
+; cerune-origin: #11 bytes 95..100
   %tmp7 = load %cerune.string, ptr %cerune_saved
-; cerune-origin: #66 bytes 95..100
-  %tmp8 = call %cerune.string @cerune.fn._ownership4.4(%cerune.string %tmp7)
-; cerune-origin: #67 bytes 95..100
-  store %cerune.string %tmp8, ptr %cerune_$owned15
-; cerune-origin: #68 bytes 95..100
-  %tmp9 = load %cerune.string, ptr %cerune_$owned15
+; cerune-origin: #46 bytes 95..100
+  store %cerune.string %tmp7, ptr %cerune_$read14
+; cerune-origin: #48 bytes 95..100
+  %tmp8 = load %cerune.string, ptr %cerune_$read14
 ; cerune-origin: #10 bytes 89..102
-  call void @cerune.print.string(%cerune.string %tmp9)
-; cerune-origin: #69 bytes 95..100
-  %tmp10 = load %cerune.string, ptr %cerune_$owned15
-; cerune-origin: #70 bytes 95..100
-  call void @cerune.string.release(%cerune.string %tmp10)
-; cerune-origin: #76 bytes 109..113
-  %tmp11 = load %cerune.string, ptr %cerune_text
-; cerune-origin: #77 bytes 109..113
-  %tmp12 = call %cerune.string @cerune.fn._ownership5.5(%cerune.string %tmp11)
-; cerune-origin: #78 bytes 109..113
-  store %cerune.string %tmp12, ptr %cerune_$owned18
-; cerune-origin: #79 bytes 109..113
-  %tmp13 = load %cerune.string, ptr %cerune_$owned18
+  call void @cerune.print.string(%cerune.string %tmp8)
+; cerune-origin: #13 bytes 109..113
+  %tmp9 = load %cerune.string, ptr %cerune_text
+; cerune-origin: #49 bytes 109..113
+  store %cerune.string %tmp9, ptr %cerune_$read15
+; cerune-origin: #51 bytes 109..113
+  %tmp10 = load %cerune.string, ptr %cerune_$read15
 ; cerune-origin: #12 bytes 103..115
-  call void @cerune.print.string(%cerune.string %tmp13)
-; cerune-origin: #80 bytes 109..113
-  %tmp14 = load %cerune.string, ptr %cerune_$owned18
-; cerune-origin: #81 bytes 109..113
-  call void @cerune.string.release(%cerune.string %tmp14)
-; cerune-origin: #82 bytes 41..62
-  %tmp15 = load %cerune.string, ptr %cerune_saved
-; cerune-origin: #83 bytes 41..62
-  call void @cerune.string.release(%cerune.string %tmp15)
-; cerune-origin: #84 bytes 0..40
-  %tmp16 = load %cerune.string, ptr %cerune_text
-; cerune-origin: #85 bytes 0..40
-  call void @cerune.string.release(%cerune.string %tmp16)
+  call void @cerune.print.string(%cerune.string %tmp10)
+; cerune-origin: #52 bytes 41..62
+  %tmp11 = load %cerune.string, ptr %cerune_saved
+; cerune-origin: #53 bytes 41..62
+  call void @cerune.string.release(%cerune.string %tmp11)
+; cerune-origin: #54 bytes 0..40
+  %tmp12 = load %cerune.string, ptr %cerune_text
+; cerune-origin: #55 bytes 0..40
+  call void @cerune.string.release(%cerune.string %tmp12)
 ; cerune-origin: synthetic
   ret i32 0
 }

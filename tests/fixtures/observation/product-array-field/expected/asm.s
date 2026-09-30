@@ -80,7 +80,8 @@ main:
   leaq .Lcerune_failure_0(%rip), %rdx
   movl $73, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_array_done_0:
   movq %rax, %rdx
   leaq .Lcerune_fmt_i64(%rip), %rcx
@@ -100,7 +101,8 @@ main:
   leaq .Lcerune_failure_1(%rip), %rdx
   movl $73, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_array_done_1:
   movq %rax, %rdx
   leaq .Lcerune_fmt_i64(%rip), %rcx

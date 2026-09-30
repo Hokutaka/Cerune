@@ -121,7 +121,8 @@ main:
   leaq .Lcerune_failure_0(%rip), %rdx
   movl $67, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_floor_0_minimum:
 .Lcerune_main_floor_0_maximum:
   xorl %ecx, %ecx
@@ -130,7 +131,8 @@ main:
   leaq .Lcerune_failure_1(%rip), %rdx
   movl $69, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_floor_0_done:
   movq %rax, %rdx
   leaq .Lcerune_fmt_i64(%rip), %rcx
@@ -195,7 +197,8 @@ main:
   leaq .Lcerune_failure_2(%rip), %rdx
   movl $69, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_ceil_1_minimum:
 .Lcerune_main_ceil_1_maximum:
   xorl %ecx, %ecx
@@ -204,7 +207,8 @@ main:
   leaq .Lcerune_failure_3(%rip), %rdx
   movl $71, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_ceil_1_done:
   movq %rax, %rdx
   leaq .Lcerune_fmt_i64(%rip), %rcx
@@ -272,7 +276,8 @@ main:
   leaq .Lcerune_failure_4(%rip), %rdx
   movl $69, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_round_2_minimum:
 .Lcerune_main_round_2_maximum:
   xorl %ecx, %ecx
@@ -281,7 +286,8 @@ main:
   leaq .Lcerune_failure_5(%rip), %rdx
   movl $71, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_round_2_done:
   movq %rax, %rdx
   leaq .Lcerune_fmt_i64(%rip), %rcx
@@ -359,7 +365,8 @@ main:
   leaq .Lcerune_failure_6(%rip), %rdx
   movl $69, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_round_ties_even_3_minimum:
 .Lcerune_main_round_ties_even_3_maximum:
   xorl %ecx, %ecx
@@ -368,7 +375,8 @@ main:
   leaq .Lcerune_failure_7(%rip), %rdx
   movl $71, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_round_ties_even_3_done:
   movq %rax, %rdx
   leaq .Lcerune_fmt_i64(%rip), %rcx

@@ -5,6 +5,7 @@ pub enum Expected {
     Abort,
     CheckedCFailure,
     IllegalInstruction,
+    NativeTrap,
 }
 
 fn matches(output: &Output, expected: Expected) -> bool {
@@ -15,7 +16,7 @@ fn matches(output: &Output, expected: Expected) -> bool {
         output.status.signal()
             == Some(match expected {
                 Expected::Abort | Expected::CheckedCFailure => 6,
-                Expected::IllegalInstruction => 4,
+                Expected::IllegalInstruction | Expected::NativeTrap => 4,
             })
     };
     #[cfg(windows)]
@@ -24,12 +25,13 @@ fn matches(output: &Output, expected: Expected) -> bool {
             output.status.code().map(|code| code as u32),
             Some(3 | 0xc0000409)
         ),
+        Expected::NativeTrap => output.status.code().map(|code| code as u32) == Some(0xc0000409),
         Expected::IllegalInstruction => {
             output.status.code().map(|code| code as u32) == Some(0xc000001d)
         }
     };
     matches
-        && (!matches!(expected, Expected::CheckedCFailure)
+        && (!matches!(expected, Expected::CheckedCFailure | Expected::NativeTrap)
             || output.stderr.starts_with(b"cerune: "))
 }
 
@@ -45,7 +47,7 @@ pub fn assert_expected(output: &Output, expected: Expected, context: &str) {
         "{context}: unexpected output before failure: {:?}",
         output.stdout
     );
-    if matches!(expected, Expected::CheckedCFailure) {
+    if matches!(expected, Expected::CheckedCFailure | Expected::NativeTrap) {
         let cerune_lang::RunError::Execution(error) = cerune_lang::run_vm(context).unwrap_err()
         else {
             panic!("expected runtime failure")
@@ -74,6 +76,7 @@ fn unrelated_crashes_and_success_are_not_expected_failures() {
         Expected::Abort,
         Expected::CheckedCFailure,
         Expected::IllegalInstruction,
+        Expected::NativeTrap,
     ] {
         for code in [0, 11, 0xc0000005u32 as i32] {
             let output = Output {
@@ -83,6 +86,23 @@ fn unrelated_crashes_and_success_are_not_expected_failures() {
             };
             assert!(!matches(&output, expected));
         }
+    }
+    #[cfg(windows)]
+    for (code, stderr) in [
+        (
+            0xc000001du32,
+            b"cerune: runtime-v1 code=division-by-zero".to_vec(),
+        ),
+        (0xc0000409u32, vec![]),
+    ] {
+        assert!(!matches(
+            &Output {
+                status: status(code as i32),
+                stdout: vec![],
+                stderr,
+            },
+            Expected::NativeTrap
+        ));
     }
     let illegal = if cfg!(windows) {
         0xc000001du32 as i32

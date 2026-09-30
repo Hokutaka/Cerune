@@ -83,6 +83,10 @@ fn budgets_cleanup_and_failure_origins_match_all_available_routes() {
     };
     let cerune = env!("CARGO_BIN_EXE_cerune");
     for (case, (source, limit, expected)) in [
+        (concat_cases::BORROWED_READS.0, 30, Some(concat_cases::BORROWED_READS.1)),
+        (concat_cases::BORROWED_READS.0, 29, None),
+        (concat_cases::PROJECTED_TEMPORARIES, 6, Some("true\n")),
+        (concat_cases::PROJECTED_TEMPORARIES, 5, None),
         (concat_cases::OWNED_ARGUMENTS.0, 22, Some(concat_cases::OWNED_ARGUMENTS.1)),
         (concat_cases::OWNED_ARGUMENTS.0, 15, None),
         (concat_cases::OWNED_ARGUMENTS.0, 19, None),
@@ -147,7 +151,7 @@ fn budgets_cleanup_and_failure_origins_match_all_available_routes() {
                 #[cfg(windows)] {
                     let status = actual.status.code().map(|n| n as u32);
                     if route == "c" { assert!(matches!(status,Some(3|0xc0000409))); }
-                    else { assert_eq!(status,Some(0xc000001d)); }
+                    else { assert_eq!(status,Some(if route=="llvm" {0xc000001d} else {0xc0000409}), "case {case}/{route}: {}", String::from_utf8_lossy(&actual.stderr)); }
                 }
             }
             assert_eq!(actual.stdout, vm.stdout.repeat(repeats), "case {case}/{route}");
@@ -343,7 +347,15 @@ fn allocator_failures_remain_distinct_from_budget_failures() {
             if route == "c" {
                 assert!(matches!(status, Some(3 | 0xc0000409)));
             } else {
-                assert_eq!(status, Some(0xc000001d));
+                assert_eq!(
+                    status,
+                    Some(if route == "llvm" {
+                        0xc000001d
+                    } else {
+                        0xc0000409
+                    }),
+                    "{route}"
+                );
             }
         }
     }

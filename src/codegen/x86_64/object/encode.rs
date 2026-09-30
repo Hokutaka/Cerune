@@ -313,7 +313,9 @@ fn validate(name: &str, args: &[Operand]) -> Result<(), String> {
     } else if let [Operand::Immediate(_), a, b] = args {
         name == "imulq" && (gp(a, 64) || memory(a)) && gp(b, 64)
     } else if let [op] = args {
-        if name.starts_with("set") {
+        if name == "int" {
+            matches!(op, Operand::Immediate(0x29))
+        } else if name.starts_with("set") {
             gp(op, 8)
         } else {
             gp(op, 64) || memory(op) || matches!(op, Operand::Label(_))
@@ -329,6 +331,9 @@ fn validate(name: &str, args: &[Operand]) -> Result<(), String> {
 }
 
 fn encode(name: &str, args: &[Operand]) -> Result<(Vec<u8>, Option<Fixup>), String> {
+    if name == "int" && matches!(args, [Operand::Immediate(0x29)]) {
+        return Ok((vec![0xcd, 0x29], None));
+    }
     if args.is_empty() {
         return Ok((
             match name {

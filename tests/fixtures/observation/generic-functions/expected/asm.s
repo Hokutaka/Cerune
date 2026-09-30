@@ -43,7 +43,8 @@ cerune_fn__generic_0_first_0:
   leaq .Lcerune_failure_0(%rip), %rdx
   movl $70, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_fn_0_array_done_0:
   addq $80, %rsp
   popq %rbp
@@ -71,7 +72,8 @@ cerune_fn__generic_1_first_1:
   leaq .Lcerune_failure_1(%rip), %rdx
   movl $70, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_fn_1_array_done_0:
   addq $64, %rsp
   popq %rbp
@@ -101,7 +103,8 @@ main:
   leaq .Lcerune_failure_2(%rip), %rdx
   movl $64, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_integer_ok_0:
   movq %rax, -120(%rbp)
   leaq -120(%rbp), %rcx

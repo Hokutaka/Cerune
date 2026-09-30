@@ -10,7 +10,7 @@
 | --- | --- |
 | IR Executor | `run`／`run-ir`でソース位置付き診断、明示的な`runtime-v1`形式。CLI終了コード1 |
 | VM | `run-vm`で既定の人向け診断と、明示的な`runtime-v1`形式 |
-| Windows/Linux直接ASM | 言語の検査失敗時に`runtime-v1`をstderrへ出し、不正命令で停止 |
+| Windows/Linux直接ASM | `runtime-v1`をstderrへ出し、Windowsはfast-fail、Linuxは不正命令で停止 |
 | 自前エンコーダのCOFF/ELF | ASMと同じlowering・診断処理を符号化 |
 | C | `runtime-v1`をC標準のstderrへ出し、`abort`で停止 |
 | LLVM | 明示したWindows/Linuxの出力ABIで`runtime-v1`を出し、trapで停止 |
@@ -66,9 +66,11 @@ cerune run examples/runtime_failures/function_division.ceru --diagnostic-format 
 
 `run`／`run-ir`は停止理由とソース位置、`run-vm`は従来のソース位置・bytecode位置付き診断を使います。`--diagnostic-format runtime-v1`で言語の検査失敗を共通形式にします。VMは終了コード1です。`ExecutionError::runtime_failure()`で構造化された理由と範囲を取得できます。
 
-失敗より前に実行した`print`は取り消しません。VMは`VmError::output()`にその出力を保持し、CLIもstdoutへ表示します。ネイティブでは失敗時に既存のstdoutバッファをflushしてからstderrへレコードを書き、不正命令`ud2`で停止します。stdoutとstderrを混ぜた表示順までは保証しません。Windowsで文字列を含むプログラムのstdoutは従来通りバイナリ出力です。
+失敗より前に実行した`print`は取り消しません。VMは`VmError::output()`にその出力を保持し、CLIもstdoutへ表示します。直接ASM・自前objectでは、失敗時に既存のstdoutバッファをflushしてからstderrへレコードを書きます。Linuxは`ud2`、Windowsは`FAST_FAIL_FATAL_APP_EXIT`（rcx=7、`int 0x29`、終了状態`0xc0000409`）で停止します。stdoutとstderrを混ぜた表示順までは保証しません。Windowsで文字列を含むプログラムのstdoutは従来通りバイナリ出力です。
 
-書き込みは明示したターゲットのLinux `write` / Windows `_write`を使います。stderrの改行は比較時にCRLF/LFを揃えます。標準エラーが閉じられている、書き込みが途中で失敗する、等の場合にも元の不正命令停止を試みますが、完全な診断の配送までは保証しません。観測ツールは欠けたレコードを合格にしません。
+書き込みは明示したターゲットのLinux `write` / Windows `_write`を使います。stderrの改行は比較時にCRLF/LFを揃えます。標準エラーが閉じられている、書き込みが途中で失敗する、等の場合にもターゲットに応じた停止を試みますが、完全な診断の配送までは保証しません。観測ツールは欠けたレコードを合格にしません。
+
+Windowsの自前ASM/COFFは現時点で巻き戻し情報を出していません。深い生成スタックからの`ud2`では、元の不正命令例外の後にOS側で別の失敗へ変わる例を確認しました。言語の検査失敗は、例外ハンドラーを呼ばず直接停止する[fast-fail](https://learn.microsoft.com/en-us/cpp/intrinsics/fastfail?view=msvc-170)へ明示的に出力します（Windows 8以降）。コード7はOS側の停止理由で、Ceruneの具体的な理由・位置は`runtime-v1`が持ちます。終了コードだけで合格にせず記録と先行出力を照合します。デバッガでのスタック復元に必要な[巻き戻し情報](https://learn.microsoft.com/en-us/cpp/build/exception-handling-x64?view=msvc-170)の生成は別途必要です。
 
 ## 実装上の判断
 
@@ -98,7 +100,7 @@ CIは利用するツールをすべて指定します。ローカルで未設定
 
 [意図した停止の4例](../../examples/runtime_failures/README.md)で、桁あふれ、入れ子の配列代入、関数内のゼロ除算、同じ関数の正常・短絡・失敗の順序を辿れます。正常終了のサンプルと混ぜず、期待する停止理由を表で示しています。
 
-`observe-native.cjs --run --expect-trap`はVMを共通形式で実行し、理由・NodeId・バイト範囲・停止前の出力をネイティブと比較します。さらにSIGILL / Windows不正命令終了を確認します。診断だけ一致する通常終了、レコードなしのクラッシュ、追加エラー、タイムアウトは合格にしません。manifestの`runtimeFailure`には照合できたレコードを保持します。
+`observe-native.cjs --run --expect-trap`はVMを共通形式で実行し、理由・NodeId・バイト範囲・停止前の出力をネイティブと比較します。さらにSIGILL / Windows fast-fail終了を確認します。診断だけ一致する通常終了、レコードなしのクラッシュ、追加エラー、タイムアウトは合格にしません。manifestの`runtimeFailure`には照合できたレコードを保持します。
 
 49種類の失敗を既知の理由と比較し、Windows/Linux双方のASMと自前オブジェクトをVMと照合します。Unicode・CRLF、短絡評価、関数の呼び出し、既定フィールドの式、変換の境界値、出力の保持も含みます。通常の50サンプルと全既存テストも検証対象です。
 

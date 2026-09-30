@@ -111,7 +111,7 @@ function observe(options) {
       report.outputComparison = windows && !strings ? 'numeric-windows-crlf-to-lf' : 'exact-bytes';
       const actual = windows && !strings ? Buffer.from(native.stdout.toString('utf8').replace(/\r\n/g, '\n')) : native.stdout;
       if (options['--expect-trap']) {
-        const trapped = windows ? native.status !== null && (native.status >>> 0) === 0xc000001d : native.signal === 'SIGILL';
+        const trapped = windows ? native.status !== null && (native.status >>> 0) === 0xc0000409 : native.signal === 'SIGILL';
         const expectedFailure = parseRuntimeFailure(vm.stderr);
         const nativeFailure = parseRuntimeFailure(native.stderr);
         if (vm.status !== 1 || !trapped || !expectedFailure || !nativeFailure

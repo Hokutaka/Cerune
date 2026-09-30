@@ -37,7 +37,8 @@ cerune_fn_add_0:
   leaq .Lcerune_failure_0(%rip), %rdx
   movl $61, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_fn_0_integer_ok_0:
   addq $80, %rsp
   popq %rbp

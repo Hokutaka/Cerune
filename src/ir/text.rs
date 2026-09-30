@@ -194,6 +194,7 @@ fn emit_statement(statement: &Statement, indent: usize, program: &Program, outpu
 
     match &statement.kind {
         StatementKind::Binding {
+            borrowed,
             id,
             mutable,
             name,
@@ -207,6 +208,9 @@ fn emit_statement(statement: &Statement, indent: usize, program: &Program, outpu
             } else {
                 output.push_str(&prefix);
                 output.push_str(&node);
+            }
+            if *borrowed {
+                output.push_str("read ");
             }
             write!(output, "%{name}@{}: {} = ", id.0, type_name(ty, program)).unwrap();
             emit_expr(value, program, output);

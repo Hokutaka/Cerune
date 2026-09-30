@@ -68,7 +68,8 @@ main:
   leaq .Lcerune_failure_0(%rip), %rdx
   movl $61, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
   jmp .Lcerune_main_integer_done_0
 .Lcerune_main_integer_bad_0:
   xorl %ecx, %ecx
@@ -77,7 +78,8 @@ main:
   leaq .Lcerune_failure_1(%rip), %rdx
   movl $64, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_integer_done_0:
   # semantic u8, storage i64
   movabsq $0, %r11
@@ -93,7 +95,8 @@ main:
   leaq .Lcerune_failure_2(%rip), %rdx
   movl $61, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_range_ok_1:
   movq %rax, -8(%rbp)
   movq -8(%rbp), %rax
@@ -118,7 +121,8 @@ main:
   leaq .Lcerune_failure_3(%rip), %rdx
   movl $66, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_integer_done_2:
   # semantic u8, storage i64
   movabsq $0, %r11
@@ -134,7 +138,8 @@ main:
   leaq .Lcerune_failure_4(%rip), %rdx
   movl $63, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_range_ok_3:
   movq %rax, %rdx
   leaq .Lcerune_fmt_i64(%rip), %rcx
@@ -156,7 +161,8 @@ main:
   leaq .Lcerune_failure_5(%rip), %rdx
   movl $64, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_range_ok_4:
   movq %rax, %rdx
   leaq .Lcerune_fmt_i64(%rip), %rcx
@@ -192,7 +198,8 @@ main:
   leaq .Lcerune_failure_6(%rip), %rdx
   movl $64, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_range_ok_6:
   movq %rax, %rcx
   movq -16(%rbp), %rax
@@ -211,7 +218,8 @@ main:
   leaq .Lcerune_failure_7(%rip), %rdx
   movl $64, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_range_ok_8:
   movq %rax, %rdx
   leaq .Lcerune_fmt_i64(%rip), %rcx
@@ -236,7 +244,8 @@ main:
   leaq .Lcerune_failure_8(%rip), %rdx
   movl $64, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_range_ok_10:
   movq %rax, %rdx
   leaq .Lcerune_fmt_i64(%rip), %rcx
@@ -250,7 +259,8 @@ main:
   leaq .Lcerune_failure_9(%rip), %rdx
   movl $64, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_integer_ok_11:
   movq %rax, -16(%rbp)
   movabsq $3, %rax
@@ -274,7 +284,8 @@ main:
   leaq .Lcerune_failure_10(%rip), %rdx
   movl $65, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_integer_done_12:
   movq %rax, %rdx
   leaq .Lcerune_fmt_i64(%rip), %rcx
@@ -290,7 +301,8 @@ main:
   leaq .Lcerune_failure_11(%rip), %rdx
   movl $64, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_integer_ok_13:
   movq %rax, %rcx
   movq -16(%rbp), %rax
@@ -312,7 +324,8 @@ main:
   leaq .Lcerune_failure_12(%rip), %rdx
   movl $65, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_integer_done_14:
   movq %rax, %rdx
   leaq .Lcerune_fmt_i64(%rip), %rcx
@@ -326,7 +339,8 @@ main:
   leaq .Lcerune_failure_13(%rip), %rdx
   movl $64, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_integer_ok_15:
   # semantic i8, storage i64
   movabsq $-128, %r11
@@ -342,7 +356,8 @@ main:
   leaq .Lcerune_failure_14(%rip), %rdx
   movl $64, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_range_ok_16:
   movq %rax, -16(%rbp)
   movabsq $1, %rax
@@ -361,7 +376,8 @@ main:
   leaq .Lcerune_failure_15(%rip), %rdx
   movl $67, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_integer_done_17:
   # semantic i8, storage i64
   movabsq $-128, %r11
@@ -377,7 +393,8 @@ main:
   leaq .Lcerune_failure_16(%rip), %rdx
   movl $64, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_range_ok_18:
   movq %rax, %rdx
   leaq .Lcerune_fmt_i64(%rip), %rcx
@@ -411,7 +428,8 @@ main:
   leaq .Lcerune_failure_17(%rip), %rdx
   movl $64, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
   jmp .Lcerune_main_integer_done_21
 .Lcerune_main_integer_bad_21:
   xorl %ecx, %ecx
@@ -420,7 +438,8 @@ main:
   leaq .Lcerune_failure_18(%rip), %rdx
   movl $67, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_integer_done_21:
   # semantic u8, storage i64
   movabsq $0, %r11
@@ -436,7 +455,8 @@ main:
   leaq .Lcerune_failure_19(%rip), %rdx
   movl $64, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_range_ok_22:
   movq %rax, -16(%rbp)
   movabsq $0, %rax

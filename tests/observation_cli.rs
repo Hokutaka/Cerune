@@ -45,6 +45,7 @@ fn owned_call_observations_match_ir_bytecode_and_execution() {
         ("run-vm", "run.stdout"),
     ] {
         assert_observation("owned-arguments", command, expected);
+        assert_observation("borrowed-reads", command, expected);
     }
 }
 

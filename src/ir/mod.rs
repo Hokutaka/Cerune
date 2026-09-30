@@ -162,6 +162,8 @@ pub enum StatementKind {
         retain: bool,
     },
     Binding {
+        /// trueは内部の読み取り用束縛。所有元の寿命内だけ使い、独立した保持を要求しません。
+        borrowed: bool,
         id: BindingId,
         mutable: bool,
         name: String,

@@ -78,6 +78,11 @@ pub(super) fn lower(program: &mut Program) {
     program.statements = l.body(std::mem::take(&mut program.statements));
     program.function_definitions.extend(l.functions);
 }
+// 借用した値か、読み取り後に解放する一時的な所有値かを区別します。
+struct ReadValue {
+    value: Expr,
+    owned: bool,
+}
 struct Lowerer {
     node: usize,
     binding: usize,
@@ -160,9 +165,25 @@ impl Lowerer {
         )
     }
     fn bind(&mut self, value: Expr, mutable: bool, body: &mut Vec<Statement>) -> Parameter {
-        let p = self.param(value.ty.clone(), value.span);
+        self.bind_value(value, mutable, false, body)
+    }
+    fn bind_read(&mut self, value: Expr, body: &mut Vec<Statement>) -> Parameter {
+        self.bind_value(value, false, true, body)
+    }
+    fn bind_value(
+        &mut self,
+        value: Expr,
+        mutable: bool,
+        borrowed: bool,
+        body: &mut Vec<Statement>,
+    ) -> Parameter {
+        let mut p = self.param(value.ty.clone(), value.span);
+        if borrowed {
+            p.name = format!("$read{}", p.id.0);
+        }
         body.push(self.stmt(
             StatementKind::Binding {
+                borrowed,
                 id: p.id,
                 mutable,
                 name: p.name.clone(),
@@ -249,6 +270,7 @@ impl Lowerer {
                     let index = self.param(Type::Integer(IntegerType::I64), span);
                     let initializer = self.stmt(
                         StatementKind::Binding {
+                            borrowed: false,
                             id: index.id,
                             mutable: true,
                             name: index.name.clone(),
@@ -443,8 +465,70 @@ impl Lowerer {
             span,
         )
     }
+    // 束縛の読み取りでは所有を増やしません。一時値はconsumer後に解放します。
+    fn read(&mut self, mut value: Expr, body: &mut Vec<Statement>) -> ReadValue {
+        let mut parent = None;
+        match &mut value.kind {
+            ExprKind::Variable { .. }
+            | ExprKind::Constant { .. }
+            | ExprKind::Boolean(_)
+            | ExprKind::String(_)
+            | ExprKind::Integer(_)
+            | ExprKind::Float { .. } => {}
+            ExprKind::FieldAccess { base, .. } => {
+                let read = self.read(*base.clone(), body);
+                **base = self.copy(&read.value);
+                parent = Some(read);
+            }
+            ExprKind::Index { base, index } => {
+                let read = self.read(*base.clone(), body);
+                **base = self.copy(&read.value);
+                **index = self.owned(*index.clone(), body);
+                parent = Some(read);
+            }
+            _ => {
+                return ReadValue {
+                    value: self.owned(value, body),
+                    owned: true,
+                };
+            }
+        }
+        let owned = parent.as_ref().is_some_and(|p| p.owned);
+        let p = if owned {
+            self.bind(value, false, body)
+        } else {
+            self.bind_read(value, body)
+        };
+        if let Some(parent) = parent.filter(|p| p.owned) {
+            // 一時的な複合値からの抽出は、選んだ値を保持してから元を解放します。
+            // 無関係なフィールドの寿命は延ばさず、次のオペランドの予算を保ちます。
+            let selected = self.var(&p);
+            self.manage(selected, true, body);
+            self.manage(parent.value, false, body);
+        }
+        ReadValue {
+            value: self.var(&p),
+            owned,
+        }
+    }
     fn owned(&mut self, mut value: Expr, body: &mut Vec<Statement>) -> Expr {
         let span = value.span;
+        if matches!(
+            value.kind,
+            ExprKind::Variable { .. }
+                | ExprKind::Constant { .. }
+                | ExprKind::FieldAccess { .. }
+                | ExprKind::Index { .. }
+        ) {
+            let read = self.read(value, body);
+            if read.owned {
+                return read.value;
+            }
+            let p = self.bind(read.value, false, body);
+            let value = self.var(&p);
+            self.manage(value, true, body);
+            return self.var(&p);
+        }
         if let ExprKind::Logical { op, left, right } = value.kind {
             let left = self.owned(*left, body);
             let result = self.bind(left, true, body);
@@ -480,47 +564,58 @@ impl Lowerer {
         }
         let fresh = matches!(
             value.kind,
-            ExprKind::Call { .. } | ExprKind::StringConcat { .. }
+            ExprKind::Call { .. }
+                | ExprKind::StringConcat { .. }
+                | ExprKind::Array(_)
+                | ExprKind::Construct { base: None, .. }
         );
-        let transfer = matches!(&value.kind, ExprKind::Call { function_id, .. }
-            if self.arguments[function_id.0] == ArgumentOwnership::Owned);
+        let transfer = match &value.kind {
+            ExprKind::Call { function_id, .. } => {
+                self.arguments[function_id.0] == ArgumentOwnership::Owned
+            }
+            ExprKind::Array(_) | ExprKind::Construct { base: None, .. } => true,
+            _ => false,
+        };
         let mut children = vec![];
-        let mut child = |e: &mut Expr, this: &mut Self, body: &mut Vec<Statement>| {
-            let owned = this.owned(e.clone(), body);
-            children.push(this.copy(&owned));
-            *e = owned;
+        let mut child = |e: &mut Expr, own: bool, this: &mut Self, body: &mut Vec<Statement>| {
+            *e = if own {
+                let owned = this.owned(e.clone(), body);
+                children.push(this.copy(&owned));
+                owned
+            } else {
+                let read = this.read(e.clone(), body);
+                if read.owned {
+                    children.push(this.copy(&read.value));
+                }
+                read.value
+            };
         };
         match &mut value.kind {
-            ExprKind::Constant { .. } => {}
             ExprKind::ArrayLength { value }
             | ExprKind::StringByteLength { value }
             | ExprKind::ConvertNumeric { value, .. }
             | ExprKind::ConvertInteger { value, .. }
-            | ExprKind::Unary { value, .. }
-            | ExprKind::FieldAccess { base: value, .. } => child(value, self, body),
-            ExprKind::StringConcat { left, right }
-            | ExprKind::Binary { left, right, .. }
-            | ExprKind::Index {
-                base: left,
-                index: right,
-            } => {
-                child(left, self, body);
-                child(right, self, body);
+            | ExprKind::Unary { value, .. } => child(value, false, self, body),
+            ExprKind::StringConcat { left, right } | ExprKind::Binary { left, right, .. } => {
+                child(left, false, self, body);
+                child(right, false, self, body);
             }
             ExprKind::Construct { base, fields, .. } => {
                 if let Some(base) = base {
-                    child(base, self, body);
+                    child(base, true, self, body);
                 }
                 for f in fields {
-                    child(&mut f.value, self, body);
+                    child(&mut f.value, true, self, body);
                 }
             }
-            ExprKind::Array(values)
-            | ExprKind::Call {
-                arguments: values, ..
-            } => {
+            ExprKind::Array(values) => {
                 for v in values {
-                    child(v, self, body);
+                    child(v, true, self, body);
+                }
+            }
+            ExprKind::Call { arguments, .. } => {
+                for v in arguments {
+                    child(v, transfer, self, body);
                 }
             }
             ExprKind::Let { .. } | ExprKind::Conditional { .. } => {
@@ -533,7 +628,7 @@ impl Lowerer {
             let v = self.var(&p);
             self.manage(v, true, body);
         }
-        // 所有を渡した引数はcalleeが処理します。呼び出し後に二重解放しません。
+        // 引数や新しい複合値へ渡した所有は、ここで重ねて解放しません。
         if !transfer {
             for v in children.into_iter().rev() {
                 self.manage(v, false, body);
@@ -640,12 +735,12 @@ impl Lowerer {
                 *value = self.replace(old, new);
             }
             StatementKind::Print { value } | StatementKind::Write { value, .. } => {
-                let evaluated = self.wrap(value.clone());
-                let p = self.bind(evaluated, false, out);
-                *value = self.var(&p);
+                let read = self.read(value.clone(), out);
+                *value = self.copy(&read.value);
                 out.push(s);
-                let v = self.var(&p);
-                self.manage(v, false, out);
+                if read.owned {
+                    self.manage(read.value, false, out);
+                }
                 return;
             }
             StatementKind::Call {
@@ -654,19 +749,23 @@ impl Lowerer {
                 ..
             } => {
                 let transfer = self.arguments[function_id.0] == ArgumentOwnership::Owned;
-                let mut temps = vec![];
+                let mut owners = vec![];
                 for a in arguments {
-                    let evaluated = self.wrap(a.clone());
-                    let p = self.bind(evaluated, false, out);
-                    *a = self.var(&p);
-                    temps.push(p);
+                    *a = if transfer {
+                        let evaluated = self.wrap(a.clone());
+                        let p = self.bind(evaluated, false, out);
+                        self.var(&p)
+                    } else {
+                        let read = self.read(a.clone(), out);
+                        if read.owned {
+                            owners.push(self.copy(&read.value));
+                        }
+                        read.value
+                    };
                 }
                 out.push(s);
-                if !transfer {
-                    for p in temps.iter().rev() {
-                        let v = self.var(p);
-                        self.manage(v, false, out);
-                    }
+                for value in owners.into_iter().rev() {
+                    self.manage(value, false, out);
                 }
                 return;
             }

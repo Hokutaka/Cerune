@@ -4,6 +4,12 @@ pub const OWNED_ARGUMENTS: (&str, &str) = (
     "[\"保存\"]\n[\"変更\"]\n左\n右\n[\"左!\"]\n[\"右!\"]\ntrue\n1\n",
 );
 
+pub const BORROWED_READS: (&str, &str) = (
+    include_str!("../../examples/borrowed_reads.ceru"),
+    "束縛\n2\n日本\n[\"日本\", \"二\"]\ntrue\n一時\n2\n抽出\n日本\n左\n右\ntrue\nfalse\n[\"保存\", \"二\"]\n[\"変更\", \"二\"]\n",
+);
+pub const PROJECTED_TEMPORARIES: &str = "type Pair { value: string, other: string }\nfn make() -> Pair { return Pair { value: concat(\"a\", \"b\"), other: concat(\"c\", \"d\") }; }\nprint(make().value == make().value);\n";
+
 pub const CASES: &[(&str, &str)] = &[
     (
         include_str!("../../examples/string_concat.ceru"),
@@ -81,4 +87,6 @@ pub const CASES: &[(&str, &str)] = &[
         "ok!\nsafe\nok\n",
     ),
     OWNED_ARGUMENTS,
+    BORROWED_READS,
+    (PROJECTED_TEMPORARIES, "true\n"),
 ];

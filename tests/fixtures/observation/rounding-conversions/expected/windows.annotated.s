@@ -140,7 +140,8 @@ cerune_origin_n7_main_4:
   leaq .Lcerune_failure_0(%rip), %rdx
   movl $67, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_floor_0_minimum:
 .Lcerune_main_floor_0_maximum:
   xorl %ecx, %ecx
@@ -149,7 +150,8 @@ cerune_origin_n7_main_4:
   leaq .Lcerune_failure_1(%rip), %rdx
   movl $69, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_floor_0_done:
 # cerune-origin: #6 bytes 73..104
 cerune_origin_n6_main_5:
@@ -230,7 +232,8 @@ cerune_origin_n12_main_12:
   leaq .Lcerune_failure_2(%rip), %rdx
   movl $69, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_ceil_1_minimum:
 .Lcerune_main_ceil_1_maximum:
   xorl %ecx, %ecx
@@ -239,7 +242,8 @@ cerune_origin_n12_main_12:
   leaq .Lcerune_failure_3(%rip), %rdx
   movl $71, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_ceil_1_done:
 # cerune-origin: #11 bytes 105..135
 cerune_origin_n11_main_13:
@@ -321,7 +325,8 @@ cerune_origin_n17_main_19:
   leaq .Lcerune_failure_4(%rip), %rdx
   movl $69, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_round_2_minimum:
 .Lcerune_main_round_2_maximum:
   xorl %ecx, %ecx
@@ -330,7 +335,8 @@ cerune_origin_n17_main_19:
   leaq .Lcerune_failure_5(%rip), %rdx
   movl $71, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_round_2_done:
 # cerune-origin: #16 bytes 136..166
 cerune_origin_n16_main_20:
@@ -422,7 +428,8 @@ cerune_origin_n21_main_26:
   leaq .Lcerune_failure_6(%rip), %rdx
   movl $69, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_round_ties_even_3_minimum:
 .Lcerune_main_round_ties_even_3_maximum:
   xorl %ecx, %ecx
@@ -431,7 +438,8 @@ cerune_origin_n21_main_26:
   leaq .Lcerune_failure_7(%rip), %rdx
   movl $71, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_round_ties_even_3_done:
 # cerune-origin: #20 bytes 167..207
 cerune_origin_n20_main_27:

@@ -200,17 +200,11 @@ cerune_string_concat:
 cerune_fn__ownership0_0:
   pushq %rbp
   movq %rsp, %rbp
-  subq $144, %rsp
+  subq $112, %rsp
   leaq .Lcerune_string_0(%rip), %rax
   movq %rax, -8(%rbp)
-  movq -8(%rbp), %rax
-  movq %rax, %rcx
-  callq cerune_string_retain
   leaq .Lcerune_string_1(%rip), %rax
   movq %rax, -16(%rbp)
-  movq -16(%rbp), %rax
-  movq %rax, %rcx
-  callq cerune_string_retain
   movq -8(%rbp), %rax
   movq %rax, -32(%rbp)
   movq -16(%rbp), %rax
@@ -227,7 +221,8 @@ cerune_fn__ownership0_0:
   leaq .Lcerune_failure_0(%rip), %rdx
   movl $69, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lfn_0_concat_limit_0:
   cmpq $2, %rdx
   jne .Lfn_0_concat_failed_0
@@ -237,7 +232,8 @@ cerune_fn__ownership0_0:
   leaq .Lcerune_failure_1(%rip), %rdx
   movl $70, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lfn_0_concat_failed_0:
   xorl %ecx, %ecx
   callq fflush
@@ -245,17 +241,12 @@ cerune_fn__ownership0_0:
   leaq .Lcerune_failure_2(%rip), %rdx
   movl $62, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lfn_0_concat_ok_0:
   movq %rax, -24(%rbp)
-  movq -16(%rbp), %rax
-  movq %rax, %rcx
-  callq cerune_string_release
-  movq -8(%rbp), %rax
-  movq %rax, %rcx
-  callq cerune_string_release
   movq -24(%rbp), %rax
-  addq $144, %rsp
+  addq $112, %rsp
   popq %rbp
   retq
 
@@ -263,15 +254,17 @@ cerune_fn__ownership0_0:
 cerune_fn__ownership1_1:
   pushq %rbp
   movq %rsp, %rbp
-  subq $80, %rsp
+  subq $96, %rsp
   movq %rcx, -8(%rbp)
   movq -8(%rbp), %rax
   movq %rax, -16(%rbp)
   movq -16(%rbp), %rax
+  movq %rax, -24(%rbp)
+  movq -24(%rbp), %rax
   movq %rax, %rcx
   callq cerune_string_retain
-  movq -16(%rbp), %rax
-  addq $80, %rsp
+  movq -24(%rbp), %rax
+  addq $96, %rsp
   popq %rbp
   retq
 
@@ -279,18 +272,12 @@ cerune_fn__ownership1_1:
 cerune_fn__ownership2_2:
   pushq %rbp
   movq %rsp, %rbp
-  subq $144, %rsp
+  subq $112, %rsp
   movq %rcx, -8(%rbp)
   movq -8(%rbp), %rax
   movq %rax, -16(%rbp)
-  movq -16(%rbp), %rax
-  movq %rax, %rcx
-  callq cerune_string_retain
   leaq .Lcerune_string_2(%rip), %rax
   movq %rax, -24(%rbp)
-  movq -24(%rbp), %rax
-  movq %rax, %rcx
-  callq cerune_string_retain
   movq -16(%rbp), %rax
   movq %rax, -40(%rbp)
   movq -24(%rbp), %rax
@@ -307,7 +294,8 @@ cerune_fn__ownership2_2:
   leaq .Lcerune_failure_3(%rip), %rdx
   movl $69, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lfn_2_concat_limit_0:
   cmpq $2, %rdx
   jne .Lfn_2_concat_failed_0
@@ -317,7 +305,8 @@ cerune_fn__ownership2_2:
   leaq .Lcerune_failure_4(%rip), %rdx
   movl $70, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lfn_2_concat_failed_0:
   xorl %ecx, %ecx
   callq fflush
@@ -325,17 +314,12 @@ cerune_fn__ownership2_2:
   leaq .Lcerune_failure_5(%rip), %rdx
   movl $62, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lfn_2_concat_ok_0:
   movq %rax, -32(%rbp)
-  movq -24(%rbp), %rax
-  movq %rax, %rcx
-  callq cerune_string_release
-  movq -16(%rbp), %rax
-  movq %rax, %rcx
-  callq cerune_string_release
   movq -32(%rbp), %rax
-  addq $144, %rsp
+  addq $112, %rsp
   popq %rbp
   retq
 
@@ -354,51 +338,19 @@ cerune_fn__ownership3_3:
   popq %rbp
   retq
 
-.p2align 4
-cerune_fn__ownership4_4:
-  pushq %rbp
-  movq %rsp, %rbp
-  subq $80, %rsp
-  movq %rcx, -8(%rbp)
-  movq -8(%rbp), %rax
-  movq %rax, -16(%rbp)
-  movq -16(%rbp), %rax
-  movq %rax, %rcx
-  callq cerune_string_retain
-  movq -16(%rbp), %rax
-  addq $80, %rsp
-  popq %rbp
-  retq
-
-.p2align 4
-cerune_fn__ownership5_5:
-  pushq %rbp
-  movq %rsp, %rbp
-  subq $80, %rsp
-  movq %rcx, -8(%rbp)
-  movq -8(%rbp), %rax
-  movq %rax, -16(%rbp)
-  movq -16(%rbp), %rax
-  movq %rax, %rcx
-  callq cerune_string_retain
-  movq -16(%rbp), %rax
-  addq $80, %rsp
-  popq %rbp
-  retq
-
 .globl main
 .p2align 4
 main:
   pushq %rbp
   movq %rsp, %rbp
-  subq $208, %rsp
+  subq $176, %rsp
   movl $1, %ecx
   movl $32768, %edx
   callq _setmode
   cmpl $-1, %eax
   jne .Lstdout_ready
   movl $1, %eax
-  addq $208, %rsp
+  addq $176, %rsp
   popq %rbp
   retq
 .Lstdout_ready:
@@ -421,27 +373,15 @@ main:
   callq cerune_fn__ownership3_3
   movq %rax, -8(%rbp)
   movq -16(%rbp), %rax
-  movq %rax, -40(%rbp)
-  movq -40(%rbp), %rcx
-  callq cerune_fn__ownership4_4
   movq %rax, -24(%rbp)
   movq -24(%rbp), %rax
   movq %rax, %rcx
   callq cerune_print_string
-  movq -24(%rbp), %rax
-  movq %rax, %rcx
-  callq cerune_string_release
   movq -8(%rbp), %rax
-  movq %rax, -40(%rbp)
-  movq -40(%rbp), %rcx
-  callq cerune_fn__ownership5_5
   movq %rax, -32(%rbp)
   movq -32(%rbp), %rax
   movq %rax, %rcx
   callq cerune_print_string
-  movq -32(%rbp), %rax
-  movq %rax, %rcx
-  callq cerune_string_release
   movq -16(%rbp), %rax
   movq %rax, %rcx
   callq cerune_string_release
@@ -449,7 +389,7 @@ main:
   movq %rax, %rcx
   callq cerune_string_release
   xorl %eax, %eax
-  addq $208, %rsp
+  addq $176, %rsp
   popq %rbp
   retq
 
