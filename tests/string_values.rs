@@ -232,6 +232,7 @@ fn numeric_only_programs_still_emit_through_every_backend() {
 
 fn vm_failure(instructions: Vec<InstructionKind>) -> VmErrorKind {
     let program = bytecode::BytecodeProgram {
+        array_heap_limit: cerune_lang::ir::DEFAULT_ARRAY_HEAP_LIMIT,
         string_heap_limit: ir::DEFAULT_STRING_HEAP_LIMIT,
         type_definitions: vec![],
         functions: vec![],

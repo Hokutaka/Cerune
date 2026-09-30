@@ -19,15 +19,18 @@ fn examples_preserve_lengths_values_and_evaluation_order() {
 }
 
 #[test]
-fn only_one_fixed_array_argument_produces_an_i64_result() {
+fn one_array_argument_produces_an_i64_result() {
     for (source, reason) in [
         ("print(array_len());", "expects 1 argument"),
         ("print(array_len([1], [2]));", "expects 1 argument"),
-        ("print(array_len(1));", "expects a fixed array"),
-        ("print(array_len(\"日本語\"));", "expects a fixed array"),
+        ("print(array_len(1));", "expects a fixed or dynamic array"),
+        (
+            "print(array_len(\"日本語\"));",
+            "expects a fixed or dynamic array",
+        ),
         (
             "type P { n: i64 } print(array_len(P { n: 1 }));",
-            "expects a fixed array",
+            "expects a fixed or dynamic array",
         ),
         ("print(array_len([]));", "at least one value"),
         ("small: i8 = array_len([1]);", "type mismatch"),

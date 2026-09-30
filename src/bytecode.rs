@@ -19,6 +19,7 @@ pub enum Type {
     F64,
     Named(usize),
     Array { element: Box<Type>, length: usize },
+    DynamicArray { element: Box<Type> },
 }
 
 impl From<crate::types::NumericType> for Type {
@@ -33,6 +34,7 @@ impl From<crate::types::NumericType> for Type {
 
 #[derive(Debug, Clone)]
 pub struct BytecodeProgram {
+    pub array_heap_limit: u64,
     pub string_heap_limit: u64,
     pub type_definitions: Vec<TypeDefinition>,
     pub functions: Vec<BytecodeFunction>,
@@ -116,6 +118,21 @@ pub enum InstructionOrigin {
 
 #[derive(Debug, Clone)]
 pub enum InstructionKind {
+    DynamicArrayLength {
+        element: Type,
+    },
+    DynamicIndex {
+        element: Type,
+    },
+    ArrayAllocate {
+        element: Type,
+        element_width: u64,
+    },
+    ArrayInitialize,
+    ArrayRetain,
+    ArrayFree,
+    ArrayReleaseOwner,
+    ArrayRangeCheck,
     ArrayLength {
         element: Type,
         length: usize,
@@ -213,7 +230,7 @@ pub enum InstructionKind {
 #[derive(Debug, Clone)]
 pub struct ArrayAccess {
     pub element: Type,
-    pub length: usize,
+    pub length: Option<usize>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -319,6 +336,7 @@ pub fn lower(program: &Program) -> Result<BytecodeProgram, Diagnostic> {
         .push(Instruction::synthetic(InstructionKind::Halt));
 
     Ok(BytecodeProgram {
+        array_heap_limit: program.array_heap_limit,
         string_heap_limit: program.string_heap_limit,
         type_definitions,
         functions,
@@ -331,6 +349,19 @@ pub fn format_program(program: &BytecodeProgram) -> String {
     let mut output = String::new();
 
     writeln!(output, "; Cerune bytecode v0.1").unwrap();
+    if program
+        .instructions
+        .iter()
+        .chain(program.functions.iter().flat_map(|f| &f.instructions))
+        .any(|i| matches!(i.kind, InstructionKind::ArrayAllocate { .. }))
+    {
+        writeln!(
+            output,
+            "; array-heap-limit={} bytes (live element storage)",
+            program.array_heap_limit
+        )
+        .unwrap();
+    }
     if program
         .instructions
         .iter()
@@ -445,6 +476,37 @@ impl Compiler {
 
     fn emit_statement(&mut self, statement: &Statement) -> bool {
         match &statement.kind {
+            StatementKind::ArrayInitialize { array, value } => {
+                self.emit_expr(array);
+                self.emit_expr(value);
+                self.emit_source(
+                    InstructionKind::ArrayInitialize,
+                    statement.id,
+                    statement.span,
+                );
+                false
+            }
+            StatementKind::ArrayRetain { value } | StatementKind::ArrayFree { value } => {
+                self.emit_expr(value);
+                let op = if matches!(statement.kind, StatementKind::ArrayRetain { .. }) {
+                    InstructionKind::ArrayRetain
+                } else {
+                    InstructionKind::ArrayFree
+                };
+                self.emit_source(op, statement.id, statement.span);
+                false
+            }
+            StatementKind::ArrayRangeCheck { length, start, end } => {
+                self.emit_expr(length);
+                self.emit_expr(start);
+                self.emit_expr(end);
+                self.emit_source(
+                    InstructionKind::ArrayRangeCheck,
+                    statement.id,
+                    statement.span,
+                );
+                false
+            }
             StatementKind::Binding { id, value, .. } => {
                 self.emit_expr(value);
 
@@ -470,7 +532,8 @@ impl Compiler {
                     self.emit_source(InstructionKind::Assign(slot), statement.id, statement.span);
                 } else {
                     for (projection_index, projection) in target.projections.iter().enumerate() {
-                        let ir::AssignmentProjection::Index { index, span, .. } = projection;
+                        let (ir::AssignmentProjection::Index { index, span, .. }
+                        | ir::AssignmentProjection::DynamicIndex { index, span, .. }) = projection;
                         self.emit_expr(index);
                         self.emit_source(
                             InstructionKind::ArrayCheck {
@@ -721,23 +784,45 @@ impl Compiler {
 
     fn emit_expr(&mut self, expr: &Expr) {
         match &expr.kind {
+            ExprKind::ArrayCopy { .. } => unreachable!("copies are expanded in common IR"),
+            ExprKind::ArrayAllocate {
+                length,
+                element_width,
+            } => {
+                let ir::Type::DynamicArray { element } = &expr.ty else {
+                    unreachable!()
+                };
+                self.emit_expr(length);
+                self.emit_source(
+                    InstructionKind::ArrayAllocate {
+                        element: element.as_ref().clone().into(),
+                        element_width: *element_width,
+                    },
+                    expr.id,
+                    expr.span,
+                );
+            }
+            ExprKind::ArrayReleaseOwner { value } => {
+                self.emit_expr(value);
+                self.emit_source(InstructionKind::ArrayReleaseOwner, expr.id, expr.span);
+            }
             ExprKind::Let { .. } | ExprKind::Conditional { .. } => {
                 unreachable!("match expressions are lowered before code generation")
             }
             ExprKind::Constant { value, .. } => self.emit_expr(value),
             ExprKind::ArrayLength { value } => {
-                let ir::Type::Array { element, length } = &value.ty else {
-                    unreachable!()
-                };
                 self.emit_expr(value);
-                self.emit_source(
-                    InstructionKind::ArrayLength {
+                let op = match &value.ty {
+                    ir::Type::Array { element, length } => InstructionKind::ArrayLength {
                         element: element.as_ref().clone().into(),
                         length: *length,
                     },
-                    expr.id,
-                    expr.span,
-                );
+                    ir::Type::DynamicArray { element } => InstructionKind::DynamicArrayLength {
+                        element: element.as_ref().clone().into(),
+                    },
+                    _ => unreachable!(),
+                };
+                self.emit_source(op, expr.id, expr.span);
             }
             ExprKind::StringConcat { left, right } => {
                 self.emit_expr(left);
@@ -821,7 +906,10 @@ impl Compiler {
                 ir::Type::Bool => {
                     unreachable!("boolean cannot be emitted as float");
                 }
-                ir::Type::String | ir::Type::Named(_) | ir::Type::Array { .. } => {
+                ir::Type::String
+                | ir::Type::Named(_)
+                | ir::Type::DynamicArray { .. }
+                | ir::Type::Array { .. } => {
                     unreachable!("a float literal must have a numeric type");
                 }
             },
@@ -916,17 +1004,17 @@ impl Compiler {
             ExprKind::Index { base, index } => {
                 self.emit_expr(base);
                 self.emit_expr(index);
-                let ir::Type::Array { element, length } = &base.ty else {
-                    unreachable!("indexed expressions must have an array base")
-                };
-                self.emit_source(
-                    InstructionKind::Index {
-                        element: (**element).clone().into(),
+                let op = match &base.ty {
+                    ir::Type::Array { element, length } => InstructionKind::Index {
+                        element: element.as_ref().clone().into(),
                         length: *length,
                     },
-                    expr.id,
-                    expr.span,
-                );
+                    ir::Type::DynamicArray { element } => InstructionKind::DynamicIndex {
+                        element: element.as_ref().clone().into(),
+                    },
+                    _ => unreachable!(),
+                };
+                self.emit_source(op, expr.id, expr.span);
             }
 
             ExprKind::Call {
@@ -1103,7 +1191,11 @@ fn collect_slots(
                 collect_slots(std::slice::from_ref(initializer), slots, slot_map);
                 collect_slots(body, slots, slot_map);
             }
-            StatementKind::Assignment { .. }
+            StatementKind::ArrayInitialize { .. }
+            | StatementKind::ArrayRetain { .. }
+            | StatementKind::ArrayFree { .. }
+            | StatementKind::ArrayRangeCheck { .. }
+            | StatementKind::Assignment { .. }
             | StatementKind::StringManage { .. }
             | StatementKind::Write { .. }
             | StatementKind::Print { .. }
@@ -1118,6 +1210,9 @@ fn collect_slots(
 impl From<ir::Type> for Type {
     fn from(value: ir::Type) -> Self {
         match value {
+            ir::Type::DynamicArray { element } => Self::DynamicArray {
+                element: Box::new((*element).into()),
+            },
             ir::Type::Bool => Self::Bool,
             ir::Type::String => Self::String,
             ir::Type::Integer(ty) => Self::Integer(ty),
@@ -1139,6 +1234,43 @@ fn format_instruction(
     output: &mut String,
 ) {
     match instruction {
+        InstructionKind::DynamicArrayLength { element } => {
+            writeln!(output, "array.len.dynamic {}", type_name(element, program)).unwrap();
+        }
+        InstructionKind::DynamicIndex { element } => {
+            writeln!(
+                output,
+                "array.index.dynamic {}",
+                type_name(element, program)
+            )
+            .unwrap();
+        }
+        InstructionKind::ArrayAllocate {
+            element,
+            element_width,
+        } => {
+            writeln!(
+                output,
+                "array.allocate-elements {} width={element_width}",
+                type_name(element, program)
+            )
+            .unwrap();
+        }
+        InstructionKind::ArrayInitialize => {
+            writeln!(output, "array.initialize-next").unwrap();
+        }
+        InstructionKind::ArrayRetain => {
+            writeln!(output, "array.retain-owner").unwrap();
+        }
+        InstructionKind::ArrayFree => {
+            writeln!(output, "array.free-elements").unwrap();
+        }
+        InstructionKind::ArrayReleaseOwner => {
+            writeln!(output, "array.release-owner-last").unwrap();
+        }
+        InstructionKind::ArrayRangeCheck => {
+            writeln!(output, "array.check-range").unwrap();
+        }
         InstructionKind::PushBool(value) => {
             writeln!(output, "push.bool {value}").unwrap();
         }
@@ -1202,7 +1334,9 @@ fn format_instruction(
                     output,
                     "{}; {}",
                     type_name(&access.element, program),
-                    access.length
+                    access
+                        .length
+                        .map_or_else(|| "dynamic".into(), |n| n.to_string())
                 )
                 .unwrap();
             }
@@ -1219,7 +1353,9 @@ fn format_instruction(
                     output,
                     "{}; {}",
                     type_name(&access.element, program),
-                    access.length
+                    access
+                        .length
+                        .map_or_else(|| "dynamic".into(), |n| n.to_string())
                 )
                 .unwrap();
             }
@@ -1410,17 +1546,23 @@ fn format_instruction(
 }
 
 fn array_access(projection: &ir::AssignmentProjection) -> ArrayAccess {
-    let ir::AssignmentProjection::Index {
-        element, length, ..
-    } = projection;
-    ArrayAccess {
-        element: element.clone().into(),
-        length: *length,
+    match projection {
+        ir::AssignmentProjection::Index {
+            element, length, ..
+        } => ArrayAccess {
+            element: element.clone().into(),
+            length: Some(*length),
+        },
+        ir::AssignmentProjection::DynamicIndex { element, .. } => ArrayAccess {
+            element: element.clone().into(),
+            length: None,
+        },
     }
 }
 
 fn type_name(ty: &Type, program: &BytecodeProgram) -> String {
     match ty {
+        Type::DynamicArray { element } => format!("[{}]", type_name(element, program)),
         Type::Bool => "bool".into(),
         Type::String => "string".into(),
         Type::Integer(ty) => ty.name().into(),
@@ -1542,7 +1684,8 @@ mod tests {
             .projections
             .iter()
             .map(|projection| match projection {
-                crate::ir::AssignmentProjection::Index { span, .. } => *span,
+                crate::ir::AssignmentProjection::Index { span, .. }
+                | crate::ir::AssignmentProjection::DynamicIndex { span, .. } => *span,
             })
             .collect::<Vec<_>>();
 

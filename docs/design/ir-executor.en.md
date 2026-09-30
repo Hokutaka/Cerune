@@ -30,7 +30,7 @@ CLI `run <file>` and its alias `run-ir <file>` select direct execution; `run-vm 
 - Evaluate arguments, operators, array elements, and constructor fields once from left to right; skip short-circuited operands.
 - Check each assignment index before later indices or the right-hand side.
 
-Private values contain typed numbers, bools, immutable string handles, and value arrays/products, without VM Value or bytecode Type. Deep-copy nested mutable aggregate values while sharing immutable strings. Execute enums as the common IR's tags and fields rather than introducing another language interpretation.
+Private values contain typed numbers, bools, immutable string handles, and value arrays/products, without VM Value or bytecode Type. Keep nested mutable aggregate values independent while sharing immutable strings. Dynamic array element copies run through explicit common-IR loops rather than an opaque host deep copy. Execute enums as the common IR's tags and fields rather than introducing another language interpretation.
 
 ## Shared semantics and ownership
 
@@ -63,13 +63,13 @@ The stages above are implemented for current completed IR.
 | --- | --- |
 | Values and operations | All integer types, f32/f64, bool, strings; range checks, explicit conversion, rounding and saturation |
 | Control and functions | if/while/for, short-circuiting, break/continue/return, top-level/main entry |
-| Aggregates | Fixed arrays, products, enums, nesting, value copies, indexed updates, equality and display |
+| Aggregates | Fixed/dynamic arrays, products, enums, nesting, value copies, indexed updates, equality and display |
 | Common expansion | Imports, constants, type/length generics, array iteration, match expressions and guards |
 | Strings | concat/byte_len, immutable contents, explicit retain/release, budgets and failure cleanup |
 | Observation | emit-ir, NodeId, file-local Span, prior output and runtime-v1 |
 
 `tests/ir_executor.rs` compares direct execution with VM bytecode lowered from the same completed IR and checks IR immutability. `tests/examples.rs` and shared fixtures check known expectations. `runtime_routes` and `string_heap_routes` also compare generated execution, origins, and budgets. `ir_execution.ceru` participates in C, LLVM, QBE, WAT, assembly, and object comparisons.
 
-Textual IR loading, an embedding API for arbitrary function invocation, and pause/resume are unsupported. No intervention API is introduced. Existing language gaps such as recursion and dynamic arrays remain unchanged. The public Rust API expects frontend-completed IR, not arbitrary hand-built IR requiring full validation. Detected structure/type/ownership inconsistencies produce `InvalidIr`; unexpanded `Let`/`Conditional` nodes are not silently expanded or delegated to the VM.
+Textual IR loading, an embedding API for arbitrary function invocation, and pause/resume are unsupported. No intervention API is introduced. Recursion remains unsupported. [Dynamic arrays](owned-arrays.en.md) were added subsequently to IR/VM; allocation, copy loops, and release execute from common IR. The public Rust API expects frontend-completed IR, not arbitrary hand-built IR requiring full validation. Detected structure/type/ownership inconsistencies produce `InvalidIr`; unexpanded `Let`/`Conditional` nodes are not silently expanded or delegated to the VM.
 
 Implementation is split into `src/ir_executor.rs` (control, frames, diagnostics), `src/ir_executor/value.rs` (private values and operators), and `src/runtime/{numeric,float_output,string_heap}.rs` (shared components). VM adapters remain under `src/vm`; direct execution does not depend on VM values or instruction sequences.

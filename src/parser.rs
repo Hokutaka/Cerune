@@ -645,6 +645,15 @@ impl Parser {
                     element.span,
                 ));
             }
+            if matches!(self.peek().kind, TokenKind::RightBracket) {
+                let end = self.advance().span.end();
+                return Ok(TypeRef {
+                    kind: TypeRefKind::DynamicArray {
+                        element: Box::new(element),
+                    },
+                    span: self.span(start, end),
+                });
+            }
             self.expect_simple(TokenKind::Semicolon)?;
             if matches!(self.peek().kind, TokenKind::Identifier(_)) {
                 let (name, name_span) = self.expect_path()?;

@@ -31,6 +31,7 @@ pub enum Type {
     F64,
     Named(TypeId),
     Array { element: Box<Type>, length: usize },
+    DynamicArray { element: Box<Type> },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -100,6 +101,9 @@ pub struct SemanticModel {
 impl SemanticModel {
     pub fn resolve_type_ref(&self, type_ref: &ast::TypeRef) -> SemanticResult<Type> {
         let ty = match &type_ref.kind {
+            ast::TypeRefKind::DynamicArray { element } => Type::DynamicArray {
+                element: Box::new(self.resolve_type_ref(element)?),
+            },
             ast::TypeRefKind::ArrayConstant { element, constant } => Type::Array {
                 element: Box::new(self.resolve_type_ref(element)?),
                 length: *self
@@ -164,6 +168,7 @@ impl SemanticModel {
             Type::F32 => "f32".into(),
             Type::F64 => "f64".into(),
             Type::Named(id) => self.type_definition(id).name.clone(),
+            Type::DynamicArray { element } => format!("[{}]", self.type_name(*element)),
             Type::Array { element, length } => {
                 format!("[{}; {length}]", self.type_name(*element))
             }
@@ -235,7 +240,10 @@ pub(crate) fn analyze_lowered(program: &Program) -> SemanticResult<SemanticModel
     for item in &program.items {
         if let Item::ConstantDefinition(d) = item {
             if ast::Type::from_name(&d.name).is_some()
-                || matches!(d.name.as_str(), "byte_len" | "array_len" | "concat")
+                || matches!(
+                    d.name.as_str(),
+                    "byte_len" | "array_len" | "concat" | "array_copy" | "array_copy_range"
+                )
                 || model.function_names.contains_key(&d.name)
                 || model.type_names.contains_key(&d.name)
             {
@@ -331,7 +339,7 @@ fn register_function_names(program: &Program) -> SemanticResult<HashMap<String, 
         };
         if matches!(
             definition.name.as_str(),
-            "byte_len" | "array_len" | "concat"
+            "byte_len" | "array_len" | "concat" | "array_copy" | "array_copy_range"
         ) {
             return Err(Diagnostic::new(
                 format!(
@@ -753,6 +761,11 @@ fn resolve_type_ref(
         ast::TypeRefKind::Named(name) => {
             return resolve_type_name(name, type_ref.span, type_names);
         }
+        ast::TypeRefKind::DynamicArray { element } => {
+            return Ok(Type::DynamicArray {
+                element: Box::new(resolve_type_ref(element, type_names)?),
+            });
+        }
         ast::TypeRefKind::Array { element, length } => (element, *length),
         ast::TypeRefKind::ArrayConstant { constant, .. } => {
             return Err(Diagnostic::new("unresolved array length", constant.span));
@@ -804,7 +817,9 @@ fn reject_infinite_types(model: &SemanticModel) -> SemanticResult<()> {
     fn named_type_dependency(ty: &Type) -> Option<TypeId> {
         match ty {
             Type::Named(id) => Some(*id),
-            Type::Array { element, .. } => named_type_dependency(element),
+            Type::Array { element, .. } | Type::DynamicArray { element } => {
+                named_type_dependency(element)
+            }
             Type::Bool | Type::String | Type::Integer(_) | Type::F32 | Type::F64 => None,
         }
     }
@@ -829,6 +844,10 @@ fn check_storage(ty: &Type, model: &SemanticModel, span: Span) -> SemanticResult
             return None;
         }
         let slots = match ty {
+            Type::DynamicArray { element } => {
+                size(element, model, memo, depth + 1)?;
+                2
+            }
             Type::Array { element, length } => {
                 size(element, model, memo, depth + 1)?.checked_mul(*length)?
             }
@@ -905,10 +924,10 @@ fn check_statements(
             StmtKind::Match { .. } => unreachable!("match is elaborated before semantic analysis"),
             StmtKind::ForEach { index, value, .. } => {
                 let ty = model.type_of_expr(value, &bindings)?;
-                if !matches!(ty, Type::Array { .. }) {
+                if !matches!(ty, Type::Array { .. } | Type::DynamicArray { .. }) {
                     return Err(Diagnostic::new(
                         format!(
-                            "for-in expects a fixed array, found {}",
+                            "for-in expects a fixed or dynamic array, found {}",
                             model.type_name(ty)
                         ),
                         value.span,
@@ -1018,7 +1037,8 @@ fn check_statements(
                 let mut target_ty = binding.ty;
                 for projection in &target.projections {
                     let AssignmentProjection::Index { index, span } = projection;
-                    let Type::Array { element, .. } = target_ty else {
+                    let (Type::Array { element, .. } | Type::DynamicArray { element }) = target_ty
+                    else {
                         return Err(Diagnostic::new(
                             format!(
                                 "cannot index assignment target of type {}",
@@ -1454,7 +1474,7 @@ fn type_of_expr_expected(
 
         ExprKind::Index { base, index } => {
             let base_ty = model.type_of_expr(base, bindings)?;
-            let Type::Array { element, .. } = base_ty else {
+            let (Type::Array { element, .. } | Type::DynamicArray { element }) = base_ty else {
                 return Err(Diagnostic::new(
                     format!("cannot index value of type {}", model.type_name(base_ty)),
                     base.span,
@@ -1687,8 +1707,10 @@ fn type_of_expr_expected(
                 ));
             }
 
-            if matches!(left_type, Type::Named(_) | Type::Array { .. })
-                && !matches!(op, BinaryOp::Equal | BinaryOp::NotEqual)
+            if matches!(
+                left_type,
+                Type::Named(_) | Type::Array { .. } | Type::DynamicArray { .. }
+            ) && !matches!(op, BinaryOp::Equal | BinaryOp::NotEqual)
             {
                 return Err(Diagnostic::new(
                     format!(
@@ -1802,6 +1824,39 @@ fn check_call(
     bindings: &Bindings,
     model: &SemanticModel,
 ) -> SemanticResult<ReturnType> {
+    if matches!(name, "array_copy" | "array_copy_range") {
+        let count = if name == "array_copy" { 1 } else { 3 };
+        if arguments.len() != count {
+            return Err(Diagnostic::new(
+                format!(
+                    "{name} expects {count} arguments, found {}",
+                    arguments.len()
+                ),
+                name_span,
+            ));
+        }
+        let actual = model.type_of_expr(&arguments[0], bindings)?;
+        let (Type::Array { element, .. } | Type::DynamicArray { element }) = actual else {
+            return Err(Diagnostic::new(
+                format!("{name} expects an array, found {}", model.type_name(actual)),
+                arguments[0].span,
+            ));
+        };
+        for bound in &arguments[1..] {
+            if model.type_of_expr_expected(
+                bound,
+                bindings,
+                Some(Type::Integer(IntegerType::I64)),
+            )? != Type::Integer(IntegerType::I64)
+            {
+                return Err(Diagnostic::new(
+                    "array range bounds must be i64",
+                    bound.span,
+                ));
+            }
+        }
+        return Ok(ReturnType::Value(Type::DynamicArray { element }));
+    }
     if name == "concat" {
         if arguments.len() != 2 {
             return Err(Diagnostic::new(
@@ -1828,10 +1883,10 @@ fn check_call(
             ));
         }
         let actual = model.type_of_expr(&arguments[0], bindings)?;
-        if !matches!(actual, Type::Array { .. }) {
+        if !matches!(actual, Type::Array { .. } | Type::DynamicArray { .. }) {
             return Err(Diagnostic::new(
                 format!(
-                    "array_len expects a fixed array, found {}",
+                    "array_len expects a fixed or dynamic array, found {}",
                     model.type_name(actual)
                 ),
                 arguments[0].span,

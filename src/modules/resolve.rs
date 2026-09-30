@@ -35,7 +35,10 @@ pub(super) fn resolve(units: &[Unit]) -> Result<Program, Diagnostic> {
             };
             if Type::from_name(name).is_some()
                 || (kind != Kind::Type
-                    && matches!(name.as_str(), "byte_len" | "array_len" | "concat"))
+                    && matches!(
+                        name.as_str(),
+                        "byte_len" | "array_len" | "concat" | "array_copy" | "array_copy_range"
+                    ))
             {
                 return Err(Diagnostic::new(
                     format!("definition name `{name}` is reserved"),
@@ -241,7 +244,9 @@ impl Resolver<'_> {
             {
                 *name = self.name(name, ty.span, Kind::Type, public)?
             }
-            TypeRefKind::Array { element, .. } => self.ty(element, public)?,
+            TypeRefKind::Array { element, .. } | TypeRefKind::DynamicArray { element } => {
+                self.ty(element, public)?
+            }
             TypeRefKind::ArrayConstant { element, constant } => {
                 self.ty(element, public)?;
                 if !self.generic(&constant.name, true) {
@@ -450,7 +455,10 @@ impl Resolver<'_> {
                 name_span,
                 arguments,
             } => {
-                if !matches!(name.as_str(), "byte_len" | "array_len" | "concat") {
+                if !matches!(
+                    name.as_str(),
+                    "byte_len" | "array_len" | "concat" | "array_copy" | "array_copy_range"
+                ) {
                     *name = self.name(name, *name_span, Kind::Function, false)?;
                 }
                 for argument in arguments {

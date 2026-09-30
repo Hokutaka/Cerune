@@ -292,6 +292,22 @@ See [Named product type design](../design/product-types.en.md) for the detailed 
 
 See the [syntax and evaluation design](../design/product-updates.en.md) and [example](../../examples/product_update.ceru).
 
+## Dynamic arrays (IR Executor and VM)
+
+`[T]` is an owned value with a runtime length. Execute it with `run` / `run-ir` / `run-vm`; inspect it with `emit-ir` / `emit-bytecode`. C, LLVM, QBE, WAT, ASM, and native object generation currently return an unsupported-feature diagnostic.
+
+| Operation | Meaning |
+| --- | --- |
+| `array_copy(values)` | Create an independent `[T]` from a fixed or dynamic array |
+| `array_copy_range(values, start, end)` | Copy a half-open range with i64 bounds, including empty ranges |
+| `array_len(values)`, indexing, display, equality, `for … in` | Existing array rules; compare the same type and iterate an independent entry snapshot |
+
+`[1, 2]` remains fixed; no implicit conversion is added. Create an empty array with `array_copy_range([1], 0, 0)`. Binding, argument, return, and aggregate copies are independent even when nested. A `mut` binding permits element updates and reassignment to a different length. Generic type arguments, modules, structs, and enums can contain dynamic arrays.
+
+Range copies evaluate source, start, and end once from left to right, then check `0 <= start <= end <= length`. Violations stop with `array-range-out-of-bounds`. Indexed assignment checks each index before later indices or the RHS.
+
+`--array-heap-limit <bytes>` limits logical element storage, defaulting to 64 MiB independently of strings. Copies require old and new storage simultaneously. Display, length, and equality do not copy solely to read. Dynamic arrays in `const`, `array_repeat`, growth operations, and borrowed slices remain unsupported. See [examples](../../examples/dynamic_arrays/README.en.md) and [ownership and generation design](../design/owned-arrays.en.md).
+
 ## Fixed arrays
 
 A fixed array is a value containing a known number of boxes of the same type. `[i64; 4]` means an array with four `i64` boxes.
@@ -371,7 +387,7 @@ The shared resource limit is 100,000 scalar units per aggregate value and type-c
 
 ### Array element count
 
-`array_len(values)` accepts one fixed array `[T; N]` and returns its outermost element count `N` as `i64`, regardless of the element type. Use `byte_len` for string bytes.
+`array_len(values)` accepts one array and returns its outermost element count as `i64`, regardless of the element type: `N` for `[T; N]`, or the runtime length for `[T]` (dynamic arrays currently require IR/VM). Use `byte_len` for string bytes.
 
 ```cerune
 matrix: [[i64; 3]; 2] = [[1, 2, 3], [4, 5, 6]];
@@ -387,6 +403,8 @@ Functions, constants, and import aliases cannot use this name. Variable and func
 
 
 ### Fixed-array iteration
+
+Dynamic arrays use the same iteration rules in IR/VM; zero length skips the body.
 
 ```cerune
 values: [i64; 3] = [4, 7, 9];

@@ -185,6 +185,12 @@ impl Lowerer<'_> {
 
     fn lower_statement_body(&mut self, statement: &cerune_ir::Statement) -> bool {
         match &statement.kind {
+            cerune_ir::StatementKind::ArrayInitialize { .. }
+            | cerune_ir::StatementKind::ArrayRetain { .. }
+            | cerune_ir::StatementKind::ArrayFree { .. }
+            | cerune_ir::StatementKind::ArrayRangeCheck { .. } => {
+                unreachable!("dynamic arrays are rejected before backend lowering")
+            }
             cerune_ir::StatementKind::Binding { id, ty, value, .. } => {
                 let slot = self.slot(*id);
                 let ty = ty.clone().into();
@@ -229,7 +235,10 @@ impl Lowerer<'_> {
                         element,
                         length,
                         span,
-                    } = projection;
+                    } = projection
+                    else {
+                        unreachable!("dynamic arrays are rejected before backend lowering")
+                    };
                     let index = self.lower_expr(index);
                     let element: Type = element.clone().into();
                     let dest = self.next_temp();
@@ -568,6 +577,11 @@ impl Lowerer<'_> {
         }
 
         match &expr.kind {
+            cerune_ir::ExprKind::ArrayCopy { .. }
+            | cerune_ir::ExprKind::ArrayAllocate { .. }
+            | cerune_ir::ExprKind::ArrayReleaseOwner { .. } => {
+                unreachable!("dynamic arrays are rejected before backend lowering")
+            }
             cerune_ir::ExprKind::Let { .. } | cerune_ir::ExprKind::Conditional { .. } => {
                 unreachable!("match expressions are lowered before code generation")
             }
@@ -656,6 +670,9 @@ impl Lowerer<'_> {
             },
 
             cerune_ir::ExprKind::Float { text } => match expr.ty {
+                cerune_ir::Type::DynamicArray { .. } => {
+                    unreachable!("dynamic arrays are rejected before backend lowering")
+                }
                 cerune_ir::Type::String => {
                     unreachable!("a float literal cannot have string type")
                 }
@@ -1055,6 +1072,12 @@ fn collect_slots(
 ) {
     for statement in statements {
         match &statement.kind {
+            cerune_ir::StatementKind::ArrayInitialize { .. }
+            | cerune_ir::StatementKind::ArrayRetain { .. }
+            | cerune_ir::StatementKind::ArrayFree { .. }
+            | cerune_ir::StatementKind::ArrayRangeCheck { .. } => {
+                unreachable!("dynamic arrays are rejected before backend lowering")
+            }
             cerune_ir::StatementKind::Binding { id, name, ty, .. } => {
                 let count = name_counts.entry(name.clone()).or_default();
                 let lowered_name = if *count == 0 {
@@ -1112,6 +1135,9 @@ fn collect_slots(
 impl From<cerune_ir::Type> for Type {
     fn from(value: cerune_ir::Type) -> Self {
         match value {
+            cerune_ir::Type::DynamicArray { .. } => {
+                unreachable!("dynamic arrays are rejected before backend lowering")
+            }
             cerune_ir::Type::String => Self::String,
             cerune_ir::Type::Bool => Self::Bool,
             cerune_ir::Type::Integer(_) => Self::I64,

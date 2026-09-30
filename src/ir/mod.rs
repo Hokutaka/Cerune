@@ -2,6 +2,7 @@ mod aggregates;
 mod ownership;
 
 pub const DEFAULT_STRING_HEAP_LIMIT: u64 = 64 * 1024 * 1024;
+pub const DEFAULT_ARRAY_HEAP_LIMIT: u64 = 64 * 1024 * 1024;
 pub mod builder;
 pub mod text;
 
@@ -19,12 +20,15 @@ pub enum Type {
     F64,
     Named(TypeId),
     Array { element: Box<Type>, length: usize },
+    DynamicArray { element: Box<Type> },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Program {
     /// 実行ごとの、生存する動的文字列のバイト数の上限です。
     pub string_heap_limit: u64,
+    /// 要素領域の共通計算幅による、生存する動的配列の予算です。
+    pub array_heap_limit: u64,
     pub constant_definitions: Vec<ConstantDefinition>,
     pub type_definitions: Vec<TypeDefinition>,
     pub function_definitions: Vec<FunctionDefinition>,
@@ -156,6 +160,23 @@ pub struct Statement {
 /// Cerune IRの文の種類を表します。
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum StatementKind {
+    /// 共通IRの要素コピーの一段。未初期化の末尾へ順に所有値を格納します。
+    ArrayInitialize {
+        array: Expr,
+        value: Expr,
+    },
+    ArrayRetain {
+        value: Expr,
+    },
+    /// 最後の所有を外した後、要素を解放済みの領域を回収します。
+    ArrayFree {
+        value: Expr,
+    },
+    ArrayRangeCheck {
+        length: Expr,
+        start: Expr,
+        end: Expr,
+    },
     /// 不変の動的文字列の共有／解放。静的文字列には作用しません。
     StringManage {
         value: Expr,
@@ -220,6 +241,11 @@ pub struct AssignmentTarget {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum AssignmentProjection {
+    DynamicIndex {
+        index: Expr,
+        element: Type,
+        span: Span,
+    },
     Index {
         index: Expr,
         element: Type,
@@ -238,6 +264,19 @@ pub struct Expr {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ExprKind {
+    /// 所有展開前の明示コピー。展開後は確保・通常のループ・要素格納になります。
+    ArrayCopy {
+        value: Box<Expr>,
+        range: Option<(Box<Expr>, Box<Expr>)>,
+    },
+    ArrayAllocate {
+        length: Box<Expr>,
+        element_width: u64,
+    },
+    /// 一時値からの所有引き継ぎ用。最後の所有なら要素解放へ進みます。
+    ArrayReleaseOwner {
+        value: Box<Expr>,
+    },
     /// 左から右へ評価し、新しい不変のバイト列を確保・コピーします。
     StringConcat {
         left: Box<Expr>,
@@ -378,4 +417,44 @@ pub enum BinaryOp {
 pub enum LogicalOp {
     And,
     Or,
+}
+
+impl Type {
+    pub(crate) fn contains_dynamic_array(&self) -> bool {
+        match self {
+            Self::DynamicArray { .. } => true,
+            Self::Array { element, .. } => element.contains_dynamic_array(),
+            _ => false,
+        }
+    }
+}
+impl Program {
+    pub(crate) fn first_dynamic_array_span(&self) -> Option<Span> {
+        for d in &self.type_definitions {
+            for f in &d.fields {
+                if f.ty.contains_dynamic_array() {
+                    return Some(f.span);
+                }
+            }
+        }
+        for f in &self.function_definitions {
+            if f.parameters.iter().any(|p| p.ty.contains_dynamic_array())
+                || matches!(&f.return_type, ReturnType::Value(t) if t.contains_dynamic_array())
+            {
+                return Some(f.span);
+            }
+        }
+        let span = std::cell::Cell::new(None);
+        let mut copy = self.clone();
+        aggregates::visit_program(
+            &mut copy,
+            &mut |e| {
+                if span.get().is_none() && e.ty.contains_dynamic_array() {
+                    span.set(Some(e.span));
+                }
+            },
+            &mut |_| {},
+        );
+        span.get()
+    }
 }

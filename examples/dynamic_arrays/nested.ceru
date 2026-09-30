@@ -1,0 +1,35 @@
+// 入れ子、文字列、関数、enumの中でも配列のコピーは独立します。
+type Rows { values: [[string]], label: string }
+enum Selection { Selected { rows: Rows }, Empty }
+fn identity<T>(value: T) -> T { return value; }
+fn make() -> Rows {
+    return Rows {
+        values: array_copy([
+            array_copy([concat("日", "本"), "保存\0\r\n"]),
+            array_copy(["次"])
+        ]),
+        label: "元",
+    };
+}
+original: Rows = make();
+copied: Rows = identity::<Rows>(original);
+selected: Selection = Selection::Selected { rows: copied };
+rows: Rows = match selected {
+    Selection::Selected { rows: value } if array_len(value.values) > 0 => value,
+    Selection::Selected { rows: value } => value,
+    Selection::Empty {} => make(),
+};
+mut edited: [[string]] = rows.values;
+edited[0][0] = "変更";
+edited[1] = array_copy(["追加", "要素"]);
+print(original.values[0][0]); // 日本
+print(edited[0][0]);          // 変更
+print(array_len(edited[1]));  // 2
+print(original == copied);   // true
+print(original.values == edited); // false
+print(rows.values[0][1]);     // NUL・CR/LFも保持します。
+for (item: [string] in edited) {
+    print(array_len(item));
+    edited = array_copy_range(edited, 0, 0); // 走査対象は開始時のコピーです。
+}
+print(edited); // []

@@ -54,6 +54,7 @@ mod lifetime_tests {
                 vec![],
                 &mut String::new(),
                 &mut heap,
+                &mut crate::runtime::array_heap::ArrayHeap::new(code.array_heap_limit),
             )
             .unwrap();
             heap.assert_empty();

@@ -42,7 +42,7 @@ pub(super) fn first_string_span(program: &Program) -> Option<Span> {
 fn contains_string(ty: &Type) -> bool {
     match ty {
         Type::String => true,
-        Type::Array { element, .. } => contains_string(element),
+        Type::Array { element, .. } | Type::DynamicArray { element } => contains_string(element),
         // 名前付き型のフィールドは、未使用の定義も含めて入口で検査します。
         Type::Named(_) | Type::Bool | Type::Integer(_) | Type::F32 | Type::F64 => false,
     }
@@ -54,6 +54,15 @@ fn string_statements(statements: &[Statement]) -> Option<Span> {
 
 fn string_statement(statement: &Statement) -> Option<Span> {
     match &statement.kind {
+        StatementKind::ArrayInitialize { array, value } => {
+            string_expr(array).or_else(|| string_expr(value))
+        }
+        StatementKind::ArrayRangeCheck { length, start, end } => string_expr(length)
+            .or_else(|| string_expr(start))
+            .or_else(|| string_expr(end)),
+        StatementKind::ArrayRetain { value } | StatementKind::ArrayFree { value } => {
+            string_expr(value)
+        }
         StatementKind::Binding { ty, value, .. } => {
             string_expr(value).or_else(|| contains_string(ty).then_some(statement.span))
         }
@@ -68,6 +77,11 @@ fn string_statement(statement: &Statement) -> Option<Span> {
                             element,
                             span,
                             ..
+                        }
+                        | AssignmentProjection::DynamicIndex {
+                            index,
+                            element,
+                            span,
                         } => {
                             string_expr(index).or_else(|| contains_string(element).then_some(*span))
                         }
@@ -110,6 +124,14 @@ fn string_expr(expr: &Expr) -> Option<Span> {
         return Some(expr.span);
     }
     match &expr.kind {
+        ExprKind::ArrayCopy { value, range } => string_expr(value).or_else(|| {
+            range
+                .as_ref()
+                .and_then(|(a, b)| string_expr(a).or_else(|| string_expr(b)))
+        }),
+        ExprKind::ArrayAllocate { length: value, .. } | ExprKind::ArrayReleaseOwner { value } => {
+            string_expr(value)
+        }
         ExprKind::Let { .. } | ExprKind::Conditional { .. } => {
             unreachable!("match expressions are lowered before code generation")
         }
@@ -154,4 +176,17 @@ pub(super) fn string_heap_limit(program: &crate::ir::Program) -> Option<u64> {
             )
         })
         .then_some(program.string_heap_limit)
+}
+
+pub(super) fn require_static_arrays(
+    program: &Program,
+    route: &str,
+) -> Result<(), crate::diagnostic::Diagnostic> {
+    if let Some(span) = program.first_dynamic_array_span() {
+        return Err(crate::diagnostic::Diagnostic::new(
+            format!("dynamic arrays are not yet supported by {route}; use run or run-vm"),
+            span,
+        ));
+    }
+    Ok(())
 }

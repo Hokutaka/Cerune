@@ -292,6 +292,22 @@ if (Flags { enabled: true, }).enabled {
 
 [構文と評価順の設計](../design/product-updates.ja.md)と[実行例](../../examples/product_update.ceru)を参照してください。
 
+## 動的配列（IR Executor・VM）
+
+`[T]`は実行時の長さを持つ所有値です。`run`／`run-ir`／`run-vm`で実行でき、`emit-ir`／`emit-bytecode`で処理を確認できます。C・LLVM・QBE・WAT・ASM・native objectは未対応の診断を返します。
+
+| 操作 | 意味 |
+| --- | --- |
+| `array_copy(values)` | 固定長・動的配列から独立した`[T]`を作る |
+| `array_copy_range(values, start, end)` | 半開区間をコピー。境界は`i64`、空範囲も可 |
+| `array_len(values)`・添字・表示・等値比較・`for … in` | 固定長配列と同じ規則。比較は同じ型同士、反復は開始時の独立コピー |
+
+`[1, 2]`は固定長のままで、暗黙変換はありません。空配列は`array_copy_range([1], 0, 0)`で作れます。束縛・引数・返却・複合値へのコピーは入れ子も独立し、`mut`では要素更新と異なる長さへの再代入ができます。型引数・モジュール・構造体・enumにも使用できます。
+
+範囲コピーは対象・開始・終了を左から一度ずつ評価してから`0 <= start <= end <= length`を検査し、違反すると`array-range-out-of-bounds`で停止します。要素代入は各添字の検査を次の添字・右辺より先に行います。
+
+`--array-heap-limit <bytes>`は配列要素領域の予算で、既定64 MiB、文字列予算とは独立です。コピーは新旧の領域が同時に必要になります。表示・長さ・比較のためだけにコピーはしません。`const`内の動的配列、`array_repeat`、成長操作、借用スライスは未対応です。[実行例](../../examples/dynamic_arrays/README.md)と[所有・生成過程の設計](../design/owned-arrays.ja.md)を参照してください。
+
 ## 固定長配列
 
 固定長配列は、同じ型の箱を決まった数だけ横に並べた値です。`[i64; 4]`は「`i64`の箱が4個ある配列」という意味です。
@@ -371,7 +387,7 @@ print(array_len(same)); // 2
 
 ### 配列の要素数
 
-`array_len(values)`は固定長配列`[T; N]`を一つ受け取り、最外側の要素数`N`を`i64`で返します。要素型は問いません。文字列のバイト数は`byte_len`で取得します。
+`array_len(values)`は配列を一つ受け取り、最外側の要素数を`i64`で返します。固定長`[T; N]`では`N`、動的`[T]`では実行時の長さです（動的配列はIR・VMのみ）。要素型は問いません。文字列のバイト数は`byte_len`で取得します。
 
 ```cerune
 matrix: [[i64; 3]; 2] = [[1, 2, 3], [4, 5, 6]];
@@ -387,6 +403,8 @@ print(array_len(matrix[0])); // 3
 
 
 ### 固定長配列の反復
+
+動的配列の反復もIR・VMで同じ規則を使い、長さ0なら本体を実行しません。
 
 ```cerune
 values: [i64; 3] = [4, 7, 9];

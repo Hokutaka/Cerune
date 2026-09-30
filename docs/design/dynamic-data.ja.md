@@ -2,7 +2,7 @@
 
 [English](dynamic-data.en.md)
 
-**文字列連結は実装済みです。動的配列・借用スライスは設計段階です。** IR Executor・VM・C・LLVM・QBE・WAT・Windows/Linux ASM・自前COFF/ELFで同じ値の意味と所有の展開を使います。
+**文字列連結は全経路で実装済みです。[動的配列](owned-arrays.ja.md)はIR・VMまで対応し、生成経路と借用スライスは未対応です。** 以下の文字列管理では、 IR Executor・VM・C・LLVM・QBE・WAT・Windows/Linux ASM・自前COFF/ELFで同じ値の意味と所有の展開を使います。
 
 ## 文字列連結
 

@@ -51,11 +51,20 @@ fn collect_array_assignment_types(program: &cerune_ir::Program) -> Vec<Type> {
     fn visit(statements: &[cerune_ir::Statement], result: &mut Vec<Type>) {
         for statement in statements {
             match &statement.kind {
+                cerune_ir::StatementKind::ArrayInitialize { .. }
+                | cerune_ir::StatementKind::ArrayRetain { .. }
+                | cerune_ir::StatementKind::ArrayFree { .. }
+                | cerune_ir::StatementKind::ArrayRangeCheck { .. } => {
+                    unreachable!("dynamic arrays are rejected before backend lowering")
+                }
                 cerune_ir::StatementKind::Assignment { target, .. } => {
                     for projection in &target.projections {
                         let cerune_ir::AssignmentProjection::Index {
                             element, length, ..
-                        } = projection;
+                        } = projection
+                        else {
+                            unreachable!("dynamic arrays are rejected before backend lowering")
+                        };
                         let ty = Type::Array {
                             element: Box::new(element.clone().into()),
                             length: *length,
@@ -145,6 +154,9 @@ fn lower_type_definitions(program: &cerune_ir::Program) -> Vec<TypeDefinition> {
 
 fn named_type_dependency(ty: &cerune_ir::Type) -> Option<cerune_ir::TypeId> {
     match ty {
+        cerune_ir::Type::DynamicArray { .. } => {
+            unreachable!("dynamic arrays are rejected before backend lowering")
+        }
         cerune_ir::Type::String => None,
         cerune_ir::Type::Named(id) => Some(*id),
         cerune_ir::Type::Array { element, .. } => named_type_dependency(element),
@@ -157,6 +169,12 @@ fn named_type_dependency(ty: &cerune_ir::Type) -> Option<cerune_ir::TypeId> {
 
 fn lower_statement(statement: &cerune_ir::Statement) -> Statement {
     match &statement.kind {
+        cerune_ir::StatementKind::ArrayInitialize { .. }
+        | cerune_ir::StatementKind::ArrayRetain { .. }
+        | cerune_ir::StatementKind::ArrayFree { .. }
+        | cerune_ir::StatementKind::ArrayRangeCheck { .. } => {
+            unreachable!("dynamic arrays are rejected before backend lowering")
+        }
         cerune_ir::StatementKind::Binding {
             id,
             name,
@@ -181,7 +199,10 @@ fn lower_statement(statement: &cerune_ir::Statement) -> Statement {
                             element,
                             length,
                             span,
-                        } = projection;
+                        } = projection
+                        else {
+                            unreachable!("dynamic arrays are rejected before backend lowering")
+                        };
                         ArrayProjection {
                             origin: super::ir::Origin {
                                 node_id: statement.id,
@@ -311,6 +332,11 @@ fn lower_expr_unchecked(expr: &cerune_ir::Expr) -> Expr {
     }
 
     let kind = match &expr.kind {
+        cerune_ir::ExprKind::ArrayCopy { .. }
+        | cerune_ir::ExprKind::ArrayAllocate { .. }
+        | cerune_ir::ExprKind::ArrayReleaseOwner { .. } => {
+            unreachable!("dynamic arrays are rejected before backend lowering")
+        }
         cerune_ir::ExprKind::Let { .. } | cerune_ir::ExprKind::Conditional { .. } => {
             unreachable!("match expressions are lowered before code generation")
         }
@@ -458,6 +484,9 @@ fn lower_expr_unchecked(expr: &cerune_ir::Expr) -> Expr {
 
 fn print_format(ty: &cerune_ir::Type) -> PrintFormat {
     match ty {
+        cerune_ir::Type::DynamicArray { .. } => {
+            unreachable!("dynamic arrays are rejected before backend lowering")
+        }
         cerune_ir::Type::String => PrintFormat::String,
         cerune_ir::Type::Bool => PrintFormat::Bool,
         cerune_ir::Type::Integer(crate::types::IntegerType::U64) => PrintFormat::U64,
@@ -473,6 +502,9 @@ fn print_format(ty: &cerune_ir::Type) -> PrintFormat {
 impl From<cerune_ir::Type> for Type {
     fn from(value: cerune_ir::Type) -> Self {
         match value {
+            cerune_ir::Type::DynamicArray { .. } => {
+                unreachable!("dynamic arrays are rejected before backend lowering")
+            }
             cerune_ir::Type::String => Self::String,
             cerune_ir::Type::Bool => Self::Bool,
             cerune_ir::Type::Integer(crate::types::IntegerType::U64) => Self::U64,
@@ -502,6 +534,11 @@ fn collect_array_types(program: &cerune_ir::Program) -> Vec<Type> {
     fn visit_expr(expr: &cerune_ir::Expr, types: &mut Vec<Type>) {
         add(&expr.ty, types);
         match &expr.kind {
+            cerune_ir::ExprKind::ArrayCopy { .. }
+            | cerune_ir::ExprKind::ArrayAllocate { .. }
+            | cerune_ir::ExprKind::ArrayReleaseOwner { .. } => {
+                unreachable!("dynamic arrays are rejected before backend lowering")
+            }
             cerune_ir::ExprKind::Let { .. } | cerune_ir::ExprKind::Conditional { .. } => {
                 unreachable!("match expressions are lowered before code generation")
             }
@@ -558,6 +595,12 @@ fn collect_array_types(program: &cerune_ir::Program) -> Vec<Type> {
 
     fn visit_statement(statement: &cerune_ir::Statement, types: &mut Vec<Type>) {
         match &statement.kind {
+            cerune_ir::StatementKind::ArrayInitialize { .. }
+            | cerune_ir::StatementKind::ArrayRetain { .. }
+            | cerune_ir::StatementKind::ArrayFree { .. }
+            | cerune_ir::StatementKind::ArrayRangeCheck { .. } => {
+                unreachable!("dynamic arrays are rejected before backend lowering")
+            }
             cerune_ir::StatementKind::Binding { ty, value, .. } => {
                 add(ty, types);
                 visit_expr(value, types);
@@ -565,7 +608,9 @@ fn collect_array_types(program: &cerune_ir::Program) -> Vec<Type> {
             cerune_ir::StatementKind::Assignment { target, value } => {
                 add(&target.root_ty, types);
                 for projection in &target.projections {
-                    let cerune_ir::AssignmentProjection::Index { index, .. } = projection;
+                    let cerune_ir::AssignmentProjection::Index { index, .. } = projection else {
+                        unreachable!("dynamic arrays are rejected before backend lowering")
+                    };
                     visit_expr(index, types);
                 }
                 visit_expr(value, types);

@@ -8,6 +8,14 @@ use super::{
 pub fn emit(program: &Program) -> String {
     let mut output = String::new();
     writeln!(output, "; Cerune IR v0.2").unwrap();
+    if program.first_dynamic_array_span().is_some() {
+        writeln!(
+            output,
+            "; array-heap-limit={} bytes (live element storage)",
+            program.array_heap_limit
+        )
+        .unwrap();
+    }
     let ownership_lowered = program
         .function_definitions
         .iter()
@@ -193,6 +201,37 @@ fn emit_statement(statement: &Statement, indent: usize, program: &Program, outpu
     let node = format!("#{} ", statement.id.0);
 
     match &statement.kind {
+        StatementKind::ArrayInitialize { array, value } => {
+            write!(output, "{prefix}{node}array.initialize-next ").unwrap();
+            emit_expr(array, program, output);
+            output.push_str(", ");
+            emit_expr(value, program, output);
+            output.push('\n');
+        }
+        StatementKind::ArrayRetain { value } | StatementKind::ArrayFree { value } => {
+            write!(
+                output,
+                "{prefix}{node}{} ",
+                if matches!(statement.kind, StatementKind::ArrayRetain { .. }) {
+                    "array.retain-owner"
+                } else {
+                    "array.free-elements"
+                }
+            )
+            .unwrap();
+            emit_expr(value, program, output);
+            output.push('\n');
+        }
+        StatementKind::ArrayRangeCheck { length, start, end } => {
+            write!(output, "{prefix}{node}array.check-range ").unwrap();
+            emit_expr(length, program, output);
+            output.push_str(", ");
+            emit_expr(start, program, output);
+            output.push_str(", ");
+            emit_expr(end, program, output);
+            output.push('\n');
+        }
+
         StatementKind::Binding {
             borrowed,
             id,
@@ -226,7 +265,8 @@ fn emit_statement(statement: &Statement, indent: usize, program: &Program, outpu
             )
             .unwrap();
             for projection in &target.projections {
-                let AssignmentProjection::Index { index, .. } = projection;
+                let (AssignmentProjection::Index { index, .. }
+                | AssignmentProjection::DynamicIndex { index, .. }) = projection;
                 output.push('[');
                 emit_expr(index, program, output);
                 output.push(']');
@@ -358,6 +398,31 @@ fn emit_expr(expr: &Expr, program: &Program, output: &mut String) {
     write!(output, "#{} ", expr.id.0).unwrap();
 
     match &expr.kind {
+        ExprKind::ArrayCopy { value, range } => {
+            output.push_str("array.copy(");
+            emit_expr(value, program, output);
+            if let Some((start, end)) = range {
+                output.push_str(", ");
+                emit_expr(start, program, output);
+                output.push_str(", ");
+                emit_expr(end, program, output);
+            }
+            output.push(')');
+        }
+        ExprKind::ArrayAllocate {
+            length,
+            element_width,
+        } => {
+            write!(output, "array.allocate-elements width={element_width}(").unwrap();
+            emit_expr(length, program, output);
+            output.push(')');
+        }
+        ExprKind::ArrayReleaseOwner { value } => {
+            output.push_str("array.release-owner-last(");
+            emit_expr(value, program, output);
+            output.push(')');
+        }
+
         ExprKind::Let {
             name, value, body, ..
         } => {
@@ -591,6 +656,7 @@ fn type_name(ty: &Type, program: &Program) -> String {
             let definition = &program.type_definitions[id.0];
             format!("%{}@{}", definition.name, id.0)
         }
+        Type::DynamicArray { element } => format!("[{}]", type_name(element, program)),
         Type::Array { element, length } => {
             format!("[{}; {length}]", type_name(element, program))
         }

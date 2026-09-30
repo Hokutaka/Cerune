@@ -199,7 +199,9 @@ impl Resolver<'_> {
     fn ty(&mut self, ty: &mut TypeRef, dependencies: bool) -> Result<(), Diagnostic> {
         match &mut ty.kind {
             TypeRefKind::Named(name) if dependencies => self.named_type(name, ty.span)?,
-            TypeRefKind::Array { element, .. } => self.ty(element, dependencies)?,
+            TypeRefKind::Array { element, .. } | TypeRefKind::DynamicArray { element } => {
+                self.ty(element, dependencies)?
+            }
             TypeRefKind::ArrayConstant { element, constant } => {
                 self.ty(element, dependencies)?;
                 let length = self.length(&constant.name, constant.span)?;

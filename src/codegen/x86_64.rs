@@ -44,6 +44,7 @@ impl Target {
 }
 
 pub fn emit_asm(program: &cerune_ir::Program, target: Target) -> Result<String, Diagnostic> {
+    super::support::require_static_arrays(program, "ASM/native object")?;
     Ok(emit(&lower::lower_with_target(program, target)))
 }
 
@@ -53,6 +54,7 @@ pub fn emit_object(
     target: Target,
     annotate_origins: bool,
 ) -> Result<Vec<u8>, Diagnostic> {
+    super::support::require_static_arrays(program, "ASM/native object")?;
     let assembly =
         emit::emit_with_origins(&lower::lower_with_target(program, target), annotate_origins);
     object::assemble(&assembly, target)
@@ -62,6 +64,7 @@ pub fn emit_asm_with_origins(
     program: &cerune_ir::Program,
     target: Target,
 ) -> Result<String, Diagnostic> {
+    super::support::require_static_arrays(program, "ASM/native object")?;
     Ok(emit::emit_with_origins(
         &lower::lower_with_target(program, target),
         true,
@@ -69,6 +72,7 @@ pub fn emit_asm_with_origins(
 }
 
 pub fn emit_x86_64_win_asm(program: &cerune_ir::Program) -> Result<String, Diagnostic> {
+    super::support::require_static_arrays(program, "ASM/native object")?;
     let module = lower(program);
 
     Ok(emit(&module))

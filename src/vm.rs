@@ -1,4 +1,7 @@
-use crate::runtime::float_output;
+use crate::runtime::{
+    array_heap::{ArrayError, ArrayHeap, ArrayValue},
+    float_output,
+};
 mod string_heap;
 use string_heap::{StringHeap, StringValue};
 mod numeric;
@@ -21,6 +24,8 @@ pub enum IntegerOperation {
 /// Cerune VMの実行中に発生した問題の種類を表します。
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum VmErrorKind {
+    ArrayRangeOutOfBounds,
+    InvalidArrayOwnership,
     AllocationSizeOverflow,
     AllocationLimitExceeded,
     AllocationFailed,
@@ -195,18 +200,31 @@ impl VmError {
 
 #[derive(Debug, Clone)]
 pub(crate) enum Value {
+    DynamicArray {
+        element: Type,
+        storage: ArrayValue<Value>,
+    },
     Bool(bool),
     String(StringValue),
     Integer(i128, IntegerType),
     F32(f32),
     F64(f64),
-    Aggregate { type_id: usize, fields: Vec<Value> },
-    Array { element: Type, values: Vec<Value> },
+    Aggregate {
+        type_id: usize,
+        fields: Vec<Value>,
+    },
+    Array {
+        element: Type,
+        values: Vec<Value>,
+    },
 }
 
 impl Value {
     fn ty(&self) -> Type {
         match self {
+            Self::DynamicArray { element, .. } => Type::DynamicArray {
+                element: Box::new(element.clone()),
+            },
             Self::Bool(_) => Type::Bool,
             Self::String(_) => Type::String,
             Self::Integer(_, ty) => Type::Integer(*ty),
@@ -236,11 +254,20 @@ enum Frame {
 pub fn run(program: &BytecodeProgram) -> Result<String, VmError> {
     let mut output = String::new();
     let mut heap = StringHeap::new(program.string_heap_limit);
-    if let Err(mut error) = execute_frame(program, Frame::Entry, Vec::new(), &mut output, &mut heap)
-    {
+    let mut arrays = ArrayHeap::new(program.array_heap_limit);
+    if let Err(mut error) = execute_frame(
+        program,
+        Frame::Entry,
+        Vec::new(),
+        &mut output,
+        &mut heap,
+        &mut arrays,
+    ) {
         error.output = output.into_boxed_str();
         return Err(error);
     }
+    #[cfg(test)]
+    arrays.assert_empty();
     Ok(output)
 }
 
@@ -267,6 +294,7 @@ pub(crate) fn execute_function(
         arguments,
         &mut output,
         &mut StringHeap::new(program.string_heap_limit),
+        &mut ArrayHeap::new(program.array_heap_limit),
     ) {
         Ok(value) => Ok((value.map(string_heap::freeze), output)),
         Err(mut error) => {
@@ -282,8 +310,9 @@ fn execute_frame(
     arguments: Vec<Value>,
     output: &mut String,
     heap: &mut StringHeap,
+    arrays: &mut ArrayHeap<Value>,
 ) -> Result<Option<Value>, VmError> {
-    let result = execute_frame_inner(program, frame, arguments, output, heap);
+    let result = execute_frame_inner(program, frame, arguments, output, heap, arrays);
     match (frame, result) {
         (Frame::Function(function_id), Err(error)) => Err(error.in_function(function_id)),
         (_, result) => result,
@@ -296,6 +325,7 @@ fn execute_frame_inner(
     arguments: Vec<Value>,
     output: &mut String,
     heap: &mut StringHeap,
+    arrays: &mut ArrayHeap<Value>,
 ) -> Result<Option<Value>, VmError> {
     let (instructions, slot_info, parameter_count, return_type) = match frame {
         Frame::Entry => (
@@ -355,6 +385,90 @@ fn execute_frame_inner(
             .ok_or_else(|| VmError::new(VmErrorKind::InstructionOutOfBounds, pc))?;
 
         match &instruction.kind {
+            InstructionKind::ArrayAllocate {
+                element,
+                element_width,
+            } => {
+                let n = at_instruction(pop_i64(&mut stack), pc)?;
+                let n = u64::try_from(n)
+                    .map_err(|_| VmError::new(VmErrorKind::AllocationSizeOverflow, pc))?;
+                let storage =
+                    at_instruction(arrays.allocate(n, *element_width).map_err(array_error), pc)?;
+                stack.push(Value::DynamicArray {
+                    element: element.clone(),
+                    storage,
+                });
+            }
+            InstructionKind::ArrayInitialize => {
+                let value = at_instruction(pop_value(&mut stack), pc)?;
+                let (element, storage) = at_instruction(pop_dynamic_array(&mut stack), pc)?;
+                if value.ty() != element {
+                    return Err(VmError::new(
+                        VmErrorKind::TypeMismatch {
+                            expected: element,
+                            actual: value.ty(),
+                        },
+                        pc,
+                    ));
+                }
+                at_instruction(arrays.initialize(&storage, value).map_err(array_error), pc)?;
+            }
+            InstructionKind::ArrayRetain
+            | InstructionKind::ArrayFree
+            | InstructionKind::ArrayReleaseOwner => {
+                let (_, storage) = at_instruction(pop_dynamic_array(&mut stack), pc)?;
+                match instruction.kind {
+                    InstructionKind::ArrayRetain => {
+                        at_instruction(arrays.retain(&storage).map_err(array_error), pc)?
+                    }
+                    InstructionKind::ArrayFree => {
+                        at_instruction(arrays.free(&storage).map_err(array_error), pc)?
+                    }
+                    _ => {
+                        let last = at_instruction(
+                            arrays.release_owner(&storage).map_err(array_error),
+                            pc,
+                        )?;
+                        stack.push(Value::Bool(last));
+                    }
+                }
+            }
+            InstructionKind::ArrayRangeCheck => {
+                let end = at_instruction(pop_i64(&mut stack), pc)?;
+                let start = at_instruction(pop_i64(&mut stack), pc)?;
+                let length = at_instruction(pop_i64(&mut stack), pc)?;
+                if start < 0 || start > end || end > length {
+                    return Err(VmError::new(VmErrorKind::ArrayRangeOutOfBounds, pc));
+                }
+            }
+            InstructionKind::DynamicArrayLength { element }
+            | InstructionKind::DynamicIndex { element } => {
+                let index = if matches!(instruction.kind, InstructionKind::DynamicIndex { .. }) {
+                    Some(at_instruction(pop_i64(&mut stack), pc)?)
+                } else {
+                    None
+                };
+                let (actual, storage) = at_instruction(pop_dynamic_array(&mut stack), pc)?;
+                if actual != *element {
+                    return Err(VmError::new(
+                        VmErrorKind::TypeMismatch {
+                            expected: Type::DynamicArray {
+                                element: Box::new(element.clone()),
+                            },
+                            actual: Type::DynamicArray {
+                                element: Box::new(actual),
+                            },
+                        },
+                        pc,
+                    ));
+                }
+                if let Some(index) = index {
+                    let index = at_instruction(array_index(index, storage.len()), pc)?;
+                    stack.push(at_instruction(storage.get(index).map_err(array_error), pc)?);
+                } else {
+                    stack.push(Value::Integer(storage.len() as i128, IntegerType::I64));
+                }
+            }
             InstructionKind::ArrayLength { element, length } => {
                 let value = at_instruction(pop_value(&mut stack), pc)?;
                 let expected = Type::Array {
@@ -800,6 +914,7 @@ fn execute_frame_inner(
                     arguments,
                     output,
                     heap,
+                    arrays,
                 )? {
                     stack.push(value);
                 }
@@ -1138,7 +1253,7 @@ fn binary(ty: Type, stack: &mut Vec<Value>, operation: BinaryOperation) -> VmRes
             stack.push(Value::F64(value));
         }
 
-        Type::String | Type::Named(_) | Type::Array { .. } => {
+        Type::String | Type::Named(_) | Type::Array { .. } | Type::DynamicArray { .. } => {
             return Err(VmErrorKind::TypeMismatch {
                 expected: Type::Integer(IntegerType::I64),
                 actual: ty,
@@ -1200,7 +1315,7 @@ fn compare(ty: Type, stack: &mut Vec<Value>, comparison: Comparison) -> VmResult
             let left = pop_f64(stack)?;
             compare_values(left, right, comparison)
         }
-        Type::Named(_) | Type::Array { .. } => {
+        Type::Named(_) | Type::Array { .. } | Type::DynamicArray { .. } => {
             return Err(VmErrorKind::InvalidComparisonType { ty });
         }
     };
@@ -1256,7 +1371,7 @@ fn negate(ty: Type, stack: &mut Vec<Value>) -> VmResult<()> {
             stack.push(Value::F64(-value));
         }
 
-        Type::String | Type::Named(_) | Type::Array { .. } => {
+        Type::String | Type::Named(_) | Type::Array { .. } | Type::DynamicArray { .. } => {
             return Err(VmErrorKind::TypeMismatch {
                 expected: Type::Integer(IntegerType::I64),
                 actual: ty,
@@ -1286,63 +1401,91 @@ fn pop_integer(stack: &mut Vec<Value>, ty: IntegerType) -> VmResult<i128> {
     }
 }
 
+fn array_error(error: ArrayError) -> VmErrorKind {
+    match error {
+        ArrayError::AllocationSizeOverflow => VmErrorKind::AllocationSizeOverflow,
+        ArrayError::AllocationLimitExceeded => VmErrorKind::AllocationLimitExceeded,
+        ArrayError::AllocationFailed => VmErrorKind::AllocationFailed,
+        ArrayError::InvalidOwnership | ArrayError::IndexOutOfBounds => {
+            VmErrorKind::InvalidArrayOwnership
+        }
+    }
+}
+fn pop_dynamic_array(stack: &mut Vec<Value>) -> VmResult<(Type, ArrayValue<Value>)> {
+    match pop_value(stack)? {
+        Value::DynamicArray { element, storage } => Ok((element, storage)),
+        _ => Err(VmErrorKind::InvalidArrayOwnership),
+    }
+}
+fn array_index(index: i64, length: usize) -> VmResult<usize> {
+    usize::try_from(index)
+        .ok()
+        .filter(|i| *i < length)
+        .ok_or(VmErrorKind::ArrayIndexOutOfBounds { index, length })
+}
+fn array_child(current: &Value, access: &ArrayAccess, index: i64) -> VmResult<(usize, Value)> {
+    let expected = match access.length {
+        Some(length) => Type::Array {
+            element: Box::new(access.element.clone()),
+            length,
+        },
+        None => Type::DynamicArray {
+            element: Box::new(access.element.clone()),
+        },
+    };
+    if current.ty() != expected {
+        return Err(VmErrorKind::TypeMismatch {
+            expected,
+            actual: current.ty(),
+        });
+    }
+    match current {
+        Value::Array { values, .. } => {
+            let i = array_index(index, values.len())?;
+            Ok((i, values[i].clone()))
+        }
+        Value::DynamicArray { storage, .. } => {
+            let i = array_index(index, storage.len())?;
+            Ok((i, storage.get(i).map_err(array_error)?))
+        }
+        _ => unreachable!(),
+    }
+}
 fn assign_array_path(
     current: &mut Value,
     path: &[ArrayAccess],
     indices: &[i64],
     replacement: Value,
 ) -> VmResult<()> {
-    let Some((access, remaining_path)) = path.split_first() else {
-        return Err(VmErrorKind::TypeMismatch {
-            expected: current.ty(),
-            actual: replacement.ty(),
-        });
+    let Some((access, rest)) = path.split_first() else {
+        return Err(VmErrorKind::InvalidArrayOwnership);
     };
-    let Some((&index, remaining_indices)) = indices.split_first() else {
+    let Some((&index, remaining)) = indices.split_first() else {
         return Err(VmErrorKind::StackUnderflow);
     };
-
-    let expected = Type::Array {
-        element: Box::new(access.element.clone()),
-        length: access.length,
-    };
-    let actual = current.ty();
-    let Value::Array { element, values } = current else {
-        return Err(VmErrorKind::TypeMismatch { expected, actual });
-    };
-    if *element != access.element || values.len() != access.length {
-        return Err(VmErrorKind::TypeMismatch { expected, actual });
-    }
-
-    let index = usize::try_from(index)
-        .ok()
-        .filter(|index| *index < values.len())
-        .ok_or(VmErrorKind::ArrayIndexOutOfBounds {
-            index,
-            length: access.length,
-        })?;
-
-    if remaining_path.is_empty() {
+    let (i, mut child) = array_child(current, access, index)?;
+    if rest.is_empty() {
         if replacement.ty() != access.element {
             return Err(VmErrorKind::TypeMismatch {
                 expected: access.element.clone(),
                 actual: replacement.ty(),
             });
         }
-        values[index] = replacement;
-        Ok(())
+        child = replacement;
     } else {
-        assign_array_path(
-            &mut values[index],
-            remaining_path,
-            remaining_indices,
-            replacement,
-        )
+        assign_array_path(&mut child, rest, remaining, replacement)?;
+    }
+    match current {
+        Value::Array { values, .. } => {
+            values[i] = child;
+            Ok(())
+        }
+        Value::DynamicArray { storage, .. } => storage.set(i, child).map_err(array_error),
+        _ => unreachable!(),
     }
 }
-
 fn check_array_path(current: &Value, path: &[ArrayAccess], indices: &[Value]) -> VmResult<()> {
-    let mut current = current;
+    let mut current = current.clone();
     for (access, index) in path.iter().zip(indices) {
         let Value::Integer(index, IntegerType::I64) = index else {
             return Err(VmErrorKind::TypeMismatch {
@@ -1350,24 +1493,7 @@ fn check_array_path(current: &Value, path: &[ArrayAccess], indices: &[Value]) ->
                 actual: index.ty(),
             });
         };
-        let expected = Type::Array {
-            element: Box::new(access.element.clone()),
-            length: access.length,
-        };
-        let actual = current.ty();
-        let Value::Array { element, values } = current else {
-            return Err(VmErrorKind::TypeMismatch { expected, actual });
-        };
-        if *element != access.element || values.len() != access.length {
-            return Err(VmErrorKind::TypeMismatch { expected, actual });
-        }
-        current = usize::try_from(*index)
-            .ok()
-            .and_then(|index| values.get(index))
-            .ok_or(VmErrorKind::ArrayIndexOutOfBounds {
-                index: *index as i64,
-                length: access.length,
-            })?;
+        current = array_child(&current, access, *index as i64)?.1;
     }
     Ok(())
 }
@@ -1471,6 +1597,7 @@ mod tests {
     #[test]
     fn distinguishes_integer_division_overflow() {
         let program = BytecodeProgram {
+            array_heap_limit: crate::ir::DEFAULT_ARRAY_HEAP_LIMIT,
             string_heap_limit: crate::ir::DEFAULT_STRING_HEAP_LIMIT,
             type_definitions: Vec::new(),
             functions: Vec::new(),
@@ -1511,6 +1638,7 @@ mod tests {
     #[test]
     fn reports_integer_subtraction_overflow_at_instruction() {
         let program = BytecodeProgram {
+            array_heap_limit: crate::ir::DEFAULT_ARRAY_HEAP_LIMIT,
             string_heap_limit: crate::ir::DEFAULT_STRING_HEAP_LIMIT,
             type_definitions: Vec::new(),
             functions: Vec::new(),
@@ -1557,6 +1685,7 @@ mod tests {
     #[test]
     fn reports_integer_negation_overflow_at_instruction() {
         let program = BytecodeProgram {
+            array_heap_limit: crate::ir::DEFAULT_ARRAY_HEAP_LIMIT,
             string_heap_limit: crate::ir::DEFAULT_STRING_HEAP_LIMIT,
             type_definitions: Vec::new(),
             functions: Vec::new(),
@@ -1602,6 +1731,7 @@ mod tests {
     #[test]
     fn rejects_bytecode_assignment_to_immutable_slot() {
         let program = BytecodeProgram {
+            array_heap_limit: crate::ir::DEFAULT_ARRAY_HEAP_LIMIT,
             string_heap_limit: crate::ir::DEFAULT_STRING_HEAP_LIMIT,
             type_definitions: Vec::new(),
             functions: Vec::new(),
@@ -1631,6 +1761,7 @@ mod tests {
     #[test]
     fn rejects_distinct_initializers_for_the_same_slot() {
         let program = BytecodeProgram {
+            array_heap_limit: crate::ir::DEFAULT_ARRAY_HEAP_LIMIT,
             string_heap_limit: crate::ir::DEFAULT_STRING_HEAP_LIMIT,
             type_definitions: Vec::new(),
             functions: Vec::new(),
@@ -1660,6 +1791,7 @@ mod tests {
     #[test]
     fn reports_missing_instruction_without_panicking() {
         let program = BytecodeProgram {
+            array_heap_limit: crate::ir::DEFAULT_ARRAY_HEAP_LIMIT,
             string_heap_limit: crate::ir::DEFAULT_STRING_HEAP_LIMIT,
             type_definitions: Vec::new(),
             functions: Vec::new(),
@@ -1770,5 +1902,33 @@ mod tests {
         }
 
         assert_eq!(output, "");
+    }
+
+    #[test]
+    fn forced_array_allocation_failure_has_source_origin_and_prior_output() {
+        let source = r#"print("before");a:[i64]=array_copy([1]);"#;
+        let p = crate::compile_to_bytecode(source).unwrap();
+        let mut heap = super::StringHeap::new(p.string_heap_limit);
+        let mut arrays = super::ArrayHeap::new(p.array_heap_limit);
+        arrays.fail_next_allocation();
+        let mut output = String::new();
+        let e = super::execute_frame(
+            &p,
+            super::Frame::Entry,
+            vec![],
+            &mut output,
+            &mut heap,
+            &mut arrays,
+        )
+        .unwrap_err();
+        assert_eq!(e.kind(), VmErrorKind::AllocationFailed);
+        assert_eq!(output, "before\n");
+        let instruction =
+            &p.functions[e.function_id().unwrap()].instructions[e.instruction_index()];
+        let crate::bytecode::InstructionOrigin::Source { span, .. } = instruction.origin else {
+            panic!()
+        };
+        assert_eq!(&source[span.start()..span.end()], "array_copy([1])");
+        arrays.assert_empty();
     }
 }

@@ -16,7 +16,7 @@ fn run() -> Result<(), String> {
         return Ok(());
     };
 
-    let (rest, string_heap_limit) = parse_string_heap_limit(args.collect(), &command)?;
+    let (rest, string_heap_limit, array_heap_limit) = parse_heap_limits(args.collect(), &command)?;
     let mut args = rest.into_iter();
     match command.as_str() {
         // コードの構文チェック
@@ -41,7 +41,7 @@ fn run() -> Result<(), String> {
             let output =
                 parse_output_option(&rest, "cerune emit-sources <file> [-o <sources.json>]")?;
             let source = read_source(&input)?;
-            ir_for(&source, string_heap_limit)?;
+            ir_for(&source, string_heap_limit, array_heap_limit)?;
             write_or_print(output, source.source_manifest())
         }
 
@@ -59,6 +59,7 @@ fn run() -> Result<(), String> {
                 Ok(cerune_lang::ir::text::emit(&ir_for(
                     &source,
                     string_heap_limit,
+                    array_heap_limit,
                 )?)),
                 &source,
             )?;
@@ -77,7 +78,11 @@ fn run() -> Result<(), String> {
             let source = read_source(&input)?;
 
             let c = render_compilation_result(
-                cerune_lang::codegen::emit_c(&ir_for(&source, string_heap_limit)?),
+                cerune_lang::codegen::emit_c(&ir_for(
+                    &source,
+                    string_heap_limit,
+                    array_heap_limit,
+                )?),
                 &source,
             )?;
 
@@ -103,7 +108,7 @@ fn run() -> Result<(), String> {
 
             let llvm = render_compilation_result(
                 cerune_lang::codegen::llvm::emit_llvm_with_options(
-                    &ir_for(&source, string_heap_limit)?,
+                    &ir_for(&source, string_heap_limit, array_heap_limit)?,
                     cerune_lang::codegen::llvm::Options {
                         target,
                         annotate_origins,
@@ -126,7 +131,11 @@ fn run() -> Result<(), String> {
             let source = read_source(&input)?;
 
             let wat = render_compilation_result(
-                cerune_lang::codegen::emit_wat(&ir_for(&source, string_heap_limit)?),
+                cerune_lang::codegen::emit_wat(&ir_for(
+                    &source,
+                    string_heap_limit,
+                    array_heap_limit,
+                )?),
                 &source,
             )?;
 
@@ -155,7 +164,7 @@ fn run() -> Result<(), String> {
 
             let qbe = render_compilation_result(
                 cerune_lang::codegen::qbe::emit_qbe_with_target(
-                    &ir_for(&source, string_heap_limit)?,
+                    &ir_for(&source, string_heap_limit, array_heap_limit)?,
                     target,
                 ),
                 &source,
@@ -181,12 +190,12 @@ fn run() -> Result<(), String> {
             let asm = render_compilation_result(
                 if annotate_origins {
                     cerune_lang::codegen::x86_64::emit_asm_with_origins(
-                        &ir_for(&source, string_heap_limit)?,
+                        &ir_for(&source, string_heap_limit, array_heap_limit)?,
                         target,
                     )
                 } else {
                     cerune_lang::codegen::x86_64::emit_asm(
-                        &ir_for(&source, string_heap_limit)?,
+                        &ir_for(&source, string_heap_limit, array_heap_limit)?,
                         target,
                     )
                 },
@@ -208,7 +217,7 @@ fn run() -> Result<(), String> {
             let source = read_source(&input)?;
             let bytes = render_compilation_result(
                 cerune_lang::codegen::x86_64::emit_object(
-                    &ir_for(&source, string_heap_limit)?,
+                    &ir_for(&source, string_heap_limit, array_heap_limit)?,
                     target,
                     origins,
                 ),
@@ -230,8 +239,12 @@ fn run() -> Result<(), String> {
             let source = read_source(&input)?;
 
             let bytecode = render_compilation_result(
-                cerune_lang::bytecode::lower(&ir_for(&source, string_heap_limit)?)
-                    .map(|program| cerune_lang::bytecode::format_program(&program)),
+                cerune_lang::bytecode::lower(&ir_for(
+                    &source,
+                    string_heap_limit,
+                    array_heap_limit,
+                )?)
+                .map(|program| cerune_lang::bytecode::format_program(&program)),
                 &source,
             )?;
 
@@ -254,7 +267,7 @@ fn run() -> Result<(), String> {
 
             let source = read_source(&input)?;
 
-            let ir = ir_for(&source, string_heap_limit)?;
+            let ir = ir_for(&source, string_heap_limit, array_heap_limit)?;
             let output = if command != "run-vm" {
                 cerune_lang::ir_executor::run(&ir).map_err(|error| {
                     print!("{}", error.output());
@@ -305,21 +318,27 @@ fn render_compilation_result<T>(
 fn ir_for(
     source: &Compilation,
     string_heap_limit: u64,
+    array_heap_limit: u64,
 ) -> Result<cerune_lang::ir::Program, String> {
     let mut program = render_compilation_result(source.to_ir(), source)?;
     program.string_heap_limit = string_heap_limit;
+    program.array_heap_limit = array_heap_limit;
     Ok(program)
 }
 
-fn parse_string_heap_limit(args: Vec<String>, command: &str) -> Result<(Vec<String>, u64), String> {
+fn parse_heap_limits(args: Vec<String>, command: &str) -> Result<(Vec<String>, u64, u64), String> {
     let mut rest = Vec::new();
-    let mut limit = None;
+    let mut limits = [None, None];
     let mut args = args.into_iter();
     while let Some(arg) = args.next() {
-        if arg != "--string-heap-limit" {
-            rest.push(arg);
-            continue;
-        }
+        let index = match arg.as_str() {
+            "--string-heap-limit" => 0,
+            "--array-heap-limit" => 1,
+            _ => {
+                rest.push(arg);
+                continue;
+            }
+        };
         if !matches!(
             command,
             "run"
@@ -334,27 +353,28 @@ fn parse_string_heap_limit(args: Vec<String>, command: &str) -> Result<(Vec<Stri
                 | "emit-asm"
                 | "emit-obj"
         ) {
-            return Err(format!("--string-heap-limit is not supported by {command}"));
+            return Err(format!("{arg} is not supported by {command}"));
         }
-        if limit.is_some() {
-            return Err("duplicate --string-heap-limit".into());
+        if limits[index].is_some() {
+            return Err(format!("duplicate {arg}"));
         }
         let text = args
             .next()
-            .ok_or("missing byte count after --string-heap-limit")?;
+            .ok_or_else(|| format!("missing byte count after {arg}"))?;
         let value = text
             .parse::<u64>()
             .ok()
             .filter(|n| *n <= i64::MAX as u64)
             .filter(|_| !text.is_empty() && text.bytes().all(|b| b.is_ascii_digit()))
-            .ok_or(
-                "--string-heap-limit expects a decimal byte count from 0 to 9223372036854775807",
-            )?;
-        limit = Some(value);
+            .ok_or_else(|| {
+                format!("{arg} expects a decimal byte count from 0 to 9223372036854775807")
+            })?;
+        limits[index] = Some(value);
     }
     Ok((
         rest,
-        limit.unwrap_or(cerune_lang::ir::DEFAULT_STRING_HEAP_LIMIT),
+        limits[0].unwrap_or(cerune_lang::ir::DEFAULT_STRING_HEAP_LIMIT),
+        limits[1].unwrap_or(cerune_lang::ir::DEFAULT_ARRAY_HEAP_LIMIT),
     ))
 }
 
@@ -450,8 +470,8 @@ fn print_help() {
            cerune run-vm <file> [--diagnostic-format runtime-v1]\n\
            cerune --version\n\n\
          run / run-ir: direct Cerune IR execution; run-vm: Bytecode -> VM.\n\
-         run / run-ir / run-vm / emit-* (except emit-sources): --string-heap-limit <bytes>\n\
-         Default: 67108864 live dynamic string bytes; compile-time budget is independent.\n",
+         run / run-ir / run-vm / emit-* (except emit-sources): --string-heap-limit <bytes> / --array-heap-limit <bytes>\n\
+         Default: 67108864 bytes per heap; compile-time string budget is independent.\n",
         env!("CARGO_PKG_VERSION")
     );
 }

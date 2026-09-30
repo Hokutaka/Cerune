@@ -37,6 +37,7 @@ pub fn emit_qbe_with_target(
     program: &cerune_ir::Program,
     target: Option<Target>,
 ) -> Result<String, Diagnostic> {
+    super::support::require_static_arrays(program, "QBE")?;
     if let Some(span) = super::support::first_string_span(program)
         && target.is_none()
     {

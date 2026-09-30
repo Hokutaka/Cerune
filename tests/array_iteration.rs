@@ -15,11 +15,14 @@ fn examples_preserve_values_snapshots_and_control_flow() {
 #[test]
 fn headers_require_arrays_compatible_types_and_local_bindings() {
     for (source, reason) in [
-        ("for (v: infer in 1) {}", "expects a fixed array"),
-        ("for (v: infer in \"text\") {}", "expects a fixed array"),
+        ("for (v: infer in 1) {}", "expects a fixed or dynamic array"),
+        (
+            "for (v: infer in \"text\") {}",
+            "expects a fixed or dynamic array",
+        ),
         (
             "type P { n: i64 } for (v: infer in (P { n: 1 })) {}",
-            "expects a fixed array",
+            "expects a fixed or dynamic array",
         ),
         ("for (v: u8 in [1]) {}", "type mismatch"),
         ("for (i: u64, v: infer in [1]) {}", "type mismatch"),

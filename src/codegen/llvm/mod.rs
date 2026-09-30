@@ -66,6 +66,7 @@ pub fn emit_llvm_with_options(
     program: &cerune_ir::Program,
     options: Options,
 ) -> Result<String, Diagnostic> {
+    super::support::require_static_arrays(program, "LLVM")?;
     let target = options.target;
     let string_span = super::support::first_string_span(program);
     if let Some(span) = string_span

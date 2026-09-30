@@ -1,5 +1,6 @@
 //! 完成済みのCerune IRを直接実行します。命令列や別のIRへ変換しません。
 mod value;
+use crate::runtime::array_heap::{ArrayError, ArrayHeap};
 use crate::{
     ir::{self, Expr, ExprKind as E, Statement, StatementKind as S},
     runtime::{
@@ -95,6 +96,15 @@ impl Fault {
         self
     }
 }
+fn array_error(e: ArrayError) -> Fault {
+    match e {
+        ArrayError::AllocationSizeOverflow => Fault::failure(FailureCode::AllocationSizeOverflow),
+        ArrayError::AllocationLimitExceeded => Fault::failure(FailureCode::AllocationLimitExceeded),
+        ArrayError::AllocationFailed => Fault::failure(FailureCode::AllocationFailed),
+        ArrayError::IndexOutOfBounds => Fault::failure(FailureCode::ArrayIndexOutOfBounds),
+        ArrayError::InvalidOwnership => Fault::invalid("invalid array ownership"),
+    }
+}
 fn heap_error(e: HeapError) -> Fault {
     match e {
         HeapError::AllocationSizeOverflow => Fault::failure(FailureCode::AllocationSizeOverflow),
@@ -119,6 +129,7 @@ struct Executor<'a> {
     program: &'a ir::Program,
     output: String,
     heap: StringHeap,
+    arrays: ArrayHeap<Value>,
 }
 
 /// 共通フロントエンドが構築したIRを、新しい実行状態で直接実行します。
@@ -128,11 +139,15 @@ pub fn run(program: &ir::Program) -> std::result::Result<String, ExecutionError>
         program,
         output: String::new(),
         heap: StringHeap::new(program.string_heap_limit),
+        arrays: ArrayHeap::new(program.array_heap_limit),
     };
     match executor.entry() {
         Ok(()) => {
             #[cfg(test)]
-            executor.heap.assert_empty();
+            {
+                executor.heap.assert_empty();
+                executor.arrays.assert_empty();
+            }
             Ok(executor.output)
         }
         Err(error) => Err(ExecutionError {
@@ -244,6 +259,35 @@ impl Executor<'_> {
             S::Assignment { target, value } => {
                 self.assignment(s, target, value, frame)?;
             }
+            S::ArrayInitialize { array, value } => {
+                let Value::DynamicArray { element, storage } = self.expr(array, frame)? else {
+                    return Err(Fault::invalid("array initialize"));
+                };
+                let value = self.expr(value, frame)?;
+                value.check(&element)?;
+                self.arrays
+                    .initialize(&storage, value)
+                    .map_err(array_error)?;
+            }
+            S::ArrayRetain { value } | S::ArrayFree { value } => {
+                let Value::DynamicArray { storage, .. } = self.expr(value, frame)? else {
+                    return Err(Fault::invalid("array ownership"));
+                };
+                if matches!(s.kind, S::ArrayRetain { .. }) {
+                    self.arrays.retain(&storage)
+                } else {
+                    self.arrays.free(&storage)
+                }
+                .map_err(array_error)?;
+            }
+            S::ArrayRangeCheck { length, start, end } => {
+                let length = self.expr(length, frame)?.integer(IntegerType::I64)?;
+                let start = self.expr(start, frame)?.integer(IntegerType::I64)?;
+                let end = self.expr(end, frame)?.integer(IntegerType::I64)?;
+                if start < 0 || start > end || end > length {
+                    return Err(Fault::failure(FailureCode::ArrayRangeOutOfBounds));
+                }
+            }
             S::StringManage { value, retain } => {
                 let value = self.expr(value, frame)?.string()?;
                 self.heap.manage(&value, *retain).map_err(heap_error)?;
@@ -335,24 +379,40 @@ impl Executor<'_> {
         let mut path = vec![];
         // 各添字の評価・検査を完了してから、次の添字や右辺へ進みます。
         for projection in &target.projections {
-            let ir::AssignmentProjection::Index {
-                index,
-                element,
-                length,
-                span,
-            } = projection;
+            let (index, element, fixed, span) = match projection {
+                ir::AssignmentProjection::Index {
+                    index,
+                    element,
+                    length,
+                    span,
+                } => (index, element, Some(*length), span),
+                ir::AssignmentProjection::DynamicIndex {
+                    index,
+                    element,
+                    span,
+                } => (index, element, None, span),
+            };
             let index = self.expr(index, frame)?.integer(IntegerType::I64)?;
             let root = &frame
                 .get(&target.id)
                 .ok_or_else(|| Fault::invalid("unknown assignment root"))?
                 .value;
             let current = at_path(root, &path)?;
-            current.check(&ir::Type::Array {
-                element: Box::new(element.clone()),
-                length: *length,
+            current.check(&match fixed {
+                Some(length) => ir::Type::Array {
+                    element: Box::new(element.clone()),
+                    length,
+                },
+                None => ir::Type::DynamicArray {
+                    element: Box::new(element.clone()),
+                },
             })?;
-            let index = checked_index(index, *length).map_err(|e| e.at(s.id, *span))?;
-            path.push(index);
+            let length = match current {
+                Value::Array { values, .. } => values.len(),
+                Value::DynamicArray { storage, .. } => storage.len(),
+                _ => return Err(Fault::invalid("array assignment type")),
+            };
+            path.push(checked_index(index, length).map_err(|e| e.at(s.id, *span))?);
         }
         let replacement = self.expr(value, frame)?;
         replacement.check(&target.ty)?;
@@ -360,10 +420,9 @@ impl Executor<'_> {
             .get_mut(&target.id)
             .ok_or_else(|| Fault::invalid("unknown assignment root"))?
             .value;
-        let destination = at_path_mut(root, &path)?;
+        let destination = at_path(root, &path)?;
         replacement.check(&destination.ty())?;
-        *destination = replacement;
-        Ok(())
+        set_path(root, &path, replacement)
     }
     fn expr(&mut self, e: &Expr, frame: &mut Frame) -> Result<Value> {
         let value = self
@@ -374,6 +433,32 @@ impl Executor<'_> {
     }
     fn expr_inner(&mut self, e: &Expr, frame: &mut Frame) -> Result<Value> {
         Ok(match &e.kind {
+            E::ArrayCopy { .. } => return Err(Fault::invalid("array copy must be lowered")),
+            E::ArrayAllocate {
+                length,
+                element_width,
+            } => {
+                let ir::Type::DynamicArray { element } = &e.ty else {
+                    return Err(Fault::invalid("array allocation type"));
+                };
+                let count = self.expr(length, frame)?.integer(IntegerType::I64)?;
+                let count = u64::try_from(count)
+                    .map_err(|_| Fault::failure(FailureCode::AllocationSizeOverflow))?;
+                let storage = self
+                    .arrays
+                    .allocate(count, *element_width)
+                    .map_err(array_error)?;
+                Value::DynamicArray {
+                    element: *element.clone(),
+                    storage,
+                }
+            }
+            E::ArrayReleaseOwner { value } => {
+                let Value::DynamicArray { storage, .. } = self.expr(value, frame)? else {
+                    return Err(Fault::invalid("array release"));
+                };
+                Value::Bool(self.arrays.release_owner(&storage).map_err(array_error)?)
+            }
             E::Boolean(v) => Value::Bool(*v),
             E::String(v) => Value::String(v.clone().into()),
             E::Integer(v) => {
@@ -412,10 +497,12 @@ impl Executor<'_> {
                 Value::Number(Number::Integer(value.len() as i128, IntegerType::I64))
             }
             E::ArrayLength { value } => {
-                let Value::Array { values, .. } = self.expr(value, frame)? else {
-                    return Err(Fault::invalid("array_len of non-array"));
+                let len = match self.expr(value, frame)? {
+                    Value::Array { values, .. } => values.len(),
+                    Value::DynamicArray { storage, .. } => storage.len(),
+                    _ => return Err(Fault::invalid("array_len of non-array")),
                 };
-                Value::Number(Number::Integer(values.len() as i128, IntegerType::I64))
+                Value::Number(Number::Integer(len as i128, IntegerType::I64))
             }
             E::ConvertInteger {
                 value, from, to, ..
@@ -479,10 +566,15 @@ impl Executor<'_> {
             E::Index { base, index } => {
                 let base = self.expr(base, frame)?;
                 let index = self.expr(index, frame)?.integer(IntegerType::I64)?;
-                let Value::Array { values, .. } = base else {
-                    return Err(Fault::invalid("index of non-array"));
-                };
-                values[checked_index(index, values.len())?].clone()
+                match base {
+                    Value::Array { values, .. } => {
+                        values[checked_index(index, values.len())?].clone()
+                    }
+                    Value::DynamicArray { storage, .. } => storage
+                        .get(checked_index(index, storage.len())?)
+                        .map_err(array_error)?,
+                    _ => return Err(Fault::invalid("index of non-array")),
+                }
             }
             E::Construct {
                 type_id,
@@ -564,27 +656,40 @@ fn checked_index(index: i128, length: usize) -> Result<usize> {
         .filter(|i| *i < length)
         .ok_or_else(|| Fault::failure(FailureCode::ArrayIndexOutOfBounds))
 }
-fn at_path<'a>(mut current: &'a Value, path: &[usize]) -> Result<&'a Value> {
+fn at_path(current: &Value, path: &[usize]) -> Result<Value> {
+    let mut current = current.clone();
     for i in path {
-        let Value::Array { values, .. } = current else {
-            return Err(Fault::invalid("invalid array path"));
+        current = match current {
+            Value::Array { values, .. } => values
+                .get(*i)
+                .cloned()
+                .ok_or_else(|| Fault::invalid("invalid checked index"))?,
+            Value::DynamicArray { storage, .. } => storage.get(*i).map_err(array_error)?,
+            _ => return Err(Fault::invalid("invalid array path")),
         };
-        current = values
-            .get(*i)
-            .ok_or_else(|| Fault::invalid("invalid checked index"))?;
     }
     Ok(current)
 }
-fn at_path_mut<'a>(mut current: &'a mut Value, path: &[usize]) -> Result<&'a mut Value> {
-    for i in path {
-        let Value::Array { values, .. } = current else {
-            return Err(Fault::invalid("invalid array path"));
-        };
-        current = values
-            .get_mut(*i)
-            .ok_or_else(|| Fault::invalid("invalid checked index"))?;
+fn set_path(current: &mut Value, path: &[usize], replacement: Value) -> Result<()> {
+    let Some((&index, rest)) = path.split_first() else {
+        *current = replacement;
+        return Ok(());
+    };
+    match current {
+        Value::Array { values, .. } => set_path(
+            values
+                .get_mut(index)
+                .ok_or_else(|| Fault::invalid("invalid checked index"))?,
+            rest,
+            replacement,
+        ),
+        Value::DynamicArray { storage, .. } => {
+            let mut value = storage.get(index).map_err(array_error)?;
+            set_path(&mut value, rest, replacement)?;
+            storage.set(index, value).map_err(array_error)
+        }
+        _ => Err(Fault::invalid("invalid array path")),
     }
-    Ok(current)
 }
 fn write_quoted(output: &mut String, text: &str) {
     output.push('"');
@@ -626,6 +731,7 @@ mod tests {
             program: &program,
             output: String::new(),
             heap: StringHeap::new(program.string_heap_limit),
+            arrays: ArrayHeap::new(program.array_heap_limit),
         };
         executor.heap.fail_next_allocation();
         let error = executor.entry().unwrap_err();
@@ -641,5 +747,43 @@ mod tests {
         );
         executor.heap.assert_empty();
         assert_eq!(run(&program).unwrap(), "before\nab\nbad\n");
+    }
+
+    #[test]
+    fn dynamic_array_examples_release_all_array_and_string_storage() {
+        for source in [
+            include_str!("../examples/dynamic_arrays/copy.ceru"),
+            include_str!("../examples/dynamic_arrays/nested.ceru"),
+            r#"enum E { A{v:[string]}, B }
+                mut e:E=E::A{v:array_copy([concat("a","b")])};copy:E=e;e=E::B{};
+                for(x:[string] in array_copy([array_copy([concat("c","d")])])){break;}
+                print(copy);"#,
+        ] {
+            let p = crate::compile_to_ir(source).unwrap();
+            run(&p).unwrap();
+            crate::vm::run(&crate::bytecode::lower(&p).unwrap()).unwrap();
+        }
+    }
+
+    #[test]
+    fn forced_array_allocation_failure_preserves_origin_and_prior_output() {
+        let source = r#"print("before");a:[i64]=array_copy([1]);print(a);"#;
+        let p = crate::compile_to_ir(source).unwrap();
+        let mut executor = Executor {
+            program: &p,
+            output: String::new(),
+            heap: StringHeap::new(p.string_heap_limit),
+            arrays: ArrayHeap::new(p.array_heap_limit),
+        };
+        executor.arrays.fail_next_allocation();
+        let e = executor.entry().unwrap_err();
+        assert_eq!(e.kind, ErrorKind::Runtime(FailureCode::AllocationFailed));
+        assert_eq!(executor.output, "before\n");
+        let origin = e.origin.unwrap();
+        assert_eq!(
+            &source[origin.span.start()..origin.span.end()],
+            "array_copy([1])"
+        );
+        executor.arrays.assert_empty();
     }
 }
