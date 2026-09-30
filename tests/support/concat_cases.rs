@@ -1,4 +1,9 @@
 // 全経路で共通の、既知のバイト列を持つ動的文字列ケースです。
+pub const OWNED_ARGUMENTS: (&str, &str) = (
+    include_str!("../../examples/owned_arguments.ceru"),
+    "[\"保存\"]\n[\"変更\"]\n左\n右\n[\"左!\"]\n[\"右!\"]\ntrue\n1\n",
+);
+
 pub const CASES: &[(&str, &str)] = &[
     (
         include_str!("../../examples/string_concat.ceru"),
@@ -75,4 +80,5 @@ pub const CASES: &[(&str, &str)] = &[
     "#,
         "ok!\nsafe\nok\n",
     ),
+    OWNED_ARGUMENTS,
 ];

@@ -50,6 +50,11 @@ pub(super) fn lower(program: &mut Program) {
         node,
         binding,
         base: program.function_definitions.len(),
+        arguments: program
+            .function_definitions
+            .iter()
+            .map(FunctionDefinition::argument_ownership)
+            .collect(),
         types: program.type_definitions.clone(),
         functions: vec![],
         managers: vec![],
@@ -57,13 +62,15 @@ pub(super) fn lower(program: &mut Program) {
         loops: vec![],
     };
     for f in &mut program.function_definitions {
-        l.scopes.push(f.parameters.clone());
-        let mut body = vec![];
-        for p in &f.parameters {
-            let value = l.var(p);
-            l.manage(value, true, &mut body);
-        }
-        body.extend(l.body(std::mem::take(&mut f.body)));
+        // 利用者の関数は準備済みの所有を受け取ります。入口で再度保持しません。
+        // 比較・表示・matchの生成関数は、呼び出し中だけ引数を借ります。
+        l.scopes
+            .push(if f.argument_ownership() == ArgumentOwnership::Owned {
+                f.parameters.clone()
+            } else {
+                vec![]
+            });
+        let mut body = l.body(std::mem::take(&mut f.body));
         l.cleanup(0, &mut body);
         l.scopes.pop();
         f.body = body;
@@ -75,6 +82,7 @@ struct Lowerer {
     node: usize,
     binding: usize,
     base: usize,
+    arguments: Vec<ArgumentOwnership>,
     types: Vec<TypeDefinition>,
     functions: Vec<FunctionDefinition>,
     managers: Vec<(Type, bool, FunctionId, String)>,
@@ -203,7 +211,7 @@ impl Lowerer {
         });
         (id, name)
     }
-    // 管理関数の引数は借用。自分自身の保持・解放を追加しません。
+    // 管理関数は保持／解放を本文に直接生成し、入口・出口の管理を重ねません。
     fn manage(&mut self, value: Expr, retain: bool, body: &mut Vec<Statement>) {
         if !self.owns(&value.ty) {
             return;
@@ -474,6 +482,8 @@ impl Lowerer {
             value.kind,
             ExprKind::Call { .. } | ExprKind::StringConcat { .. }
         );
+        let transfer = matches!(&value.kind, ExprKind::Call { function_id, .. }
+            if self.arguments[function_id.0] == ArgumentOwnership::Owned);
         let mut children = vec![];
         let mut child = |e: &mut Expr, this: &mut Self, body: &mut Vec<Statement>| {
             let owned = this.owned(e.clone(), body);
@@ -523,8 +533,11 @@ impl Lowerer {
             let v = self.var(&p);
             self.manage(v, true, body);
         }
-        for v in children.into_iter().rev() {
-            self.manage(v, false, body);
+        // 所有を渡した引数はcalleeが処理します。呼び出し後に二重解放しません。
+        if !transfer {
+            for v in children.into_iter().rev() {
+                self.manage(v, false, body);
+            }
         }
         self.var(&p)
     }
@@ -635,7 +648,12 @@ impl Lowerer {
                 self.manage(v, false, out);
                 return;
             }
-            StatementKind::Call { arguments, .. } => {
+            StatementKind::Call {
+                function_id,
+                arguments,
+                ..
+            } => {
+                let transfer = self.arguments[function_id.0] == ArgumentOwnership::Owned;
                 let mut temps = vec![];
                 for a in arguments {
                     let evaluated = self.wrap(a.clone());
@@ -644,9 +662,11 @@ impl Lowerer {
                     temps.push(p);
                 }
                 out.push(s);
-                for p in temps.iter().rev() {
-                    let v = self.var(p);
-                    self.manage(v, false, out);
+                if !transfer {
+                    for p in temps.iter().rev() {
+                        let v = self.var(p);
+                        self.manage(v, false, out);
+                    }
                 }
                 return;
             }

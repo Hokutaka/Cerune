@@ -1,6 +1,9 @@
 //! 明示した小さい予算を、VMと全生成先へ同じ値で渡して検査します。
 #[path = "support/aggregate_cases.rs"]
 mod aggregate_cases;
+#[allow(dead_code)]
+#[path = "support/concat_cases.rs"]
+mod concat_cases;
 #[path = "support/crash_dialogs.rs"]
 mod crash_dialogs;
 #[path = "support/process.rs"]
@@ -80,6 +83,9 @@ fn budgets_cleanup_and_failure_origins_match_all_available_routes() {
     };
     let cerune = env!("CARGO_BIN_EXE_cerune");
     for (case, (source, limit, expected)) in [
+        (concat_cases::OWNED_ARGUMENTS.0, 22, Some(concat_cases::OWNED_ARGUMENTS.1)),
+        (concat_cases::OWNED_ARGUMENTS.0, 15, None),
+        (concat_cases::OWNED_ARGUMENTS.0, 19, None),
         (aggregate_cases::CASES[7].0, 24, Some(aggregate_cases::CASES[7].1)),
         (aggregate_cases::CASES[7].0, 23, None),
         (r#"fn value()->string{v:string=concat("a","b");return v;} for(mut i:i64=0;i<1000;i=i+1){s:string=value();if i<999{continue;}print(s);} print(concat("",""));"#, 2, Some("ab\n\n")),

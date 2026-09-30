@@ -4,6 +4,16 @@
 
 **This is a specification proposal for the next implementation. Dynamic arrays, the operations below, and the array budget are not implemented.** The executable baseline is [fixed-array copies and lifetimes](../../examples/array_copy_lifetimes.ceru). It builds on [implemented string ownership](dynamic-data.en.md), but mutable array storage must be copied independently.
 
+## Implementation progress
+
+| Stage | Status |
+| --- | --- |
+| Argument ownership transfer | Implemented: pass caller-prepared ownership once; the callee releases it. IR distinguishes ownership from internal reading |
+| Dynamic array types, reads versus value copies, and storage management | Not implemented; the next implementation step |
+| Dynamic arrays across backends and the completion criteria below | Not implemented |
+
+The first stage is validated with existing strings and fixed arrays. See [ownership across calls](dynamic-data.en.md#ownership-across-calls) and the [example](../../examples/owned_arguments.ceru). This does not mark `[T]` or the array budget as supported.
+
 ## Types and initial operations
 
 | Proposed spelling | Meaning |
@@ -132,7 +142,7 @@ The VM manages typed element storage per execution. C, LLVM, QBE, ASM, and nativ
 | Allocation failure | Size boundaries, fixed allocator failure, actual WAT memory.grow failure |
 | Observability | Common-IR/bytecode/backend fixtures and annotations identifying the original expressions |
 
-Compare known output bytes, diagnostics, and prior output across VM, generated C, LLVM, QBE, WAT, Windows/Linux ASM, and native COFF/ELF. Add C ASan/UBSan checks and verify successful cleanup and partial-failure reclamation. Only mark the feature implemented in the reference and feature tables once the routes agree.
+Compare known output bytes, diagnostics, and prior output across IR Executor, VM, generated C, LLVM, QBE, WAT, Windows/Linux ASM, and native COFF/ELF. Add C ASan/UBSan checks and verify successful cleanup and partial-failure reclamation. Only mark the feature implemented in the reference and feature tables once the routes agree.
 
 ## Executable baseline today
 

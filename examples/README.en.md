@@ -102,6 +102,7 @@ Integer overflow stops execution; values never wrap. Convert explicitly with `i6
 | Product `type Point { ... }` | [product-point.ceru](product-point.ceru), [product_arrays.ceru](product_arrays.ceru) | fields, defaults, and arrays of products |
 | Nested arrays and products | [function_values.ceru](function_values.ceru), [u64_values.ceru](u64_values.ceru), [string_lookup.ceru](string_lookup.ceru) | combining numbers or strings and passing values to functions |
 | Fixed capacity and used length | [bounded_sequence.ceru](bounded_sequence.ceru) | Empty/full/invalid lengths; a capacity-four value, not a dynamic array |
+| Ownership across calls | [owned_arguments.ceru](owned_arguments.ceru) | Independent fixed arrays, argument order, unused arguments, and returned-value lifetime; loops within a 22-byte string budget |
 | Nested copies and lifetime | [array_copy_lifetimes.ceru](array_copy_lifetimes.ceru) | Dynamic strings inside fixed arrays: survival after return, range copies, independent updates |
 | Range copy into fixed capacity | [array_window.ceru](array_window.ceru) | Empty/invalid ranges, evaluation order, short circuiting, independent source updates; not a borrowed slice |
 | Aggregate equality | [aggregate_comparison.ceru](aggregate_comparison.ceru) | Arrays/products/sums, operand order, constants and generic functions |

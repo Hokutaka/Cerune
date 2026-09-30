@@ -34,6 +34,14 @@ Both `s = concat(s, suffix)` and `s = s` are valid. Previously saved copies reta
 
 The IR Executor and VM release locals on success and reclaims remaining content at the call boundary on failure before returning to its host. Existing embedding API value types remain unchanged. Native failure terminates the process, whose remaining allocations the OS reclaims. Successful WAT calls reuse released storage; discard an instance after a trap instead of reusing it.
 
+## Ownership across calls
+
+Arguments to user functions are evaluated from left to right, including the retains needed to prepare each owned value. Ownership passes once: the callee does not retain parameters again at entry, and the caller does not release transferred arguments after the call. The callee also releases unused arguments and acquires the return value before releasing locals and parameters. A binding's last use does not silently become a move.
+
+After ownership expansion, IR shows `ownership arguments=owned` / `borrowed` together with explicit retains and releases. Executors run those body operations without adding extra lifetime operations from the classification. Generated comparison, display, match, and expression functions only borrow their arguments during the call. Generated release and replacement functions process transferred ownership. This is logical ownership of dynamic storage, separate from aggregate copies required by a backend ABI; it does not add a source-language borrow type.
+
+[owned_arguments.ceru](../../examples/owned_arguments.ceru) demonstrates independent fixed arrays, argument order, returned-value lifetime, and early returns with unused arguments. It completes 100 iterations with a 22-byte string budget. At 15 bytes, construction of the first argument fails; at 19, the next argument fails. IR Executor, VM, and compiled routes compare these cases. Dynamic array allocation is not included yet.
+
 ## Budget and failures
 
 The default budget is **64 MiB (67108864 bytes) of live dynamic string payload**. Shared allocations count once; static literals do not count. Old and new values both count while reassignment keeps them alive.

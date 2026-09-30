@@ -1,0 +1,4 @@
+fn forward(text: string) -> string { return text; }
+fn discard(text: string) -> void {}
+discard(forward(concat("a", "b")));
+print(concat("c", "d"));
