@@ -208,7 +208,7 @@ fn direct_assembly_matches_known_bytes_and_vm_on_windows() {
             .current_dir(&workspace.0)
             .output()
             .unwrap();
-        termination::assert_expected(&failed, termination::Expected::IllegalInstruction, source);
+        termination::assert_expected(&failed, termination::Expected::NativeTrap, source);
         assert!(failed.stdout.is_empty());
     }
 }

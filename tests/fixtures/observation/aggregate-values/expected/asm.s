@@ -776,7 +776,8 @@ cerune_fn__equal0_0:
   leaq .Lcerune_failure_0(%rip), %rdx
   movl $71, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_fn_0_array_done_3:
   movq %rax, -48(%rbp)
   movq -40(%rbp), %rax
@@ -794,7 +795,8 @@ cerune_fn__equal0_0:
   leaq .Lcerune_failure_1(%rip), %rdx
   movl $71, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_fn_0_array_done_4:
   movq %rax, %rcx
   movq -48(%rbp), %rax
@@ -824,7 +826,8 @@ cerune_fn__equal0_0:
   leaq .Lcerune_failure_2(%rip), %rdx
   movl $62, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_fn_0_integer_ok_7:
   movq %rax, -40(%rbp)
   jmp .Lcerune_fn_0_block_0
@@ -906,7 +909,8 @@ cerune_fn__match_select3_3:
   leaq .Lcerune_failure_3(%rip), %rdx
   movl $64, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_fn_3_integer_ok_2:
   addq $112, %rsp
   popq %rbp

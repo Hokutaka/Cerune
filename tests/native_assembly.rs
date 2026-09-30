@@ -263,7 +263,7 @@ fn runtime_failures_match_vm_codes_origins_and_prior_output() {
             #[cfg(windows)]
             assert_eq!(
                 result.status.code().map(|c| c as u32),
-                Some(0xc000001d),
+                Some(0xc0000409),
                 "{body}"
             );
             #[cfg(unix)]
@@ -361,11 +361,7 @@ fn linux_assembly_executes_all_examples_and_rejects_invalid_operations() {
         .chain(u64_cases::FAILURES)
     {
         assert!(run_vm(source).is_err());
-        termination::assert_expected(
-            &run(source),
-            termination::Expected::IllegalInstruction,
-            source,
-        );
+        termination::assert_expected(&run(source), termination::Expected::NativeTrap, source);
     }
 }
 

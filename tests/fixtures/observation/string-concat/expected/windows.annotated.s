@@ -240,7 +240,8 @@ cerune_origin_n1_fn_0_7:
   leaq .Lcerune_failure_0(%rip), %rdx
   movl $69, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lfn_0_concat_limit_0:
   cmpq $2, %rdx
   jne .Lfn_0_concat_failed_0
@@ -250,7 +251,8 @@ cerune_origin_n1_fn_0_7:
   leaq .Lcerune_failure_1(%rip), %rdx
   movl $70, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lfn_0_concat_failed_0:
   xorl %ecx, %ecx
   callq fflush
@@ -258,7 +260,8 @@ cerune_origin_n1_fn_0_7:
   leaq .Lcerune_failure_2(%rip), %rdx
   movl $62, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lfn_0_concat_ok_0:
 # cerune-origin: #18 bytes 19..39
 cerune_origin_n18_fn_0_8:
@@ -352,7 +355,8 @@ cerune_origin_n7_fn_2_8:
   leaq .Lcerune_failure_3(%rip), %rdx
   movl $69, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lfn_2_concat_limit_0:
   cmpq $2, %rdx
   jne .Lfn_2_concat_failed_0
@@ -362,7 +366,8 @@ cerune_origin_n7_fn_2_8:
   leaq .Lcerune_failure_4(%rip), %rdx
   movl $70, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lfn_2_concat_failed_0:
   xorl %ecx, %ecx
   callq fflush
@@ -370,7 +375,8 @@ cerune_origin_n7_fn_2_8:
   leaq .Lcerune_failure_5(%rip), %rdx
   movl $62, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lfn_2_concat_ok_0:
 # cerune-origin: #36 bytes 70..87
 cerune_origin_n36_fn_2_9:

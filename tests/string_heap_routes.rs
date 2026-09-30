@@ -151,7 +151,7 @@ fn budgets_cleanup_and_failure_origins_match_all_available_routes() {
                 #[cfg(windows)] {
                     let status = actual.status.code().map(|n| n as u32);
                     if route == "c" { assert!(matches!(status,Some(3|0xc0000409))); }
-                    else { assert_eq!(status,Some(0xc000001d)); }
+                    else { assert_eq!(status,Some(if route=="llvm" {0xc000001d} else {0xc0000409}), "case {case}/{route}: {}", String::from_utf8_lossy(&actual.stderr)); }
                 }
             }
             assert_eq!(actual.stdout, vm.stdout.repeat(repeats), "case {case}/{route}");
@@ -347,7 +347,15 @@ fn allocator_failures_remain_distinct_from_budget_failures() {
             if route == "c" {
                 assert!(matches!(status, Some(3 | 0xc0000409)));
             } else {
-                assert_eq!(status, Some(0xc000001d));
+                assert_eq!(
+                    status,
+                    Some(if route == "llvm" {
+                        0xc000001d
+                    } else {
+                        0xc0000409
+                    }),
+                    "{route}"
+                );
             }
         }
     }

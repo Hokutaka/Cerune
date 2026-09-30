@@ -147,7 +147,7 @@ mod tests {
 
         assert!(asm.contains("addq %rcx, %rax"));
         assert!(asm.contains("jno .Lcerune_main_integer_ok_"));
-        assert!(asm.contains("ud2"));
+        assert!(asm.contains("movl $7, %ecx\n  int $0x29"));
 
         assert!(asm.contains("callq printf"));
     }
@@ -168,7 +168,7 @@ mod tests {
         assert!(asm.contains("jno .Lcerune_main_integer_ok_"));
         assert!(asm.contains("je .Lcerune_main_division_trap_"));
         assert!(asm.contains("movabsq $-9223372036854775808, %rdx"));
-        assert!(asm.contains("ud2"));
+        assert!(asm.contains("movl $7, %ecx\n  int $0x29"));
     }
 
     #[test]

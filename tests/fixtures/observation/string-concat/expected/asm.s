@@ -221,7 +221,8 @@ cerune_fn__ownership0_0:
   leaq .Lcerune_failure_0(%rip), %rdx
   movl $69, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lfn_0_concat_limit_0:
   cmpq $2, %rdx
   jne .Lfn_0_concat_failed_0
@@ -231,7 +232,8 @@ cerune_fn__ownership0_0:
   leaq .Lcerune_failure_1(%rip), %rdx
   movl $70, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lfn_0_concat_failed_0:
   xorl %ecx, %ecx
   callq fflush
@@ -239,7 +241,8 @@ cerune_fn__ownership0_0:
   leaq .Lcerune_failure_2(%rip), %rdx
   movl $62, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lfn_0_concat_ok_0:
   movq %rax, -24(%rbp)
   movq -24(%rbp), %rax
@@ -291,7 +294,8 @@ cerune_fn__ownership2_2:
   leaq .Lcerune_failure_3(%rip), %rdx
   movl $69, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lfn_2_concat_limit_0:
   cmpq $2, %rdx
   jne .Lfn_2_concat_failed_0
@@ -301,7 +305,8 @@ cerune_fn__ownership2_2:
   leaq .Lcerune_failure_4(%rip), %rdx
   movl $70, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lfn_2_concat_failed_0:
   xorl %ecx, %ecx
   callq fflush
@@ -309,7 +314,8 @@ cerune_fn__ownership2_2:
   leaq .Lcerune_failure_5(%rip), %rdx
   movl $62, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lfn_2_concat_ok_0:
   movq %rax, -32(%rbp)
   movq -32(%rbp), %rax

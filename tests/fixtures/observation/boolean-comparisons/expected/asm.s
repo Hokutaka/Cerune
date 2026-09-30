@@ -60,7 +60,8 @@ main:
   leaq .Lcerune_failure_0(%rip), %rdx
   movl $62, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_integer_ok_0:
   movq %rax, -48(%rbp)
   movabsq $4, %rax

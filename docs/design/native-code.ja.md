@@ -62,7 +62,7 @@ WSLで`CARGO_TARGET_DIR=target/unix`を使う場合は、`--cerune target/unix/d
 
 通常実行はVMとネイティブの終了成功、stderrが空であること、stdoutの一致を確認します。文字列はバイト単位で比較します。Windowsの数値のみの既存CRT出力はCRLFをLFへ揃え、その比較条件をmanifestに明記します。
 
-`--run --expect-trap`は異常系用です。VMとネイティブの`runtime-v1`記録（理由・NodeId・バイト範囲）、停止前のstdoutの一致、およびネイティブのSIGILL／Windows不正命令終了を要求します。成功実行、アクセス違反、起動失敗、タイムアウトは合格にしません。manifestでは`output-matched`、`expected-failure-confirmed`、`generated-not-executed`、`failed`を分け、照合できた記録を`runtimeFailure`へ残します。[共通診断の契約](runtime-diagnostics.ja.md)を参照してください。各ツールの時間上限は30秒です。
+`--run --expect-trap`は異常系用です。VMとネイティブの`runtime-v1`記録（理由・NodeId・バイト範囲）、停止前のstdoutの一致、およびネイティブのSIGILL／Windows fast-fail終了を要求します。成功実行、アクセス違反、起動失敗、タイムアウトは合格にしません。manifestでは`output-matched`、`expected-failure-confirmed`、`generated-not-executed`、`failed`を分け、照合できた記録を`runtimeFailure`へ残します。[共通診断の契約](runtime-diagnostics.ja.md)を参照してください。各ツールの時間上限は30秒です。
 
 Cの検査は`runtime-v1`をstderrへ出し、VMと停止理由・ソース位置・先行出力を照合します。Windowsではabortと他のfast-failが同じ終了コードを使い得るため、コードだけでは合格にしません。[Microsoftのabort仕様](https://learn.microsoft.com/en-us/cpp/c-runtime-library/reference/abort)と[fast-fail仕様](https://learn.microsoft.com/en-us/cpp/intrinsics/fastfail)も参照してください。QBEはSIGABRT、LLVMは不正命令、WATはunreachableを確認し、いずれも同じ共通記録を照合します。
 

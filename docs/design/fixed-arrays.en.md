@@ -112,7 +112,7 @@ Length remains explicit type information instead of being inferred from hidden r
 | LLVM IR | `[N x element]` | Internal get/set helpers per used type and length; failure calls `llvm.trap` |
 | QBE IR | Stack storage with 8-byte scalar units and product stride derived from fields | Comparisons and branches; failure calls `abort` |
 | WebAssembly Text | Linear memory with 8-byte scalar units and product stride derived from fields | `i64.lt_s` / `i64.ge_s`; failure executes `unreachable` |
-| Windows x86-64 | One stack slot per scalar and multiple field-derived slots per product value | Negative and upper-bound comparisons; failure executes `ud2` |
+| Windows x86-64 | One stack slot per scalar and multiple field-derived slots per product value | Negative and upper-bound comparisons; failure reports diagnostics then fast-fails |
 | Cerune bytecode | A typed array value | The VM checks `array.get` and `array.check` |
 
 QBE, WebAssembly, and Windows x86-64 currently reserve 8-byte units even for 4-byte scalar values. A product or array element uses the storage required by the complete value as its stride. This simple, observable layout is a backend-lowering choice, not part of the Cerune type meaning.

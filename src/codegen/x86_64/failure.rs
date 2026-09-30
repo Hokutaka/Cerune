@@ -45,6 +45,12 @@ impl Reporter {
         } else {
             output.push_str(&format!("  xorl %ecx, %ecx\n  callq fflush\n  movl $2, %ecx\n  leaq {label}(%rip), %rdx\n  movl ${}, %r8d\n  callq _write\n", record.len()));
         }
-        output.push_str("  ud2\n");
+        if self.target.is_linux() {
+            output.push_str("  ud2\n");
+        } else {
+            // Windowsの例外巻き戻しに依存せず、FAST_FAIL_FATAL_APP_EXITで停止します。
+            // rcx=7はOS側の停止方法。言語上の理由と出自は直前のruntime-v1に残します。
+            output.push_str("  movl $7, %ecx\n  int $0x29\n");
+        }
     }
 }

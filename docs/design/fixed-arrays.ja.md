@@ -112,7 +112,7 @@ Cerune VMだけでなく、C、LLVM IR、QBE IR、WebAssembly Text、Windows x86
 | LLVM IR | `[N x element]` | 型と長さごとのget/set内部関数、違反時は`llvm.trap` |
 | QBE IR | scalarは8 byte単位、product typeはfieldから求めたstrideのstack領域 | 比較と分岐、違反時は`abort` |
 | WebAssembly Text | scalarは8 byte単位、product typeはfieldから求めたstrideのlinear memory | `i64.lt_s` / `i64.ge_s`、違反時は`unreachable` |
-| Windows x86-64 | scalarは1 slot、product typeはfieldから求めた複数のstack slot | 負数と上限の比較、違反時は`ud2` |
+| Windows x86-64 | scalarは1 slot、product typeはfieldから求めた複数のstack slot | 負数と上限の比較、違反時は診断後にfast-fail |
 | Cerune bytecode | 型付きの配列値 | `array.get`と`array.check`をVMが検査 |
 
 scalarの大きさが4 byteでも、QBE、WebAssembly、Windows x86-64では現在8 byte単位の場所を使います。product typeや配列の要素は、その値全体が必要とする場所をstrideにします。これは単純で観測しやすい現在のlayoutであり、Ceruneの型の意味ではなくbackend loweringの判断です。

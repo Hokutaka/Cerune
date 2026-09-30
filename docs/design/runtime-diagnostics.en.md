@@ -10,7 +10,7 @@ A nonzero exit alone cannot distinguish an intended language stop from an access
 | --- | --- |
 | IR Executor | `run` / `run-ir`: source-aware diagnostics or explicit `runtime-v1`; CLI exits with code 1 |
 | VM | `run-vm`: default human-readable diagnostics and explicit `runtime-v1` format |
-| Windows/Linux direct assembly | Language checks write `runtime-v1` to stderr, then terminate with an illegal instruction |
+| Windows/Linux direct assembly | Write `runtime-v1` to stderr, then fast-fail on Windows or execute an illegal instruction on Linux |
 | Internal COFF/ELF encoder | Encodes the same assembly lowering and diagnostics |
 | C | `runtime-v1` on C standard stderr, followed by `abort` |
 | LLVM | `runtime-v1` using the explicit Windows/Linux output ABI, followed by a trap |
@@ -66,9 +66,11 @@ cerune run examples/runtime_failures/function_division.ceru --diagnostic-format 
 
 `run` / `run-ir` show the reason and source location; `run-vm` keeps the existing source/bytecode-position diagnostics. `--diagnostic-format runtime-v1` selects common records for language check failures. The VM exits with code 1. `ExecutionError::runtime_failure()` exposes structured reasons and ranges.
 
-Previously executed `print` operations are not rolled back. The VM retains their output in `VmError::output()`, and the CLI writes it to stdout. Native failures flush existing stdout buffers, write the stderr record, and stop with `ud2`. This does not guarantee the display order of merged stdout/stderr. Windows programs containing strings retain their existing binary stdout behavior.
+Previously executed `print` operations are not rolled back. The VM retains their output in `VmError::output()`, and the CLI writes it to stdout. Direct ASM/native objects flush existing stdout buffers and write the stderr record. Linux then executes `ud2`; Windows uses `FAST_FAIL_FATAL_APP_EXIT` (rcx=7, `int 0x29`, status `0xc0000409`). This does not guarantee the display order of merged stdout/stderr. Windows programs containing strings retain their existing binary stdout behavior.
 
-Writing uses the explicitly selected target's Linux `write` or Windows `_write`. Diagnostic comparisons normalize CRLF/LF. If stderr is closed or a write fails partway through, code still attempts the original illegal-instruction stop, but complete diagnostic delivery is not guaranteed. Observation tools reject incomplete records.
+Writing uses the explicitly selected target's Linux `write` or Windows `_write`. Diagnostic comparisons normalize CRLF/LF. If stderr is closed or a write fails partway through, code still attempts the target-specific stop, but complete diagnostic delivery is not guaranteed. Observation tools reject incomplete records.
+
+The internal Windows ASM/COFF routes do not yet emit unwind information. We reproduced an illegal-instruction exception followed by a different OS failure from a deeper generated stack. Language checks now explicitly emit [fast-fail](https://learn.microsoft.com/en-us/cpp/intrinsics/fastfail?view=msvc-170), which terminates without invoking exception handlers (Windows 8 or later). Code 7 describes the OS termination; `runtime-v1` carries Cerune's specific reason and origin. Tests require matching records and prior output in addition to the exit status. Generating [unwind information](https://learn.microsoft.com/en-us/cpp/build/exception-handling-x64?view=msvc-170) for debugger stack recovery remains separate work.
 
 ## Implementation decisions
 
@@ -98,7 +100,7 @@ CI configures all tools used by its platform. Locally, unavailable unconfigured 
 
 [Four expected-failure examples](../../examples/runtime_failures/README.en.md) trace overflow, nested array assignment, division inside a function, and successful, short-circuited, and failing calls to the same function. They are separate from normal examples and list their intended failure reasons.
 
-`observe-native.cjs --run --expect-trap` runs the VM with common records and compares reason, NodeId, byte range, and prior output with native execution. It also requires SIGILL / Windows illegal-instruction termination. Matching diagnostics with successful termination, unreported crashes, additional errors, and timeouts do not pass. The manifest's `runtimeFailure` stores the matched record.
+`observe-native.cjs --run --expect-trap` runs the VM with common records and compares reason, NodeId, byte range, and prior output with native execution. It also requires SIGILL / Windows fast-fail termination. Matching diagnostics with successful termination, unreported crashes, additional errors, and timeouts do not pass. The manifest's `runtimeFailure` stores the matched record.
 
 Tests compare 49 failure cases with known reasons, matching Windows/Linux assembly and internal objects against the VM. They include Unicode, CRLF, short-circuiting, function calls, default-field expressions, conversion boundaries, and retained output. The 50 normal examples and existing test suite also remain part of validation.
 

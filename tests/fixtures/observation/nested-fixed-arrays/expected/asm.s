@@ -127,7 +127,8 @@ main:
   leaq .Lcerune_failure_0(%rip), %rdx
   movl $73, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_array_done_0:
   movabsq $2, %rax
   testq %rax, %rax
@@ -144,7 +145,8 @@ main:
   leaq .Lcerune_failure_1(%rip), %rdx
   movl $73, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_array_done_1:
   movq %rax, %rdx
   leaq .Lcerune_fmt_i64(%rip), %rcx
@@ -169,7 +171,8 @@ main:
   leaq .Lcerune_failure_2(%rip), %rdx
   movl $73, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_array_done_2:
   movabsq $1, %rax
   testq %rax, %rax
@@ -186,7 +189,8 @@ main:
   leaq .Lcerune_failure_3(%rip), %rdx
   movl $73, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_main_array_done_3:
   movq %rax, %rdx
   leaq .Lcerune_fmt_i64(%rip), %rcx

@@ -805,7 +805,8 @@ cerune_origin_n52_fn_0_13:
   leaq .Lcerune_failure_0(%rip), %rdx
   movl $71, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_fn_0_array_done_3:
 # cerune-origin: #56 bytes 70..84
 cerune_origin_n56_fn_0_14:
@@ -829,7 +830,8 @@ cerune_origin_n55_fn_0_16:
   leaq .Lcerune_failure_1(%rip), %rdx
   movl $71, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_fn_0_array_done_4:
 # cerune-origin: #56 bytes 70..84
 cerune_origin_n56_fn_0_17:
@@ -893,7 +895,8 @@ cerune_origin_n63_fn_0_33:
   leaq .Lcerune_failure_2(%rip), %rdx
   movl $62, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_fn_0_integer_ok_7:
 # cerune-origin: #64 bytes 70..84
 cerune_origin_n64_fn_0_34:
@@ -1043,7 +1046,8 @@ cerune_origin_n41_fn_3_13:
   leaq .Lcerune_failure_3(%rip), %rdx
   movl $64, %r8d
   callq _write
-  ud2
+  movl $7, %ecx
+  int $0x29
 .Lcerune_fn_3_integer_ok_2:
 # cerune-origin: #78 bytes 205..216
 cerune_origin_n78_fn_3_14:
