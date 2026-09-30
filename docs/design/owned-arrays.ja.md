@@ -2,7 +2,7 @@
 
 [English](owned-arrays.en.md)
 
-**次の実装に向けた仕様案です。動的配列・以下の組み込み操作・配列用予算は未実装です。** 実行できる基準例は[固定長配列のコピーと寿命](../../examples/array_copy_lifetimes.ceru)です。[実装済みの文字列管理](dynamic-data.ja.md)を土台にしますが、更新できる配列の領域は独立してコピーします。
+**`[T]`・`array_copy`・`array_copy_range`・配列用予算は共通IRとIR Executor／VMで実装済みです。C・LLVM・QBE・WAT・ASM・native objectと`array_repeat`は未対応です。** 実行例は[動的配列のコピー](../../examples/dynamic_arrays/copy.ceru)と[入れ子・関数・enum](../../examples/dynamic_arrays/nested.ceru)です。[実装済みの文字列管理](dynamic-data.ja.md)を土台にしますが、更新できる配列の領域は独立してコピーします。
 
 ## 実装の進捗
 
@@ -10,14 +10,15 @@
 | --- | --- |
 | 引数の所有受け渡し | 実装済み。呼び出し側が準備した所有を一度だけ渡し、calleeが解放。IRで所有と内部の読み取りを区別 |
 | 読み取りと所有値の準備 | 実装済み。共通IRの`read`束縛で読み取りを区別し、一時値の抽出と解放順を維持 |
-| 動的配列の型・領域確保・独立コピー | 未実装。次の実装対象 |
+| 動的配列の型・領域確保・独立コピー | IR・VMで実装済み。範囲コピー、表示・比較・反復、複合値と関数も対応 |
+| `array_repeat` | 未実装。後続の操作 |
 | 各生成経路の動的配列対応・下記の完了条件 | 未実装 |
 
-実装済みの段階は既存の文字列・固定長配列で検証しています。[呼び出し境界の所有](dynamic-data.ja.md#呼び出し境界の所有)と[読み取りの設計](dynamic-data.ja.md#読み取りと所有値の準備)、[引数](../../examples/owned_arguments.ceru)・[読み取り](../../examples/borrowed_reads.ceru)のexampleを参照してください。`[T]`や配列用予算の対応済みを意味しません。
+IR・VMでは動的配列も結果・停止理由・ソース位置・先行出力を照合しています。[呼び出し境界の所有](dynamic-data.ja.md#呼び出し境界の所有)と[読み取りの設計](dynamic-data.ja.md#読み取りと所有値の準備)、[引数](../../examples/owned_arguments.ceru)・[読み取り](../../examples/borrowed_reads.ceru)のexampleを参照してください。生成経路の対応完了は意味しません。
 
 ## 型と最初の操作
 
-| 表記・操作案 | 意味 |
+| 表記・操作（`array_repeat`のみ提案） | 意味 |
 | --- | --- |
 | `[T]` | 実行時の長さを持つ、所有する配列。長さは型の一部ではない |
 | `[T; N]` | 従来の固定長配列。既存の構文と意味を維持 |
@@ -27,11 +28,11 @@
 | `array_len(values)` | 固定長・動的配列の要素数を`i64`で返す |
 | `values[index]` | `i64`の添字で参照。`mut`な束縛の配列は要素を更新できる |
 
-操作名は既存の`array_len`に揃える案です。既存exampleのユーザー関数`copy_range`・`append`を予約語化しません。新しい名前の予約と診断は実装時に追加し、同名の既存関数を黙って組み込みへ解決しません。
+実装した操作名は既存の`array_len`に揃えています。既存exampleのユーザー関数`copy_range`・`append`を予約語化しません。`array_copy`・`array_copy_range`との定義名の衝突は診断します。
 
-固定長配列と動的配列の間に暗黙変換は設けません。配列リテラル`[1, 2]`は従来どおり固定長です。初回は動的配列リテラルを追加せず、空値は`array_repeat::<T>(seed, 0)`や空範囲で作れます。seedは要素数0でも評価します。`[T; 0]`・空リテラルの現在の制限は別の変更にしません。
+固定長配列と動的配列の間に暗黙変換は設けません。配列リテラル`[1, 2]`は従来どおり固定長です。初回は動的配列リテラルを追加せず、空値は空範囲から作れます。後続の`array_repeat::<T>(seed, 0)`案でもseedは要素数0で評価します。`[T; 0]`・空リテラルの現在の制限は別の変更にしません。
 
-以下は**未実装の構文を含む説明用コード**です。
+以下はIR・VMで実行できます。
 
 ```text
 mut values: [i64] = array_copy([10, 20, 30]);
@@ -40,7 +41,7 @@ part: [i64] = array_copy_range(values, 1, 3);
 values[1] = 99;
 print(saved); // [10, 20, 30]
 print(part);  // [20, 30]
-empty: [i64] = array_repeat::<i64>(0, 0);
+empty: [i64] = array_copy_range(values, 3, 3);
 print(empty); // []
 ```
 
@@ -88,7 +89,7 @@ matchは対象を一度所有値として保存し、選択したペイロード
 | 診断案 | 原因・出自 |
 | --- | --- |
 | `array-index-out-of-bounds`（既存） | 添字アクセス式 |
-| `array-range-out-of-bounds`（追加予定） | 不正な範囲を指定した`array_copy_range`式 |
+| `array-range-out-of-bounds` | 不正な範囲を指定した`array_copy_range`式 |
 | `array-length-out-of-range`（追加予定） | 負のcountを渡した`array_repeat`式 |
 | `allocation-size-overflow`（既存） | サイズの積・和、長さ、配置サイズを表現できない |
 | `allocation-limit-exceeded`（既存） | 配列または文字列の明示予算を超える |
@@ -98,7 +99,7 @@ matchは対象を一度所有値として保存し、選択したペイロード
 
 ## 予算と寿命
 
-配列用に`--array-heap-limit <bytes>`を追加する案です。既定64 MiB、0と`i64::MAX`までの十進非負整数を認め、文字列用`--string-heap-limit`は意味を変えません。どちらも実行前・生成前の設定とし、IR・bytecodeと成果物に記録します。コンパイル時定数では初回は動的配列を許さず、固定長定数から実行時に明示コピーします。
+配列用に`--array-heap-limit <bytes>`を追加しました。既定64 MiB、0と`i64::MAX`までの十進非負整数を認め、文字列用`--string-heap-limit`は意味を変えません。どちらも実行前・生成前の設定とし、IR・bytecodeに記録します。各生成成果物は後続実装で同じ設定を使います。コンパイル時定数では初回は動的配列を許さず、固定長定数から実行時に明示コピーします。
 
 経路ごとのポインタ幅・paddingで予算超過の位置が変わらないよう、**配列の生存要素領域を共通の計算単位で数える**案です。物理メモリ上限ではありません。
 
@@ -118,7 +119,7 @@ matchは対象を一度所有値として保存し、選択したペイロード
 
 ## 生成過程で見えること
 
-`array.copy.allocate-elements`、`array.copy-range`、`array.repeat`などの型付き操作を導入し、共通loweringで次の処理を展開する案です。名前は実装時に確定します。
+`array_copy`・`array_copy_range`と暗黙の値コピーを共通IRの通常のループ・分岐へ展開しました。`array.check-range`、`array.allocate-elements width=N`、`array.initialize-next`、`array.release-owner-last`、`array.free-elements`が実際の操作名です。
 
 - 元の式の一度だけの評価と、読み取り・値コピー・一時値の所有移動の区別。
 - 添字・範囲・長さ・サイズ・予算の検査。
@@ -128,7 +129,13 @@ matchは対象を一度所有値として保存し、選択したペイロード
 
 ASTの型、共通IR、backend IR、bytecode、成果物の対応を残します。配列全体を隠れたホスト関数で処理して終わらせず、要素走査は共通IRの通常のループ・分岐で追える形にします。各backendは配置・確保・load/store・解放の実装を担当し、値コピーの規則を個別に再定義しません。LLVM・ASM・objectでは既存の出自注釈も維持します。
 
-VMは実行単位で型付き要素領域を管理します。C・LLVM・QBE・ASM・自前COFF/ELFは明示ターゲットのallocatorとABIを使い、WATは非公開memoryを使います。領域の共有アドレスを利用者や観測APIへ公開しません。再帰的な型、外部値としての動的配列、借用・FFIはこの変更に含めません。
+IR ExecutorとVMは実行単位の型付き要素領域を管理し、同じ領域管理プリミティブを使います。命令の実行は独立し、要素コピーはそれぞれ共通IR／bytecodeのループで実行します。今後のC・LLVM・QBE・ASM・自前COFF/ELFは明示ターゲットのallocatorとABIを使い、WATは非公開memoryを使います。領域の共有アドレスを利用者や観測APIへ公開しません。再帰的な型、外部値としての動的配列、借用・FFIはこの変更に含めません。
+
+### 一時値からの所有の引き継ぎ
+
+束縛からの値コピーは必ず独立した領域を確保します。一方、`make().field`のような所有する一時値からの抽出では、選んだ配列の所有を一時的に保持してから元の複合値を解放します。この短い引き継ぎだけに`array.retain-owner`と所有数を使い、copy-on-writeには使いません。最後の所有を外したときだけ共通IRの逆順ループで要素を解放し、`array.free-elements`で領域を回収します。無関係なフィールドの寿命を延ばさないため、次の引数に使える予算も保ちます。
+
+IR ExecutorとVMの領域管理は、途中まで初期化した領域も実行境界で回収します。確保失敗・サイズ超過・予算超過は別々に検証し、所有管理の内部エラーを言語の停止として扱いません。
 
 ## 実装の完了条件
 
@@ -143,7 +150,7 @@ VMは実行単位で型付き要素領域を管理します。C・LLVM・QBE・A
 | 確保失敗 | サイズ計算の境界、固定allocator失敗、WAT memory.grow失敗を別々に検証 |
 | 可観測性 | 共通IR・bytecode・各生成形式のfixtureと、元の式を示す出自注釈 |
 
-IR Executor・VM・生成C・LLVM・QBE・WAT・Windows/Linux ASM・自前COFF/ELFで、既知の出力バイト列・診断・先行出力を比較します。CにはASan/UBSanを併用し、成功後の領域残存と失敗途中の回収も検査します。すべて揃ってから言語リファレンスと機能表を「実装済み」に更新します。
+IR Executor・VM・生成C・LLVM・QBE・WAT・Windows/Linux ASM・自前COFF/ELFで、既知の出力バイト列・診断・先行出力を比較します。CにはASan/UBSanを併用し、成功後の領域残存と失敗途中の回収も検査します。各段階の対応経路を言語リファレンスと機能表に明記し、すべて揃うまで全経路対応とはしません。
 
 ## 現在実行できる基準例
 

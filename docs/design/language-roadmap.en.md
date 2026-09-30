@@ -2,7 +2,7 @@
 
 [日本語](language-roadmap.ja.md)
 
-As of 2026-09-27, this inventory includes modules, removal of the parameter limit, product updates, compile-time constants, sum types with match, array-length queries, array iteration, constants in array type lengths, functions with explicit type/length parameters, rounding/saturation, aggregate equality/display, and match expressions/guards. “Current” means implemented; candidates are proposals awaiting design and implementation. This document does not commit to candidate syntax or adoption. See the [language reference](../reference/language.en.md) for the current specification.
+As of 2026-09-30, this inventory includes IR/VM dynamic arrays plus modules, removal of the parameter limit, product updates, compile-time constants, sum types with match, array-length queries, array iteration, constants in array type lengths, functions with explicit type/length parameters, rounding/saturation, aggregate equality/display, and match expressions/guards. “Current” means implemented; candidates are proposals awaiting design and implementation. This document does not commit to candidate syntax or adoption. See the [language reference](../reference/language.en.md) for the current specification.
 
 ## Properties Cerune should preserve
 
@@ -24,6 +24,7 @@ Cerune prioritizes explaining a computation's meaning and its transformation int
 | Booleans | `bool`, comparisons, `!`, short-circuiting `&&` and `||` | No implicit numeric conversion | [short_circuit](../../examples/short_circuit.ceru) |
 | Strings | `string`, printing, `==`, `!=`, `byte_len`, `concat` | No indexing, character count, or numeric conversion | [string_byte_length](../../examples/string_byte_length.ceru), [string_lookup](../../examples/string_lookup.ceru) |
 | Fixed arrays | `[T; N]`, `array_len`, `for … in`, nesting, value passing, updates through `mut` | Length belongs to the type; indices are `i64`; no dynamic lengths or slices | [array_iteration](../../examples/array_iteration.ceru), [heat_diffusion](../../examples/heat_diffusion.ceru) |
+| Dynamic arrays | `[T]`, explicit/range copies, independent nesting, display/equality/iteration | IR/VM only; compiled routes and `array_repeat` pending | [copy](../../examples/dynamic_arrays/copy.ceru), [nested](../../examples/dynamic_arrays/nested.ceru) |
 | Named product types | Fields, defaults, update expressions, nesting, value passing | No direct field assignment; construct a new value and reassign the whole binding | [product-point](../../examples/product-point.ceru), [packet_counter](../../examples/packet_counter.ceru) |
 | Functions and control flow | Typed parameters/results, explicit type/length parameters, `void`, `if`/`else`, `while`/`for`, `break`/`continue`/`return` | No fixed parameter-count limit; no recursion | [function_values](../../examples/function_values.ceru), [loop_control](../../examples/loop_control.ceru) |
 | Bindings and conversions | Immutable by default, `mut`, explicit `infer`, `T(value)` and `convert<T>(value)` | `infer` is not a runtime type; five float-to-integer rounding modes and explicit saturation are supported | [integer_conversions](../../examples/integer_conversions.ceru) |
@@ -35,7 +36,7 @@ The [example type tables](../../examples/README.en.md) list ranges and applicati
 
 ## Separate language features from output routes
 
-These language features are supported by the [IR Executor](ir-executor.en.md), VM, generated C, LLVM, QBE, WAT, Windows/Linux direct assembly, and objects from Cerune's own encoder. Windows/Linux distinguish targets; assembly/objects distinguish artifacts. Use the [route and target table](targets.en.md) when counting them.
+Dynamic arrays support IR Executor and VM so far. The other features above are supported by the [IR Executor](ir-executor.en.md), VM, generated C, LLVM, QBE, WAT, Windows/Linux direct assembly, and objects from Cerune's own encoder. Windows/Linux distinguish targets; assembly/objects distinguish artifacts. Use the [route and target table](targets.en.md) when counting them.
 
 The native encoder generates x86-64 instructions and COFF/ELF objects. It shares assembly lowering and currently reads an internal assembly representation to encode it. Linking uses external tools. A typed machine-instruction IR or an internal linker would be compiler implementation work, not new language features. See the [native encoder design](native-encoder.en.md).
 
@@ -47,7 +48,7 @@ Language support does not imply equal observation detail. Language check failure
 
 | Order | Missing feature | First contract and example |
 | --- | --- | --- |
-| 1 | [Dynamic arrays and ranges](owned-arrays.en.md) (proposal) | Owned arrays/range copies first; borrowed slices need separate lifetime and mutation type rules |
+| 1 | [Dynamic arrays and ranges](owned-arrays.en.md) on compiled routes | Bring C and subsequent routes to IR/VM parity, then add `array_repeat`; borrowed slices need separate lifetime and mutation type rules |
 | 2 | Recursion and external I/O | Define call storage, resource limits, I/O failure, and cleanup |
 | 3 | Module distribution | Re-exports, dependencies/versions, reproducible builds; extend explicit imports |
 | Experiment | GPU numeric computation | Narrow the supported types, memory, synchronization, and diagnostics; compare independent element computations with the CPU |

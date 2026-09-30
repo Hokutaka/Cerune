@@ -36,6 +36,17 @@ cerune run examples/string_concat.ceru --string-heap-limit 1024
 cerune emit-llvm examples/string_concat.ceru --target x86_64-unknown-linux-gnu --string-heap-limit 1024 -o concat.ll
 ```
 
+## Dynamic array budget
+
+The same commands also accept `--array-heap-limit <bytes>`, with the same default and numeric syntax as the string option. The budgets are independent. Array accounting measures live element storage using logical widths, not total physical memory. `check` and `emit-sources` reject this option.
+
+Dynamic arrays support `run` / `run-ir` / `run-vm` and IR/bytecode output. Compiled routes diagnose unsupported arrays before modifying output files. IR and bytecode record the array budget in use.
+
+```sh
+cerune run examples/dynamic_arrays/copy.ceru --array-heap-limit 1024
+cerune run-vm examples/dynamic_arrays/copy.ceru --array-heap-limit 1024
+```
+
 ## Validation
 
 `<file>` is the entry file for every command. [Module imports](../design/modules.en.md) resolve from the declaring file's directory, and all dependencies are checked. Changing the CLI working directory does not change resolution. Existing backend `--target` requirements remain in effect.

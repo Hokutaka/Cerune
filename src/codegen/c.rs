@@ -16,6 +16,7 @@ use lower::lower;
 use crate::{diagnostic::Diagnostic, ir as cerune_ir};
 
 pub fn emit_c(program: &cerune_ir::Program) -> Result<String, Diagnostic> {
+    super::support::require_static_arrays(program, "C")?;
     let module = lower(program);
 
     Ok(emit(&module))

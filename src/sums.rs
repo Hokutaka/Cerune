@@ -502,6 +502,28 @@ impl Lowerer {
         }
         *budget -= 1;
         let kind = match &ty.kind {
+            TypeRefKind::DynamicArray { element } => {
+                let seed = self.zero(element, span, path, budget)?;
+                let zero = Expr {
+                    kind: ExprKind::Integer(IntegerLiteral::with_type(
+                        "0",
+                        crate::types::IntegerType::I64,
+                    )),
+                    span,
+                };
+                ExprKind::Call {
+                    name: "array_copy_range".into(),
+                    name_span: span,
+                    arguments: vec![
+                        Expr {
+                            kind: ExprKind::Array(vec![seed]),
+                            span,
+                        },
+                        zero.clone(),
+                        zero,
+                    ],
+                }
+            }
             TypeRefKind::ArrayConstant { constant, .. } => {
                 return Err(Diagnostic::new("unresolved array length", constant.span));
             }

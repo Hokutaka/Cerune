@@ -12,6 +12,10 @@ use crate::{
 
 #[derive(Debug, Clone)]
 pub(super) enum Value {
+    DynamicArray {
+        element: ir::Type,
+        storage: crate::runtime::array_heap::ArrayValue<Value>,
+    },
     Bool(bool),
     String(StringValue),
     Number(Number),
@@ -27,6 +31,9 @@ pub(super) enum Value {
 impl Value {
     pub(super) fn ty(&self) -> ir::Type {
         match self {
+            Self::DynamicArray { element, .. } => ir::Type::DynamicArray {
+                element: Box::new(element.clone()),
+            },
             Self::Bool(_) => ir::Type::Bool,
             Self::String(_) => ir::Type::String,
             Self::Number(Number::Integer(_, t)) => ir::Type::Integer(*t),

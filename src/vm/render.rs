@@ -52,14 +52,18 @@ pub fn render_compact_with_sources(error: &VmError, sources: &SourceMap, span: S
 
 fn render_message(error: &VmError) -> String {
     match error.kind() {
-        VmErrorKind::AllocationSizeOverflow => "string allocation size overflow".into(),
+        VmErrorKind::ArrayRangeOutOfBounds => "array range is out of bounds".into(),
+        VmErrorKind::InvalidArrayOwnership => "invalid dynamic array ownership".into(),
+        VmErrorKind::AllocationSizeOverflow => {
+            "allocation-size-overflow: allocation size overflow".into()
+        }
         VmErrorKind::AllocationLimitExceeded => {
-            "live string payload exceeds the configured heap limit".into()
+            "allocation-limit-exceeded: live storage exceeds the configured heap limit".into()
         }
         VmErrorKind::InvalidStringOwnership => {
             "invalid dynamic string ownership in bytecode".into()
         }
-        VmErrorKind::AllocationFailed => "string allocation failed".into(),
+        VmErrorKind::AllocationFailed => "allocation-failed: allocation failed".into(),
         VmErrorKind::InvalidNumericConversion { from, to } => format!(
             "invalid rounded conversion from {} to {}",
             from.name(),
@@ -178,6 +182,7 @@ fn integer_operation_name(operation: IntegerOperation) -> &'static str {
 
 fn type_name(ty: Type) -> String {
     match ty {
+        Type::DynamicArray { element } => format!("[{}]", type_name(*element)),
         Type::Bool => "bool".into(),
         Type::String => "string".into(),
         Type::Integer(ty) => ty.name().into(),

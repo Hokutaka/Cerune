@@ -1,0 +1,446 @@
+; Cerune bytecode v0.1
+; array-heap-limit=67108864 bytes (live element storage)
+
+.function 0 $display0(0:$value:[i64]) -> void
+.slot 0 $value [i64]
+.slot 1 $read6 string
+.slot 2 mut $index i64
+.slot 3 $read22 string
+.slot 4 $read23 [i64]
+.slot 5 $read24 i64
+.slot 6 $owned25 i64
+.slot 7 $read26 i64
+.slot 8 $read27 string
+.slot 9 $read28 string
+0000  push.string "["
+0001  store 1       ; $read6
+0002  load 1        ; $read6
+0003  write string
+0004  call 2 0  ; $ownership2
+0005  store 2       ; $index
+0006  load 2        ; $index
+0007  load 0        ; $value
+0008  call 3 2  ; $ownership3
+0009  jump-if-false 0033
+0010  load 2        ; $index
+0011  call 5 1  ; $ownership5
+0012  jump-if-false 0017
+0013  push.string ", "
+0014  store 3       ; $read22
+0015  load 3        ; $read22
+0016  write string
+0017  load 0        ; $value
+0018  store 4       ; $read23
+0019  load 2        ; $index
+0020  store 5       ; $read24
+0021  load 5        ; $read24
+0022  store 6       ; $owned25
+0023  load 4        ; $read23
+0024  load 6        ; $owned25
+0025  array.index.dynamic i64
+0026  store 7       ; $read26
+0027  load 7        ; $read26
+0028  write i64
+0029  load 2        ; $index
+0030  call 4 1  ; $ownership4
+0031  assign 2      ; $index
+0032  jump 0006
+0033  push.string "]"
+0034  store 8       ; $read27
+0035  load 8        ; $read27
+0036  write string
+0037  push.string ""
+0038  store 9       ; $read28
+0039  load 9        ; $read28
+0040  print.string
+0041  return
+.end
+
+.function 1 $display1(0:$value:[i64]) -> void
+.slot 0 $value [i64]
+.slot 1 $read29 string
+.slot 2 mut $index i64
+.slot 3 $read45 string
+.slot 4 $read46 [i64]
+.slot 5 $read47 i64
+.slot 6 $owned48 i64
+.slot 7 $read49 i64
+.slot 8 $read50 string
+.slot 9 $read51 string
+0000  push.string "["
+0001  store 1       ; $read29
+0002  load 1        ; $read29
+0003  write string
+0004  call 6 0  ; $ownership6
+0005  store 2       ; $index
+0006  load 2        ; $index
+0007  load 0        ; $value
+0008  call 7 2  ; $ownership7
+0009  jump-if-false 0033
+0010  load 2        ; $index
+0011  call 9 1  ; $ownership9
+0012  jump-if-false 0017
+0013  push.string ", "
+0014  store 3       ; $read45
+0015  load 3        ; $read45
+0016  write string
+0017  load 0        ; $value
+0018  store 4       ; $read46
+0019  load 2        ; $index
+0020  store 5       ; $read47
+0021  load 5        ; $read47
+0022  store 6       ; $owned48
+0023  load 4        ; $read46
+0024  load 6        ; $owned48
+0025  array.index.dynamic i64
+0026  store 7       ; $read49
+0027  load 7        ; $read49
+0028  write i64
+0029  load 2        ; $index
+0030  call 8 1  ; $ownership8
+0031  assign 2      ; $index
+0032  jump 0006
+0033  push.string "]"
+0034  store 8       ; $read50
+0035  load 8        ; $read50
+0036  write string
+0037  push.string ""
+0038  store 9       ; $read51
+0039  load 9        ; $read51
+0040  print.string
+0041  return
+.end
+
+.function 2 $ownership2() -> i64
+.slot 0 $owned7 i64
+0000  push.i64 0
+0001  store 0       ; $owned7
+0002  load 0        ; $owned7
+0003  return.value
+.end
+
+.function 3 $ownership3(0:$owned8:i64, 1:$owned9:[i64]) -> bool
+.slot 0 $owned8 i64
+.slot 1 $owned9 [i64]
+.slot 2 $read10 i64
+.slot 3 $read11 [i64]
+.slot 4 $owned12 i64
+.slot 5 $owned13 bool
+0000  load 0        ; $owned8
+0001  store 2       ; $read10
+0002  load 1        ; $owned9
+0003  store 3       ; $read11
+0004  load 3        ; $read11
+0005  array.len.dynamic i64
+0006  store 4       ; $owned12
+0007  load 2        ; $read10
+0008  load 4        ; $owned12
+0009  lt.i64
+0010  store 5       ; $owned13
+0011  load 5        ; $owned13
+0012  return.value
+.end
+
+.function 4 $ownership4(0:$owned14:i64) -> i64
+.slot 0 $owned14 i64
+.slot 1 $read15 i64
+.slot 2 $read16 i64
+.slot 3 $owned17 i64
+0000  load 0        ; $owned14
+0001  store 1       ; $read15
+0002  push.i64 1
+0003  store 2       ; $read16
+0004  load 1        ; $read15
+0005  load 2        ; $read16
+0006  add.i64
+0007  store 3       ; $owned17
+0008  load 3        ; $owned17
+0009  return.value
+.end
+
+.function 5 $ownership5(0:$owned18:i64) -> bool
+.slot 0 $owned18 i64
+.slot 1 $read19 i64
+.slot 2 $read20 i64
+.slot 3 $owned21 bool
+0000  load 0        ; $owned18
+0001  store 1       ; $read19
+0002  push.i64 0
+0003  store 2       ; $read20
+0004  load 1        ; $read19
+0005  load 2        ; $read20
+0006  ne.i64
+0007  store 3       ; $owned21
+0008  load 3        ; $owned21
+0009  return.value
+.end
+
+.function 6 $ownership6() -> i64
+.slot 0 $owned30 i64
+0000  push.i64 0
+0001  store 0       ; $owned30
+0002  load 0        ; $owned30
+0003  return.value
+.end
+
+.function 7 $ownership7(0:$owned31:i64, 1:$owned32:[i64]) -> bool
+.slot 0 $owned31 i64
+.slot 1 $owned32 [i64]
+.slot 2 $read33 i64
+.slot 3 $read34 [i64]
+.slot 4 $owned35 i64
+.slot 5 $owned36 bool
+0000  load 0        ; $owned31
+0001  store 2       ; $read33
+0002  load 1        ; $owned32
+0003  store 3       ; $read34
+0004  load 3        ; $read34
+0005  array.len.dynamic i64
+0006  store 4       ; $owned35
+0007  load 2        ; $read33
+0008  load 4        ; $owned35
+0009  lt.i64
+0010  store 5       ; $owned36
+0011  load 5        ; $owned36
+0012  return.value
+.end
+
+.function 8 $ownership8(0:$owned37:i64) -> i64
+.slot 0 $owned37 i64
+.slot 1 $read38 i64
+.slot 2 $read39 i64
+.slot 3 $owned40 i64
+0000  load 0        ; $owned37
+0001  store 1       ; $read38
+0002  push.i64 1
+0003  store 2       ; $read39
+0004  load 1        ; $read38
+0005  load 2        ; $read39
+0006  add.i64
+0007  store 3       ; $owned40
+0008  load 3        ; $owned40
+0009  return.value
+.end
+
+.function 9 $ownership9(0:$owned41:i64) -> bool
+.slot 0 $owned41 i64
+.slot 1 $read42 i64
+.slot 2 $read43 i64
+.slot 3 $owned44 bool
+0000  load 0        ; $owned41
+0001  store 1       ; $read42
+0002  push.i64 0
+0003  store 2       ; $read43
+0004  load 1        ; $read42
+0005  load 2        ; $read43
+0006  ne.i64
+0007  store 3       ; $owned44
+0008  load 3        ; $owned44
+0009  return.value
+.end
+
+.function 10 $ownership10() -> [i64]
+.slot 0 $owned52 i64
+.slot 1 $owned53 i64
+.slot 2 $owned54 [i64; 2]
+.slot 3 $owned55 i64
+.slot 4 $owned56 [i64]
+.slot 5 mut $owned57 i64
+.slot 6 $read58 [i64; 2]
+.slot 7 $read59 i64
+.slot 8 $read60 i64
+.slot 9 $owned61 i64
+.slot 10 $read62 i64
+.slot 11 $owned63 i64
+0000  push.i64 1
+0001  store 0       ; $owned52
+0002  push.i64 2
+0003  store 1       ; $owned53
+0004  load 0        ; $owned52
+0005  load 1        ; $owned53
+0006  array.new i64 2
+0007  store 2       ; $owned54
+0008  push.i64 2
+0009  push.i64 0
+0010  push.i64 2
+0011  array.check-range
+0012  push.i64 2
+0013  push.i64 0
+0014  sub.i64
+0015  store 3       ; $owned55
+0016  load 3        ; $owned55
+0017  array.allocate-elements i64 width=8
+0018  store 4       ; $owned56
+0019  push.i64 0
+0020  store 5       ; $owned57
+0021  load 5        ; $owned57
+0022  load 3        ; $owned55
+0023  lt.i64
+0024  jump-if-false 0049
+0025  load 2        ; $owned54
+0026  store 6       ; $read58
+0027  load 5        ; $owned57
+0028  store 7       ; $read59
+0029  push.i64 0
+0030  store 8       ; $read60
+0031  load 7        ; $read59
+0032  load 8        ; $read60
+0033  add.i64
+0034  store 9       ; $owned61
+0035  load 6        ; $read58
+0036  load 9        ; $owned61
+0037  array.get i64 2
+0038  store 10       ; $read62
+0039  load 10        ; $read62
+0040  store 11       ; $owned63
+0041  load 4        ; $owned56
+0042  load 11        ; $owned63
+0043  array.initialize-next
+0044  load 5        ; $owned57
+0045  push.i64 1
+0046  add.i64
+0047  assign 5      ; $owned57
+0048  jump 0021
+0049  load 4        ; $owned56
+0050  return.value
+.end
+
+.function 11 $ownership11(0:$owned64:[i64]) -> [i64]
+.slot 0 $owned64 [i64]
+.slot 1 $read65 [i64]
+.slot 2 $read66 [i64]
+.slot 3 $owned67 i64
+.slot 4 $owned68 [i64]
+.slot 5 mut $owned69 i64
+.slot 6 $read70 [i64]
+.slot 7 $read71 i64
+.slot 8 $read72 i64
+.slot 9 $owned73 i64
+.slot 10 $read74 i64
+.slot 11 $owned75 i64
+0000  load 0        ; $owned64
+0001  store 1       ; $read65
+0002  load 1        ; $read65
+0003  store 2       ; $read66
+0004  load 2        ; $read66
+0005  array.len.dynamic i64
+0006  push.i64 0
+0007  load 2        ; $read66
+0008  array.len.dynamic i64
+0009  array.check-range
+0010  load 2        ; $read66
+0011  array.len.dynamic i64
+0012  push.i64 0
+0013  sub.i64
+0014  store 3       ; $owned67
+0015  load 3        ; $owned67
+0016  array.allocate-elements i64 width=8
+0017  store 4       ; $owned68
+0018  push.i64 0
+0019  store 5       ; $owned69
+0020  load 5        ; $owned69
+0021  load 3        ; $owned67
+0022  lt.i64
+0023  jump-if-false 0048
+0024  load 2        ; $read66
+0025  store 6       ; $read70
+0026  load 5        ; $owned69
+0027  store 7       ; $read71
+0028  push.i64 0
+0029  store 8       ; $read72
+0030  load 7        ; $read71
+0031  load 8        ; $read72
+0032  add.i64
+0033  store 9       ; $owned73
+0034  load 6        ; $read70
+0035  load 9        ; $owned73
+0036  array.index.dynamic i64
+0037  store 10       ; $read74
+0038  load 10        ; $read74
+0039  store 11       ; $owned75
+0040  load 4        ; $owned68
+0041  load 11        ; $owned75
+0042  array.initialize-next
+0043  load 5        ; $owned69
+0044  push.i64 1
+0045  add.i64
+0046  assign 5      ; $owned69
+0047  jump 0020
+0048  load 4        ; $owned68
+0049  return.value
+.end
+
+.function 12 $ownership12() -> i64
+.slot 0 $owned76 i64
+0000  push.i64 0
+0001  store 0       ; $owned76
+0002  load 0        ; $owned76
+0003  return.value
+.end
+
+.function 13 $ownership13() -> i64
+.slot 0 $owned79 i64
+0000  push.i64 9
+0001  store 0       ; $owned79
+0002  load 0        ; $owned79
+0003  return.value
+.end
+
+.function 14 $ownership14(0:$owned82:[i64]) -> void
+.slot 0 $owned82 [i64]
+.slot 1 mut $owned83 i64
+0000  load 0        ; $owned82
+0001  array.release-owner-last
+0002  jump-if-false 0017
+0003  load 0        ; $owned82
+0004  array.len.dynamic i64
+0005  store 1       ; $owned83
+0006  load 1        ; $owned83
+0007  push.i64 0
+0008  gt.i64
+0009  jump-if-false 0015
+0010  load 1        ; $owned83
+0011  push.i64 1
+0012  sub.i64
+0013  assign 1      ; $owned83
+0014  jump 0006
+0015  load 0        ; $owned82
+0016  array.free-elements
+0017  return
+.end
+
+.slot 0 mut values [i64]
+.slot 1 saved [i64]
+.slot 2 $owned77 i64
+.slot 3 $owned78 i64
+.slot 4 $read80 [i64]
+.slot 5 $read81 [i64]
+
+0000  call 10 0  ; $ownership10
+0001  store 0       ; values
+0002  load 0        ; values
+0003  call 11 1  ; $ownership11
+0004  store 1       ; saved
+0005  call 12 0  ; $ownership12
+0006  store 2       ; $owned77
+0007  load 0        ; values
+0008  load 2        ; $owned77
+0009  array.index.dynamic i64
+0010  store 3       ; $owned78
+0011  load 2        ; $owned77
+0012  array.check 0 [i64; dynamic] ; values
+0013  call 13 0  ; $ownership13
+0014  array.assign 0 [i64; dynamic] ; values
+0015  load 0        ; values
+0016  store 4       ; $read80
+0017  load 4        ; $read80
+0018  call 0 1  ; $display0
+0019  load 1        ; saved
+0020  store 5       ; $read81
+0021  load 5        ; $read81
+0022  call 1 1  ; $display1
+0023  load 1        ; saved
+0024  call 14 1  ; $ownership14
+0025  load 0        ; values
+0026  call 14 1  ; $ownership14
+0027  halt

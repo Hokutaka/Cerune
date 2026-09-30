@@ -44,7 +44,10 @@ pub(super) fn lower(program: &mut Program) {
                 expr.kind = lowerer.expression_function(expr.clone()).kind;
             }
             if let ExprKind::Binary { op, left, right } = &expr.kind
-                && matches!(left.ty, Type::Named(_) | Type::Array { .. })
+                && matches!(
+                    left.ty,
+                    Type::Named(_) | Type::Array { .. } | Type::DynamicArray { .. }
+                )
                 && matches!(op, BinaryOp::Equal | BinaryOp::NotEqual)
             {
                 let call = lowerer.equal(*left.clone(), *right.clone(), expr.span);
@@ -62,7 +65,10 @@ pub(super) fn lower(program: &mut Program) {
     );
     visit_program(program, &mut |_| {}, &mut |stmt| {
         if let StatementKind::Print { value } = &stmt.kind
-            && matches!(value.ty, Type::Named(_) | Type::Array { .. })
+            && matches!(
+                value.ty,
+                Type::Named(_) | Type::Array { .. } | Type::DynamicArray { .. }
+            )
         {
             stmt.kind = lowerer.write(value.clone(), stmt.span, true).kind;
         }
@@ -110,12 +116,25 @@ pub(super) fn visit_body(
 ) {
     for stmt in body {
         match &mut stmt.kind {
-            StatementKind::StringManage { value, .. }
+            StatementKind::ArrayInitialize { array, value } => {
+                visit_expr(array, f);
+                visit_expr(value, f);
+            }
+            StatementKind::ArrayRangeCheck { length, start, end } => {
+                visit_expr(length, f);
+                visit_expr(start, f);
+                visit_expr(end, f);
+            }
+            StatementKind::ArrayRetain { value }
+            | StatementKind::ArrayFree { value }
+            | StatementKind::StringManage { value, .. }
             | StatementKind::Binding { value, .. }
             | StatementKind::Print { value }
             | StatementKind::Write { value, .. } => visit_expr(value, f),
             StatementKind::Assignment { target, value } => {
-                for AssignmentProjection::Index { index, .. } in &mut target.projections {
+                for AssignmentProjection::Index { index, .. }
+                | AssignmentProjection::DynamicIndex { index, .. } in &mut target.projections
+                {
                     visit_expr(index, f);
                 }
                 visit_expr(value, f);
@@ -174,7 +193,16 @@ pub(super) fn visit_expr(expr: &mut Expr, f: &mut impl FnMut(&mut Expr)) {
             visit_expr(then_value, f);
             visit_expr(else_value, f);
         }
-        ExprKind::Constant { value, .. }
+        ExprKind::ArrayCopy { value, range } => {
+            visit_expr(value, f);
+            if let Some((start, end)) = range {
+                visit_expr(start, f);
+                visit_expr(end, f);
+            }
+        }
+        ExprKind::ArrayAllocate { length: value, .. }
+        | ExprKind::ArrayReleaseOwner { value }
+        | ExprKind::Constant { value, .. }
         | ExprKind::ArrayLength { value }
         | ExprKind::StringByteLength { value }
         | ExprKind::ConvertNumeric { value, .. }
@@ -213,6 +241,19 @@ pub(super) fn visit_expr(expr: &mut Expr, f: &mut impl FnMut(&mut Expr)) {
 }
 
 impl Lowerer {
+    fn length(&mut self, p: &Parameter, span: Span) -> Expr {
+        if let Type::Array { length, .. } = p.ty {
+            return self.int(length, span);
+        }
+        let value = self.var(p, span);
+        self.expr(
+            Type::Integer(IntegerType::I64),
+            ExprKind::ArrayLength {
+                value: Box::new(value),
+            },
+            span,
+        )
+    }
     fn fragment(&mut self, text: &str, span: Span) -> Statement {
         let value = self.expr(Type::String, ExprKind::String(text.into()), span);
         self.stmt(
@@ -224,7 +265,10 @@ impl Lowerer {
         )
     }
     fn write(&mut self, value: Expr, span: Span, newline: bool) -> Statement {
-        if !matches!(value.ty, Type::Named(_) | Type::Array { .. }) {
+        if !matches!(
+            value.ty,
+            Type::Named(_) | Type::Array { .. } | Type::DynamicArray { .. }
+        ) {
             let quoted = value.ty == Type::String;
             return self.stmt(StatementKind::Write { value, quoted }, span);
         }
@@ -244,7 +288,7 @@ impl Lowerer {
         });
         let mut body = Vec::new();
         match ty {
-            Type::Array { element, length } => {
+            Type::Array { element, .. } | Type::DynamicArray { element } => {
                 body.push(self.fragment("[", span));
                 let index = self.param("$index", Type::Integer(IntegerType::I64), span);
                 let zero = self.int(0, span);
@@ -260,7 +304,7 @@ impl Lowerer {
                     span,
                 );
                 let i = self.var(&index, span);
-                let limit = self.int(length, span);
+                let limit = self.length(&input, span);
                 let condition = self.binary(Type::Bool, BinaryOp::Less, i, limit, span);
                 let i = self.var(&index, span);
                 let zero = self.int(0, span);
@@ -477,7 +521,10 @@ impl Lowerer {
         )
     }
     fn equal(&mut self, left: Expr, right: Expr, span: Span) -> Expr {
-        if !matches!(left.ty, Type::Named(_) | Type::Array { .. }) {
+        if !matches!(
+            left.ty,
+            Type::Named(_) | Type::Array { .. } | Type::DynamicArray { .. }
+        ) {
             return self.binary(Type::Bool, BinaryOp::Equal, left, right, span);
         }
         let ty = left.ty.clone();
@@ -497,7 +544,13 @@ impl Lowerer {
         });
         let mut body = Vec::new();
         match ty {
-            Type::Array { element, length } => {
+            Type::Array { element, .. } | Type::DynamicArray { element } => {
+                if matches!(a.ty, Type::DynamicArray { .. }) {
+                    let al = self.length(&a, span);
+                    let bl = self.length(&b, span);
+                    let equal = self.binary(Type::Bool, BinaryOp::Equal, al, bl, span);
+                    body.push(self.reject_unless(equal, span));
+                }
                 let i = self.param("$index", Type::Integer(IntegerType::I64), span);
                 let zero = self.int(0, span);
                 let initializer = self.stmt(
@@ -512,7 +565,7 @@ impl Lowerer {
                     span,
                 );
                 let index = self.var(&i, span);
-                let limit = self.int(length, span);
+                let limit = self.length(&a, span);
                 let condition = self.binary(Type::Bool, BinaryOp::Less, index, limit, span);
                 let av = self.var(&a, span);
                 let index = self.var(&i, span);

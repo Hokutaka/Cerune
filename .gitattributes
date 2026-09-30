@@ -1,4 +1,5 @@
 tests/fixtures/** text eol=lf
+tests/fixtures/dynamic-arrays/nested.stdout -text
 scripts/*.ps1 -linguist-detectable
 scripts/*.sh text eol=lf -linguist-detectable
 scripts/*.cjs text eol=lf -linguist-detectable

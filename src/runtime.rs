@@ -1,3 +1,4 @@
+pub(crate) mod array_heap;
 pub(crate) mod float_output;
 pub(crate) mod numeric;
 pub(crate) mod string_heap;
@@ -23,6 +24,7 @@ pub enum FailureCode {
     ConversionNaN,
     ConversionNegativeZero,
     ArrayIndexOutOfBounds,
+    ArrayRangeOutOfBounds,
 }
 
 impl FailureCode {
@@ -43,6 +45,7 @@ impl FailureCode {
             Self::ConversionNaN => "conversion-nan",
             Self::ConversionNegativeZero => "conversion-negative-zero",
             Self::ArrayIndexOutOfBounds => "array-index-out-of-bounds",
+            Self::ArrayRangeOutOfBounds => "array-range-out-of-bounds",
         }
     }
 
@@ -67,6 +70,7 @@ impl FailureCode {
                 C::NegativeZero => Self::ConversionNegativeZero,
             },
             VmErrorKind::ArrayIndexOutOfBounds { .. } => Self::ArrayIndexOutOfBounds,
+            VmErrorKind::ArrayRangeOutOfBounds => Self::ArrayRangeOutOfBounds,
             _ => return None,
         })
     }

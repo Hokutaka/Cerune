@@ -118,6 +118,9 @@ fn lower_body(
             cerune_ir::Type::F32 | cerune_ir::Type::F64
         ));
         match &parameter.ty {
+            cerune_ir::Type::DynamicArray { .. } => {
+                unreachable!("dynamic arrays are rejected before backend lowering")
+            }
             cerune_ir::Type::String
             | cerune_ir::Type::Bool
             | cerune_ir::Type::Integer(_)
@@ -272,6 +275,12 @@ impl Lowerer<'_> {
 
     fn lower_statement_body(&mut self, statement: &cerune_ir::Statement) -> bool {
         match &statement.kind {
+            cerune_ir::StatementKind::ArrayInitialize { .. }
+            | cerune_ir::StatementKind::ArrayRetain { .. }
+            | cerune_ir::StatementKind::ArrayFree { .. }
+            | cerune_ir::StatementKind::ArrayRangeCheck { .. } => {
+                unreachable!("dynamic arrays are rejected before backend lowering")
+            }
             cerune_ir::StatementKind::Binding { id, ty, value, .. } => {
                 let value = self.lower_expr(value, 0);
                 let destination = self.binding_slot(*id);
@@ -293,7 +302,10 @@ impl Lowerer<'_> {
                         element,
                         length,
                         span,
-                    } = projection;
+                    } = projection
+                    else {
+                        unreachable!("dynamic arrays are rejected before backend lowering")
+                    };
                     let Value::Scalar(Type::I64) = self.lower_expr(index, 0) else {
                         unreachable!("array index must be i64")
                     };
@@ -564,6 +576,11 @@ impl Lowerer<'_> {
         }
 
         match &expr.kind {
+            cerune_ir::ExprKind::ArrayCopy { .. }
+            | cerune_ir::ExprKind::ArrayAllocate { .. }
+            | cerune_ir::ExprKind::ArrayReleaseOwner { .. } => {
+                unreachable!("dynamic arrays are rejected before backend lowering")
+            }
             cerune_ir::ExprKind::Let { .. } | cerune_ir::ExprKind::Conditional { .. } => {
                 unreachable!("match expressions are lowered before code generation")
             }
@@ -1008,6 +1025,9 @@ impl Lowerer<'_> {
         }
 
         let aggregate_result = result_type.and_then(|ty| match ty {
+            cerune_ir::Type::DynamicArray { .. } => {
+                unreachable!("dynamic arrays are rejected before backend lowering")
+            }
             cerune_ir::Type::Named(_) | cerune_ir::Type::Array { .. } => {
                 Some((ty, self.allocate_aggregate(ty)))
             }
@@ -1027,6 +1047,9 @@ impl Lowerer<'_> {
 
         if let Some((ty, base_slot)) = aggregate_result {
             return Some(match ty {
+                cerune_ir::Type::DynamicArray { .. } => {
+                    unreachable!("dynamic arrays are rejected before backend lowering")
+                }
                 cerune_ir::Type::Named(type_id) => Value::Aggregate {
                     type_id: type_id.0,
                     base_slot,
@@ -1294,6 +1317,12 @@ fn collect_binding_slots(
 ) {
     for statement in statements {
         match &statement.kind {
+            cerune_ir::StatementKind::ArrayInitialize { .. }
+            | cerune_ir::StatementKind::ArrayRetain { .. }
+            | cerune_ir::StatementKind::ArrayFree { .. }
+            | cerune_ir::StatementKind::ArrayRangeCheck { .. } => {
+                unreachable!("dynamic arrays are rejected before backend lowering")
+            }
             cerune_ir::StatementKind::Binding { id, ty, .. } => {
                 slots.insert(*id, *next);
                 *next += type_slot_count(program, ty);
@@ -1333,6 +1362,9 @@ fn collect_binding_slots(
 
 fn type_slot_count(program: &cerune_ir::Program, ty: &cerune_ir::Type) -> usize {
     match ty {
+        cerune_ir::Type::DynamicArray { .. } => {
+            unreachable!("dynamic arrays are rejected before backend lowering")
+        }
         cerune_ir::Type::String
         | cerune_ir::Type::Bool
         | cerune_ir::Type::Integer(_)
@@ -1358,6 +1390,12 @@ fn count_statements_expr_nodes(statements: &[cerune_ir::Statement]) -> usize {
     statements
         .iter()
         .map(|statement| match &statement.kind {
+            cerune_ir::StatementKind::ArrayInitialize { .. }
+            | cerune_ir::StatementKind::ArrayRetain { .. }
+            | cerune_ir::StatementKind::ArrayFree { .. }
+            | cerune_ir::StatementKind::ArrayRangeCheck { .. } => {
+                unreachable!("dynamic arrays are rejected before backend lowering")
+            }
             cerune_ir::StatementKind::Binding { value, .. }
             | cerune_ir::StatementKind::Assignment { value, .. }
             | cerune_ir::StatementKind::StringManage { value, .. }
@@ -1399,6 +1437,11 @@ fn count_statements_expr_nodes(statements: &[cerune_ir::Statement]) -> usize {
 
 fn count_expr_nodes(expr: &cerune_ir::Expr) -> usize {
     match &expr.kind {
+        cerune_ir::ExprKind::ArrayCopy { .. }
+        | cerune_ir::ExprKind::ArrayAllocate { .. }
+        | cerune_ir::ExprKind::ArrayReleaseOwner { .. } => {
+            unreachable!("dynamic arrays are rejected before backend lowering")
+        }
         cerune_ir::ExprKind::Let { .. } | cerune_ir::ExprKind::Conditional { .. } => {
             unreachable!("match expressions are lowered before code generation")
         }
@@ -1442,6 +1485,12 @@ fn required_scratch_slots(statements: &[cerune_ir::Statement]) -> usize {
     statements
         .iter()
         .map(|statement| match &statement.kind {
+            cerune_ir::StatementKind::ArrayInitialize { .. }
+            | cerune_ir::StatementKind::ArrayRetain { .. }
+            | cerune_ir::StatementKind::ArrayFree { .. }
+            | cerune_ir::StatementKind::ArrayRangeCheck { .. } => {
+                unreachable!("dynamic arrays are rejected before backend lowering")
+            }
             cerune_ir::StatementKind::Binding { value, .. }
             | cerune_ir::StatementKind::Assignment { value, .. }
             | cerune_ir::StatementKind::StringManage { value, .. }
@@ -1483,6 +1532,11 @@ fn required_scratch_slots(statements: &[cerune_ir::Statement]) -> usize {
 
 fn required_expr_scratch(expr: &cerune_ir::Expr, depth: usize) -> usize {
     match &expr.kind {
+        cerune_ir::ExprKind::ArrayCopy { .. }
+        | cerune_ir::ExprKind::ArrayAllocate { .. }
+        | cerune_ir::ExprKind::ArrayReleaseOwner { .. } => {
+            unreachable!("dynamic arrays are rejected before backend lowering")
+        }
         cerune_ir::ExprKind::Let { .. } | cerune_ir::ExprKind::Conditional { .. } => {
             unreachable!("match expressions are lowered before code generation")
         }
@@ -1536,6 +1590,9 @@ fn required_expr_scratch(expr: &cerune_ir::Expr, depth: usize) -> usize {
 
 fn scalar_type(ty: &cerune_ir::Type) -> Type {
     match ty {
+        cerune_ir::Type::DynamicArray { .. } => {
+            unreachable!("dynamic arrays are rejected before backend lowering")
+        }
         cerune_ir::Type::String => Type::String,
         cerune_ir::Type::Bool => Type::Bool,
         cerune_ir::Type::Integer(_) => Type::I64,
@@ -1549,6 +1606,9 @@ fn scalar_type(ty: &cerune_ir::Type) -> Type {
 
 fn array_element_type(element: &cerune_ir::Type) -> ArrayElement {
     match element {
+        cerune_ir::Type::DynamicArray { .. } => {
+            unreachable!("dynamic arrays are rejected before backend lowering")
+        }
         cerune_ir::Type::String => ArrayElement::Scalar(Type::String),
         cerune_ir::Type::Bool => ArrayElement::Scalar(Type::Bool),
         cerune_ir::Type::Integer(_) => ArrayElement::Scalar(Type::I64),

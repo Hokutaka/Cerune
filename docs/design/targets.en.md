@@ -41,6 +41,8 @@ A backend is an internal implementation component that lowers Cerune IR for a pa
 
 Backend is an implementation term. It is not used as a collective name for an output route, target, and artifact.
 
+Dynamic arrays `[T]` currently execute in IR Executor and Bytecode VM. C, LLVM, QBE, WAT, ASM, and native object generation explicitly reject them, including unused dynamic array types. See [support status](owned-arrays.en.md).
+
 ## Current configuration
 
 The current outputs can be described as follows:

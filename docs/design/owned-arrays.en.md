@@ -2,7 +2,7 @@
 
 [日本語](owned-arrays.ja.md)
 
-**This is a specification proposal for the next implementation. Dynamic arrays, the operations below, and the array budget are not implemented.** The executable baseline is [fixed-array copies and lifetimes](../../examples/array_copy_lifetimes.ceru). It builds on [implemented string ownership](dynamic-data.en.md), but mutable array storage must be copied independently.
+**`[T]`, `array_copy`, `array_copy_range`, and the array budget are implemented in common IR and IR Executor/VM. C, LLVM, QBE, WAT, ASM, native objects, and `array_repeat` are pending.** Runnable examples cover [copies](../../examples/dynamic_arrays/copy.ceru) and [nesting, functions, and enums](../../examples/dynamic_arrays/nested.ceru). It builds on [implemented string ownership](dynamic-data.en.md), but mutable array storage must be copied independently.
 
 ## Implementation progress
 
@@ -10,14 +10,15 @@
 | --- | --- |
 | Argument ownership transfer | Implemented: pass caller-prepared ownership once; the callee releases it. IR distinguishes ownership from internal reading |
 | Reads and owned-value preparation | Implemented: common IR marks `read` bindings and preserves temporary projection/release order |
-| Dynamic array types, allocation, and independent copies | Not implemented; the next implementation step |
+| Dynamic array types, allocation, and independent copies | Implemented in IR/VM, including ranges, display/equality/iteration, aggregates, and functions |
+| `array_repeat` | Pending operation |
 | Dynamic arrays across backends and the completion criteria below | Not implemented |
 
-Implemented stages are validated with existing strings and fixed arrays. See [call ownership](dynamic-data.en.md#ownership-across-calls), [read preparation](dynamic-data.en.md#reads-and-owned-value-preparation), and the [argument](../../examples/owned_arguments.ceru) and [read](../../examples/borrowed_reads.ceru) examples. This does not mark `[T]` or the array budget as supported.
+Dynamic arrays are also compared between IR/VM for results, failure reasons, source origins, and prior output. See [call ownership](dynamic-data.en.md#ownership-across-calls), [read preparation](dynamic-data.en.md#reads-and-owned-value-preparation), and the [argument](../../examples/owned_arguments.ceru) and [read](../../examples/borrowed_reads.ceru) examples. This does not mark compiled routes as supported.
 
 ## Types and initial operations
 
-| Proposed spelling | Meaning |
+| Spelling (`array_repeat` remains proposed) | Meaning |
 | --- | --- |
 | `[T]` | An owned array with a runtime length; length is not part of its type |
 | `[T; N]` | The existing fixed array, with its syntax and meaning preserved |
@@ -27,11 +28,11 @@ Implemented stages are validated with existing strings and fixed arrays. See [ca
 | `array_len(values)` | Return a fixed or dynamic array's element count as i64 |
 | `values[index]` | Read through an i64 index; a mut array binding permits element updates |
 
-The proposed operation names follow `array_len`. Existing example functions named `copy_range` and `append` remain ordinary functions. Reserving the new names and diagnosing collisions belongs to implementation; an existing function must not silently resolve to a builtin.
+Implemented operation names follow `array_len`. Existing example functions named `copy_range` and `append` remain ordinary functions. Definitions colliding with `array_copy` or `array_copy_range` are diagnosed.
 
-There is no implicit fixed/dynamic conversion. `[1, 2]` remains a fixed-array literal. Initially no dynamic-array literal is added. Empty values come from `array_repeat::<T>(seed, 0)` or an empty range; seed is evaluated even for zero elements. Existing restrictions on `[T; 0]` and empty literals are unchanged.
+There is no implicit fixed/dynamic conversion. `[1, 2]` remains a fixed-array literal. Initially no dynamic-array literal is added. Empty values come from an empty range. The future `array_repeat::<T>(seed, 0)` proposal also evaluates seed for zero elements. Existing restrictions on `[T; 0]` and empty literals are unchanged.
 
-The following is **illustrative code containing unimplemented syntax**:
+The following runs through IR and VM:
 
 ```text
 mut values: [i64] = array_copy([10, 20, 30]);
@@ -40,7 +41,7 @@ part: [i64] = array_copy_range(values, 1, 3);
 values[1] = 99;
 print(saved); // [10, 20, 30]
 print(part);  // [20, 30]
-empty: [i64] = array_repeat::<i64>(0, 0);
+empty: [i64] = array_copy_range(values, 3, 3);
 print(empty); // []
 ```
 
@@ -88,7 +89,7 @@ For indexed assignment, evaluate and check each index before later indices or th
 | Proposed diagnostic | Cause and origin |
 | --- | --- |
 | `array-index-out-of-bounds` (existing) | The indexed access expression |
-| `array-range-out-of-bounds` (planned) | An invalid range at the array_copy_range expression |
+| `array-range-out-of-bounds` | An invalid range at the array_copy_range expression |
 | `array-length-out-of-range` (planned) | A negative count at the array_repeat expression |
 | `allocation-size-overflow` (existing) | An unrepresentable size product/sum, length, or layout size |
 | `allocation-limit-exceeded` (existing) | An explicit array or string budget is exceeded |
@@ -98,7 +99,7 @@ An allocation introduced by copying points to the source expression requesting t
 
 ## Budgets and lifetimes
 
-Propose `--array-heap-limit <bytes>`, defaulting to 64 MiB and accepting decimal integers from zero through i64::MAX. Preserve the meaning of `--string-heap-limit`. Both are settings made before execution/generation and recorded in IR, bytecode, and artifacts. Initially dynamic arrays are not allowed in compile-time constants; explicitly copy fixed-array constants at runtime.
+`--array-heap-limit <bytes>` is implemented, defaulting to 64 MiB and accepting decimal integers from zero through i64::MAX. Preserve the meaning of `--string-heap-limit`. Both are settings made before execution/generation and recorded in IR and bytecode. Compiled artifacts will use the same setting when implemented. Initially dynamic arrays are not allowed in compile-time constants; explicitly copy fixed-array constants at runtime.
 
 To keep pointer width and padding from changing where budget failures occur, **count live array element storage using common accounting widths**. This is not a physical-memory limit.
 
@@ -118,7 +119,7 @@ Release bindings in reverse order at block exit, return, break, and continue; re
 
 ## What the generation process exposes
 
-Propose typed operations such as `array.copy.allocate-elements`, `array.copy-range`, and `array.repeat`, with final spellings settled during implementation. Common lowering expands:
+`array_copy`, `array_copy_range`, and value copies now expand into ordinary common-IR loops and branches. Primitive spellings are `array.check-range`, `array.allocate-elements width=N`, `array.initialize-next`, `array.release-owner-last`, and `array.free-elements`. Lowering exposes:
 
 - Once-only source evaluation, distinguishing reads, value copies, and temporary ownership transfers.
 - Index, range, length, size, and budget checks.
@@ -128,7 +129,13 @@ Propose typed operations such as `array.copy.allocate-elements`, `array.copy-ran
 
 Preserve correspondence between AST types, common IR, backend IR, bytecode, and artifacts. Element traversal must remain visible as ordinary common-IR loops and branches, rather than disappear into one opaque host call. Backends implement layout, allocation, load/store, and release without redefining value-copy semantics separately. Keep existing LLVM/ASM/object origin annotations.
 
-The VM manages typed element storage per execution. C, LLVM, QBE, ASM, and native COFF/ELF use the explicit target's allocator and ABI; WAT uses private memory. Do not expose shared storage addresses through the language or observation APIs. Recursive types, dynamic arrays as external host values, borrowing, and FFI are outside this change.
+IR Executor and VM share primitive typed storage management per execution. Execution remains independent: elements are copied by common-IR or bytecode loops. Future C, LLVM, QBE, ASM, and native COFF/ELF use the explicit target's allocator and ABI; WAT uses private memory. Do not expose shared storage addresses through the language or observation APIs. Recursive types, dynamic arrays as external host values, borrowing, and FFI are outside this change.
+
+### Ownership handoff from a temporary
+
+Copying a binding always allocates independent storage. Extracting an owned temporary such as `make().field` briefly retains the selected array before releasing the parent aggregate. Only this handoff uses `array.retain-owner` and the owner count; it is not copy-on-write. The last release enters an ordinary reverse IR loop to release elements, followed by `array.free-elements`. Unrelated fields do not stay alive and consume the next argument's budget.
+
+IR Executor and VM reclaim partially initialized regions at the execution boundary. Allocation failure, size overflow, and budget exhaustion are tested separately. Invalid ownership is an internal error, not a language failure.
 
 ## Implementation acceptance criteria
 
@@ -143,7 +150,7 @@ The VM manages typed element storage per execution. C, LLVM, QBE, ASM, and nativ
 | Allocation failure | Size boundaries, fixed allocator failure, actual WAT memory.grow failure |
 | Observability | Common-IR/bytecode/backend fixtures and annotations identifying the original expressions |
 
-Compare known output bytes, diagnostics, and prior output across IR Executor, VM, generated C, LLVM, QBE, WAT, Windows/Linux ASM, and native COFF/ELF. Add C ASan/UBSan checks and verify successful cleanup and partial-failure reclamation. Only mark the feature implemented in the reference and feature tables once the routes agree.
+Compare known output bytes, diagnostics, and prior output across IR Executor, VM, generated C, LLVM, QBE, WAT, Windows/Linux ASM, and native COFF/ELF. Add C ASan/UBSan checks and verify successful cleanup and partial-failure reclamation. Mark the supported routes at each stage in the reference and feature tables; do not claim full route coverage until they agree.
 
 ## Executable baseline today
 

@@ -82,7 +82,7 @@ pub(crate) fn lower(program: &Program) -> Result<Lowered, Diagnostic> {
             }
             if matches!(
                 d.name.as_str(),
-                "main" | "byte_len" | "array_len" | "concat"
+                "main" | "byte_len" | "array_len" | "concat" | "array_copy" | "array_copy_range"
             ) || Type::from_name(&d.name).is_some()
             {
                 return Err(Diagnostic::new(
@@ -97,7 +97,13 @@ pub(crate) fn lower(program: &Program) -> Result<Lowered, Diagnostic> {
                     || Type::from_name(&p.name).is_some()
                     || matches!(
                         p.name.as_str(),
-                        "infer" | "byte_len" | "array_len" | "concat" | "convert"
+                        "infer"
+                            | "byte_len"
+                            | "array_len"
+                            | "concat"
+                            | "array_copy"
+                            | "array_copy_range"
+                            | "convert"
                     )
                 {
                     return Err(Diagnostic::new(
@@ -166,6 +172,7 @@ struct Expander<'a> {
 fn type_key(ty: &TypeRef) -> String {
     match &ty.kind {
         TypeRefKind::Named(n) => n.clone(),
+        TypeRefKind::DynamicArray { element } => format!("[{}]", type_key(element)),
         TypeRefKind::Array { element, length } => format!("[{}; {length}]", type_key(element)),
         TypeRefKind::ArrayConstant { .. } => unreachable!(),
     }
@@ -189,7 +196,9 @@ impl Expander<'_> {
                 }
                 None => {}
             },
-            TypeRefKind::Array { element, .. } => self.ty(element)?,
+            TypeRefKind::Array { element, .. } | TypeRefKind::DynamicArray { element } => {
+                self.ty(element)?
+            }
             TypeRefKind::ArrayConstant { element, constant } => {
                 self.ty(element)?;
                 match self.substitutions.get(&constant.name) {
@@ -355,7 +364,9 @@ impl Expander<'_> {
             {
                 Ok(())
             }
-            TypeRefKind::Array { element, .. } => self.validate_type(element),
+            TypeRefKind::Array { element, .. } | TypeRefKind::DynamicArray { element } => {
+                self.validate_type(element)
+            }
             _ => Err(Diagnostic::new(
                 "generic argument requires a known concrete type",
                 ty.span,

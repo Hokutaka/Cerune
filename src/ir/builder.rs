@@ -111,6 +111,7 @@ pub(crate) fn build_with_model(
     let statements = statements.into_iter().flatten().collect();
     Ok(Program {
         string_heap_limit: super::DEFAULT_STRING_HEAP_LIMIT,
+        array_heap_limit: super::DEFAULT_ARRAY_HEAP_LIMIT,
         constant_definitions,
         type_definitions,
         function_definitions,
@@ -294,19 +295,30 @@ impl Builder<'_> {
                 let mut projections = Vec::with_capacity(target.projections.len());
                 for projection in &target.projections {
                     let ast::AssignmentProjection::Index { index, span } = projection;
-                    let semantic::Type::Array { element, length } = target_ty else {
-                        unreachable!("semantic analysis requires an array assignment target")
+                    let (element, length) = match target_ty {
+                        semantic::Type::Array { element, length } => (element, Some(length)),
+                        semantic::Type::DynamicArray { element } => (element, None),
+                        _ => unreachable!("semantic analysis requires an array assignment target"),
                     };
                     let element_ty = *element;
-                    projections.push(AssignmentProjection::Index {
-                        index: self.build_expr(
+                    let index = self.build_expr(
+                        index,
+                        Some(semantic::Type::Integer(IntegerType::I64)),
+                        &bindings,
+                    )?;
+                    let element = ir_type(element_ty.clone());
+                    projections.push(match length {
+                        Some(length) => AssignmentProjection::Index {
                             index,
-                            Some(semantic::Type::Integer(IntegerType::I64)),
-                            &bindings,
-                        )?,
-                        element: ir_type(element_ty.clone()),
-                        length,
-                        span: *span,
+                            element,
+                            length,
+                            span: *span,
+                        },
+                        None => AssignmentProjection::DynamicIndex {
+                            index,
+                            element,
+                            span: *span,
+                        },
                     });
                     target_ty = element_ty;
                 }
@@ -441,6 +453,29 @@ impl Builder<'_> {
                     bindings,
                 )?),
             },
+            ast::ExprKind::Call {
+                name, arguments, ..
+            } if matches!(name.as_str(), "array_copy" | "array_copy_range") => {
+                ExprKind::ArrayCopy {
+                    value: Box::new(self.build_expr(&arguments[0], None, bindings)?),
+                    range: if name == "array_copy_range" {
+                        Some((
+                            Box::new(self.build_expr(
+                                &arguments[1],
+                                Some(semantic::Type::Integer(IntegerType::I64)),
+                                bindings,
+                            )?),
+                            Box::new(self.build_expr(
+                                &arguments[2],
+                                Some(semantic::Type::Integer(IntegerType::I64)),
+                                bindings,
+                            )?),
+                        ))
+                    } else {
+                        None
+                    },
+                }
+            }
             ast::ExprKind::Call {
                 name, arguments, ..
             } if name == "array_len" => ExprKind::ArrayLength {
@@ -815,6 +850,9 @@ fn ir_type(value: semantic::Type) -> Type {
         semantic::Type::F32 => Type::F32,
         semantic::Type::F64 => Type::F64,
         semantic::Type::Named(id) => Type::Named(TypeId(id.0)),
+        semantic::Type::DynamicArray { element } => Type::DynamicArray {
+            element: Box::new(ir_type(*element)),
+        },
         semantic::Type::Array { element, length } => Type::Array {
             element: Box::new(ir_type(*element)),
             length,

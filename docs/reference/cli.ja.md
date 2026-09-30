@@ -36,6 +36,17 @@ cerune run examples/string_concat.ceru --string-heap-limit 1024
 cerune emit-llvm examples/string_concat.ceru --target x86_64-unknown-linux-gnu --string-heap-limit 1024 -o concat.ll
 ```
 
+## 動的配列の予算
+
+同じコマンドで`--array-heap-limit <bytes>`も指定できます。既定値・数値形式は文字列予算と同じで、二つの予算は独立です。要素の計算幅に基づく生存領域を数え、物理メモリ全体の上限ではありません。`check`・`emit-sources`では受け付けません。
+
+動的配列は`run`／`run-ir`／`run-vm`とIR・bytecode出力まで対応しています。C以降の生成経路では、出力ファイルを書き換える前に未対応と診断します。IR・bytecodeには使用した配列予算を記録します。
+
+```sh
+cerune run examples/dynamic_arrays/copy.ceru --array-heap-limit 1024
+cerune run-vm examples/dynamic_arrays/copy.ceru --array-heap-limit 1024
+```
+
 ## 検証
 
 各コマンドの`<file>`は入口ファイルです。[モジュール](../design/modules.ja.md)のimportは宣言元のディレクトリから解決し、全依存を検査します。CLIを別ディレクトリから起動してもimport先は変わりません。対象の生成経路に必要な`--target`指定は従来通りです。

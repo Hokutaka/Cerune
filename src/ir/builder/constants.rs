@@ -189,6 +189,7 @@ impl Builder<'_> {
                 .collect();
             let mut program = Program {
                 string_heap_limit: super::super::DEFAULT_STRING_HEAP_LIMIT,
+                array_heap_limit: super::super::DEFAULT_ARRAY_HEAP_LIMIT,
                 constant_definitions: Vec::new(),
                 type_definitions: types,
                 function_definitions: vec![FunctionDefinition {
@@ -250,6 +251,7 @@ impl Builder<'_> {
     pub(super) fn freeze(&self, value: Value, ty: &Type, span: Span) -> Expr {
         let id = self.allocate_node_id();
         let kind = match value {
+            Value::DynamicArray { .. } => unreachable!("dynamic arrays are not constant values"),
             Value::Bool(v) => ExprKind::Boolean(v),
             Value::String(v) => ExprKind::String(v.text()),
             Value::Integer(v, _) => ExprKind::Integer(v),

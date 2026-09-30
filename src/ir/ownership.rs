@@ -1,9 +1,10 @@
 //! 所有の処理を通常の束縛・関数・分岐に展開し、生成先ごとの差を防ぎます。
 use super::aggregates::{visit_body, visit_expr, visit_program};
 use super::*;
+mod arrays;
 
 pub(super) fn lower(program: &mut Program) {
-    let mut needed = false;
+    let mut needed = program.first_dynamic_array_span().is_some();
     for f in &mut program.function_definitions {
         visit_body(
             &mut f.body,
@@ -205,7 +206,7 @@ impl Lowerer {
     }
     fn owns(&self, ty: &Type) -> bool {
         match ty {
-            Type::String => true,
+            Type::String | Type::DynamicArray { .. } => true,
             Type::Array { element, length } => *length != 0 && self.owns(element),
             Type::Named(id) => self.types[id.0].fields.iter().any(|f| self.owns(&f.ty)),
             _ => false,
@@ -265,6 +266,53 @@ impl Lowerer {
             self.managers.push((ty.clone(), retain, id, name.clone()));
             let mut b = vec![];
             match ty {
+                Type::DynamicArray { element } => {
+                    let value = self.var(&p);
+                    if retain {
+                        b.push(self.stmt(StatementKind::ArrayRetain { value }, span));
+                    } else {
+                        let condition = self.expr(
+                            Type::Bool,
+                            ExprKind::ArrayReleaseOwner {
+                                value: Box::new(value),
+                            },
+                            span,
+                        );
+                        let value = self.var(&p);
+                        let length = self.length(value);
+                        let mut cleanup = vec![];
+                        self.array_loop(
+                            length,
+                            true,
+                            span,
+                            |this, index| {
+                                let base = this.var(&p);
+                                let value = this.expr(
+                                    *element,
+                                    ExprKind::Index {
+                                        base: Box::new(base),
+                                        index: Box::new(index),
+                                    },
+                                    span,
+                                );
+                                let mut statements = vec![];
+                                this.manage(value, false, &mut statements);
+                                statements
+                            },
+                            &mut cleanup,
+                        );
+                        let value = self.var(&p);
+                        cleanup.push(self.stmt(StatementKind::ArrayFree { value }, span));
+                        b.push(self.stmt(
+                            StatementKind::If {
+                                condition,
+                                then_body: cleanup,
+                                else_body: vec![],
+                            },
+                            span,
+                        ));
+                    }
+                }
                 Type::Array { element, length } => {
                     let start = self.int(if retain { 0 } else { length }, span);
                     let index = self.param(Type::Integer(IntegerType::I64), span);
@@ -524,10 +572,22 @@ impl Lowerer {
             if read.owned {
                 return read.value;
             }
-            let p = self.bind(read.value, false, body);
-            let value = self.var(&p);
-            self.manage(value, true, body);
-            return self.var(&p);
+            return self.copy_owned(read.value, body);
+        }
+        if let ExprKind::ArrayCopy {
+            value: source,
+            range,
+        } = value.kind
+        {
+            let source = self.read(*source, body);
+            let range =
+                range.map(|(start, end)| (self.owned(*start, body), self.owned(*end, body)));
+            let input = self.copy(&source.value);
+            let result = self.copy_range(input, range, span, body);
+            if source.owned {
+                self.manage(source.value, false, body);
+            }
+            return result;
         }
         if let ExprKind::Logical { op, left, right } = value.kind {
             let left = self.owned(*left, body);
@@ -684,6 +744,12 @@ impl Lowerer {
     fn statement(&mut self, mut s: Statement, out: &mut Vec<Statement>) {
         let span = s.span;
         match &mut s.kind {
+            StatementKind::ArrayInitialize { .. }
+            | StatementKind::ArrayRetain { .. }
+            | StatementKind::ArrayFree { .. }
+            | StatementKind::ArrayRangeCheck { .. } => {
+                unreachable!("array storage statements are generated after ownership expansion")
+            }
             StatementKind::Binding {
                 id,
                 name,
@@ -713,6 +779,11 @@ impl Lowerer {
                     element,
                     span,
                     ..
+                }
+                | AssignmentProjection::DynamicIndex {
+                    index,
+                    element,
+                    span,
                 } in &mut target.projections
                 {
                     let evaluated = self.wrap(index.clone());

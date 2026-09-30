@@ -50,4 +50,4 @@ NodeIds are assigned after expansion; subject and body retain their original Spa
 
 The [observation fixture](../../tests/fixtures/observation/array-iteration/) records the source and generated representations. This feature introduces no new allocation mechanism: each route retains its existing array-copy and storage model. Optimizations may eliminate copies/checks only while preserving evaluation order and independent values.
 
-Only existing positive-length fixed arrays are supported. Empty arrays, string iteration, slices, references, destructuring patterns, and an iterator protocol are outside this feature. Return checking remains conservative: a `return` inside the body alone does not establish that a function returns on every path.
+This initial design covers positive-length fixed arrays. The subsequent [dynamic array stage](owned-arrays.en.md) extends IR/VM iteration to runtime lengths, including empty arrays. String iteration, slices, references, destructuring patterns, and an iterator protocol remain unsupported. Return checking remains conservative: a `return` inside the body alone does not establish that a function returns on every path.

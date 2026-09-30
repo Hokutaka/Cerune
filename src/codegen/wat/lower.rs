@@ -80,6 +80,9 @@ fn lower_function(
     let mut name_counts = HashMap::new();
     let mut parameters = Vec::new();
     let aggregate_return_type = match &function.return_type {
+        cerune_ir::ReturnType::Value(cerune_ir::Type::DynamicArray { .. }) => {
+            unreachable!("dynamic arrays are rejected before backend lowering")
+        }
         cerune_ir::ReturnType::Value(
             ty @ (cerune_ir::Type::Named(_) | cerune_ir::Type::Array { .. }),
         ) => Some(ty),
@@ -105,6 +108,9 @@ fn lower_function(
     for parameter in &function.parameters {
         name_counts.insert(parameter.name.clone(), 1);
         match &parameter.ty {
+            cerune_ir::Type::DynamicArray { .. } => {
+                unreachable!("dynamic arrays are rejected before backend lowering")
+            }
             cerune_ir::Type::String
             | cerune_ir::Type::Bool
             | cerune_ir::Type::Integer(_)
@@ -221,6 +227,9 @@ fn lower_function(
         name: function.name.clone(),
         parameters,
         return_type: match &function.return_type {
+            cerune_ir::ReturnType::Value(cerune_ir::Type::DynamicArray { .. }) => {
+                unreachable!("dynamic arrays are rejected before backend lowering")
+            }
             cerune_ir::ReturnType::Void => None,
             cerune_ir::ReturnType::Value(
                 ty @ (cerune_ir::Type::String
@@ -321,6 +330,12 @@ impl LoweringContext<'_> {
         instructions: &mut Vec<Instruction>,
     ) {
         match &statement.kind {
+            cerune_ir::StatementKind::ArrayInitialize { .. }
+            | cerune_ir::StatementKind::ArrayRetain { .. }
+            | cerune_ir::StatementKind::ArrayFree { .. }
+            | cerune_ir::StatementKind::ArrayRangeCheck { .. } => {
+                unreachable!("dynamic arrays are rejected before backend lowering")
+            }
             cerune_ir::StatementKind::Binding { id, value, .. } => {
                 self.assign_location(self.locations[id].clone(), value, instructions);
             }
@@ -339,7 +354,10 @@ impl LoweringContext<'_> {
                             element,
                             length,
                             span,
-                        } = projection;
+                        } = projection
+                        else {
+                            unreachable!("dynamic arrays are rejected before backend lowering")
+                        };
                         destination = self.lower_checked_array_address(
                             destination,
                             &array_element_type(element),
@@ -560,6 +578,9 @@ impl LoweringContext<'_> {
         instructions: &mut Vec<Instruction>,
     ) {
         match ty {
+            cerune_ir::Type::DynamicArray { .. } => {
+                unreachable!("dynamic arrays are rejected before backend lowering")
+            }
             cerune_ir::Type::String
             | cerune_ir::Type::Bool
             | cerune_ir::Type::Integer(_)
@@ -673,6 +694,11 @@ impl LoweringContext<'_> {
             return Value::Scalar(Type::I64);
         }
         match &expr.kind {
+            cerune_ir::ExprKind::ArrayCopy { .. }
+            | cerune_ir::ExprKind::ArrayAllocate { .. }
+            | cerune_ir::ExprKind::ArrayReleaseOwner { .. } => {
+                unreachable!("dynamic arrays are rejected before backend lowering")
+            }
             cerune_ir::ExprKind::Let { .. } | cerune_ir::ExprKind::Conditional { .. } => {
                 unreachable!("match expressions are lowered before code generation")
             }
@@ -1121,6 +1147,9 @@ impl LoweringContext<'_> {
         instructions: &mut Vec<Instruction>,
     ) -> Option<Value> {
         let aggregate_result = result_type.and_then(|ty| match ty {
+            cerune_ir::Type::DynamicArray { .. } => {
+                unreachable!("dynamic arrays are rejected before backend lowering")
+            }
             cerune_ir::Type::Named(_) | cerune_ir::Type::Array { .. } => {
                 let address = self.allocate(type_size(self.program, ty));
                 instructions.push(Instruction::I32Const(address as i32));
@@ -1145,6 +1174,9 @@ impl LoweringContext<'_> {
 
         if let Some((ty, address)) = aggregate_result {
             return Some(match ty {
+                cerune_ir::Type::DynamicArray { .. } => {
+                    unreachable!("dynamic arrays are rejected before backend lowering")
+                }
                 cerune_ir::Type::Named(type_id) => Value::Aggregate {
                     type_id: type_id.0,
                     address: Address::Static(address),
@@ -1334,6 +1366,12 @@ fn collect_locations(
 ) {
     for statement in statements {
         match &statement.kind {
+            cerune_ir::StatementKind::ArrayInitialize { .. }
+            | cerune_ir::StatementKind::ArrayRetain { .. }
+            | cerune_ir::StatementKind::ArrayFree { .. }
+            | cerune_ir::StatementKind::ArrayRangeCheck { .. } => {
+                unreachable!("dynamic arrays are rejected before backend lowering")
+            }
             cerune_ir::StatementKind::Binding { id, name, ty, .. } => match ty {
                 cerune_ir::Type::Named(type_id) => {
                     let address = *next_address;
@@ -1436,6 +1474,9 @@ fn collect_locations(
 
 fn type_size(program: &cerune_ir::Program, ty: &cerune_ir::Type) -> usize {
     match ty {
+        cerune_ir::Type::DynamicArray { .. } => {
+            unreachable!("dynamic arrays are rejected before backend lowering")
+        }
         cerune_ir::Type::String
         | cerune_ir::Type::Bool
         | cerune_ir::Type::Integer(_)
@@ -1459,6 +1500,9 @@ fn field_offset(program: &cerune_ir::Program, type_id: usize, field_id: usize) -
 
 fn scalar_type(ty: &cerune_ir::Type) -> Type {
     match ty {
+        cerune_ir::Type::DynamicArray { .. } => {
+            unreachable!("dynamic arrays are rejected before backend lowering")
+        }
         cerune_ir::Type::String => Type::String,
         cerune_ir::Type::Bool => Type::Bool,
         cerune_ir::Type::Integer(_) => Type::I64,
@@ -1472,6 +1516,9 @@ fn scalar_type(ty: &cerune_ir::Type) -> Type {
 
 fn array_element_type(element: &cerune_ir::Type) -> ArrayElement {
     match element {
+        cerune_ir::Type::DynamicArray { .. } => {
+            unreachable!("dynamic arrays are rejected before backend lowering")
+        }
         cerune_ir::Type::String => ArrayElement::Scalar(Type::String),
         cerune_ir::Type::Bool => ArrayElement::Scalar(Type::Bool),
         cerune_ir::Type::Integer(_) => ArrayElement::Scalar(Type::I64),

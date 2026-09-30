@@ -2,7 +2,7 @@
 
 [日本語](dynamic-data.ja.md)
 
-**String concatenation is implemented. Dynamic arrays and borrowed slices remain proposals.** The IR Executor, VM, C, LLVM, QBE, WAT, Windows/Linux ASM, and native COFF/ELF routes share value semantics and ownership lowering.
+**String concatenation is implemented across routes. [Dynamic arrays](owned-arrays.en.md) support IR/VM execution; compiled routes and borrowed slices remain pending.** For string ownership below, the IR Executor, VM, C, LLVM, QBE, WAT, Windows/Linux ASM, and native COFF/ELF routes share value semantics and ownership lowering.
 
 ## String concatenation
 
