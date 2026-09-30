@@ -51,7 +51,10 @@ fn failure_preserves_output_original_span_and_skips_right_operand() {
     let error = vm::run(&code).unwrap_err();
     assert_eq!(error.output(), "before\n");
     assert_eq!(error.kind(), vm::VmErrorKind::AllocationLimitExceeded);
-    let instructions = &code.functions[error.function_id().unwrap()].instructions;
+    let instructions = match error.function_id() {
+        Some(id) => &code.functions[id].instructions,
+        None => &code.instructions,
+    };
     let bytecode::InstructionOrigin::Source { span, .. } =
         instructions[error.instruction_index()].origin
     else {
@@ -65,8 +68,10 @@ fn constant_result_is_static_and_ir_exposes_ownership() {
         run(r#"const S:string=concat("日","本"); print(S);"#, 0).unwrap(),
         "日本\n"
     );
-    let text =
-        compile_to_ir_text(r#"mut s:string=concat("a","b"); s=concat(s,"c"); print(s);"#).unwrap();
+    let text = compile_to_ir_text(
+        r#"mut s:string=concat("a","b"); saved:string=s; s=concat(s,"c"); print(saved); print(s);"#,
+    )
+    .unwrap();
     for expected in [
         "string.concat.allocate-copy",
         "string.retain",
@@ -183,4 +188,81 @@ fn owned_arguments_release_on_return_and_preserve_failure_order() {
     let mut program = compile_to_ir(source).unwrap();
     program.string_heap_limit = 2;
     assert_eq!(cerune_lang::ir_executor::run(&program).unwrap(), "cd\n");
+}
+
+#[test]
+fn reads_do_not_generate_aggregate_retains_but_value_copies_do() {
+    use cerune_lang::ir::{LoweringKind, StatementKind, Type};
+    let source = r#"mut a:[string;1]=[concat("a","b")];
+        print(array_len(a)); print(a[0]); print(a); print(a==a);"#;
+    let program = compile_to_ir(source).unwrap();
+    assert!(program.statements.iter().any(|s| matches!(
+        &s.kind,
+        StatementKind::Binding {
+            borrowed: true,
+            ty: Type::Array { .. },
+            ..
+        }
+    )));
+    assert!(
+        !program
+            .function_definitions
+            .iter()
+            .any(|f| f.lowering == Some(LoweringKind::OwnershipRetain))
+    );
+    assert_eq!(run(source, 2).unwrap(), "1\nab\n[\"ab\"]\ntrue\n");
+    assert_eq!(
+        cerune_lang::ir_executor::run(&program).unwrap(),
+        "1\nab\n[\"ab\"]\ntrue\n"
+    );
+
+    let copied = format!("{source} saved:[string;1]=a; a[0]=\"changed\"; print(saved); print(a);");
+    let program = compile_to_ir(&copied).unwrap();
+    assert!(
+        program
+            .function_definitions
+            .iter()
+            .any(|f| f.lowering == Some(LoweringKind::OwnershipRetain))
+    );
+    assert_eq!(
+        run(&copied, 2).unwrap(),
+        "1\nab\n[\"ab\"]\ntrue\n[\"ab\"]\n[\"changed\"]\n"
+    );
+}
+
+#[test]
+fn projections_preserve_the_existing_budget_and_returned_value_lifetime() {
+    for (source, limit, expected) in [
+        (cases::BORROWED_READS.0, 30, cases::BORROWED_READS.1),
+        (cases::PROJECTED_TEMPORARIES, 6, "true\n"),
+        (
+            r#"fn make()->[string;1]{return [concat("a","b")];}
+            for(mut i:i64=0;i<1000;i=i+1) {
+                value:string=make()[0];
+                if i==999 {print(value);}
+            }"#,
+            2,
+            "ab\n",
+        ),
+    ] {
+        let mut program = compile_to_ir(source).unwrap();
+        program.string_heap_limit = limit;
+        assert_eq!(run(source, limit).unwrap(), expected);
+        assert_eq!(cerune_lang::ir_executor::run(&program).unwrap(), expected);
+    }
+    let source = cases::BORROWED_READS.0;
+    let error = run(source, 29).unwrap_err();
+    assert_eq!(error.kind(), vm::VmErrorKind::AllocationLimitExceeded);
+    assert_eq!(
+        error.output(),
+        "束縛\n2\n日本\n[\"日本\", \"二\"]\ntrue\n一時\n2\n抽出\n日本\n左\n右\n"
+    );
+    let mut program = compile_to_ir(source).unwrap();
+    program.string_heap_limit = 29;
+    let error = cerune_lang::ir_executor::run(&program).unwrap_err();
+    let failure = error.runtime_failure().unwrap();
+    assert_eq!(
+        &source[failure.span.start()..failure.span.end()],
+        "concat(\"棚\", \"\")"
+    );
 }

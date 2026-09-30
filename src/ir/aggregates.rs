@@ -250,6 +250,7 @@ impl Lowerer {
                 let zero = self.int(0, span);
                 let initializer = self.stmt(
                     StatementKind::Binding {
+                        borrowed: false,
                         id: index.id,
                         name: index.name.clone(),
                         ty: index.ty.clone(),
@@ -501,6 +502,7 @@ impl Lowerer {
                 let zero = self.int(0, span);
                 let initializer = self.stmt(
                     StatementKind::Binding {
+                        borrowed: false,
                         id: i.id,
                         name: i.name.clone(),
                         ty: i.ty.clone(),
@@ -686,6 +688,7 @@ impl Lowerer {
             } => vec![
                 self.stmt(
                     StatementKind::Binding {
+                        borrowed: false,
                         id: binding,
                         name,
                         mutable: false,

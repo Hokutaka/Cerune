@@ -1,0 +1,32 @@
+// 読み取りと値コピーを比べ、一時値から取り出した内容の寿命も確認します。
+// Compare reads with value copies and observe temporary projection lifetimes.
+type Shelf { words: [string; 2], note: string }
+
+fn make(label: string) -> Shelf {
+    print(label);
+    return Shelf { words: [concat("日", "本"), "二"], note: concat("棚", "") };
+}
+fn reads() -> void {
+    shelf: Shelf = make("束縛");
+    print(array_len(shelf.words));
+    print(shelf.words[0]);
+    print(shelf.words);
+    print(shelf.words == shelf.words);
+    print(array_len(make("一時").words));
+    saved: string = make("抽出").words[0];
+    print(saved);
+
+    // 抽出後のnoteは次のmakeまで保持せず、30バイトの予算で比較できます。
+    print(make("左").words == make("右").words);
+    print(false && array_len(make("未実行").words) == 0);
+}
+fn copies() -> void {
+    mut words: [string; 2] = [concat("保", "存"), "二"];
+    saved: infer = words;
+    words[0] = concat("変", "更");
+    print(saved);
+    print(words);
+}
+
+reads();
+copies();

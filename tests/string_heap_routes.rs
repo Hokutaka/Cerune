@@ -83,6 +83,10 @@ fn budgets_cleanup_and_failure_origins_match_all_available_routes() {
     };
     let cerune = env!("CARGO_BIN_EXE_cerune");
     for (case, (source, limit, expected)) in [
+        (concat_cases::BORROWED_READS.0, 30, Some(concat_cases::BORROWED_READS.1)),
+        (concat_cases::BORROWED_READS.0, 29, None),
+        (concat_cases::PROJECTED_TEMPORARIES, 6, Some("true\n")),
+        (concat_cases::PROJECTED_TEMPORARIES, 5, None),
         (concat_cases::OWNED_ARGUMENTS.0, 22, Some(concat_cases::OWNED_ARGUMENTS.1)),
         (concat_cases::OWNED_ARGUMENTS.0, 15, None),
         (concat_cases::OWNED_ARGUMENTS.0, 19, None),

@@ -1,0 +1,4 @@
+a: [string; 1] = [concat("a", "b")];
+print(array_len(a));
+print(a[0]);
+print(a == a);

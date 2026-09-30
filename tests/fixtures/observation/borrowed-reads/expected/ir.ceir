@@ -1,0 +1,122 @@
+; Cerune IR v0.2
+; string-heap-limit=67108864 bytes (live dynamic payload)
+; #N identifies one statement or expression in this compilation
+
+; lower aggregate-equality [generated source=0 bytes=77..83]
+; ownership arguments=borrowed
+fn %$equal0@0(%$left@1: [string; 1], %$right@2: [string; 1]) -> bool {
+  #36 for.loop {
+    start {
+      #17 mut %$index@3: i64 = #43 call %$ownership1@1():i64
+    }
+    condition.bool #53 call %$ownership2@2(#52 %$index@3:i64):bool
+    body {
+      #31 if.bool #96 call %$ownership4@4(#93 %$left@1:[string; 1], #94 %$index@3:i64, #95 %$right@2:[string; 1]):bool {
+        #102 %$owned27@27: bool = #101 call %$ownership5@5():bool
+        #30 return #103 %$owned27@27:bool
+      }
+    }
+    update {
+      #35 set %$index@3:i64 = #64 call %$ownership3@3(#63 %$index@3:i64):i64
+    }
+  }
+  #111 %$owned29@29: bool = #110 call %$ownership6@6():bool
+  #38 return #112 %$owned29@29:bool
+}
+
+; lower ownership-expression [generated source=0 bytes=77..83]
+; ownership arguments=borrowed
+fn %$ownership1@1() -> i64 {
+  #39 %$owned4@4: i64 = #16 0i64
+  #42 return #41 %$owned4@4:i64
+}
+
+; lower ownership-expression [generated source=0 bytes=77..83]
+; ownership arguments=borrowed
+fn %$ownership2@2(%$owned5@5: i64) -> bool {
+  #44 read %$read6@6: i64 = #18 %$owned5@5:i64
+  #46 read %$read7@7: i64 = #19 1i64
+  #48 %$owned8@8: bool = #20 lt.i64(#45 %$read6@6:i64, #47 %$read7@7:i64)
+  #51 return #50 %$owned8@8:bool
+}
+
+; lower ownership-expression [generated source=0 bytes=77..83]
+; ownership arguments=borrowed
+fn %$ownership3@3(%$owned9@9: i64) -> i64 {
+  #55 read %$read10@10: i64 = #32 %$owned9@9:i64
+  #57 read %$read11@11: i64 = #33 1i64
+  #59 %$owned12@12: i64 = #34 add.i64(#56 %$read10@10:i64, #58 %$read11@11:i64)
+  #62 return #61 %$owned12@12:i64
+}
+
+; lower ownership-expression [generated source=0 bytes=77..83]
+; ownership arguments=borrowed
+fn %$ownership4@4(%$owned13@13: [string; 1], %$owned14@14: i64, %$owned15@15: [string; 1]) -> bool {
+  #65 read %$read16@16: [string; 1] = #21 %$owned13@13:[string; 1]
+  #68 read %$read17@17: i64 = #22 %$owned14@14:i64
+  #70 %$owned18@18: i64 = #69 %$read17@17:i64
+  #73 read %$read19@19: string = #23 index(#67 %$read16@16:[string; 1], #72 %$owned18@18:i64):string
+  #75 read %$read20@20: [string; 1] = #24 %$owned15@15:[string; 1]
+  #78 read %$read21@21: i64 = #25 %$owned14@14:i64
+  #80 %$owned22@22: i64 = #79 %$read21@21:i64
+  #83 read %$read23@23: string = #26 index(#77 %$read20@20:[string; 1], #82 %$owned22@22:i64):string
+  #85 %$owned24@24: bool = #27 eq.string(#74 %$read19@19:string, #84 %$read23@23:string)
+  #89 %$owned25@25: bool = #28 not.bool(#87 %$owned24@24:bool)
+  #92 return #91 %$owned25@25:bool
+}
+
+; lower ownership-expression [generated source=0 bytes=77..83]
+; ownership arguments=borrowed
+fn %$ownership5@5() -> bool {
+  #97 %$owned26@26: bool = #29 false:bool
+  #100 return #99 %$owned26@26:bool
+}
+
+; lower ownership-expression [generated source=0 bytes=77..83]
+; ownership arguments=borrowed
+fn %$ownership6@6() -> bool {
+  #106 %$owned28@28: bool = #37 true:bool
+  #109 return #108 %$owned28@28:bool
+}
+
+; lower ownership-expression [generated source=0 bytes=17..35]
+; ownership arguments=borrowed
+fn %$ownership7@7() -> [string; 1] {
+  #113 read %$read30@30: string = #3 "a":string
+  #115 read %$read31@31: string = #4 "b":string
+  #117 %$owned32@32: string = #2 string.concat.allocate-copy(#114 %$read30@30:string, #116 %$read31@31:string)
+  #120 %$owned33@33: [string; 1] = #1 array[#118 %$owned32@32:string]:[string; 1]
+  #122 return #121 %$owned33@33:[string; 1]
+}
+
+; lower ownership-release [generated source=0 bytes=0..36]
+; ownership arguments=owned
+fn %$ownership8@8(%$owned42@42: [string; 1]) -> void {
+  #162 for.loop {
+    start {
+      #148 mut %$owned43@43: i64 = #147 1i64
+    }
+    condition.bool #151 gt.i64(#149 %$owned43@43:i64, #150 0i64)
+    body {
+      #161 string.release #160 index(#156 %$owned42@42:[string; 1], #159 sub.i64(#157 %$owned43@43:i64, #158 1i64)):string
+    }
+    update {
+      #155 set %$owned43@43:i64 = #154 sub.i64(#152 %$owned43@43:i64, #153 1i64)
+    }
+  }
+  #163 return
+}
+
+#0 %a@0: [string; 1] = #123 call %$ownership7@7():[string; 1]
+#124 read %$read34@34: [string; 1] = #7 %a@0:[string; 1]
+#126 %$owned35@35: i64 = #6 array_len(#125 %$read34@34:[string; 1])
+#5 print.i64 #129 %$owned35@35:i64
+#130 read %$read36@36: [string; 1] = #10 %a@0:[string; 1]
+#133 %$owned37@37: i64 = #11 0i64
+#136 read %$read38@38: string = #9 index(#132 %$read36@36:[string; 1], #135 %$owned37@37:i64):string
+#8 print.string #138 %$read38@38:string
+#139 read %$read39@39: [string; 1] = #14 %a@0:[string; 1]
+#141 read %$read40@40: [string; 1] = #15 %a@0:[string; 1]
+#143 %$owned41@41: bool = #13 call %$equal0@0(#140 %$read39@39:[string; 1], #142 %$read40@40:[string; 1]):bool
+#12 print.bool #145 %$owned41@41:bool
+#164 call %$ownership8@8(#146 %a@0:[string; 1])

@@ -282,110 +282,71 @@ data $fmt_f64 = { b "%.17g", b 10, b 0 }
 
 function l $cerune_fn__ownership0_0() {
 @start
-  %slot_$owned2 =l alloc8 8
-  %slot_$owned3 =l alloc8 8
+  %slot_$read2 =l alloc8 8
+  %slot_$read3 =l alloc8 8
   %slot_$owned4 =l alloc8 8
-  storel $cerune_string_0, %slot_$owned2
-  %tmp0 =l loadl %slot_$owned2
-  call $cerune_string_retain(l %tmp0)
-  storel $cerune_string_1, %slot_$owned3
-  %tmp1 =l loadl %slot_$owned3
-  call $cerune_string_retain(l %tmp1)
-  %tmp2 =l loadl %slot_$owned2
-  %tmp3 =l loadl %slot_$owned3
-  %tmp4 =l call $cerune_string_concat(l %tmp2, l %tmp3, l $cerune_origin_1_19_39, l 21)
-  storel %tmp4, %slot_$owned4
-  %tmp5 =l loadl %slot_$owned3
-  call $cerune_string_release(l %tmp5)
-  %tmp6 =l loadl %slot_$owned2
-  call $cerune_string_release(l %tmp6)
-  %tmp7 =l loadl %slot_$owned4
-  ret %tmp7
+  storel $cerune_string_0, %slot_$read2
+  storel $cerune_string_1, %slot_$read3
+  %tmp0 =l loadl %slot_$read2
+  %tmp1 =l loadl %slot_$read3
+  %tmp2 =l call $cerune_string_concat(l %tmp0, l %tmp1, l $cerune_origin_1_19_39, l 21)
+  storel %tmp2, %slot_$owned4
+  %tmp3 =l loadl %slot_$owned4
+  ret %tmp3
 }
 
 function l $cerune_fn__ownership1_1(l %arg0) {
 @start
   %slot_$owned5 =l alloc8 8
-  %slot_$owned6 =l alloc8 8
+  %slot_$read6 =l alloc8 8
+  %slot_$owned7 =l alloc8 8
   storel %arg0, %slot_$owned5
   %tmp0 =l loadl %slot_$owned5
-  storel %tmp0, %slot_$owned6
-  %tmp1 =l loadl %slot_$owned6
-  call $cerune_string_retain(l %tmp1)
-  %tmp2 =l loadl %slot_$owned6
-  ret %tmp2
+  storel %tmp0, %slot_$read6
+  %tmp1 =l loadl %slot_$read6
+  storel %tmp1, %slot_$owned7
+  %tmp2 =l loadl %slot_$owned7
+  call $cerune_string_retain(l %tmp2)
+  %tmp3 =l loadl %slot_$owned7
+  ret %tmp3
 }
 
 function l $cerune_fn__ownership2_2(l %arg0) {
 @start
-  %slot_$owned7 =l alloc8 8
   %slot_$owned8 =l alloc8 8
-  %slot_$owned9 =l alloc8 8
-  %slot_$owned10 =l alloc8 8
-  storel %arg0, %slot_$owned7
-  %tmp0 =l loadl %slot_$owned7
-  storel %tmp0, %slot_$owned8
-  %tmp1 =l loadl %slot_$owned8
-  call $cerune_string_retain(l %tmp1)
-  storel $cerune_string_2, %slot_$owned9
-  %tmp2 =l loadl %slot_$owned9
-  call $cerune_string_retain(l %tmp2)
-  %tmp3 =l loadl %slot_$owned8
-  %tmp4 =l loadl %slot_$owned9
-  %tmp5 =l call $cerune_string_concat(l %tmp3, l %tmp4, l $cerune_origin_7_70_87, l 21)
-  storel %tmp5, %slot_$owned10
-  %tmp6 =l loadl %slot_$owned9
-  call $cerune_string_release(l %tmp6)
-  %tmp7 =l loadl %slot_$owned8
-  call $cerune_string_release(l %tmp7)
-  %tmp8 =l loadl %slot_$owned10
-  ret %tmp8
+  %slot_$read9 =l alloc8 8
+  %slot_$read10 =l alloc8 8
+  %slot_$owned11 =l alloc8 8
+  storel %arg0, %slot_$owned8
+  %tmp0 =l loadl %slot_$owned8
+  storel %tmp0, %slot_$read9
+  storel $cerune_string_2, %slot_$read10
+  %tmp1 =l loadl %slot_$read9
+  %tmp2 =l loadl %slot_$read10
+  %tmp3 =l call $cerune_string_concat(l %tmp1, l %tmp2, l $cerune_origin_7_70_87, l 21)
+  storel %tmp3, %slot_$owned11
+  %tmp4 =l loadl %slot_$owned11
+  ret %tmp4
 }
 
 function l $cerune_fn__ownership3_3(l %arg0, l %arg1) {
 @start
-  %slot_$owned11 =l alloc8 8
   %slot_$owned12 =l alloc8 8
-  storel %arg0, %slot_$owned11
-  storel %arg1, %slot_$owned12
-  %tmp0 =l loadl %slot_$owned11
-  call $cerune_string_release(l %tmp0)
-  %tmp1 =l loadl %slot_$owned12
-  ret %tmp1
-}
-
-function l $cerune_fn__ownership4_4(l %arg0) {
-@start
   %slot_$owned13 =l alloc8 8
-  %slot_$owned14 =l alloc8 8
-  storel %arg0, %slot_$owned13
-  %tmp0 =l loadl %slot_$owned13
-  storel %tmp0, %slot_$owned14
-  %tmp1 =l loadl %slot_$owned14
-  call $cerune_string_retain(l %tmp1)
-  %tmp2 =l loadl %slot_$owned14
-  ret %tmp2
-}
-
-function l $cerune_fn__ownership5_5(l %arg0) {
-@start
-  %slot_$owned16 =l alloc8 8
-  %slot_$owned17 =l alloc8 8
-  storel %arg0, %slot_$owned16
-  %tmp0 =l loadl %slot_$owned16
-  storel %tmp0, %slot_$owned17
-  %tmp1 =l loadl %slot_$owned17
-  call $cerune_string_retain(l %tmp1)
-  %tmp2 =l loadl %slot_$owned17
-  ret %tmp2
+  storel %arg0, %slot_$owned12
+  storel %arg1, %slot_$owned13
+  %tmp0 =l loadl %slot_$owned12
+  call $cerune_string_release(l %tmp0)
+  %tmp1 =l loadl %slot_$owned13
+  ret %tmp1
 }
 
 export function w $main() {
 @start
   %slot_text =l alloc8 8
   %slot_saved =l alloc8 8
-  %slot_$owned15 =l alloc8 8
-  %slot_$owned18 =l alloc8 8
+  %slot_$read14 =l alloc8 8
+  %slot_$read15 =l alloc8 8
   %tmp0 =l call $cerune_fn__ownership0_0()
   storel %tmp0, %slot_text
   %tmp1 =l loadl %slot_text
@@ -397,22 +358,16 @@ export function w $main() {
   %tmp6 =l call $cerune_fn__ownership3_3(l %tmp3, l %tmp5)
   storel %tmp6, %slot_text
   %tmp7 =l loadl %slot_saved
-  %tmp8 =l call $cerune_fn__ownership4_4(l %tmp7)
-  storel %tmp8, %slot_$owned15
-  %tmp9 =l loadl %slot_$owned15
-  call $cerune_print_string(l %tmp9)
-  %tmp10 =l loadl %slot_$owned15
-  call $cerune_string_release(l %tmp10)
-  %tmp11 =l loadl %slot_text
-  %tmp12 =l call $cerune_fn__ownership5_5(l %tmp11)
-  storel %tmp12, %slot_$owned18
-  %tmp13 =l loadl %slot_$owned18
-  call $cerune_print_string(l %tmp13)
-  %tmp14 =l loadl %slot_$owned18
-  call $cerune_string_release(l %tmp14)
-  %tmp15 =l loadl %slot_saved
-  call $cerune_string_release(l %tmp15)
-  %tmp16 =l loadl %slot_text
-  call $cerune_string_release(l %tmp16)
+  storel %tmp7, %slot_$read14
+  %tmp8 =l loadl %slot_$read14
+  call $cerune_print_string(l %tmp8)
+  %tmp9 =l loadl %slot_text
+  storel %tmp9, %slot_$read15
+  %tmp10 =l loadl %slot_$read15
+  call $cerune_print_string(l %tmp10)
+  %tmp11 =l loadl %slot_saved
+  call $cerune_string_release(l %tmp11)
+  %tmp12 =l loadl %slot_text
+  call $cerune_string_release(l %tmp12)
   ret 0
 }

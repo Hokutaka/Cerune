@@ -42,6 +42,16 @@ After ownership expansion, IR shows `ownership arguments=owned` / `borrowed` tog
 
 [owned_arguments.ceru](../../examples/owned_arguments.ceru) demonstrates independent fixed arrays, argument order, returned-value lifetime, and early returns with unused arguments. It completes 100 iterations with a 22-byte string budget. At 15 bytes, construction of the first argument fails; at 19, the next argument fails. IR Executor, VM, and compiled routes compare these cases. Dynamic array allocation is not included yet.
 
+## Reads and owned-value preparation
+
+Reading an existing binding for `array_len(a)`, display, comparison, indexing, or field access does not acquire ownership. Common IR marks these internal bindings as `read %...`, avoiding whole-array walks whose only purpose was retaining and releasing strings. Saving or passing a value still acquires the required ownership. Fresh array literals and products without a base receive the ownership already prepared for their elements or fields.
+
+Temporaries remain alive until their read completes. For a projection such as `make().field`, retain the selected value before releasing the original temporary. Keeping unrelated fields alive until the next expression would change budget failures. If a product contains two dynamic strings of two bytes each, `make().value == make().value` continues to succeed with six bytes rather than requiring eight.
+
+This distinction describes logical ownership. Physical fixed-array copies may remain in executor value representations or backend ABIs. Executors run explicit lifetime operations in the body without inferring additional work from the `read` marker. No source-language borrow type or dynamic-array storage management is added yet.
+
+[borrowed_reads.ceru](../../examples/borrowed_reads.ceru) covers reads, temporary projections, operand order, short circuit, and independent updates after copying. It succeeds with a 30-byte string budget; at 29 bytes, concatenation in the right-hand product construction fails. IR/bytecode fixtures and every execution route check output, the original failure location, and prior output.
+
 ## Budget and failures
 
 The default budget is **64 MiB (67108864 bytes) of live dynamic string payload**. Shared allocations count once; static literals do not count. Old and new values both count while reassignment keeps them alive.
