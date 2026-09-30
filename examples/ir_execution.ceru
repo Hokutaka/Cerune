@@ -1,0 +1,16 @@
+// 同じソースを run-ir と run で実行し、emit-ir で処理を確認できます。
+// Run with run-ir or run; inspect the shared program with emit-ir.
+fn greet(name: string) -> string {
+    return concat("Hello, ", name);
+}
+
+fn main() -> void {
+    mut names: [string; 2] = ["Cerune", "世界"];
+    saved: [string; 2] = names;
+    names[0] = "IR";
+
+    for (name: string in names) {
+        print(greet(name));
+    }
+    print(saved);
+}

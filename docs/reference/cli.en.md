@@ -19,13 +19,14 @@ cerune emit-qbe <file> [--target <triple>] [-o <output.ssa>]
 cerune emit-asm <file> [--target <triple>] [--annotate-origins] [-o <output.s>]
 cerune emit-obj <file> --target <triple> [--annotate-origins] -o <output.o>
 cerune emit-bytecode <file> [-o <output.cebc>]
+cerune run-ir <file> [--diagnostic-format runtime-v1]
 cerune run <file> [--diagnostic-format runtime-v1]
 cerune --version
 ```
 
 ## Dynamic string budget
 
-`run`, `emit-ir`, `emit-bytecode`, `emit-c`, `emit-llvm`, `emit-qbe`, `emit-wat`, `emit-asm`, and `emit-obj` accept `--string-heap-limit <bytes>`. The default is 67108864 (64 MiB). Values are decimal integers from 0 through 9223372036854775807; missing, duplicate, and negative values are rejected. `check` and `emit-sources` do not accept this option.
+`run-ir`, `run`, `emit-ir`, `emit-bytecode`, `emit-c`, `emit-llvm`, `emit-qbe`, `emit-wat`, `emit-asm`, and `emit-obj` accept `--string-heap-limit <bytes>`. The default is 67108864 (64 MiB). Values are decimal integers from 0 through 9223372036854775807; missing, duplicate, and negative values are rejected. `check` and `emit-sources` do not accept this option.
 
 The budget counts live dynamic string payload, shared allocations once, and static strings never. Old and new values both count while reassignment keeps them alive. Compile-time evaluation has an independent 64 MiB budget unaffected by this setting. This is not a physical-memory cap. Generated artifacts fix the value; no API changes it during execution.
 
@@ -46,7 +47,7 @@ cerune emit-sources examples/modules/main.ceru -o sources.json
 
 This explicitly outputs names and source contents. JSON schema `cerune-sources-v1` contains a registration-ordered `files` array with `id`, `name`, and `text`. JSON escaping preserves the exact UTF-8 text without normalization. Inputs without import/pub retain anonymous source ID 0; module inputs start with entry ID 1. Resolve runtime `file` and file-local `bytes` against these contents. This does not embed source text in generated programs. Without `-o`, the JSON goes to stdout.
 
-Default `run` diagnostics show the dependency filename, line, and column. `--diagnostic-format runtime-v1` emits numeric file IDs. Compilation failures do not replace output artifacts.
+Default `run-ir` and `run` diagnostics show the dependency filename, line, and column. `--diagnostic-format runtime-v1` emits numeric file IDs. Compilation failures do not replace output artifacts.
 
 ### Syntax and type validation
 
@@ -57,6 +58,19 @@ cerune check <file>
 `cerune check` parses the input source file and performs semantic validation and type checking.
 
 A successful `check` does not guarantee that every output route supports the program. Strings work through every route. Omitting the LLVM or QBE target diagnoses string-containing type definitions or expressions at their source location without producing an artifact. This diagnostic also leaves an existing file specified by `-o` unchanged.
+
+## Direct Cerune IR execution
+
+```sh
+cerune run-ir examples/ir_execution.ceru
+cerune run-ir examples/modules/failure.ceru --diagnostic-format runtime-v1
+```
+
+`run-ir` builds common IR from source and directly executes its statements and expressions. It supports current language features without lowering to Bytecode or delegating to the VM. It does not parse textual `.ceir` files or accept `--target` or `-o`.
+
+Successful output goes to stdout. Failures preserve prior output, write a diagnostic to stderr, and exit with code 1. Default diagnostics report the reason and source location; `runtime-v1` uses the same FailureCode, NodeId, and Span as other routes. There is no instruction index.
+
+Rust callers use `run_ir(source)` or `ir_executor::run(&program)` for completed IR. `IrRunError` distinguishes construction and execution failures; execution errors expose `output()`, `origin()`, and `runtime_failure()`. For imports, use `modules::load(path)?.to_ir()`. See [responsibilities and limits](../design/ir-executor.en.md).
 
 ## Cerune IR emission
 

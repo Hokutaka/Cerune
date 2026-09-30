@@ -4,7 +4,7 @@
 
 [日本語](README.md) | English
 
-Cerune is an experimental programming language with static typing, VM execution, and code generation in multiple formats.
+Cerune is an experimental programming language with static typing, direct IR execution, VM execution, and code generation in multiple formats.
 
 ## Try It
 
@@ -74,6 +74,7 @@ During development, replace `cerune` with `cargo run --quiet --`.
 | Command | Result / artifact | Use / target |
 | --- | --- | --- |
 | `check` | Syntax and type checking | Validate Cerune source (`.ceru`) |
+| `run-ir` | Direct IR execution | Execute Cerune source (`.ceru`) from common IR |
 | `run` | VM execution | Run Cerune source (`.ceru`) |
 | `emit-sources` | Source manifest (JSON) | Export loaded file names and contents |
 | `emit-ir` | Cerune IR (`.ceir`) | Inspect types and operations |

@@ -6,6 +6,7 @@ pub mod diagnostic;
 pub mod embedding;
 mod generics;
 pub mod ir;
+pub mod ir_executor;
 mod iteration;
 pub mod lexer;
 pub mod modules;
@@ -214,6 +215,20 @@ pub fn compile_to_bytecode_text(source: &str) -> Result<String, Diagnostic> {
     let bytecode = compile_to_bytecode(source)?;
 
     Ok(bytecode::format_program(&bytecode))
+}
+
+/// ソースの構築エラーと、IRの直接実行エラーを区別します。
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum IrRunError {
+    Compilation(Diagnostic),
+    Execution(ir_executor::ExecutionError),
+}
+
+/// 共通フロントエンドで構築したIRを、loweringせず直接実行します。
+/// importを持つ入力にはmodules::loadとir_executor::runを使用してください。
+pub fn run_ir(source: &str) -> Result<String, IrRunError> {
+    let program = compile_to_ir(source).map_err(IrRunError::Compilation)?;
+    ir_executor::run(&program).map_err(IrRunError::Execution)
 }
 
 pub fn run_vm(source: &str) -> Result<String, RunError> {

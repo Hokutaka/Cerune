@@ -1,8 +1,8 @@
-pub(super) fn f32(value: f32) -> String {
+pub(crate) fn f32(value: f32) -> String {
     significant(f64::from(value), 9)
 }
 
-pub(super) fn f64(value: f64) -> String {
+pub(crate) fn f64(value: f64) -> String {
     significant(value, 17)
 }
 

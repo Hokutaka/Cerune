@@ -11,6 +11,16 @@ Normal examples are the `.ceru` files in this directory.
 | [runtime_failures](runtime_failures/README.en.md) | Four expected stops: prior output and failing expressions |
 | [source_files](source_files/README.en.md) | Rust API examples: parse type/function files separately and compare origins; no imports |
 
+## Execute IR directly
+
+Run `cargo run --quiet -- run-ir examples/ir_execution.ceru` to try functions, array copies, iteration, and string concatenation. `run` produces the same result; `emit-ir` shows the shared program.
+
+| Example | Output |
+| --- | --- |
+| [ir_execution.ceru](ir_execution.ceru) | `Hello, IR` → `Hello, 世界` → `["Cerune", "世界"]` |
+
+Other normal examples also work with `run-ir`. Batch scripts still use the VM; `cargo test --test examples --test ir_executor` compares both routes and expected values.
+
 ## Run all examples
 
 Run from the repository root. Subdirectories are outside the batch runner.

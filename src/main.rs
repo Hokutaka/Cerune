@@ -238,29 +238,42 @@ fn run() -> Result<(), String> {
             write_or_print(output, bytecode)
         }
 
-        // Cerune VM 実行
-        "run" => {
+        // 同じ完成済みIRから、明示された実行経路を選びます。
+        "run" | "run-ir" => {
             let input = required_path(args.next(), "missing input file")?;
             let rest: Vec<_> = args.collect();
             let runtime_format = match rest.as_slice() {
                 [] => false,
                 [flag, format] if flag == "--diagnostic-format" && format == "runtime-v1" => true,
-                _ => return Err("usage: cerune run <file> [--diagnostic-format runtime-v1]".into()),
+                _ => {
+                    return Err(format!(
+                        "usage: cerune {command} <file> [--diagnostic-format runtime-v1]"
+                    ));
+                }
             };
 
             let source = read_source(&input)?;
 
-            let bytecode = render_compilation_result(
-                cerune_lang::bytecode::lower(&ir_for(&source, string_heap_limit)?),
-                &source,
-            )?;
-            let output = cerune_lang::run_bytecode(&bytecode).map_err(|error| {
-                print!("{}", error.vm_error().output());
-                if runtime_format && let Some(failure) = error.runtime_failure() {
-                    return failure.record();
-                }
-                source.render_execution(&error)
-            })?;
+            let ir = ir_for(&source, string_heap_limit)?;
+            let output = if command == "run-ir" {
+                cerune_lang::ir_executor::run(&ir).map_err(|error| {
+                    print!("{}", error.output());
+                    if runtime_format && let Some(failure) = error.runtime_failure() {
+                        return failure.record();
+                    }
+                    source.render(&error.diagnostic())
+                })?
+            } else {
+                let bytecode =
+                    render_compilation_result(cerune_lang::bytecode::lower(&ir), &source)?;
+                cerune_lang::run_bytecode(&bytecode).map_err(|error| {
+                    print!("{}", error.vm_error().output());
+                    if runtime_format && let Some(failure) = error.runtime_failure() {
+                        return failure.record();
+                    }
+                    source.render_execution(&error)
+                })?
+            };
 
             print!("{output}");
 
@@ -310,6 +323,7 @@ fn parse_string_heap_limit(args: Vec<String>, command: &str) -> Result<(Vec<Stri
         if !matches!(
             command,
             "run"
+                | "run-ir"
                 | "emit-ir"
                 | "emit-bytecode"
                 | "emit-c"
@@ -430,9 +444,10 @@ fn print_help() {
            cerune emit-asm <file> [--target <triple>] [--annotate-origins] [-o <output.s>]\n\
            cerune emit-obj <file> --target <triple> [--annotate-origins] -o <output.o>\n\
            cerune emit-bytecode <file> [-o <output.cebc>]\n\
+           cerune run-ir <file> [--diagnostic-format runtime-v1]\n\
            cerune run <file> [--diagnostic-format runtime-v1]\n\
            cerune --version\n\n\
-         run / emit-* (except emit-sources): --string-heap-limit <bytes>\n\
+         run / run-ir / emit-* (except emit-sources): --string-heap-limit <bytes>\n\
          Default: 67108864 live dynamic string bytes; compile-time budget is independent.\n",
         env!("CARGO_PKG_VERSION")
     );

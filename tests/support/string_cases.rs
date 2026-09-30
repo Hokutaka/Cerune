@@ -118,6 +118,10 @@ pub const CASES: &[(&str, &str)] = &[
     concat_cases::CASES[1],
     concat_cases::CASES[2],
     concat_cases::CASES[3],
+    (
+        include_str!("../../examples/ir_execution.ceru"),
+        "Hello, IR\nHello, 世界\n[\"Cerune\", \"世界\"]\n",
+    ),
 ];
 
 pub const PRODUCT_UPDATES: &[(&str, &str)] = &[

@@ -19,13 +19,14 @@ cerune emit-qbe <file> [--target <triple>] [-o <output.ssa>]
 cerune emit-asm <file> [--target <triple>] [--annotate-origins] [-o <output.s>]
 cerune emit-obj <file> --target <triple> [--annotate-origins] -o <output.o>
 cerune emit-bytecode <file> [-o <output.cebc>]
+cerune run-ir <file> [--diagnostic-format runtime-v1]
 cerune run <file> [--diagnostic-format runtime-v1]
 cerune --version
 ```
 
 ## 動的文字列の予算
 
-`run`・`emit-ir`・`emit-bytecode`・`emit-c`・`emit-llvm`・`emit-qbe`・`emit-wat`・`emit-asm`・`emit-obj`では`--string-heap-limit <bytes>`を指定できます。既定は67108864（64 MiB）。値は0〜9223372036854775807の十進整数で、省略・重複・負数を拒否します。`check`・`emit-sources`では受け付けません。
+`run-ir`・`run`・`emit-ir`・`emit-bytecode`・`emit-c`・`emit-llvm`・`emit-qbe`・`emit-wat`・`emit-asm`・`emit-obj`では`--string-heap-limit <bytes>`を指定できます。既定は67108864（64 MiB）。値は0〜9223372036854775807の十進整数で、省略・重複・負数を拒否します。`check`・`emit-sources`では受け付けません。
 
 生存する動的文字列の内容を数え、共有領域は一度だけ、静的文字列は数えません。再代入中に共存する旧値・新値は両方数えます。コンパイル時評価には独立した64 MiBがあり、この設定では変更しません。物理メモリ全体の上限ではありません。値は生成物に固定され、実行中に変更するAPIはありません。
 
@@ -46,7 +47,7 @@ cerune emit-sources examples/modules/main.ceru -o sources.json
 
 ファイル名と本文を明示的に出力します。JSONの`schema`は`cerune-sources-v1`、`files`は登録順の`id`・`name`・`text`です。`text`は正規化前の正確なUTF-8本文をJSONエスケープで保持します。import/pubのない入力のIDは既存の匿名ソース0、モジュール入力は入口1からです。実行時記録の`file`とそのファイル内の`bytes`を、この本文で照合します。生成プログラムへ本文を埋め込む操作ではありません。`-o`がなければstdoutへ出します。
 
-`run`の既定診断は依存ファイルの名前・行・列を表示します。`--diagnostic-format runtime-v1`では数値の`file`を含む記録を出します。コンパイル失敗時は出力成果物を書き換えません。
+`run-ir`・`run`の既定診断は依存ファイルの名前・行・列を表示します。`--diagnostic-format runtime-v1`では数値の`file`を含む記録を出します。コンパイル失敗時は出力成果物を書き換えません。
 
 ### 構文・型の検証
 
@@ -57,6 +58,19 @@ cerune check <file>
 `cerune check`は、入力されたソースファイルの構文解析、意味検証、型検査を行います。
 
 `check`の成功は、すべての出力経路がそのプログラムに対応することを保証しません。文字列は全経路で使用できます。LLVMとQBEのターゲットが未指定の場合は、文字列を含む型定義や式をソース位置付きで診断し、成果物を生成しません。この診断では`-o`で指定した既存ファイルも変更しません。
+
+## Cerune IRの直接実行
+
+```sh
+cerune run-ir examples/ir_execution.ceru
+cerune run-ir examples/modules/failure.ceru --diagnostic-format runtime-v1
+```
+
+`run-ir`はソースから共通IRを構築し、その文・式を直接実行します。現在の言語機能に対応し、Bytecodeへの変換・VMへの委譲はしません。`.ceir`テキストの読み込みコマンドではありません。`--target`や`-o`は受け付けません。
+
+正常時は出力をstdoutへ返します。失敗時も先行出力を保持し、stderrへ診断して終了コード1を返します。既定診断は停止理由とソース位置、`runtime-v1`は他経路と同じFailureCode・NodeId・Spanです。命令番号はありません。
+
+Rust APIは`run_ir(source)`、完成済みIRには`ir_executor::run(&program)`を使います。`IrRunError`は構築失敗と実行失敗を区別し、実行エラーから`output()`・`origin()`・`runtime_failure()`を取得できます。importには`modules::load(path)?.to_ir()`を使います。[責務・制限](../design/ir-executor.ja.md)も参照してください。
 
 ## Cerune IRの出力
 
