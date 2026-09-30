@@ -101,7 +101,7 @@ function observe(options) {
       report.artifacts[name] = { sha256: hash(bytes), bytes: bytes.length };
     }
     if (options['--run']) {
-      const vm = run('vm', cerune, ['run', source, '--diagnostic-format', 'runtime-v1'], true);
+      const vm = run('vm', cerune, ['run-vm', source, '--diagnostic-format', 'runtime-v1'], true);
       const native = run('native', path.join(directory, executable), [], true);
       write('vm.stdout', vm.stdout);
       write('vm.stderr', vm.stderr);

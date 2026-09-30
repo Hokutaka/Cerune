@@ -15,7 +15,7 @@
 cargo run -- run examples/runtime_failures/array_update.ceru --diagnostic-format runtime-v1
 ```
 
-VMは終了コード1で停止し、stderrに`cerune: runtime-v1 code=... node=... bytes=.....`を1行出します。`bytes`は元ソースのUTF-8バイト範囲で、終端は含みません。NodeIdと合わせて`emit-ir`へ辿れます。CRLF/LFを変更するとバイト位置も変わります。
+`run`／`run-ir`／`run-vm`は終了コード1で停止し、stderrに`cerune: runtime-v1 code=... node=... bytes=.....`を1行出します。`bytes`は元ソースのUTF-8バイト範囲で、終端は含みません。NodeIdと合わせて`emit-ir`へ辿れます。CRLF/LFを変更するとバイト位置も変わります。
 
 同じソースをC・LLVM・QBE・WATでも生成・実行し、このレコードと停止前の出力を比較するテストは`cargo test --test runtime_routes`です。外部ツールの指定は[診断の検証手順](../../docs/design/runtime-diagnostics.ja.md#検証)を参照してください。未設定で利用できない経路は実行済みと数えません。WATホストには`cerune.write_error_byte`が必要です。
 

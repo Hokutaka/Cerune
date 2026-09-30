@@ -1,6 +1,6 @@
 ﻿<#
 .SYNOPSIS
-Ceruneのexampleをまとめて実行します。
+Ceruneのexampleをrun（IR直接実行）でまとめて実行します。
 
 .PARAMETER Pattern
 実行するファイル名のpatternです。既定値は*.ceruです。

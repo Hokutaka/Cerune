@@ -16,7 +16,7 @@ The current output routes are C, LLVM IR, QBE IR, WebAssembly Text, native assem
 
 ### Direct execution
 
-The [IR Executor](ir-executor.en.md), selected by `run-ir`, directly executes completed Cerune IR. It produces no new artifact and selects no target ABI, so it is separate from the output-route table. `run` remains Bytecode → VM.
+The [IR Executor](ir-executor.en.md), selected by `run` or `run-ir`, directly executes completed Cerune IR. It produces no new artifact and selects no target ABI, so it is separate from the output-route table. `run-vm` selects Bytecode → VM.
 
 ### Target
 
@@ -80,7 +80,7 @@ The environment running Cerune is separate from the artifact target. Calling `em
 
 ### What comparison establishes
 
-The current CLI directly executes IR through `run-ir`, runs bytecode in the VM through `run` and returns artifacts through `emit-*`. Comparing exit status and standard output through these commands does not require a new public API. There is no CLI for loading and executing `.cebc` files in the VM.
+The current CLI directly executes IR through `run` or `run-ir`, runs bytecode in the VM through `run-vm` and returns artifacts through `emit-*`. Comparing exit status and standard output through these commands does not require a new public API. There is no CLI for loading and executing `.cebc` files in the VM.
 
 Matching standard output establishes matching displayed results. It does not prove equality of unprinted information such as floating-point NaN payload bits. If bitwise comparison becomes necessary, design a separate typed observation format. Numeric tolerances and newline normalization must also be explicit comparison conditions when used.
 

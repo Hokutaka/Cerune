@@ -15,7 +15,7 @@ These four examples must stop for the specified reason. They are excluded from t
 cargo run -- run examples/runtime_failures/array_update.ceru --diagnostic-format runtime-v1
 ```
 
-The VM exits with code 1 and emits one stderr line: `cerune: runtime-v1 code=... node=... bytes=.....`. The byte range addresses the original UTF-8 source, with an exclusive end. Use the NodeId and range to locate the operation in `emit-ir`. Changing CRLF/LF changes byte offsets.
+`run` / `run-ir` / `run-vm` exit with code 1 and emits one stderr line: `cerune: runtime-v1 code=... node=... bytes=.....`. The byte range addresses the original UTF-8 source, with an exclusive end. Use the NodeId and range to locate the operation in `emit-ir`. Changing CRLF/LF changes byte offsets.
 
 `cargo test --test runtime_routes` generates and executes the same sources through C, LLVM, QBE, and WAT, comparing these records and prior output. See [diagnostic verification](../../docs/design/runtime-diagnostics.en.md#verification) for external-tool configuration. An unavailable, unconfigured route is skipped rather than counted as execution coverage. WAT hosts must implement `cerune.write_error_byte`.
 

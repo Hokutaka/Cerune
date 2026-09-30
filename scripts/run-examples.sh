@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 set -euo pipefail
+# runでIRを直接実行します。VM比較は明示的なrun-vmを使います。
 
 usage() {
     printf '%s\n' 'Usage: bash scripts/run-examples.sh [--pattern GLOB] [--skip-build]'

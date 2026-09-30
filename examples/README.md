@@ -13,13 +13,13 @@
 
 ## IRから直接実行
 
-`cargo run --quiet -- run-ir examples/ir_execution.ceru`で、関数・配列のコピー・反復・文字列連結を試せます。`run`でも同じ結果になり、`emit-ir`で共通の処理を確認できます。
+`cargo run --quiet -- run-ir examples/ir_execution.ceru`で、関数・配列のコピー・反復・文字列連結を試せます。`run`は同じ実行経路で、VMとの比較には`run-vm`を使います。`emit-ir`で共通の処理を確認できます。
 
 | 例 | 出力 |
 | --- | --- |
 | [ir_execution.ceru](ir_execution.ceru) | `Hello, IR` → `Hello, 世界` → `["Cerune", "世界"]` |
 
-他の正常例も`run-ir`で実行できます。一括スクリプトは引き続きVMを使い、`cargo test --test examples --test ir_executor`で両経路と期待値を照合します。
+他の正常例も`run-ir`で実行できます。一括スクリプトは`run`によるIR直接実行を使い、`cargo test --test examples --test ir_executor`で両経路と期待値を照合します。
 
 ## まとめて実行
 

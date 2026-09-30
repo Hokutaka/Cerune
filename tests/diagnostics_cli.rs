@@ -316,42 +316,44 @@ fn emit_ir_semantic_unknown_binding_matches_expected_diagnostic() {
 
 #[test]
 fn run_compilation_error_matches_expected_diagnostic() {
-    assert_diagnostic("semantic-unknown-binding", "run", "run.stderr");
+    for command in ["run", "run-ir", "run-vm"] {
+        assert_diagnostic("semantic-unknown-binding", command, "run.stderr");
+    }
 }
 
 #[test]
 fn run_vm_error_matches_expected_diagnostic() {
-    assert_diagnostic("vm-division-by-zero", "run", "run.stderr");
+    assert_diagnostic("vm-division-by-zero", "run-vm", "run.stderr");
 }
 
 #[test]
 fn run_integer_overflow_matches_expected_diagnostic() {
-    assert_diagnostic("vm-integer-overflow", "run", "run.stderr");
+    assert_diagnostic("vm-integer-overflow", "run-vm", "run.stderr");
 }
 
 #[test]
 fn run_numeric_conversion_failures_match_expected_diagnostics() {
     for reason in ["inexact", "range", "negative-zero", "nonfinite", "nan"] {
-        assert_diagnostic(&format!("vm-conversion-{reason}"), "run", "run.stderr");
+        assert_diagnostic(&format!("vm-conversion-{reason}"), "run-vm", "run.stderr");
     }
 }
 
 #[test]
 fn run_remainder_by_zero_matches_expected_diagnostic() {
-    assert_diagnostic("vm-remainder-by-zero", "run", "run.stderr");
+    assert_diagnostic("vm-remainder-by-zero", "run-vm", "run.stderr");
 }
 
 #[test]
 fn run_invalid_shift_count_matches_expected_diagnostic() {
-    assert_diagnostic("vm-invalid-shift-count", "run", "run.stderr");
+    assert_diagnostic("vm-invalid-shift-count", "run-vm", "run.stderr");
 }
 
 #[test]
 fn run_left_shift_overflow_matches_expected_diagnostic() {
-    assert_diagnostic("vm-left-shift-overflow", "run", "run.stderr");
+    assert_diagnostic("vm-left-shift-overflow", "run-vm", "run.stderr");
 }
 
 #[test]
 fn run_array_index_out_of_bounds_matches_expected_diagnostic() {
-    assert_diagnostic("vm-array-index-out-of-bounds", "run", "run.stderr");
+    assert_diagnostic("vm-array-index-out-of-bounds", "run-vm", "run.stderr");
 }

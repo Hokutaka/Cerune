@@ -38,7 +38,7 @@ The IR Executor and VM release locals on success and reclaims remaining content 
 
 The default budget is **64 MiB (67108864 bytes) of live dynamic string payload**. Shared allocations count once; static literals do not count. Old and new values both count while reassignment keeps them alive.
 
-Use `--string-heap-limit <bytes>` with `run` or code generation commands to change the runtime budget; zero is valid. Compile-time evaluation has an independent 64 MiB budget, unaffected by this option. Rust callers set `ir::Program::string_heap_limit` before emitting or lowering to bytecode. This configures generation rather than intervening in a running program.
+Use `--string-heap-limit <bytes>` with `run`, `run-ir`, `run-vm`, or code generation commands to change the runtime budget; zero is valid. Compile-time evaluation has an independent 64 MiB budget, unaffected by this option. Rust callers set `ir::Program::string_heap_limit` before emitting or lowering to bytecode. This configures generation rather than intervening in a running program.
 
 ```sh
 cerune run examples/string_concat.ceru --string-heap-limit 1024

@@ -239,7 +239,7 @@ fn run() -> Result<(), String> {
         }
 
         // 同じ完成済みIRから、明示された実行経路を選びます。
-        "run" | "run-ir" => {
+        "run" | "run-ir" | "run-vm" => {
             let input = required_path(args.next(), "missing input file")?;
             let rest: Vec<_> = args.collect();
             let runtime_format = match rest.as_slice() {
@@ -255,7 +255,7 @@ fn run() -> Result<(), String> {
             let source = read_source(&input)?;
 
             let ir = ir_for(&source, string_heap_limit)?;
-            let output = if command == "run-ir" {
+            let output = if command != "run-vm" {
                 cerune_lang::ir_executor::run(&ir).map_err(|error| {
                     print!("{}", error.output());
                     if runtime_format && let Some(failure) = error.runtime_failure() {
@@ -324,6 +324,7 @@ fn parse_string_heap_limit(args: Vec<String>, command: &str) -> Result<(Vec<Stri
             command,
             "run"
                 | "run-ir"
+                | "run-vm"
                 | "emit-ir"
                 | "emit-bytecode"
                 | "emit-c"
@@ -444,10 +445,12 @@ fn print_help() {
            cerune emit-asm <file> [--target <triple>] [--annotate-origins] [-o <output.s>]\n\
            cerune emit-obj <file> --target <triple> [--annotate-origins] -o <output.o>\n\
            cerune emit-bytecode <file> [-o <output.cebc>]\n\
-           cerune run-ir <file> [--diagnostic-format runtime-v1]\n\
            cerune run <file> [--diagnostic-format runtime-v1]\n\
+           cerune run-ir <file> [--diagnostic-format runtime-v1]\n\
+           cerune run-vm <file> [--diagnostic-format runtime-v1]\n\
            cerune --version\n\n\
-         run / run-ir / emit-* (except emit-sources): --string-heap-limit <bytes>\n\
+         run / run-ir: direct Cerune IR execution; run-vm: Bytecode -> VM.\n\
+         run / run-ir / run-vm / emit-* (except emit-sources): --string-heap-limit <bytes>\n\
          Default: 67108864 live dynamic string bytes; compile-time budget is independent.\n",
         env!("CARGO_PKG_VERSION")
     );

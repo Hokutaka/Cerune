@@ -22,7 +22,7 @@ Input is the completed program returned by compile_to_ir or modules::Compilation
 
 The entry point is `ir_executor::run(&ir::Program) -> Result<String, ExecutionError>`. A constructed IR can be run repeatedly without recompilation, with fresh state per call. Execution does not mutate IR, perform hidden optimization, or build a separate executable IR.
 
-CLI `run-ir <file>` selects direct execution; `run` retains the VM route. Both reuse the frontend for imports, diagnostics, and string budgets and support `--diagnostic-format runtime-v1`. Source API `run_ir(source) -> Result<String, IrRunError>` distinguishes compilation from execution failures. Execution paths are never selected silently.
+CLI `run <file>` and its alias `run-ir <file>` select direct execution; `run-vm <file>` selects the VM route. All three reuse the frontend for imports, diagnostics, and string budgets and support `--diagnostic-format runtime-v1`. Source API `run_ir(source) -> Result<String, IrRunError>` distinguishes compilation from execution failures. Execution paths are never selected silently.
 
 - Walk statements and expressions directly; identify per-function bindings by BindingId.
 - Execute structured if/while/for and distinguish return/break/continue. For-loop continue still executes its update.

@@ -43,7 +43,7 @@ Cerune IR
   - backend independent
       │
       ├── Observation 1: emit-ir / .ceir
-      ├── IR Executor: run-ir (direct structured execution)
+      ├── IR Executor: run / run-ir (direct structured execution)
       │
       ↓
 Backend Lowering
