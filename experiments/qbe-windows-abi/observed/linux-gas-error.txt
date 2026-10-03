@@ -1,0 +1,2 @@
+callee-only.s: Assembler messages:
+callee-only.s:7: Error: operand type mismatch for `ucomiss'

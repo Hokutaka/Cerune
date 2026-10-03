@@ -1,0 +1,12 @@
+Cerune source: examples/function_arguments.ceru
+Cerune commit: b6bb95f7ce77bcad1cfc23422ca86f72ecd5593a
+Saved pre-workaround Linux SSA equals current explicit-Linux output: yes (LF text comparison)
+SSA SHA-256: 717bd640d27c0cfd499f0c25684e13752d0aa080bca40ce32c6d2ab598b6a5e4
+
+Definition:
+function $cerune_fn_changed_2(l %result, l %arg0, l %arg1, l %arg2, l %arg3, w %arg4, l %arg5, l %arg6, l %arg7, l %arg8, s %arg9, d %arg10) {
+
+Call:
+  call $cerune_fn_changed_2(l %slot_aggregate_tmp2, l 1, l 2, l 3, l 4, w 1, l -9223372036854775808, l $cerune_string_2, l %slot_values, l %slot_original, s s_1.5, d d_2.5)
+
+Matching argument types: l, l, l, l, l, w, l, l, l, l, s, d

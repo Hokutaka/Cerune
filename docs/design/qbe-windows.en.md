@@ -23,6 +23,8 @@ After reporting a language error, the runtime calls `abort`. Immediately beforeh
 
 ## Argument limitation reproduced with QBE 1.3
 
+The [standalone investigation](../../experiments/qbe-windows-abi/README.md) compares minimal IL on 1.3 and official master, both targets, independent assemblers, and C call boundaries. Windows callee ABI lowering is the leading candidate. The [upstream inquiry draft](../../experiments/qbe-windows-abi/UPSTREAM.md) also asks whether the IL usage is correct; this is not a confirmed upstream bug report.
+
 `examples/function_arguments.ceru` reproduced invalid Windows assembly for `f32` and `f64` arguments in the fifth or later positions. QBE 1.3's `amd64/winabi.c` loads these stack arguments with an integer class, potentially feeding an integer register to a floating-point comparison.
 
 For internal Cerune calls, these `f32` arguments travel as `w` bits and `f64` arguments as `l` bits, restored by a same-width `cast` at entry. The hidden aggregate-return pointer counts toward argument positions. QBE [cast](https://c9x.me/compile/doc/il.html#Cast-and-Copy) preserves bits without rounding or numeric conversion. Only passing already-evaluated arguments changes; evaluation order and Cerune IR types remain unchanged.

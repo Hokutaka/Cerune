@@ -1,0 +1,25 @@
+**** Function check ****
+> After parsing:
+function $check() {
+@start
+	%a =l par
+	%b =l par
+	%c =l par
+	%d =l par
+	%value =s par
+	%ok =w ceqs %value, s_1.500000
+	retw %ok
+}
+
+> After ABI lowering:
+function $check() {
+@start
+	%value =l copy S-12
+	%d =l copy R7
+	%c =l copy R6
+	%b =l copy R3
+	%a =l copy R2
+	%ok =w ceqs %value, s_1.500000
+	R1 =w copy %ok
+	ret0 0001
+}

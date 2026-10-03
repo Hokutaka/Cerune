@@ -23,6 +23,8 @@ Windowsでは、最初のCerune操作より前に`_setmode(1, 32768)`と`_setmod
 
 ## QBE 1.3で確認した引数の制約
 
+[QBE単体での追加調査](../../experiments/qbe-windows-abi/README.md)では、1.3と公式masterの最小IL、両ターゲット、別assembler、Cとの呼び出し境界を比較しました。Windowsのcallee側ABI loweringが原因候補ですが、ILの使い方も含めて上流に確認するための資料であり、確認済みの上流不具合とは扱いません。
+
 `examples/function_arguments.ceru`で、Windowsの第5引数以降にある`f32`・`f64`が不正なAssemblyになることを再現しました。QBE 1.3の`amd64/winabi.c`はこのスタック引数を整数クラスで読み、浮動小数点比較へ整数レジスタが渡る場合があります。
 
 Ceruneの内部関数間では、この位置にある`f32`を`w`、`f64`を`l`のビット列として渡し、入口で同幅の`cast`により復元します。隠れた集約戻り値ポインタも引数位置に数えます。QBEの[cast](https://c9x.me/compile/doc/il.html#Cast-and-Copy)はビット列を保持し、丸めや数値変換を行いません。引数評価後の受け渡しだけが変わり、評価順やCerune IRの型は変わりません。
