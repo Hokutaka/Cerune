@@ -154,7 +154,7 @@ fn run() -> Result<(), String> {
                 Some(value) => Some(cerune_lang::codegen::qbe::Target::parse(value).ok_or_else(
                     || {
                         format!(
-                            "unsupported QBE target `{value}`; expected x86_64-unknown-linux-gnu"
+                            "unsupported QBE target `{value}`; expected x86_64-unknown-linux-gnu or x86_64-pc-windows-msvc"
                         )
                     },
                 )?),

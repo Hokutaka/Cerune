@@ -57,7 +57,7 @@ The current outputs can be described as follows:
 | --- | --- | --- |
 | C | not selected by Cerune | C source `.c` |
 | LLVM IR | unspecified, or explicit Windows x64 / Linux x86-64 (required for strings and runtime checks) | LLVM IR `.ll` |
-| QBE IR | unspecified, or explicit Linux x86-64 (required for strings). Windows x64 support in Cerune is pending (QBE 1.3 provides `amd64_win`) | QBE IR `.ssa` |
+| QBE IR | unspecified, or explicit Windows x64 / Linux x86-64 (required for strings) | QBE IR `.ssa` |
 | WebAssembly Text | WebAssembly | WAT `.wat` |
 | Native assembly | x86-64, Windows / Linux, respective calling conventions | GNU-style assembly `.s` |
 | Native object | explicit Windows x64 / Linux x86-64 | COFF `.obj` / ELF64 `.o` |
@@ -67,9 +67,9 @@ The current outputs can be described as follows:
 
 ### QBE validation version
 
-CI uses [QBE 1.3](https://c9x.me/compile/releases.html), verified against its official SHA-256. Cerune's current QBE execution comparisons target Linux `amd64_sysv`.
+CI uses [QBE 1.3](https://c9x.me/compile/releases.html), verified against its official SHA-256. Execution comparisons use Linux `amd64_sysv` and Windows `amd64_win`. On Windows, MinGW/UCRT builds QBE itself; Clang/MSVC links its generated assembly. The tool's build environment and the generated program's target are separate.
 
-QBE 1.3 provides `amd64_win` for the Windows ABI. Cerune support still requires explicit target selection, Windows output and failure diagnostics, data placement, toolchain configuration, and execution tests. Updating QBE alone does not establish Windows support. [Official release notes](https://c9x.me/compile/release/qbe-1.3.html)
+See [QBE Windows support](qbe-windows.en.md) for output, diagnostics, argument passing, and validation of each stage.
 
 ## Artifact consumer boundary
 
@@ -79,7 +79,7 @@ LLVM `--target` selects `x86_64-unknown-linux-gnu` or `x86_64-pc-windows-msvc` a
 
 Artifact comparison separates the following questions. Support information is data, not permission to launch external programs.
 
-QBE strings pair explicit `x86_64-unknown-linux-gnu` selection with downstream `amd64_sysv`. Direct assembly accepts explicit Windows/Linux x86-64 selection, and WAT remains fixed to WebAssembly; WAT string output has a host contract accepting byte values. Route-specific storage and output choices remain documented in [string design](strings.en.md).
+QBE pairs explicit `x86_64-unknown-linux-gnu` / `x86_64-pc-windows-msvc` selection with downstream `amd64_sysv` / `amd64_win`, respectively. Direct assembly accepts explicit Windows/Linux x86-64 selection, and WAT remains fixed to WebAssembly; WAT string output has a host contract accepting byte values. Route-specific storage and output choices remain documented in [string design](strings.en.md).
 
 This table describes consumers processing current emitted artifacts. Planned Cerune-owned builds make Cerune responsible for managing the tools and dependencies needed to construct the completed artifact.
 

@@ -18,14 +18,34 @@ use crate::{diagnostic::Diagnostic, ir as cerune_ir};
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Target {
     X86_64UnknownLinuxGnu,
+    X86_64PcWindowsMsvc,
 }
 
 impl Target {
     pub const fn triple(self) -> &'static str {
-        "x86_64-unknown-linux-gnu"
+        match self {
+            Self::X86_64UnknownLinuxGnu => "x86_64-unknown-linux-gnu",
+            Self::X86_64PcWindowsMsvc => "x86_64-pc-windows-msvc",
+        }
+    }
+    pub const fn qbe_name(self) -> &'static str {
+        match self {
+            Self::X86_64UnknownLinuxGnu => "amd64_sysv",
+            Self::X86_64PcWindowsMsvc => "amd64_win",
+        }
+    }
+    const fn read_only_section(self) -> &'static str {
+        match self {
+            Self::X86_64UnknownLinuxGnu => ".rodata",
+            Self::X86_64PcWindowsMsvc => ".rdata",
+        }
     }
     pub fn parse(value: &str) -> Option<Self> {
-        (value == "x86_64-unknown-linux-gnu").then_some(Self::X86_64UnknownLinuxGnu)
+        match value {
+            "x86_64-unknown-linux-gnu" => Some(Self::X86_64UnknownLinuxGnu),
+            "x86_64-pc-windows-msvc" => Some(Self::X86_64PcWindowsMsvc),
+            _ => None,
+        }
     }
 }
 
@@ -42,7 +62,7 @@ pub fn emit_qbe_with_target(
         && target.is_none()
     {
         return Err(Diagnostic::new(
-            "QBE string values require an explicit --target: x86_64-unknown-linux-gnu",
+            "QBE string values require an explicit --target: x86_64-unknown-linux-gnu or x86_64-pc-windows-msvc",
             span,
         ));
     }

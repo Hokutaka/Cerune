@@ -132,6 +132,7 @@ fn qbe_requires_an_explicit_runtime_target() {
         assert!(error.message().contains("explicit --target"));
         assert!(error.primary_span().is_some());
         assert!(compile_to_qbe_with_target(source, Some(Target::X86_64UnknownLinuxGnu)).is_ok());
+        assert!(compile_to_qbe_with_target(source, Some(Target::X86_64PcWindowsMsvc)).is_ok());
         assert!(compile_to_wat(source).is_ok());
         assert!(compile_to_x86_64_win_asm(source).is_ok());
     }
@@ -142,7 +143,7 @@ fn qbe_requires_an_explicit_runtime_target() {
     for options in [
         vec![],
         vec!["--target"],
-        vec!["--target", "x86_64-pc-windows-msvc"],
+        vec!["--target", "x86_64-pc-windows-gnu"],
         vec!["--target", "unknown"],
     ] {
         fs::write(&output, b"existing artifact").unwrap();
@@ -157,6 +158,28 @@ fn qbe_requires_an_explicit_runtime_target() {
         assert_eq!(result.status.code(), Some(1));
         assert!(!result.stderr.is_empty());
         assert_eq!(fs::read(&output).unwrap(), b"existing artifact");
+    }
+    for (target, qbe_name) in [
+        ("x86_64-pc-windows-msvc", "amd64_win"),
+        ("x86_64-unknown-linux-gnu", "amd64_sysv"),
+    ] {
+        let result = Command::new(env!("CARGO_BIN_EXE_cerune"))
+            .arg("emit-qbe")
+            .arg(&input)
+            .args(["--target", target, "-o"])
+            .arg(&output)
+            .output()
+            .unwrap();
+        assert!(
+            result.status.success(),
+            "{}",
+            String::from_utf8_lossy(&result.stderr)
+        );
+        assert!(
+            fs::read_to_string(&output)
+                .unwrap()
+                .starts_with(&format!("# target: {target} (qbe -t {qbe_name})"))
+        );
     }
 }
 

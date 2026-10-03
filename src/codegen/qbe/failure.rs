@@ -90,7 +90,7 @@ pub(super) fn emit(module: &Module, output: &mut String) {
         return;
     }
     for origin in origins {
-        data(&symbol(origin), &suffix(origin), output);
+        data(module, &symbol(origin), &suffix(origin), output);
     }
     use FailureCode::*;
     let mut codes = vec![
@@ -116,6 +116,7 @@ pub(super) fn emit(module: &Module, output: &mut String) {
     }
     for code in codes {
         data(
+            module,
             &format!("cerune_code_{}", code.name().replace('-', "_")),
             &prefix(code),
             output,
@@ -129,12 +130,25 @@ pub(super) fn emit(module: &Module, output: &mut String) {
         call(code, output);
         output.push_str("}\n\n");
     }
-    // QBEの既存のLinux/SysV ABI。失敗時だけstdoutをflushし、不変の二片を出力します。
-    output.push_str("function $cerune_runtime_failure(l %code, l %code_len, l %origin, l %origin_len) {\n@start\n  call $fflush(l 0)\n  call $write(w 2, l %code, l %code_len)\n  call $write(w 2, l %origin, l %origin_len)\n  call $abort()\n  hlt\n}\n\n");
+    // 失敗時だけstdoutをflushし、明示ターゲットのCRTで診断を出力します。
+    output.push_str("function $cerune_runtime_failure(l %code, l %code_len, l %origin, l %origin_len) {\n@start\n  call $fflush(l 0)\n");
+    if module.target == Some(super::Target::X86_64PcWindowsMsvc) {
+        // 診断片の長さはu32に収まります。_writeのcountはWindowsでは32bitです。
+        output.push_str("  %code_count =w copy %code_len\n  %origin_count =w copy %origin_len\n  call $_write(w 2, l %code, w %code_count)\n  call $_write(w 2, l %origin, w %origin_count)\n");
+        // 診断済みの言語エラーでCRTの追加メッセージ・クラッシュ収集を起動しません。
+        output.push_str("  call $_set_abort_behavior(w 0, w 3)\n");
+    } else {
+        output.push_str("  call $write(w 2, l %code, l %code_len)\n  call $write(w 2, l %origin, l %origin_len)\n");
+    }
+    output.push_str("  call $abort()\n  hlt\n}\n\n");
 }
 
-fn data(name: &str, text: &str, output: &mut String) {
-    write!(output, "section \".rodata\" data ${name} = {{ ").unwrap();
+fn data(module: &Module, name: &str, text: &str, output: &mut String) {
+    let section = module
+        .target
+        .unwrap_or(super::Target::X86_64UnknownLinuxGnu)
+        .read_only_section();
+    write!(output, "section \"{section}\" data ${name} = {{ ").unwrap();
     for (index, byte) in text.bytes().enumerate() {
         if index != 0 {
             output.push_str(", ");
