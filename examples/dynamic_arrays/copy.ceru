@@ -1,4 +1,4 @@
-// 動的配列の作成、独立コピー、範囲コピー。IR ExecutorとVMで実行できます。
+// 動的配列の作成、独立コピー、範囲コピー。IR Executor・VM・C・LLVMで実行できます。
 mut values: [i64] = array_copy([10, 20, 30]);
 saved: [i64] = values;
 part: [i64] = array_copy_range(values, 1, 3);

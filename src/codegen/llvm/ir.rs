@@ -1,5 +1,6 @@
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Type {
+    DynamicArray { element: Box<Type> },
     String,
     Bool,
     I64,
@@ -11,6 +12,7 @@ pub enum Type {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Module {
+    pub array_heap_limit: Option<u64>,
     pub string_heap_limit: Option<u64>,
     pub uses_write: bool,
     pub target: Option<super::Target>,
@@ -106,6 +108,31 @@ pub enum PrintFormat {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Instruction {
+    ArrayAllocate {
+        dest: Temp,
+        element: Type,
+        length: Operand,
+        element_width: u64,
+    },
+    ArrayInitialize {
+        scratch: Temp,
+        element: Type,
+        array: Operand,
+        value: Operand,
+    },
+    ArrayManage {
+        value: Operand,
+        retain: bool,
+    },
+    ArrayReleaseOwner {
+        dest: Temp,
+        value: Operand,
+    },
+    ArrayRangeCheck {
+        length: Operand,
+        start: Operand,
+        end: Operand,
+    },
     StringConcat {
         dest: Temp,
         left: Operand,
@@ -179,14 +206,14 @@ pub enum Instruction {
     ArrayGet {
         dest: Temp,
         element: Type,
-        length: usize,
+        length: Option<usize>,
         array: Operand,
         index: Operand,
     },
     ArraySet {
         dest: Temp,
         element: Type,
-        length: usize,
+        length: Option<usize>,
         array: Operand,
         index: Operand,
         value: Operand,

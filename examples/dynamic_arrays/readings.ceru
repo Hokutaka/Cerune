@@ -1,0 +1,24 @@
+// 測定値の末尾を選び、コピーだけを修正します。
+// Select the latest readings and edit only an independent copy.
+type Reading { valid: bool, value: f32 }
+
+fn latest(values: [Reading], count: i64) -> [Reading] {
+    end: i64 = array_len(values);
+    return array_copy_range(values, end - count, end);
+}
+
+source: [Reading] = array_copy([
+    Reading { valid: true, value: 10.0 },
+    Reading { valid: false, value: 0.0 },
+    Reading { valid: true, value: 20.0 }
+]);
+selected: [Reading] = latest(source, 2);
+mut edited: [Reading] = selected;
+edited[0] = Reading { valid: true, value: 15.0 };
+print(selected);
+print(edited);
+mut total: f32 = 0.0;
+for (reading: Reading in edited) {
+    if reading.valid { total = total + reading.value; }
+}
+print(total);

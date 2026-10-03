@@ -1,4 +1,5 @@
 //! 既存の動的配列ケースを生成Cでも実行します。所有の規則は再実装しません。
+use super::{crash_dialogs, process};
 use cerune_lang::{codegen, ir, ir_executor};
 use std::{
     ffi::OsString,
@@ -11,9 +12,6 @@ use std::{
     },
     time::Duration,
 };
-#[path = "crash_dialogs.rs"]
-mod crash_dialogs;
-use super::process;
 
 struct Workspace(PathBuf);
 impl Drop for Workspace {

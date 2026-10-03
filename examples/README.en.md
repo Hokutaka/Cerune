@@ -7,7 +7,7 @@ Normal examples are the `.ceru` files in this directory.
 | Location | Purpose |
 | --- | --- |
 | This directory | Standalone programs; included in the batch runner |
-| [dynamic_arrays](dynamic_arrays/README.en.md) | Dynamic array copies, ranges, nesting; IR/VM/generated C execution |
+| [dynamic_arrays](dynamic_arrays/README.en.md) | Dynamic array copies, ranges, nesting; IR/VM/generated C/LLVM execution |
 | [modules](modules/README.en.md) | Imports, single-file comparison, and expected failures |
 | [runtime_failures](runtime_failures/README.en.md) | Four expected stops: prior output and failing expressions |
 | [source_files](source_files/README.en.md) | Rust API examples: parse type/function files separately and compare origins; no imports |
@@ -99,7 +99,7 @@ Integer overflow stops execution; values never wrap. Convert explicitly with `i6
 
 | Type form | Example | What to observe |
 | --- | --- | --- |
-| Dynamic array `[T]` (IR/VM/C) | [copy.ceru](dynamic_arrays/copy.ceru), [nested.ceru](dynamic_arrays/nested.ceru) | Empty ranges, independent copies, nesting, functions, enums, iteration |
+| Dynamic array `[T]` (IR/VM/C/LLVM) | [copy.ceru](dynamic_arrays/copy.ceru), [nested.ceru](dynamic_arrays/nested.ceru) | Empty ranges, independent copies, nesting, functions, enums, iteration |
 | Fixed array `[T; N]` | [fixed_arrays.ceru](fixed_arrays.ceru), [bubble_sort.ceru](bubble_sort.ceru) | indexing, element updates, and independent copies |
 | Product `type Point { ... }` | [product-point.ceru](product-point.ceru), [product_arrays.ceru](product_arrays.ceru) | fields, defaults, and arrays of products |
 | Nested arrays and products | [function_values.ceru](function_values.ceru), [u64_values.ceru](u64_values.ceru), [string_lookup.ceru](string_lookup.ceru) | combining numbers or strings and passing values to functions |

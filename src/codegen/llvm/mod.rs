@@ -1,3 +1,4 @@
+mod array;
 mod conversion;
 mod emit;
 mod failure;
@@ -66,8 +67,15 @@ pub fn emit_llvm_with_options(
     program: &cerune_ir::Program,
     options: Options,
 ) -> Result<String, Diagnostic> {
-    super::support::require_static_arrays(program, "LLVM")?;
     let target = options.target;
+    if let Some(span) = program.first_dynamic_array_span()
+        && target.is_none()
+    {
+        return Err(Diagnostic::new(
+            "LLVM dynamic arrays require an explicit --target: x86_64-unknown-linux-gnu or x86_64-pc-windows-msvc",
+            span,
+        ));
+    }
     let string_span = super::support::first_string_span(program);
     if let Some(span) = string_span
         && target.is_none()

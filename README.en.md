@@ -58,7 +58,7 @@ During development, replace `cerune` with `cargo run --quiet --`.
 | Structs | Named types, field access and defaults, updates that create new values, nesting, value copies |
 | Sum types | `enum` variants with payloads; exhaustive `match` statements/expressions with `if` guards |
 | Arrays | Fixed length (including named constants), element counts with `array_len`, nesting, element access and updates, value copies |
-| Dynamic arrays (IR/VM/C) | `[T]`, `array_copy`, `array_copy_range`, independent copies, display, equality, iteration; LLVM and subsequent routes pending |
+| Dynamic arrays (IR/VM/C/LLVM) | `[T]`, `array_copy`, `array_copy_range`, independent copies, display, equality, iteration; QBE and subsequent routes pending |
 | Functions | Typed parameters/results, `void`, `return`, type/array-length parameters; aggregate values can be passed and returned |
 | Entry point | Top-level statements or `fn main() -> void` (not both) |
 | Control flow | `if` / `else`, `while`, `for`, array `for … in`, `break` / `continue` |
@@ -68,7 +68,7 @@ During development, replace `cerune` with `cargo run --quiet --`.
 
 **Arithmetic rules:** No implicit numeric conversions. Integer overflow, invalid integer division, out-of-bounds access, failed exact conversions, and out-of-range rounded results stop execution. Explicit saturation clamps to the type's endpoints. Floating-point arithmetic rounds.
 
-**Not implemented:** Recursion, dynamic arrays on LLVM and subsequent routes, and `array_repeat`, string indexing, catching runtime stops.
+**Not implemented:** Recursion, dynamic arrays on QBE and subsequent routes, and `array_repeat`, string indexing, catching runtime stops.
 
 ## Execution and Output
 
@@ -87,7 +87,7 @@ During development, replace `cerune` with `cargo run --quiet --`.
 | `emit-asm` | Assembly (`.s`) | Windows / Linux x86-64 |
 | `emit-obj` | ELF / COFF object (`.o` / `.obj`) | External linker; requires `--target` and `-o` |
 
-Text goes to stdout; use `-o` to save it. LLVM / QBE string output and LLVM checked numeric operations require `--target`. WAT uses host functions for output and diagnostics.
+Text goes to stdout; use `-o` to save it. LLVM / QBE string output and LLVM checked numeric operations / dynamic arrays require `--target`. WAT uses host functions for output and diagnostics.
 
 ## Examples and Development
 
