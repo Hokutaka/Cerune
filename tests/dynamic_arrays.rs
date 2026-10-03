@@ -1,6 +1,10 @@
-//! 動的配列のIR・VM・生成Cの結果・停止理由・出自を照合します。
+//! 動的配列のIR・VM・生成C・LLVMの結果・停止理由・出自を照合します。
 #[path = "support/c_arrays.rs"]
 mod c_arrays;
+#[path = "support/crash_dialogs.rs"]
+mod crash_dialogs;
+#[path = "support/llvm_arrays.rs"]
+mod llvm_arrays;
 use cerune_lang::{bytecode, compile_to_ir, ir, ir_executor, run_bytecode};
 
 fn compare(source: &str, limit: u64) -> Result<String, ir_executor::ExecutionError> {
@@ -18,6 +22,7 @@ fn compare(source: &str, limit: u64) -> Result<String, ir_executor::ExecutionErr
         _ => panic!("IR: {direct:?}\nVM: {vm:?}\n{source}"),
     }
     c_arrays::compare(&program, &direct);
+    llvm_arrays::compare(&program, &direct);
     direct
 }
 fn success(source: &str, expected: &str) {
@@ -204,8 +209,8 @@ fn unimplemented_compiled_routes_diagnose_even_unused_dynamic_types() {
     ] {
         let p = compile_to_ir(source).unwrap();
         c_arrays::compare(&p, &ir_executor::run(&p));
+        llvm_arrays::compare(&p, &ir_executor::run(&p));
         for result in [
-            codegen::emit_llvm(&p),
             codegen::emit_qbe(&p),
             codegen::emit_wat(&p),
             codegen::emit_x86_64_win_asm(&p),
@@ -233,6 +238,10 @@ fn unimplemented_compiled_routes_diagnose_even_unused_dynamic_types() {
 #[test]
 fn examples_and_generated_steps_match_checked_artifacts() {
     success(
+        include_str!("../examples/dynamic_arrays/readings.ceru"),
+        "[{valid: false, value: 0}, {valid: true, value: 20}]\n[{valid: true, value: 15}, {valid: true, value: 20}]\n35\n",
+    );
+    success(
         include_str!("../examples/dynamic_arrays/window.ceru"),
         "[20, 30]\n[10, 20, 30]\n[99, 30]\n[]\n",
     );
@@ -249,6 +258,14 @@ fn examples_and_generated_steps_match_checked_artifacts() {
         success(source, expected);
     }
     let p = compile_to_ir(include_str!("fixtures/dynamic-arrays/source.ceru")).unwrap();
+    assert_eq!(
+        cerune_lang::codegen::llvm::emit_llvm_with_target(
+            &p,
+            Some(cerune_lang::codegen::llvm::Target::X86_64UnknownLinuxGnu)
+        )
+        .unwrap(),
+        include_str!("fixtures/dynamic-arrays/llvm.ll")
+    );
     assert_eq!(
         cerune_lang::codegen::emit_c(&p).unwrap(),
         include_str!("fixtures/dynamic-arrays/c.c")
@@ -280,6 +297,7 @@ fn array_and_string_budgets_are_independent() {
     p.array_heap_limit = 16;
     p.string_heap_limit = 2;
     c_arrays::compare(&p, &ir_executor::run(&p));
+    llvm_arrays::compare(&p, &ir_executor::run(&p));
     assert_eq!(ir_executor::run(&p).unwrap(), "[\"ab\"]\n");
     assert_eq!(
         run_bytecode(&bytecode::lower(&p).unwrap()).unwrap(),
@@ -287,6 +305,7 @@ fn array_and_string_budgets_are_independent() {
     );
     p.string_heap_limit = 1;
     c_arrays::compare(&p, &ir_executor::run(&p));
+    llvm_arrays::compare(&p, &ir_executor::run(&p));
     let e = ir_executor::run(&p).unwrap_err();
     assert_eq!(
         e.runtime_failure().unwrap().code.name(),
@@ -395,7 +414,16 @@ fn cli_examples_limits_modules_and_unsupported_output_are_explicit() {
         assert!(!result.status.success());
         assert!(String::from_utf8_lossy(&result.stderr).contains("allocation-limit-exceeded"));
     }
-    for command in ["emit-llvm", "emit-qbe", "emit-wat", "emit-asm", "emit-obj"] {
+    let preserved = w.0.join("missing-llvm-target.ll");
+    fs::write(&preserved, b"keep").unwrap();
+    let result = cli(&["emit-llvm", file, "-o", preserved.to_str().unwrap()]);
+    assert!(!result.status.success());
+    assert!(
+        String::from_utf8_lossy(&result.stderr)
+            .contains("dynamic arrays require an explicit --target")
+    );
+    assert_eq!(fs::read(&preserved).unwrap(), b"keep");
+    for command in ["emit-qbe", "emit-wat", "emit-asm", "emit-obj"] {
         let out = w.0.join("preserved-output");
         fs::write(&out, b"keep").unwrap();
         let mut args = vec![command, file, "-o", out.to_str().unwrap()];
@@ -468,6 +496,7 @@ fn cli_examples_limits_modules_and_unsupported_output_are_explicit() {
             _ => panic!("module IR/VM mismatch"),
         }
         c_arrays::compare(&p, &direct);
+        llvm_arrays::compare(&p, &direct);
     }
     fs::write(
         w.0.join("values.ceru"),
@@ -505,4 +534,55 @@ fn partial_nested_copy_failure_and_element_replacement_keep_previous_output() {
 fn c_allocation_boundaries_are_distinct_from_budget_and_empty_storage() {
     let p = compile_to_ir("print(array_copy([1]));").unwrap();
     c_arrays::runtime_boundaries(&p);
+}
+
+#[test]
+fn llvm_allocation_failures_keep_the_original_operation_and_prior_output() {
+    let p = compile_to_ir("print(7); print(array_copy([1]));").unwrap();
+    llvm_arrays::runtime_boundaries(&p);
+}
+
+#[test]
+fn logical_budget_is_independent_of_llvm_element_layout() {
+    for (ty, value) in [("bool", "true"), ("f32", "1.5")] {
+        let source = format!("source:[{ty};1]=[{value}]; a:[{ty}]=array_copy(source);print(a[0]);");
+        assert_eq!(compare(&source, 8).unwrap(), format!("{value}\n"));
+        failure(&source, 7, "allocation-limit-exceeded", "");
+    }
+}
+
+#[test]
+fn llvm_requires_explicit_array_target_and_preserves_origins() {
+    use cerune_lang::codegen::llvm::{self, Options, Target};
+    for source in [
+        "print(array_copy([1]));",
+        "type T{unused:[i64]} print(1);",
+        "fn unused(a:[i64])->void{} print(1);",
+    ] {
+        let p = compile_to_ir(source).unwrap();
+        assert!(
+            llvm::emit_llvm(&p)
+                .unwrap_err()
+                .message()
+                .contains("dynamic arrays require an explicit --target")
+        );
+        for target in [Target::X86_64UnknownLinuxGnu, Target::X86_64PcWindowsMsvc] {
+            let plain = llvm::emit_llvm_with_target(&p, Some(target)).unwrap();
+            let annotated = llvm::emit_llvm_with_options(
+                &p,
+                Options {
+                    target: Some(target),
+                    annotate_origins: true,
+                },
+            )
+            .unwrap();
+            let stripped = annotated
+                .lines()
+                .filter(|line| !line.trim_start().starts_with("; cerune-origin"))
+                .collect::<Vec<_>>()
+                .join("\n")
+                + "\n";
+            assert_eq!(plain, stripped);
+        }
+    }
 }

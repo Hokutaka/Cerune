@@ -16,8 +16,9 @@ pub fn emit_with_origins(module: &Module, annotate_origins: bool) -> String {
     }
     emit_origin(Origin::Synthetic, annotate_origins, &mut output);
     let i64_operations = i64_operations(module);
-    let runtime_failures =
-        module.string_heap_limit.is_some() || super::failure::first_failure_span(module).is_some();
+    let runtime_failures = module.array_heap_limit.is_some()
+        || module.string_heap_limit.is_some()
+        || super::failure::first_failure_span(module).is_some();
     if let Some(target) = module.target {
         writeln!(output, "target triple = \"{}\"\n", target.triple()).unwrap();
     }
@@ -48,6 +49,9 @@ pub fn emit_with_origins(module: &Module, annotate_origins: bool) -> String {
     output.push_str("@.fmt_f32 = private unnamed_addr constant [6 x i8] c\"%.9g\\0A\\00\"\n");
     output.push_str("@.fmt_f64 = private unnamed_addr constant [7 x i8] c\"%.17g\\0A\\00\"\n");
 
+    if module.array_heap_limit.is_some() {
+        output.push_str("%cerune.array = type { ptr, i64 }\n%cerune.array.owner = type { ptr, i64, i64, i64 }\n");
+    }
     for definition in &module.type_definitions {
         write!(
             output,
@@ -79,7 +83,11 @@ pub fn emit_with_origins(module: &Module, annotate_origins: bool) -> String {
 
     let array_types = array_types(module);
     let array_set_types = array_set_types(module);
-    if module.string_heap_limit.is_some() || !array_types.is_empty() || i64_operations.any() {
+    if module.array_heap_limit.is_some()
+        || module.string_heap_limit.is_some()
+        || !array_types.is_empty()
+        || i64_operations.any()
+    {
         output.push_str("declare void @llvm.trap()\n");
     }
 
@@ -106,6 +114,15 @@ pub fn emit_with_origins(module: &Module, annotate_origins: bool) -> String {
         }
     }
 
+    if let Some(limit) = module.array_heap_limit {
+        if !module.uses_strings || module.string_heap_limit.is_none() {
+            output.push_str("declare ptr @malloc(i64)\ndeclare void @free(ptr)\n");
+        }
+        if !module.uses_strings && module.target == Some(super::Target::X86_64PcWindowsMsvc) {
+            output.push_str("declare i32 @_setmode(i32, i32)\n");
+        }
+        output.push_str(&super::array::support(limit));
+    }
     if module.uses_write {
         output.push_str(&crate::codegen::display::llvm());
     }
@@ -125,7 +142,9 @@ pub fn emit_with_origins(module: &Module, annotate_origins: bool) -> String {
 
     emit_origin(Origin::Synthetic, annotate_origins, &mut output);
     output.push_str("define i32 @main() {\nentry:\n");
-    if module.uses_strings && module.target == Some(super::Target::X86_64PcWindowsMsvc) {
+    if (module.uses_strings || module.array_heap_limit.is_some())
+        && module.target == Some(super::Target::X86_64PcWindowsMsvc)
+    {
         // CRTの標準出力(記述子1)を、最初の出力より前にバイナリモードにします。
         output.push_str("  %stdout.mode = call i32 @_setmode(i32 1, i32 32768)\n");
         output.push_str("  %stdout.failed = icmp eq i32 %stdout.mode, -1\n");
@@ -231,6 +250,82 @@ fn emit_instruction(
 ) {
     let failure = super::failure::argument(instruction, origin);
     match instruction {
+        Instruction::ArrayAllocate {
+            dest,
+            element,
+            length,
+            element_width,
+        } => {
+            let ty = type_name(element, module);
+            writeln!(output, "  {} = call %cerune.array @cerune.array.allocate.elements(i64 {}, i64 {element_width}, i64 ptrtoint (ptr getelementptr ({ty}, ptr null, i64 1) to i64), ptr {failure})", temp(*dest), operand(*length)).unwrap();
+        }
+        Instruction::ArrayInitialize {
+            scratch,
+            element,
+            array,
+            value,
+        } => {
+            let prefix = temp(*scratch);
+            let ty = type_name(element, module);
+            writeln!(
+                output,
+                "  {prefix}.owner = extractvalue %cerune.array {}, 0",
+                operand(*array)
+            )
+            .unwrap();
+            writeln!(output, "  {prefix}.count.ptr = getelementptr %cerune.array.owner, ptr {prefix}.owner, i32 0, i32 3").unwrap();
+            writeln!(
+                output,
+                "  {prefix}.index = load i64, ptr {prefix}.count.ptr"
+            )
+            .unwrap();
+            writeln!(output, "  {prefix}.data = load ptr, ptr {prefix}.owner").unwrap();
+            writeln!(
+                output,
+                "  {prefix}.element = getelementptr {ty}, ptr {prefix}.data, i64 {prefix}.index"
+            )
+            .unwrap();
+            writeln!(
+                output,
+                "  store {ty} {}, ptr {prefix}.element",
+                operand(*value)
+            )
+            .unwrap();
+            writeln!(output, "  {prefix}.next = add i64 {prefix}.index, 1").unwrap();
+            writeln!(output, "  store i64 {prefix}.next, ptr {prefix}.count.ptr").unwrap();
+        }
+        Instruction::ArrayManage { value, retain } => {
+            writeln!(
+                output,
+                "  call void @cerune.array.{}(%cerune.array {})",
+                if *retain {
+                    "retain.owner"
+                } else {
+                    "free.elements"
+                },
+                operand(*value)
+            )
+            .unwrap();
+        }
+        Instruction::ArrayReleaseOwner { dest, value } => {
+            writeln!(
+                output,
+                "  {} = call i1 @cerune.array.release.owner.last(%cerune.array {})",
+                temp(*dest),
+                operand(*value)
+            )
+            .unwrap();
+        }
+        Instruction::ArrayRangeCheck { length, start, end } => {
+            writeln!(
+                output,
+                "  call void @cerune.array.check.range(i64 {}, i64 {}, i64 {}, ptr {failure})",
+                operand(*length),
+                operand(*start),
+                operand(*end)
+            )
+            .unwrap();
+        }
         Instruction::StringConcat { dest, left, right } => {
             writeln!(output, "  {} = call %cerune.string @cerune.string.concat(%cerune.string {}, %cerune.string {}, ptr {failure})",
                 temp(*dest), operand(*left), operand(*right)).unwrap();
@@ -400,10 +495,7 @@ fn emit_instruction(
             array,
             index,
         } => {
-            let array_ty = Type::Array {
-                element: Box::new(element.clone()),
-                length: *length,
-            };
+            let array_ty = array_type(element, *length);
             writeln!(
                 output,
                 "  {} = call {} @{}({} {}, i64 {}, ptr {failure})",
@@ -425,10 +517,7 @@ fn emit_instruction(
             index,
             value,
         } => {
-            let array_ty = Type::Array {
-                element: Box::new(element.clone()),
-                length: *length,
-            };
+            let array_ty = array_type(element, *length);
             writeln!(
                 output,
                 "  {} = call {} @{}({} {}, i64 {}, {} {}, ptr {failure})",
@@ -628,6 +717,7 @@ fn label(label: Label) -> String {
 
 fn type_name(ty: &Type, module: &Module) -> String {
     match ty {
+        Type::DynamicArray { .. } => "%cerune.array".into(),
         Type::String => "%cerune.string".into(),
         Type::Bool => "i1".into(),
         Type::I64 => "i64".into(),
@@ -800,7 +890,7 @@ fn compare_name(op: CompareOp, ty: &Type) -> &'static str {
         ) => {
             unreachable!("semantic analysis rejects boolean ordering")
         }
-        (_, Type::Named(_) | Type::Array { .. }) => {
+        (_, Type::DynamicArray { .. } | Type::Named(_) | Type::Array { .. }) => {
             unreachable!("semantic analysis rejects aggregate comparison")
         }
     }
@@ -853,7 +943,7 @@ fn uses_bool_print(module: &Module) -> bool {
 
 fn array_types(module: &Module) -> Vec<Type> {
     fn add(ty: &Type, result: &mut Vec<Type>) {
-        let Type::Array { element, .. } = ty else {
+        let (Type::Array { element, .. } | Type::DynamicArray { element }) = ty else {
             return;
         };
         add(element, result);
@@ -876,13 +966,7 @@ fn array_types(module: &Module) -> Vec<Type> {
             | Instruction::ArraySet {
                 element, length, ..
             } => {
-                add(
-                    &Type::Array {
-                        element: Box::new(element.clone()),
-                        length: *length,
-                    },
-                    &mut result,
-                );
+                add(&array_type(element, *length), &mut result);
             }
             _ => {}
         }
@@ -902,10 +986,7 @@ fn array_set_types(module: &Module) -> Vec<Type> {
             element, length, ..
         } = &instruction.instruction
         {
-            let ty = Type::Array {
-                element: Box::new(element.clone()),
-                length: *length,
-            };
+            let ty = array_type(element, *length);
             if !result.contains(&ty) {
                 result.push(ty);
             }
@@ -915,6 +996,9 @@ fn array_set_types(module: &Module) -> Vec<Type> {
 }
 
 fn emit_array_get(ty: &Type, module: &Module, output: &mut String) {
+    if let Type::DynamicArray { element } = ty {
+        return emit_dynamic_access(element, false, module, output);
+    }
     let Type::Array { element, length } = ty else {
         unreachable!("array getter requires an array type")
     };
@@ -923,7 +1007,7 @@ fn emit_array_get(ty: &Type, module: &Module, output: &mut String) {
     writeln!(
         output,
         "define internal {element_ty} @{}({array_ty} %value, i64 %index, ptr %failure) {{",
-        array_get_name(element, *length, module)
+        array_get_name(element, Some(*length), module)
     )
     .unwrap();
     output.push_str("entry:\n");
@@ -947,6 +1031,9 @@ fn emit_array_get(ty: &Type, module: &Module, output: &mut String) {
 }
 
 fn emit_array_set(ty: &Type, module: &Module, output: &mut String) {
+    if let Type::DynamicArray { element } = ty {
+        return emit_dynamic_access(element, true, module, output);
+    }
     let Type::Array { element, length } = ty else {
         unreachable!("array setter requires an array type")
     };
@@ -955,7 +1042,7 @@ fn emit_array_set(ty: &Type, module: &Module, output: &mut String) {
     writeln!(
         output,
         "define internal {array_ty} @{}({array_ty} %value, i64 %index, {element_ty} %replacement, ptr %failure) {{",
-        array_set_name(element, *length, module)
+        array_set_name(element, Some(*length), module)
     )
     .unwrap();
     output.push_str("entry:\n");
@@ -979,14 +1066,16 @@ fn emit_array_set(ty: &Type, module: &Module, output: &mut String) {
     output.push_str("}\n");
 }
 
-fn array_get_name(element: &Type, length: usize, module: &Module) -> String {
+fn array_get_name(element: &Type, length: Option<usize>, module: &Module) -> String {
+    let length = length.map_or_else(|| "dynamic".into(), |n| n.to_string());
     format!(
         "cerune.array.get.{}.{length}",
         array_element_name(element, module)
     )
 }
 
-fn array_set_name(element: &Type, length: usize, module: &Module) -> String {
+fn array_set_name(element: &Type, length: Option<usize>, module: &Module) -> String {
+    let length = length.map_or_else(|| "dynamic".into(), |n| n.to_string());
     format!(
         "cerune.array.set.{}.{length}",
         array_element_name(element, module)
@@ -995,6 +1084,9 @@ fn array_set_name(element: &Type, length: usize, module: &Module) -> String {
 
 fn array_element_name(element: &Type, module: &Module) -> String {
     match element {
+        Type::DynamicArray { element } => {
+            format!("dynamic.{}", array_element_name(element, module))
+        }
         Type::String => "string".into(),
         Type::Bool => "bool".into(),
         Type::I64 => "i64".into(),
@@ -1036,5 +1128,46 @@ fn unsigned_compare(op: CompareOp) -> &'static str {
         CompareOp::LessEqual => "icmp ule",
         CompareOp::Greater => "icmp ugt",
         CompareOp::GreaterEqual => "icmp uge",
+    }
+}
+
+fn array_type(element: &Type, length: Option<usize>) -> Type {
+    let element = Box::new(element.clone());
+    match length {
+        Some(length) => Type::Array { element, length },
+        None => Type::DynamicArray { element },
+    }
+}
+// 動的配列の境界検査と型付きload/store。要素走査は共通IRのループのままです。
+fn emit_dynamic_access(element: &Type, set: bool, module: &Module, output: &mut String) {
+    let ty = type_name(element, module);
+    if set {
+        writeln!(output, "define internal %cerune.array @{}(%cerune.array %value, i64 %index, {ty} %replacement, ptr %failure) {{", array_set_name(element, None, module)).unwrap();
+    } else {
+        writeln!(
+            output,
+            "define internal {ty} @{}(%cerune.array %value, i64 %index, ptr %failure) {{",
+            array_get_name(element, None, module)
+        )
+        .unwrap();
+    }
+    output.push_str("entry:\n  %data = call ptr @cerune.array.checked.data(%cerune.array %value, i64 %index, ptr %failure)\n");
+    writeln!(
+        output,
+        "  %element = getelementptr {ty}, ptr %data, i64 %index"
+    )
+    .unwrap();
+    if set {
+        writeln!(
+            output,
+            "  store {ty} %replacement, ptr %element\n  ret %cerune.array %value\n}}"
+        )
+        .unwrap();
+    } else {
+        writeln!(
+            output,
+            "  %result = load {ty}, ptr %element\n  ret {ty} %result\n}}"
+        )
+        .unwrap();
     }
 }

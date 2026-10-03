@@ -292,9 +292,9 @@ See [Named product type design](../design/product-types.en.md) for the detailed 
 
 See the [syntax and evaluation design](../design/product-updates.en.md) and [example](../../examples/product_update.ceru).
 
-## Dynamic arrays (IR Executor, VM, and C)
+## Dynamic arrays (IR Executor, VM, C, and LLVM)
 
-`[T]` is an owned value with a runtime length. Execute it with `run` / `run-ir` / `run-vm`; inspect it with `emit-ir` / `emit-bytecode` / `emit-c`. Build generated C with an external compiler. LLVM, QBE, WAT, ASM, and native object generation currently return an unsupported-feature diagnostic.
+`[T]` is an owned value with a runtime length. Execute it with `run` / `run-ir` / `run-vm`; inspect it with `emit-ir` / `emit-bytecode` / `emit-c` / `emit-llvm`. Build generated C/LLVM with an external compiler; LLVM requires an explicit `--target`. QBE, WAT, ASM, and native object generation currently return an unsupported-feature diagnostic.
 
 | Operation | Meaning |
 | --- | --- |
@@ -387,7 +387,7 @@ The shared resource limit is 100,000 scalar units per aggregate value and type-c
 
 ### Array element count
 
-`array_len(values)` accepts one array and returns its outermost element count as `i64`, regardless of the element type: `N` for `[T; N]`, or the runtime length for `[T]` (dynamic arrays currently support IR/VM/C). Use `byte_len` for string bytes.
+`array_len(values)` accepts one array and returns its outermost element count as `i64`, regardless of the element type: `N` for `[T; N]`, or the runtime length for `[T]` (dynamic arrays currently support IR/VM/C/LLVM). Use `byte_len` for string bytes.
 
 ```cerune
 matrix: [[i64; 3]; 2] = [[1, 2, 3], [4, 5, 6]];
@@ -404,7 +404,7 @@ Functions, constants, and import aliases cannot use this name. Variable and func
 
 ### Fixed-array iteration
 
-Dynamic arrays use the same iteration rules in IR/VM/C; zero length skips the body.
+Dynamic arrays use the same iteration rules in IR/VM/C/LLVM; zero length skips the body.
 
 ```cerune
 values: [i64; 3] = [4, 7, 9];

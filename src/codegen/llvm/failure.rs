@@ -9,7 +9,7 @@ use crate::{
 };
 
 // 表の位置は生成物内だけの契約です。公開レコードには理由の文字列を使います。
-const CODES: [Code; 15] = [
+const CODES: [Code; 16] = [
     Code::IntegerOverflow,
     Code::DivisionByZero,
     Code::DivisionOverflow,
@@ -25,6 +25,7 @@ const CODES: [Code; 15] = [
     Code::AllocationSizeOverflow,
     Code::AllocationLimitExceeded,
     Code::AllocationFailed,
+    Code::ArrayRangeOutOfBounds,
 ];
 
 pub(super) fn index(code: Code) -> usize {
@@ -36,7 +37,8 @@ pub(super) fn index(code: Code) -> usize {
 
 fn codes(instruction: &Instruction) -> Vec<Code> {
     match instruction {
-        Instruction::StringConcat { .. } => vec![
+        Instruction::ArrayRangeCheck { .. } => vec![Code::ArrayRangeOutOfBounds],
+        Instruction::StringConcat { .. } | Instruction::ArrayAllocate { .. } => vec![
             Code::AllocationSizeOverflow,
             Code::AllocationLimitExceeded,
             Code::AllocationFailed,
@@ -146,8 +148,10 @@ pub(super) fn emit_data(module: &Module, output: &mut String) {
             unreachable!()
         };
         let name = table_name(origin);
-        let count = if module.string_heap_limit.is_some() {
+        let count = if module.array_heap_limit.is_some() {
             CODES.len()
+        } else if module.string_heap_limit.is_some() {
+            15
         } else {
             12
         };
