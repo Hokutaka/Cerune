@@ -1,0 +1,14 @@
+// 関数から返した範囲は、元の配列と独立して更新できます。
+// The returned range owns its elements independently of the source.
+fn tail<T>(values: [T], count: i64) -> [T] {
+    end: i64 = array_len(values);
+    return array_copy_range(values, end - count, end);
+}
+readings: [i64] = array_copy([10, 20, 30]);
+count: i64 = 2;
+mut latest: [i64] = tail::<i64>(readings, count);
+print(latest);   // [20, 30]
+latest[0] = 99;
+print(readings); // [10, 20, 30]
+print(latest);   // [99, 30]
+print(tail::<i64>(readings, 0)); // []

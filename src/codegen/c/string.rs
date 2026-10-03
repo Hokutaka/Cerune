@@ -6,7 +6,7 @@ pub(super) fn uses_type(module: &Module) -> bool {
     fn contains(ty: &Type) -> bool {
         match ty {
             Type::String => true,
-            Type::Array { element, .. } => contains(element),
+            Type::Array { element, .. } | Type::DynamicArray { element } => contains(element),
             Type::Bool | Type::U64 | Type::I64 | Type::Float | Type::Double | Type::Named(_) => {
                 false
             }

@@ -11,7 +11,19 @@ pub(super) fn lower(module: &mut Module) {
 fn statements(body: &mut [Statement], temporaries: &mut Vec<Type>) {
     for statement in body {
         match statement {
-            Statement::Binding { value, .. }
+            Statement::ArrayInitialize { array, value } => {
+                expression(array, temporaries);
+                expression(value, temporaries);
+            }
+            Statement::ArrayRangeCheck {
+                length, start, end, ..
+            } => {
+                for value in [length, start, end] {
+                    expression(value, temporaries);
+                }
+            }
+            Statement::ArrayManage { value, .. }
+            | Statement::Binding { value, .. }
             | Statement::StringManage { value, .. }
             | Statement::Write { value, .. }
             | Statement::Print { value, .. } => {
@@ -106,7 +118,9 @@ fn expression(expr: &mut Expr, temporaries: &mut Vec<Type>) {
             expression(right, temporaries);
             return;
         }
-        ExprKind::ArrayLength { value, .. }
+        ExprKind::ArrayAllocate { length: value, .. }
+        | ExprKind::ArrayReleaseOwner { value }
+        | ExprKind::ArrayLength { value, .. }
         | ExprKind::StringByteLength { value }
         | ExprKind::ConvertNumeric { value, .. }
         | ExprKind::CheckIntegerRange { value, .. }
@@ -164,7 +178,9 @@ fn order(children: Vec<&mut Expr>, temporaries: &mut Vec<Type>) -> Vec<(usize, E
 
 fn observable(expr: &Expr) -> bool {
     match &expr.kind {
-        ExprKind::StringConcat { .. }
+        ExprKind::ArrayAllocate { .. }
+        | ExprKind::ArrayReleaseOwner { .. }
+        | ExprKind::StringConcat { .. }
         | ExprKind::Call { .. }
         | ExprKind::Index { .. }
         | ExprKind::ConvertNumeric { .. }

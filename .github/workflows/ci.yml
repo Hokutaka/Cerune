@@ -56,10 +56,10 @@ jobs:
           name: linux-test-log
           path: target/ci-tests.log
           if-no-files-found: ignore
-      - name: C string and u64 sanitizer checks
+      - name: C strings, u64, and dynamic array sanitizer checks
         run: |
           ulimit -c 0
-          cargo test --test c_strings
+          cargo test --test c_strings --test dynamic_arrays
         env:
           CERUNE_TEST_CC: clang
           CERUNE_TEST_SANITIZE: "1"
