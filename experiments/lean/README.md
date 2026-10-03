@@ -9,9 +9,14 @@ This precedes a public backend. It verifies only the selected `increment` functi
 | --- | --- |
 | [increment.ceru](increment.ceru) | `u8`を1増やす。通常の実行例 / Increment a checked `u8` |
 | [Model.lean](Model.lean) | 引数・定数・加算・overflowと出自の参照モデル / Reference model |
+| [main.rs](main.rs) | Rust側の生成ツールの入口 / Rust verification-tool entry point |
 | [emit.rs](emit.rs) | 実際のIRからモデルの項と直接Lean定義を別々に生成 / Experimental translation |
 | [Properties.lean](Properties.lean) | 生成器と分離した性質と、IR側への移送 / Independent properties and transfer |
 | [lean-toolchain](lean-toolchain) | 検証するLeanの固定版 / Pinned checker |
+
+このフォルダに証明・入力・生成ツールをまとめ、Ceruneの実行サンプル一覧である`examples/`とは分離します。Cargoの`--example lean_verification`はこのフォルダのRustツールを起動するための開発用ターゲット名です。通常のCerune build/runにLeanは不要です。
+
+Proofs, input, and the generator live here, separately from the Cerune program list in `examples/`. Cargo's `--example lean_verification` names the Rust development tool in this folder. Ordinary Cerune build/run does not require Lean.
 
 リポジトリのルートから実行します。実行例の出力は`1 → 42 → 255`です。
 Run from the repository root; the example prints `1 → 42 → 255`.

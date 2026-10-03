@@ -12,8 +12,6 @@
 | [runtime_failures](runtime_failures/README.md) | 停止前の出力と失敗する式を追う4例 |
 | [source_files](source_files/README.md) | 型・関数のファイルを別々に解析し、出自を比較するRust API例。importは使わない |
 
-[Lean検証実験](../experiments/lean/README.md)では、小さな関数の実行比較と証明を試せます。公開Lean backendとは別の実験です。
-
 ## IRから直接実行
 
 `cargo run --quiet -- run-ir examples/ir_execution.ceru`で、関数・配列のコピー・反復・文字列連結を試せます。`run`は同じ実行経路で、VMとの比較には`run-vm`を使います。`emit-ir`で共通の処理を確認できます。

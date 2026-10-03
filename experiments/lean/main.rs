@@ -1,5 +1,5 @@
 //! 最小の証明実験を生成します。Ceruneの公開emit-leanではありません。
-#[path = "../experiments/lean/emit.rs"]
+#[path = "emit.rs"]
 mod experiment;
 
 fn main() {
