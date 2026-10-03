@@ -2,7 +2,7 @@
 
 [日本語](owned-arrays.ja.md)
 
-**`[T]`, `array_copy`, `array_copy_range`, and the array budget are implemented in common IR and IR Executor/VM. C, LLVM, QBE, WAT, ASM, native objects, and `array_repeat` are pending.** Runnable examples cover [copies](../../examples/dynamic_arrays/copy.ceru) and [nesting, functions, and enums](../../examples/dynamic_arrays/nested.ceru). It builds on [implemented string ownership](dynamic-data.en.md), but mutable array storage must be copied independently.
+**`[T]`, `array_copy`, `array_copy_range`, and the array budget are implemented in common IR, IR Executor/VM, and generated C. LLVM, QBE, WAT, ASM, native objects, and `array_repeat` are pending.** Runnable examples cover [copies](../../examples/dynamic_arrays/copy.ceru) and [nesting, functions, and enums](../../examples/dynamic_arrays/nested.ceru). It builds on [implemented string ownership](dynamic-data.en.md), but mutable array storage must be copied independently.
 
 ## Implementation progress
 
@@ -10,11 +10,11 @@
 | --- | --- |
 | Argument ownership transfer | Implemented: pass caller-prepared ownership once; the callee releases it. IR distinguishes ownership from internal reading |
 | Reads and owned-value preparation | Implemented: common IR marks `read` bindings and preserves temporary projection/release order |
-| Dynamic array types, allocation, and independent copies | Implemented in IR/VM, including ranges, display/equality/iteration, aggregates, and functions |
+| Dynamic array types, allocation, and independent copies | Implemented in IR/VM/C, including ranges, display/equality/iteration, aggregates, and functions |
 | `array_repeat` | Pending operation |
-| Dynamic arrays across backends and the completion criteria below | Not implemented |
+| Dynamic arrays across backends and the completion criteria below | C implemented; LLVM and subsequent routes pending |
 
-Dynamic arrays are also compared between IR/VM for results, failure reasons, source origins, and prior output. See [call ownership](dynamic-data.en.md#ownership-across-calls), [read preparation](dynamic-data.en.md#reads-and-owned-value-preparation), and the [argument](../../examples/owned_arguments.ceru) and [read](../../examples/borrowed_reads.ceru) examples. This does not mark compiled routes as supported.
+Dynamic arrays are also compared between IR/VM/generated C for results, failure reasons, source origins, and prior output. See [call ownership](dynamic-data.en.md#ownership-across-calls), [read preparation](dynamic-data.en.md#reads-and-owned-value-preparation), and the [argument](../../examples/owned_arguments.ceru) and [read](../../examples/borrowed_reads.ceru) examples. This does not mark the other compiled routes as supported.
 
 ## Types and initial operations
 
@@ -32,7 +32,7 @@ Implemented operation names follow `array_len`. Existing example functions named
 
 There is no implicit fixed/dynamic conversion. `[1, 2]` remains a fixed-array literal. Initially no dynamic-array literal is added. Empty values come from an empty range. The future `array_repeat::<T>(seed, 0)` proposal also evaluates seed for zero elements. Existing restrictions on `[T; 0]` and empty literals are unchanged.
 
-The following runs through IR and VM:
+The following runs through IR, VM, and generated C:
 
 ```text
 mut values: [i64] = array_copy([10, 20, 30]);
@@ -99,7 +99,7 @@ An allocation introduced by copying points to the source expression requesting t
 
 ## Budgets and lifetimes
 
-`--array-heap-limit <bytes>` is implemented, defaulting to 64 MiB and accepting decimal integers from zero through i64::MAX. Preserve the meaning of `--string-heap-limit`. Both are settings made before execution/generation and recorded in IR and bytecode. Compiled artifacts will use the same setting when implemented. Initially dynamic arrays are not allowed in compile-time constants; explicitly copy fixed-array constants at runtime.
+`--array-heap-limit <bytes>` is implemented, defaulting to 64 MiB and accepting decimal integers from zero through i64::MAX. Preserve the meaning of `--string-heap-limit`. Both are settings made before execution/generation and recorded in IR and bytecode. Generated C uses the same setting; other compiled artifacts will follow. Initially dynamic arrays are not allowed in compile-time constants; explicitly copy fixed-array constants at runtime.
 
 To keep pointer width and padding from changing where budget failures occur, **count live array element storage using common accounting widths**. This is not a physical-memory limit.
 
@@ -129,13 +129,21 @@ Release bindings in reverse order at block exit, return, break, and continue; re
 
 Preserve correspondence between AST types, common IR, backend IR, bytecode, and artifacts. Element traversal must remain visible as ordinary common-IR loops and branches, rather than disappear into one opaque host call. Backends implement layout, allocation, load/store, and release without redefining value-copy semantics separately. Keep existing LLVM/ASM/object origin annotations.
 
-IR Executor and VM share primitive typed storage management per execution. Execution remains independent: elements are copied by common-IR or bytecode loops. Future C, LLVM, QBE, ASM, and native COFF/ELF use the explicit target's allocator and ABI; WAT uses private memory. Do not expose shared storage addresses through the language or observation APIs. Recursive types, dynamic arrays as external host values, borrowing, and FFI are outside this change.
+IR Executor and VM share primitive typed storage management per execution. Execution remains independent: elements are copied by common-IR or bytecode loops. C uses the standard allocator of the target selected by the downstream C compiler. Future LLVM, QBE, ASM, and native COFF/ELF use the explicit target's allocator and ABI; WAT uses private memory. Do not expose shared storage addresses through the language or observation APIs. Recursive types, dynamic arrays as external host values, borrowing, and FFI are outside this change.
 
 ### Ownership handoff from a temporary
 
 Copying a binding always allocates independent storage. Extracting an owned temporary such as `make().field` briefly retains the selected array before releasing the parent aggregate. Only this handoff uses `array.retain-owner` and the owner count; it is not copy-on-write. The last release enters an ordinary reverse IR loop to release elements, followed by `array.free-elements`. Unrelated fields do not stay alive and consume the next argument's budget.
 
 IR Executor and VM reclaim partially initialized regions at the execution boundary. Allocation failure, size overflow, and budget exhaustion are tested separately. Invalid ownership is an internal error, not a language failure.
+
+## C support
+
+C uses an owner pointer and length descriptor. The owner tracks references, initialized elements, and logical bytes; separately allocated element storage has the target C type's alignment. Empty arrays allocate nothing. Accounting width and physical `sizeof(T)` are checked independently, before budget checks and allocation.
+
+Element copying, equality, display, and reverse release remain common-IR loops emitted as C. Helpers only manage storage and typed loads/stores. Tests check live accounting after success, allocator failure, and budget failure during partial copies. A runtime stop emits the existing diagnostic and terminates the process; the OS reclaims remaining storage. No recoverable execution API is added.
+
+Compare the same [source](../../tests/fixtures/dynamic-arrays/source.ceru), [IR](../../tests/fixtures/dynamic-arrays/ir.ceir), [bytecode](../../tests/fixtures/dynamic-arrays/bytecode.cebc), and [C](../../tests/fixtures/dynamic-arrays/c.c). The [returned-range example](../../examples/dynamic_arrays/window.ceru) also runs through IR/VM/C. C comparisons use `-O0` and `-O2`, plus ASan/UBSan on Linux. These are external compiler test settings, not implicit Cerune optimization.
 
 ## Implementation acceptance criteria
 

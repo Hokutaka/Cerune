@@ -1,5 +1,6 @@
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Type {
+    DynamicArray { element: Box<Type> },
     Bool,
     String,
     I64,
@@ -12,6 +13,7 @@ pub enum Type {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Module {
+    pub array_heap_limit: Option<u64>,
     pub string_heap_limit: Option<u64>,
     pub uses_write: bool,
     pub uses_strings: bool,
@@ -55,6 +57,20 @@ pub struct FieldDefinition {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Statement {
+    ArrayInitialize {
+        array: Expr,
+        value: Expr,
+    },
+    ArrayManage {
+        value: Expr,
+        retain: bool,
+    },
+    ArrayRangeCheck {
+        origin: Origin,
+        length: Expr,
+        start: Expr,
+        end: Expr,
+    },
     StringManage {
         value: Expr,
         retain: bool,
@@ -114,7 +130,7 @@ pub struct ArrayProjection {
     pub origin: Origin,
     pub index: Expr,
     pub element: Type,
-    pub length: usize,
+    pub length: Option<usize>,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -151,13 +167,20 @@ impl From<&crate::ir::Expr> for Origin {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum ExprKind {
+    ArrayAllocate {
+        length: Box<Expr>,
+        element_width: u64,
+    },
+    ArrayReleaseOwner {
+        value: Box<Expr>,
+    },
     StringConcat {
         left: Box<Expr>,
         right: Box<Expr>,
     },
     ArrayLength {
         value: Box<Expr>,
-        length: usize,
+        length: Option<usize>,
     },
     StringByteLength {
         value: Box<Expr>,

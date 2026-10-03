@@ -1,4 +1,6 @@
-//! 動的配列の初回対応。IRとVMの結果・停止理由・出自を照合します。
+//! 動的配列のIR・VM・生成Cの結果・停止理由・出自を照合します。
+#[path = "support/c_arrays.rs"]
+mod c_arrays;
 use cerune_lang::{bytecode, compile_to_ir, ir, ir_executor, run_bytecode};
 
 fn compare(source: &str, limit: u64) -> Result<String, ir_executor::ExecutionError> {
@@ -15,6 +17,7 @@ fn compare(source: &str, limit: u64) -> Result<String, ir_executor::ExecutionErr
         }
         _ => panic!("IR: {direct:?}\nVM: {vm:?}\n{source}"),
     }
+    c_arrays::compare(&program, &direct);
     direct
 }
 fn success(source: &str, expected: &str) {
@@ -200,8 +203,8 @@ fn unimplemented_compiled_routes_diagnose_even_unused_dynamic_types() {
         "fn unused(a:[i64])->void{} print(1);",
     ] {
         let p = compile_to_ir(source).unwrap();
+        c_arrays::compare(&p, &ir_executor::run(&p));
         for result in [
-            codegen::emit_c(&p),
             codegen::emit_llvm(&p),
             codegen::emit_qbe(&p),
             codegen::emit_wat(&p),
@@ -229,6 +232,10 @@ fn unimplemented_compiled_routes_diagnose_even_unused_dynamic_types() {
 
 #[test]
 fn examples_and_generated_steps_match_checked_artifacts() {
+    success(
+        include_str!("../examples/dynamic_arrays/window.ceru"),
+        "[20, 30]\n[10, 20, 30]\n[99, 30]\n[]\n",
+    );
     for (source, expected) in [
         (
             include_str!("../examples/dynamic_arrays/copy.ceru"),
@@ -242,6 +249,10 @@ fn examples_and_generated_steps_match_checked_artifacts() {
         success(source, expected);
     }
     let p = compile_to_ir(include_str!("fixtures/dynamic-arrays/source.ceru")).unwrap();
+    assert_eq!(
+        cerune_lang::codegen::emit_c(&p).unwrap(),
+        include_str!("fixtures/dynamic-arrays/c.c")
+    );
     assert_eq!(
         ir::text::emit(&p),
         include_str!("fixtures/dynamic-arrays/ir.ceir")
@@ -268,12 +279,14 @@ fn array_and_string_budgets_are_independent() {
     let mut p = compile_to_ir(r#"a:[string]=array_copy([concat("a","b")]);print(a);"#).unwrap();
     p.array_heap_limit = 16;
     p.string_heap_limit = 2;
+    c_arrays::compare(&p, &ir_executor::run(&p));
     assert_eq!(ir_executor::run(&p).unwrap(), "[\"ab\"]\n");
     assert_eq!(
         run_bytecode(&bytecode::lower(&p).unwrap()).unwrap(),
         "[\"ab\"]\n"
     );
     p.string_heap_limit = 1;
+    c_arrays::compare(&p, &ir_executor::run(&p));
     let e = ir_executor::run(&p).unwrap_err();
     assert_eq!(
         e.runtime_failure().unwrap().code.name(),
@@ -382,14 +395,7 @@ fn cli_examples_limits_modules_and_unsupported_output_are_explicit() {
         assert!(!result.status.success());
         assert!(String::from_utf8_lossy(&result.stderr).contains("allocation-limit-exceeded"));
     }
-    for command in [
-        "emit-c",
-        "emit-llvm",
-        "emit-qbe",
-        "emit-wat",
-        "emit-asm",
-        "emit-obj",
-    ] {
+    for command in ["emit-llvm", "emit-qbe", "emit-wat", "emit-asm", "emit-obj"] {
         let out = w.0.join("preserved-output");
         fs::write(&out, b"keep").unwrap();
         let mut args = vec![command, file, "-o", out.to_str().unwrap()];
@@ -445,6 +451,29 @@ fn cli_examples_limits_modules_and_unsupported_output_are_explicit() {
         String::from_utf8_lossy(&result.stderr)
     );
     assert_eq!(result.stdout, b"[1, 2]\n");
+    for module_source in [
+        "pub fn make()->[i64]{return array_copy([1,2]);}",
+        "pub fn make()->[i64]{print(7);return array_copy_range([1],-1,1);}",
+    ] {
+        fs::write(w.0.join("values.ceru"), module_source).unwrap();
+        let p = cerune_lang::modules::load(&main).unwrap().to_ir().unwrap();
+        let direct = ir_executor::run(&p);
+        let vm = run_bytecode(&bytecode::lower(&p).unwrap());
+        match (&direct, &vm) {
+            (Ok(a), Ok(b)) => assert_eq!(a, b),
+            (Err(a), Err(b)) => {
+                assert_eq!(a.runtime_failure(), b.runtime_failure());
+                assert_eq!(a.output(), b.vm_error().output());
+            }
+            _ => panic!("module IR/VM mismatch"),
+        }
+        c_arrays::compare(&p, &direct);
+    }
+    fs::write(
+        w.0.join("values.ceru"),
+        "pub fn make()->[i64]{return array_copy([1,2]);}",
+    )
+    .unwrap();
     let result = cli(&["run-vm", main.to_str().unwrap()]);
     assert!(
         result.status.success(),
@@ -470,4 +499,10 @@ fn partial_nested_copy_failure_and_element_replacement_keep_previous_output() {
     let source = r#"mut a:[[i64]]=array_copy([array_copy([1])]);keep:[i64]=array_copy([7]);print(a);a[0]=a[0];print(a);"#;
     failure(source, 39, "allocation-limit-exceeded", "[[1]]\n");
     assert_eq!(compare(source, 40).unwrap(), "[[1]]\n[[1]]\n");
+}
+
+#[test]
+fn c_allocation_boundaries_are_distinct_from_budget_and_empty_storage() {
+    let p = compile_to_ir("print(array_copy([1]));").unwrap();
+    c_arrays::runtime_boundaries(&p);
 }
