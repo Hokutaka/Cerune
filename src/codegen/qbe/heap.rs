@@ -1,11 +1,13 @@
 //! 長さ付き文字列のうち動的領域だけを共有・解放します。
-pub(super) fn support(limit: u64) -> String {
-    SOURCE.replace("@LIMIT@", &limit.to_string())
+pub(super) fn support(limit: u64, section: &str) -> String {
+    SOURCE
+        .replace("@LIMIT@", &limit.to_string())
+        .replace("@READ_ONLY@", section)
 }
 const SOURCE: &str = r#"
 data $cerune_string_owners = align 8 { l 0 }
 data $cerune_string_live = align 8 { l 0 }
-section ".rodata" data $cerune_string_empty = align 8 { l 0 }
+section "@READ_ONLY@" data $cerune_string_empty = align 8 { l 0 }
 function $cerune_string_retain(l %value) {
 @start
   %head =l loadl $cerune_string_owners

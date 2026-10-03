@@ -14,7 +14,7 @@ A nonzero exit alone cannot distinguish an intended language stop from an access
 | Internal COFF/ELF encoder | Encodes the same assembly lowering and diagnostics |
 | C | `runtime-v1` on C standard stderr, followed by `abort` |
 | LLVM | `runtime-v1` using the explicit Windows/Linux output ABI, followed by a trap |
-| QBE | `runtime-v1` using the Linux/SysV output ABI, followed by `abort` |
+| QBE | `runtime-v1` using the explicit Windows/Linux output ABI, followed by `abort` |
 | WAT | `runtime-v1` bytes through `cerune.write_error_byte`, followed by `unreachable` |
 
 IR Executor, VM, C, LLVM, QBE, WAT, direct assembly, and internal objects expose comparable reasons and source locations for language check failures. Verification requires both the record and each route's intended termination; OS and host exit codes remain route-specific.
@@ -76,7 +76,7 @@ The internal Windows ASM/COFF routes do not yet emit unwind information. We repr
 
 C passes immutable location strings into checked helpers, which report codes and locations through standard C stderr on failure. QBE and LLVM likewise use read-only data and helper arguments. Successful paths do not mutate a global current-location variable, and caller locations do not overwrite failures inside called functions.
 
-LLVM requires `--target` for potentially failing operations, conversions, or bounds checks, as well as strings. Even `print(1 + 2);` emits a checked addition. Missing targets produce a diagnostic rather than inferring Windows/Linux from the host. QBE diagnostics use its existing fixed Linux/SysV numeric runtime ABI; strings retain the explicit-target requirement.
+LLVM requires `--target` for potentially failing operations, conversions, or bounds checks, as well as strings. Even `print(1 + 2);` emits a checked addition. Missing targets produce a diagnostic rather than inferring Windows/Linux from the host. QBE also selects its diagnostic ABI through the explicit target. Strings require a target; numeric-only calls without one retain the previous Linux/SysV assumptions. Windows writes the record with `_write`, disables additional CRT messages and crash collection, then calls `abort` for exit code 3. See [QBE Windows support](qbe-windows.en.md).
 
 WAT emits ASCII bytes from statically specialized checked helpers through `cerune.write_error_byte(i32) -> void`. Modules with diagnostics require this import. Hosts retain/write these bytes as stderr and preserve previous stdout when a trap occurs. Neither memory nor mutable diagnostic state is exported. Complete delivery is not guaranteed if the host discards output, throws from an import, or encounters an I/O error.
 
@@ -86,7 +86,7 @@ Each source-derived failure site has a read-only record. This increases artifact
 
 ## Verification
 
-`cargo test --test runtime_routes` uses these external tools. Configured but unavailable tools fail the test. QBE execution runs on Linux x86-64. Existing Windows numeric-only stdout uses CRT CRLF, normalized to LF for comparison; output containing strings requires exact bytes, including NUL and CR/LF.
+`cargo test --test runtime_routes` uses these external tools. Configured but unavailable tools fail the test. This test runs QBE on Linux x86-64. Windows uses `cargo test --test qbe_windows -- --include-ignored`, requiring exact stdout/stderr bytes even for numeric-only programs. For the existing C and LLVM routes in `runtime_routes`, Windows numeric-only CRT output normalizes CRLF to LF for comparison; output containing strings requires exact bytes, including NUL and CR/LF.
 
 | Environment variable | Tool |
 | --- | --- |

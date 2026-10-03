@@ -5,7 +5,11 @@ pub(super) fn emit(module: &Module, output: &mut String) {
     for (id, value) in module.strings.iter().enumerate() {
         write!(
             output,
-            "section \".rodata\" data $cerune_string_{id} = align 8 {{ l {}",
+            "section \"{}\" data $cerune_string_{id} = align 8 {{ l {}",
+            module
+                .target
+                .unwrap_or(super::Target::X86_64UnknownLinuxGnu)
+                .read_only_section(),
             value.len()
         )
         .unwrap();

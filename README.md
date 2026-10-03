@@ -82,7 +82,7 @@ cerune emit-c examples/floating_point.ceru -o floating_point.c
 | `emit-bytecode` | bytecodeテキスト（`.cebc`） | 命令列を確認 |
 | `emit-c` | C（`.c`） | GCC / Clangなど |
 | `emit-llvm` | LLVM IR（`.ll`） | LLVM / Clang、Windows / Linux x86-64 |
-| `emit-qbe` | QBE IR（`.ssa`） | QBE 1.3、Linux x86-64。Windows x64はCerune対応準備中 |
+| `emit-qbe` | QBE IR（`.ssa`） | QBE 1.3、Windows x64 / Linux x86-64（明示ターゲット） |
 | `emit-wat` | WebAssembly Text（`.wat`） | WebAssembly用ツールとホスト |
 | `emit-asm` | アセンブリ（`.s`） | Windows / Linux x86-64 |
 | `emit-obj` | ELF / COFFオブジェクト（`.o` / `.obj`） | 外部リンカ。`--target`・`-o`必須 |

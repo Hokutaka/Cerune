@@ -114,7 +114,7 @@ cerune emit-bytecode <file> [-o <output.cebc>]
 | --- | --- | --- | --- |
 | `emit-c` | C | Ceruneでは指定しない | `.c` |
 | `emit-llvm` | LLVM IR | 未指定、または明示的なWindows x64 / Linux x86-64 | `.ll` |
-| `emit-qbe` | QBE IR | 未指定、または明示的なLinux x86-64。Windows x64はCerune対応準備中（QBE 1.3は対応） | `.ssa` |
+| `emit-qbe` | QBE IR | 未指定、または明示的なWindows x64 / Linux x86-64 | `.ssa` |
 | `emit-wat` | WebAssembly Text | WebAssembly | `.wat` |
 | `emit-asm` | ネイティブアセンブリ | x86-64、Windows / Linux、各OSの呼出規約 | `.s` |
 | `emit-obj` | 自前のネイティブオブジェクト | 明示的なWindows x64 / Linux x86-64 | `.obj` / `.o` |
@@ -150,7 +150,7 @@ CeruneはLLVMの生成だけを行い、Clangや実行ファイルを起動し�
 
 ### QBEのターゲット指定
 
-文字列を含むQBE出力では`--target x86_64-unknown-linux-gnu`を指定します。省略・未対応のターゲット・オプションの重複は診断し、既存の出力ファイルを変更しません。数値だけの既存の呼び出しでは省略できます。
+QBEの`--target`は`x86_64-unknown-linux-gnu`または`x86_64-pc-windows-msvc`です。文字列では必須です。省略・未対応のターゲット・オプションの重複は診断し、既存の出力ファイルを変更しません。数値だけの既存の呼び出しでは省略できますが、Windows用の出力・診断を選ぶには明示指定が必要です。
 
 ```sh
 cerune emit-qbe examples/string_lookup.ceru --target x86_64-unknown-linux-gnu -o target/string_lookup.ssa
@@ -159,7 +159,16 @@ cc target/string_lookup.s -o target/string_lookup
 ./target/string_lookup
 ```
 
-生成物のコメントにターゲットを残します。QBEとCリンカの起動は利用側の操作です。ライブラリでは`compile_to_qbe_with_target(source, Some(codegen::qbe::Target::X86_64UnknownLinuxGnu))`を使います。
+Windows x64では、QBE 1.3とClang、MSVCのCRT・リンカを用意します。
+
+```powershell
+cerune emit-qbe examples/function_arguments.ceru --target x86_64-pc-windows-msvc -o target/function_arguments.ssa
+qbe -t amd64_win -o target/function_arguments.s target/function_arguments.ssa
+clang --target=x86_64-pc-windows-msvc target/function_arguments.s -o target/function_arguments.exe
+./target/function_arguments.exe
+```
+
+生成物のコメントにターゲットとQBEの`-t`を残します。QBEとリンカの起動は利用側の操作です。ライブラリでは`compile_to_qbe_with_target(source, Some(codegen::qbe::Target::X86_64UnknownLinuxGnu))`、または`X86_64PcWindowsMsvc`を使います。[WindowsのABIと検証](../design/qbe-windows.ja.md)も参照してください。
 
 ### WATと直接アセンブリの文字列
 

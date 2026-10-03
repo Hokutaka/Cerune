@@ -57,7 +57,7 @@ IR・VM・NativeはCeruneが完成成果物と実行契約を定義する経路�
 | --- | --- | --- |
 | C | Ceruneでは指定しない | Cソース `.c` |
 | LLVM IR | 未指定、または明示的なWindows x64 / Linux x86-64（文字列・実行時検査では必須） | LLVM IR `.ll` |
-| QBE IR | 未指定、または明示的なLinux x86-64（文字列では必須）。Windows x64はCerune対応準備中（QBE 1.3の`amd64_win`） | QBE IR `.ssa` |
+| QBE IR | 未指定、または明示的なWindows x64 / Linux x86-64（文字列では必須） | QBE IR `.ssa` |
 | WebAssembly Text | WebAssembly | WAT `.wat` |
 | ネイティブアセンブリ | x86-64、Windows / Linux、各OSの呼出規約 | GNU形式のアセンブリ `.s` |
 | ネイティブオブジェクト | 明示的なWindows x64 / Linux x86-64 | COFF `.obj` / ELF64 `.o` |
@@ -67,9 +67,9 @@ IR・VM・NativeはCeruneが完成成果物と実行契約を定義する経路�
 
 ### QBEの検証バージョン
 
-CIでは[QBE 1.3](https://c9x.me/compile/releases.html)を公式SHA-256で検証して使用します。現在のCeruneのQBE実行比較はLinuxの`amd64_sysv`が対象です。
+CIでは[QBE 1.3](https://c9x.me/compile/releases.html)を公式SHA-256で検証して使用します。Linuxは`amd64_sysv`、Windowsは`amd64_win`で実行比較します。WindowsではQBE本体をMinGW/UCRTでビルドし、生成ASMをClang/MSVCでリンクします。ツール自身のビルド環境と生成プログラムのターゲットは別です。
 
-QBE 1.3にはWindows ABI向けの`amd64_win`があります。Cerune側の対応には、明示ターゲット、Windowsの標準出力・停止診断、データ配置、ツールチェーンと実行テストの追加が必要です。QBEの更新だけではWindows対応済みとは扱いません。[公式リリース説明](https://c9x.me/compile/release/qbe-1.3.html)
+Windows向けの出力・診断・引数の扱いと、段階ごとの検証は[QBE Windows対応](qbe-windows.ja.md)にまとめています。
 
 ## 生成物を利用する側との境界
 
@@ -79,7 +79,7 @@ LLVMの`--target`は`x86_64-unknown-linux-gnu`または`x86_64-pc-windows-msvc`�
 
 生成物の比較では、次の問いを分けます。ここでいう対応状況は情報であり、外部プログラムを起動する許可ではありません。
 
-QBEの文字列対応は明示的な`x86_64-unknown-linux-gnu`と下流の`amd64_sysv`を組み合わせます。直接アセンブリはWindows/Linux x86-64を明示的に選べ、WATはWebAssembly固定で、WATの文字列出力はバイト値を受け取るホスト関数との契約です。経路ごとの格納・出力の違いは[文字列の設計](strings.ja.md)に残します。
+QBEは明示的な`x86_64-unknown-linux-gnu` / `x86_64-pc-windows-msvc`と、下流の`amd64_sysv` / `amd64_win`をそれぞれ組み合わせます。直接アセンブリはWindows/Linux x86-64を明示的に選べ、WATはWebAssembly固定で、WATの文字列出力はバイト値を受け取るホスト関数との契約です。経路ごとの格納・出力の違いは[文字列の設計](strings.ja.md)に残します。
 
 次の担当表は、現行のemit成果物を利用側が処理する場合です。計画中のCerune-owned buildでは、完成成果物を作るためのツール・依存条件の管理をCeruneが担当します。
 
