@@ -15,6 +15,8 @@ Cerune documentation is divided into `design`, which records design decisions, a
 | AST execution study / AST直接実行の調査 | [日本語](design/ast-executor-study.ja.md) | [English](design/ast-executor-study.en.md) |
 | IR Executor / IRの直接実行 | [日本語](design/ir-executor.ja.md) | [English](design/ir-executor.en.md) |
 | VM embedding / VMの埋め込み実行 | [日本語](design/vm-embedding.ja.md) | [English](design/vm-embedding.en.md) |
+| Owned routes and build / release / 実行・配布の責務 | [日本語](design/owned-routes.ja.md) | [English](design/owned-routes.en.md) |
+| Lean verification / 意味の対応とプログラムの証明 | [日本語](design/lean-verification.ja.md) | [English](design/lean-verification.en.md) |
 | Output routes and targets / 出力経路とターゲット | [日本語](design/targets.ja.md) | [English](design/targets.en.md) |
 | Owned arrays (IR/VM) / 所有する動的配列（IR・VM） | [日本語](design/owned-arrays.ja.md) | [English](design/owned-arrays.en.md) |
 | Dynamic strings and data / 動的文字列とデータ | [日本語](design/dynamic-data.ja.md) | [English](design/dynamic-data.en.md) |

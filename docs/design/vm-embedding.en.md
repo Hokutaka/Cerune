@@ -69,7 +69,7 @@ Emitter
 Backend Artifact
 ```
 
-The application consuming C, LLVM IR, QBE IR, WAT, Assembly, Native Object, or another artifact decides which external tools build, link, load, and execute it.
+Consumers choose tools to build, link, load, and execute current emitted artifacts. Planned [IR/VM/Native build / release](owned-routes.en.md) operations are separate from the VM embedding API. C, LLVM, QBE, WAT, and similar routes remain emit-only.
 
 Cerune does not add:
 
@@ -210,4 +210,4 @@ The first implementation proceeds in this order:
 5. Preserve VM errors and instruction origin information consistently with existing execution.
 6. Test repeated execution of compiled bytecode without recompilation.
 
-Even after this API exists, building and executing emitter artifacts remains outside Cerune's responsibility.
+This API does not manage external build or execution for emit-only routes. Planned Cerune-owned build / release operations have a separate responsibility.

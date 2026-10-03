@@ -4,6 +4,8 @@
 
 This document defines the command-line interface of Cerune v0.1.
 
+IR/VM/Native [build / release](../design/owned-routes.en.md) and [Lean output](../design/lean-verification.en.md) are at the design/experiment stage and are not current CLI commands.
+
 ## Commands
 
 The current CLI provides the following commands:

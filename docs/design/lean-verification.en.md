@@ -1,0 +1,97 @@
+# Semantic correspondence and program proofs with Lean
+
+[日本語](lean-verification.ja.md)
+
+## Purpose
+
+The Lean backend should support both:
+
+1. **Translation correspondence:** completed Cerune IR and generated Lean code have the same meaning.
+2. **Program properties:** the program satisfies a stated specification under explicit assumptions.
+
+Once Cerune self-hosts, the compiler written in Cerune can itself become a subject of (2).
+Self-hosting is not a correctness proof: compiler specifications, input domains, and output semantics still need definitions and proofs.
+It also does not automatically verify today's Rust compiler or other backends.
+
+**Current status: design and a small verification experiment. The public Lean backend, `emit-lean`, and a formal semantics for the whole language are not implemented.**
+The [experiment](../../experiments/lean/README.md) checks both kinds of theorem for a `u8` function extracted from actual completed IR.
+
+## Connecting the contracts
+
+```text
+Cerune source → shared frontend → completed Cerune IR
+                                    ├─ IR model in Lean (reference semantics)
+                                    └─ generated Lean code + correspondence proof
+                                                └─ user specification + property proof
+```
+
+Conceptually, translation correspondence requires
+`observe(evalIR(P, s)) = observe(evalLean(emit(P), encode(s)))`
+for valid inputs/states s.
+A property Q of the generated program can then transfer to IR through that correspondence.
+Putting the same generator on both sides of an identity, or comparing output for successful examples alone, does not establish this contract.
+
+The reference model formalizes the meaning of existing `ir::Program`.
+It does not introduce another language/frontend or redo name resolution, generics, match expansion, or ownership lowering.
+The Rust-to-Lean representation boundary and the model's fidelity to the existing specification still require review and validation.
+
+## Runtime semantics
+
+Observations include return values, output bytes, failure codes, NodeId/SourceId/Span, and output preceding failure.
+Proofs involving intermediate states or resource budgets must include those states in the relation.
+
+| Area | Meaning to preserve |
+| --- | --- |
+| Integers | Type bounds and overflow, division, shift, and explicit-conversion failures; no silent replacement by unbounded or wrapping arithmetic |
+| Floating point | IEEE widths, rounding, NaN, infinity, negative zero, and conversions; not Lean real numbers |
+| Strings | Immutable bytes, Japanese text, NUL, CR/LF, no normalization, display and equality |
+| Control | Left-to-right order, short-circuiting, functions, loops, break/continue/return |
+| Aggregates/ownership | Independent copies and the allocation, retain/release, freeing, and budgets explicit in common IR |
+| External conditions | Explicit assumptions for future I/O and real allocation failure; an ideal heap proof does not guarantee OS behavior |
+
+Finite-fuel agreement proves agreement only within that fuel. It does not establish general termination or equivalence of infinite executions.
+Total execution claims need termination proofs or an execution relation admitting divergence.
+Cerune resource-limit failures are distinct from proof-checker/test timeouts.
+
+## Backend and checker boundary
+
+Lean is [emit-only](owned-routes.en.md). A future `emit-lean` emits Lean source and tracking metadata; the ordinary Cerune CLI does not invoke Lean.
+Development tests and CI use a pinned Lean version to check code and theorems.
+
+Start with per-program translation validation.
+There is no fallback that turns a failed proof into success. A later proof of the general translation algorithm is a separate result.
+User properties live in a separate file so a generator cannot rewrite the specification to make it pass.
+Proofs and execution must reference the same generated definitions.
+
+Tie source, completed IR, generated definitions, theorems, origin maps, and semantics/Lean versions to verification results.
+Do not remove unsupported types, values, or ownership operations and call the remainder verified.
+Accepting a whole program requires coverage checks including unused definitions.
+A function-only experiment must name the selected function and explicitly exclude unverified callers.
+
+## Distinguishing tests and proofs
+
+- Compare known expectations with IR Executor, VM, and generated-route execution.
+- Prove correspondence between the Lean model and output, reviewing the theorem statement and assumptions.
+- Prove independently authored user properties of the same generated definitions.
+- Mutate generated behavior, failure origins, and specifications; require rejection.
+- Distinguish unsupported, unexecuted, timed-out, and failed proofs from success.
+
+Lean kernel acceptance is relative to theorem statements and axioms.
+Inspect dependencies with `#print axioms`; do not silently accept `sorryAx`, unreviewed custom axioms, or extra native-evaluation trust.
+The initial experiment uses kernel-checked proofs and requires empty axiom dependencies.
+Any later allowance for standard axioms must be documented explicitly.
+See Lean's [proof validation](https://lean-lang.org/doc/reference/latest/ValidatingProofs/) and [axiom reference](https://lean-lang.org/doc/reference/latest/Axioms/).
+
+## Stages and completion criteria
+
+| Stage | Content | Completion criterion |
+| --- | --- | --- |
+| Initial experiment | `u8` function arguments, constants, addition, value or overflow/origin | Actually check correspondence, conditional properties, boundary cases, and mutation rejection |
+| Backend foundation | Common IR input, origins, results/traces, generated definitions separated from user specifications | Settle `emit-lean` and support table; port existing success/failure tests |
+| Control/numbers | All integer types, booleans, order, functions, branches, loops, explicit conversions | Compare failures, prior output, and termination conditions as well as values; add floats with an explicit model |
+| Aggregates/resources | Strings, arrays, products, sums, ownership/budgets | Target existing language semantics and track gaps explicitly |
+| User proofs | Preconditions, postconditions, invariants, and termination where needed | Examples trace the subject and assumptions from source through IR to Lean |
+| After self-hosting | Treat the compiler as a Cerune program | Specifications/proofs for frontend, IR transformations, and backends, with an explicit bootstrap trust boundary |
+
+The small experiment is not a permanently restricted language subset for Lean.
+Its success does not prove the entire Rust frontend, executors, or generator, nor Native output.

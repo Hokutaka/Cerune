@@ -43,6 +43,12 @@
 
 動的配列`[T]`は現在IR ExecutorとBytecode VMで実行できます。C・LLVM・QBE・WAT・ASM・native objectへの出力は、未使用の動的配列型も含めて明示的に診断します。[対応範囲](owned-arrays.ja.md)を参照してください。
 
+## 実行経路の責務
+
+IR・VM・NativeはCeruneが完成成果物と実行契約を定義する経路です。C・LLVM・QBE・WATと将来のLean等はemit-onlyで、外部でのビルド・実行・証明検査は利用側が管理します。生成結果の意味を守る責任はCeruneに残ります。
+
+[経路図とbuild / releaseの計画](owned-routes.ja.md)は将来の操作を含みます。以下の表は現行の出力です。
+
 ## 現在の構成
 
 現在の出力は、次のように整理できます。
@@ -68,6 +74,8 @@ LLVMの`--target`は`x86_64-unknown-linux-gnu`または`x86_64-pc-windows-msvc`�
 生成物の比較では、次の問いを分けます。ここでいう対応状況は情報であり、外部プログラムを起動する許可ではありません。
 
 QBEの文字列対応は明示的な`x86_64-unknown-linux-gnu`と下流の`amd64_sysv`を組み合わせます。直接アセンブリはWindows/Linux x86-64を明示的に選べ、WATはWebAssembly固定で、WATの文字列出力はバイト値を受け取るホスト関数との契約です。経路ごとの格納・出力の違いは[文字列の設計](strings.ja.md)に残します。
+
+次の担当表は、現行のemit成果物を利用側が処理する場合です。計画中のCerune-owned buildでは、完成成果物を作るためのツール・依存条件の管理をCeruneが担当します。
 
 | 問い | 確認する内容 | 担当 |
 | --- | --- | --- |

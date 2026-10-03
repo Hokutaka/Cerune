@@ -43,6 +43,12 @@ Backend is an implementation term. It is not used as a collective name for an ou
 
 Dynamic arrays `[T]` currently execute in IR Executor and Bytecode VM. C, LLVM, QBE, WAT, ASM, and native object generation explicitly reject them, including unused dynamic array types. See [support status](owned-arrays.en.md).
 
+## Execution-route responsibilities
+
+IR, VM, and Native are routes for which Cerune defines completed artifacts and execution contracts. C, LLVM, QBE, WAT, and future Lean-like outputs are emit-only: consumers manage external build, execution, and proof checking. Cerune remains responsible for preserving semantics in generated output.
+
+The [route diagram and build / release plan](owned-routes.en.md) include future operations. The following table describes current output.
+
 ## Current configuration
 
 The current outputs can be described as follows:
@@ -68,6 +74,8 @@ LLVM `--target` selects `x86_64-unknown-linux-gnu` or `x86_64-pc-windows-msvc` a
 Artifact comparison separates the following questions. Support information is data, not permission to launch external programs.
 
 QBE strings pair explicit `x86_64-unknown-linux-gnu` selection with downstream `amd64_sysv`. Direct assembly accepts explicit Windows/Linux x86-64 selection, and WAT remains fixed to WebAssembly; WAT string output has a host contract accepting byte values. Route-specific storage and output choices remain documented in [string design](strings.en.md).
+
+This table describes consumers processing current emitted artifacts. Planned Cerune-owned builds make Cerune responsible for managing the tools and dependencies needed to construct the completed artifact.
 
 | Question | What is checked | Owner |
 | --- | --- | --- |

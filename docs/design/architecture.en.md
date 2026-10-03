@@ -6,6 +6,8 @@ Cerune is a statically typed experimental language designed to make compiler tra
 
 The boundaries that Cerune preserves for observability are defined in the [observability contract](observability.en.md). Terminology and conditions for generated output are defined in [output routes and targets](targets.en.md).
 
+The [route diagram and build / release plan](owned-routes.en.md) define IR, VM, and Native as Cerune-owned and C-like outputs as emit-only. Planned operations are distinct from the implemented pipeline below.
+
 ## Principles
 
 Cerune aims to combine sophisticated implementation with observability. As transformations become more advanced, their boundaries and results must remain observable.
@@ -355,7 +357,7 @@ The current design intentionally does not require:
 - a generic `observe` command duplicating the existing `emit-*` commands;
 - a universal SSA representation shared by all backends;
 - implicit optimization;
-- build orchestration inside Cerune;
+- orchestration of external compilers and runtimes for emit-only routes (distinct from planned Cerune-owned builds);
 - benchmarking or performance measurement inside Cerune.
 
 Possible future work includes:
@@ -363,7 +365,7 @@ Possible future work includes:
 - an explicit optimization pipeline with additional observation boundaries;
 - optional backend-IR inspection when a concrete use case requires it;
 - an Observation Bundle that collects source, Cerune IR, emitted artifacts, and metadata together;
-- consuming serialized Cerune IR as an explicit compiler input if experiments require replaying the backend half of the pipeline.
+- verified, loadable IR/VM Images as completed artifacts, with formats and verifiers described in the [build / release plan](owned-routes.en.md).
 
 Those features should be added only when they preserve the central rule:
 

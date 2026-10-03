@@ -42,6 +42,10 @@ The native encoder generates x86-64 instructions and COFF/ELF objects. It shares
 
 Language support does not imply equal observation detail. Language check failures have comparable reasons, source locations, and prior output across all routes. LLVM/assembly origin annotations still do not promise debugging information across all routes and optimization stages.
 
+## Execution, distribution, and proof foundations
+
+[IR/VM/Native build / release](owned-routes.en.md) and [Lean correspondence and program-property verification](lean-verification.en.md) are separate foundation work. A new classification or proof experiment does not complete the missing language features or route support below.
+
 ## Proposed priorities
 
 `array_len`, array `for … in`, constant lengths `[T; COUNT]`, and [functions with type/length parameters](generic-functions.en.md) are implemented, along with [explicit rounding and saturation](rounding-conversions.en.md) and [aggregate operations, match expressions, and guards](aggregate-values.en.md). [Dynamic string concatenation and ownership](dynamic-data.en.md) are also implemented. Add missing features in the order below, pairing a small design with examples and cross-route comparisons. Each stage determines its syntax and adoption.

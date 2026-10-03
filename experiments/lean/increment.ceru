@@ -1,0 +1,8 @@
+// 255未満なら正確に1増えます。255では折り返さず停止します。
+fn increment(value: u8) -> u8 {
+    return value + 1;
+}
+
+print(increment(0));
+print(increment(41));
+print(increment(254));

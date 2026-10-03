@@ -12,6 +12,8 @@ Normal examples are the `.ceru` files in this directory.
 | [runtime_failures](runtime_failures/README.en.md) | Four expected stops: prior output and failing expressions |
 | [source_files](source_files/README.en.md) | Rust API examples: parse type/function files separately and compare origins; no imports |
 
+The [Lean verification experiment](../experiments/lean/README.md) compares execution and checks proofs for a small function. It is separate from a public Lean backend.
+
 ## Execute IR directly
 
 Run `cargo run --quiet -- run-ir examples/ir_execution.ceru` to try functions, array copies, iteration, and string concatenation. `run` is the same execution route; use `run-vm` to compare with the VM. `emit-ir` shows the shared program.
