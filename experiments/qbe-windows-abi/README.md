@@ -231,8 +231,6 @@ ucomiss ".Lfp0"(%rip), %xmm0
 
 [![Windows host manual reproduction](observed/qbe-win64-manual-check.png?v=20261003)](observed/qbe-win64-manual-check.png)
 
-*クリックすると原寸で表示できます。*
-
 この手動確認は、upstream問い合わせの中核となる最小再現を
 作者自身のWindows環境で再確認したものです。
 
