@@ -57,13 +57,19 @@ The current outputs can be described as follows:
 | --- | --- | --- |
 | C | not selected by Cerune | C source `.c` |
 | LLVM IR | unspecified, or explicit Windows x64 / Linux x86-64 (required for strings and runtime checks) | LLVM IR `.ll` |
-| QBE IR | unspecified, or explicit Linux x86-64 (required for strings) | QBE IR `.ssa` |
+| QBE IR | unspecified, or explicit Linux x86-64 (required for strings). Windows x64 support in Cerune is pending (QBE 1.3 provides `amd64_win`) | QBE IR `.ssa` |
 | WebAssembly Text | WebAssembly | WAT `.wat` |
 | Native assembly | x86-64, Windows / Linux, respective calling conventions | GNU-style assembly `.s` |
 | Native object | explicit Windows x64 / Linux x86-64 | COFF `.obj` / ELF64 `.o` |
 | Cerune bytecode | Cerune VM | Cerune bytecode `.cebc` |
 
 "Not selected by Cerune" does not mean inferred implicitly from the host environment. It means that Cerune does not include target-specific decisions in that observation and that the caller of a downstream tool selects the target.
+
+### QBE validation version
+
+CI uses [QBE 1.3](https://c9x.me/compile/releases.html), verified against its official SHA-256. Cerune's current QBE execution comparisons target Linux `amd64_sysv`.
+
+QBE 1.3 provides `amd64_win` for the Windows ABI. Cerune support still requires explicit target selection, Windows output and failure diagnostics, data placement, toolchain configuration, and execution tests. Updating QBE alone does not establish Windows support. [Official release notes](https://c9x.me/compile/release/qbe-1.3.html)
 
 ## Artifact consumer boundary
 

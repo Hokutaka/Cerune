@@ -46,6 +46,8 @@ Language support does not imply equal observation detail. Language check failure
 
 [IR/VM/Native build / release](owned-routes.en.md) and [Lean correspondence and program-property verification](lean-verification.en.md) are separate foundation work. A new classification or proof experiment does not complete the missing language features or route support below.
 
+The immediate order is route design / Lean experiment → QBE 1.3 and Windows support → dynamic-array route parity → build / release → broader Lean backend support. Align existing semantics and behavior first, then use that baseline for artifact construction and proofs.
+
 ## Proposed priorities
 
 `array_len`, array `for … in`, constant lengths `[T; COUNT]`, and [functions with type/length parameters](generic-functions.en.md) are implemented, along with [explicit rounding and saturation](rounding-conversions.en.md) and [aggregate operations, match expressions, and guards](aggregate-values.en.md). [Dynamic string concatenation and ownership](dynamic-data.en.md) are also implemented. Add missing features in the order below, pairing a small design with examples and cross-route comparisons. Each stage determines its syntax and adoption.

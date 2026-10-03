@@ -114,7 +114,7 @@ cerune emit-bytecode <file> [-o <output.cebc>]
 | --- | --- | --- | --- |
 | `emit-c` | C | Ceruneでは指定しない | `.c` |
 | `emit-llvm` | LLVM IR | 未指定、または明示的なWindows x64 / Linux x86-64 | `.ll` |
-| `emit-qbe` | QBE IR | 未指定、または明示的なLinux x86-64 | `.ssa` |
+| `emit-qbe` | QBE IR | 未指定、または明示的なLinux x86-64。Windows x64はCerune対応準備中（QBE 1.3は対応） | `.ssa` |
 | `emit-wat` | WebAssembly Text | WebAssembly | `.wat` |
 | `emit-asm` | ネイティブアセンブリ | x86-64、Windows / Linux、各OSの呼出規約 | `.s` |
 | `emit-obj` | 自前のネイティブオブジェクト | 明示的なWindows x64 / Linux x86-64 | `.obj` / `.o` |

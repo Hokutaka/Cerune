@@ -24,10 +24,10 @@ jobs:
       - name: Install execution validation tools
         run: |
           mkdir -p target
-          curl --fail --location https://c9x.me/compile/release/qbe-1.2.tar.xz -o target/qbe-1.2.tar.xz
-          echo 'a6d50eb952525a234bf76ba151861f73b7a382ac952d985f2b9af1df5368225d  target/qbe-1.2.tar.xz' | sha256sum --check
-          tar -xf target/qbe-1.2.tar.xz -C target
-          make -C target/qbe-1.2
+          curl --fail --location https://c9x.me/compile/release/qbe-1.3.tar.xz -o target/qbe-1.3.tar.xz
+          echo 'd587905d620dc5e1d2bfa7c2cc642b9b837aa89a3188c6e37b53d756cf66e320  target/qbe-1.3.tar.xz' | sha256sum --check
+          tar -xf target/qbe-1.3.tar.xz -C target
+          make -C target/qbe-1.3
           npm install --prefix target/wasm-tools --no-audit --no-fund wabt@1.0.39
       - name: Format
         run: cargo fmt --check
@@ -45,7 +45,7 @@ jobs:
           CERUNE_TEST_TRACE: "1"
           CERUNE_TEST_CC: clang
           CERUNE_TEST_LLVM_CLANG: clang
-          CERUNE_TEST_QBE: ${{ github.workspace }}/target/qbe-1.2/qbe
+          CERUNE_TEST_QBE: ${{ github.workspace }}/target/qbe-1.3/qbe
           CERUNE_TEST_NODE: node
           CERUNE_TEST_OBJDUMP: objdump
           CERUNE_TEST_WAT2WASM_JS: ${{ github.workspace }}/target/wasm-tools/node_modules/wabt/bin/wat2wasm

@@ -82,7 +82,7 @@ During development, replace `cerune` with `cargo run --quiet --`.
 | `emit-bytecode` | Bytecode text (`.cebc`) | Inspect instructions |
 | `emit-c` | C (`.c`) | GCC, Clang, or another C compiler |
 | `emit-llvm` | LLVM IR (`.ll`) | LLVM / Clang; Windows / Linux x86-64 |
-| `emit-qbe` | QBE IR (`.ssa`) | QBE; Linux x86-64 |
+| `emit-qbe` | QBE IR (`.ssa`) | QBE 1.3; Linux x86-64. Windows x64 support in Cerune is pending |
 | `emit-wat` | WebAssembly Text (`.wat`) | WebAssembly tools and a host |
 | `emit-asm` | Assembly (`.s`) | Windows / Linux x86-64 |
 | `emit-obj` | ELF / COFF object (`.o` / `.obj`) | External linker; requires `--target` and `-o` |

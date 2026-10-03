@@ -114,7 +114,7 @@ Each command emits the following artifact:
 | --- | --- | --- | --- |
 | `emit-c` | C | not selected by Cerune | `.c` |
 | `emit-llvm` | LLVM IR | unspecified, or explicit Windows x64 / Linux x86-64 | `.ll` |
-| `emit-qbe` | QBE IR | unspecified, or explicit Linux x86-64 | `.ssa` |
+| `emit-qbe` | QBE IR | unspecified, or explicit Linux x86-64. Windows x64 support in Cerune is pending (supported by QBE 1.3) | `.ssa` |
 | `emit-wat` | WebAssembly Text | WebAssembly | `.wat` |
 | `emit-asm` | native assembly | x86-64, Windows / Linux, respective calling conventions | `.s` |
 | `emit-obj` | Native object encoded by Cerune | explicit Windows x64 / Linux x86-64 | `.obj` / `.o` |

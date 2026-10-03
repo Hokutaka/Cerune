@@ -57,13 +57,19 @@ IR・VM・NativeはCeruneが完成成果物と実行契約を定義する経路�
 | --- | --- | --- |
 | C | Ceruneでは指定しない | Cソース `.c` |
 | LLVM IR | 未指定、または明示的なWindows x64 / Linux x86-64（文字列・実行時検査では必須） | LLVM IR `.ll` |
-| QBE IR | 未指定、または明示的なLinux x86-64（文字列では必須） | QBE IR `.ssa` |
+| QBE IR | 未指定、または明示的なLinux x86-64（文字列では必須）。Windows x64はCerune対応準備中（QBE 1.3の`amd64_win`） | QBE IR `.ssa` |
 | WebAssembly Text | WebAssembly | WAT `.wat` |
 | ネイティブアセンブリ | x86-64、Windows / Linux、各OSの呼出規約 | GNU形式のアセンブリ `.s` |
 | ネイティブオブジェクト | 明示的なWindows x64 / Linux x86-64 | COFF `.obj` / ELF64 `.o` |
 | Cerune bytecode | Cerune VM | Cerune bytecode `.cebc` |
 
 「Ceruneでは指定しない」は、実行中のホスト環境から暗黙に推測することを意味しません。Ceruneの観測結果にターゲット固有の決定を含めず、後続ツールを呼び出す側がターゲットを決めることを意味します。
+
+### QBEの検証バージョン
+
+CIでは[QBE 1.3](https://c9x.me/compile/releases.html)を公式SHA-256で検証して使用します。現在のCeruneのQBE実行比較はLinuxの`amd64_sysv`が対象です。
+
+QBE 1.3にはWindows ABI向けの`amd64_win`があります。Cerune側の対応には、明示ターゲット、Windowsの標準出力・停止診断、データ配置、ツールチェーンと実行テストの追加が必要です。QBEの更新だけではWindows対応済みとは扱いません。[公式リリース説明](https://c9x.me/compile/release/qbe-1.3.html)
 
 ## 生成物を利用する側との境界
 
