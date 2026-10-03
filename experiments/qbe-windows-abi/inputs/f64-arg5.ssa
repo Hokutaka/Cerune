@@ -1,0 +1,12 @@
+export function w $check(l %a0, l %a1, l %a2, l %a3, d %value) {
+@start
+    %ok =w ceqd %value, d_2.5
+    ret %ok
+}
+
+export function w $main() {
+@start
+    %ok =w call $check(l 1, l 2, l 3, l 4, d d_2.5)
+    %status =w sub 1, %ok
+    ret %status
+}

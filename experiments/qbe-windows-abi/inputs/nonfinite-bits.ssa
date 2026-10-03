@@ -1,0 +1,6 @@
+export function w $main() {
+@start
+    %ok =w cgtd 9218868437227405312, d_0.0
+    %status =w sub 1, %ok
+    ret %status
+}

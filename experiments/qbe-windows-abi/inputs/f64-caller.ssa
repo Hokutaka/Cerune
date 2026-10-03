@@ -1,0 +1,7 @@
+export function w $main() {
+@start
+    %value =d call $source()
+    %ok =w call $check(l 1, l 2, l 3, l 4, d %value)
+    %status =w sub 1, %ok
+    ret %status
+}
