@@ -3,17 +3,20 @@
 このフォルダは、QBE `amd64_win` の浮動小数点スタック引数について行った
 処理系の切り分け調査を保存するためのものです。
 
-Ceruneの実行exampleではありません。
-
 QBE upstreamへの問い合わせ本文は [UPSTREAM.md](UPSTREAM.md)、
 再現・対照実験のコマンドは [COMMANDS.md](COMMANDS.md) に保存しています。
 
 2026-10-03、QBEのメーリングリストへ問い合わせを送信済みです。
 現時点では、upstreamから確認された不具合とは扱いません。
 
+2026-10-04、Scott Graham氏から、この最小ILは妥当であり、
+現象はbackend bugであるとの確認を得ました。
+
+
+
 ## 結論
 
-**QBE単体の最小ILで現象を再現でき、`amd64_win` のcallee側ABI loweringが強い原因候補として残りました。**
+**QBE単体の最小ILで現象を再現し、Upstreamからbackend bugであるとの確認を得ました。**
 
 確認できた範囲は次のとおりです。
 
@@ -25,8 +28,10 @@ QBE upstreamへの問い合わせ本文は [UPSTREAM.md](UPSTREAM.md)、
 - LinuxホストでビルドしたQBEでも、WindowsホストでビルドしたQBEでも同じWindows向けassemblyを生成した。
 - ABI loweringのdebug出力では、`s` のparameterが `l` のcopyへ変化している。
 
-この結果からQBE側の調査が妥当と考えていますが、
-ILの妥当性とサポート範囲を含む最終判断はupstreamに確認します。
+upstreamから、最小ILの使い方は妥当であり、
+現象はbackend bugであるとの返答を受けました。
+原因位置の候補や修正方法の十分性については、
+引き続きこの調査だけでは確定しません。
 
 ## 版と環境
 
@@ -285,8 +290,9 @@ stdout / stderrを使用しないため、
 この範囲では仕様違反を見つけていません。
 
 ただし、parserやSSA検査を通ることだけを
-ILの妥当性の証明とは扱いません。
-そのためupstreamにもILの使い方とサポート範囲を含めて確認しています。
+ILの妥当性の証明とは扱わず、upstreamにも確認しました。
+upstreamから、この最小ILは妥当であり、
+現象はbackend bugであるとの返答を受けています。
 
 元のCerune `function_arguments.ceru` から生成したSSAでも、
 問題の関数定義とcallは同じ12引数の型列を持ちます。
@@ -359,10 +365,11 @@ Ceruneが非有限値について文書化されたビット定数表現を使�
 
 ## 現在の扱い
 
-- QBE upstreamのメーリングリストへ、2026-10-03に問い合わせを送信済みです。
+- QBE upstreamのメーリングリストへ、2026-10-03に問い合わせを送信しました。
 - 問い合わせ本文は [UPSTREAM.md](UPSTREAM.md) に保存しています。
-- upstreamからの確認前なので、現時点では「QBEの確認済みbug」とは表現しません。
-- PR #84は未マージです。
-- Cerune本体やCIのQBEへ、調査中の `Kl -> instr->cls` 変更は適用していません。
+- upstreamから、この最小ILは妥当であり、現象はbackend bugであるとの確認を得ました。
+- Cerune側のPR #84は2026-10-03にmasterへマージ済みで、QBE 1.3向けの内部呼び出しworkaroundを含みます。
+- Cerune本体やCIが使用するQBEにはpatchを加えていません。
+- 調査中の `Kl -> instr->cls` 変更は、原因位置を絞る実験にだけ使用し、Cerune本体やCIが使用するQBEには適用していません。
 - Windows上で最小再現の中核は作者自身でも手動再確認しました。
-- upstreamから返答やpatchがあれば、最小reproducerとCerune側の関連testで再検証します。
+- upstream側で修正が公開された場合は、最小reproducerとCerune側の関連testで再検証します。
