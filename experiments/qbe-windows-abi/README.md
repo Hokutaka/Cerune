@@ -229,7 +229,7 @@ ucomiss ".Lfp0"(%rip), %xmm0
 
 が生成されました。
 
-[![Windows host manual reproduction](observed/qbe-win64-manual-check.png)](observed/qbe-win64-manual-check.png)
+[![Windows host manual reproduction](observed/qbe-win64-manual-check.jpg)](observed/qbe-win64-manual-check.jpg)
 
 *クリックすると原寸で表示できます。*
 
