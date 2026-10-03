@@ -2,10 +2,11 @@
 
 [日本語](README.md)
 
-Run with IR Executor, VM, generated C, or LLVM. QBE, WAT, ASM, and native objects are pending.
+Run with IR Executor, VM, generated C, LLVM, or QBE. WAT, ASM, and native objects are pending.
 
 | Example | Checks |
 | --- | --- |
+| [batches.ceru](batches.ceru) | Return two ranges in a fixed array and compare updates with a saved copy |
 | [readings.ceru](readings.ceru) | Return a range of records, edit a copy, and total its values |
 | [window.ceru](window.ceru) | Choose a runtime-sized range; update the returned array independently |
 | [copy.ceru](copy.ceru) | Independent copies, ranges and emptiness, updates, display/equality/iteration |
@@ -34,3 +35,14 @@ clang readings.ll -o readings
 ```
 
 On Windows, use target `x86_64-pc-windows-msvc`, then `clang readings.ll -o readings.exe` and `.\readings.exe`. The selected range stays `[{valid: false, value: 0}, {valid: true, value: 20}]`; the edited copy contains 15 and 20 and prints a total of 35.
+
+Generate and execute with QBE 1.3 (Linux x86-64):
+
+```sh
+cargo run --quiet -- emit-qbe examples/dynamic_arrays/batches.ceru --target x86_64-unknown-linux-gnu -o batches.ssa
+qbe -t amd64_sysv -o batches.s batches.ssa
+clang batches.s -o batches
+./batches
+```
+
+On Windows, select Cerune target `x86_64-pc-windows-msvc` and QBE `-t amd64_win`, then link with `clang --target=x86_64-pc-windows-msvc batches.s -o batches.exe`. Run `.\batches.exe`: it prints the updated `[[99, 20], []]`, saved `[[10, 20], [30]]`, outer length 2, and empty-array length 0.

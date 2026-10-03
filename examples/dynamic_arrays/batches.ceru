@@ -1,0 +1,17 @@
+// 動的配列を二つに分け、固定長配列に入れて返します。
+// Split a runtime-sized array into two independent batches.
+fn split<T>(values: [T], at: i64) -> [[T]; 2] {
+    return [
+        array_copy_range(values, 0, at),
+        array_copy_range(values, at, array_len(values))
+    ];
+}
+
+mut batches: [[i64]; 2] = split::<i64>(array_copy([10, 20, 30]), 2);
+saved: [[i64]; 2] = batches;
+batches[0][0] = 99;
+batches[1] = array_copy_range(batches[1], 1, 1);
+print(batches);
+print(saved);
+print(array_len(batches));
+print(array_len(batches[1]));

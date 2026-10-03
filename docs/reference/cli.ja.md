@@ -42,7 +42,7 @@ cerune emit-llvm examples/string_concat.ceru --target x86_64-unknown-linux-gnu -
 
 同じコマンドで`--array-heap-limit <bytes>`も指定できます。既定値・数値形式は文字列予算と同じで、二つの予算は独立です。要素の計算幅に基づく生存領域を数え、物理メモリ全体の上限ではありません。`check`・`emit-sources`では受け付けません。
 
-動的配列は`run`／`run-ir`／`run-vm`とIR・bytecode・C・LLVM出力に対応しています。QBE・WAT・ASM・native objectでは、出力ファイルを書き換える前に未対応と診断します。IR・bytecode・生成C・LLVMには使用した配列予算を記録します。LLVMは未使用の配列型も含め`--target`が必要です。
+動的配列は`run`／`run-ir`／`run-vm`とIR・bytecode・C・LLVM・QBE出力に対応しています。WAT・ASM・native objectでは、出力ファイルを書き換える前に未対応と診断します。IR・bytecode・生成C・LLVM・QBEには使用した配列予算を記録します。LLVM・QBEは未使用の配列型も含め`--target`が必要です。
 
 ```sh
 cerune run examples/dynamic_arrays/copy.ceru --array-heap-limit 1024
@@ -114,7 +114,7 @@ cerune emit-bytecode <file> [-o <output.cebc>]
 | --- | --- | --- | --- |
 | `emit-c` | C | Ceruneでは指定しない | `.c` |
 | `emit-llvm` | LLVM IR | 未指定、または明示的なWindows x64 / Linux x86-64 | `.ll` |
-| `emit-qbe` | QBE IR | 未指定、または明示的なLinux x86-64。Windows x64はCerune対応準備中（QBE 1.3は対応） | `.ssa` |
+| `emit-qbe` | QBE IR | 未指定、または明示的なWindows x64 / Linux x86-64 | `.ssa` |
 | `emit-wat` | WebAssembly Text | WebAssembly | `.wat` |
 | `emit-asm` | ネイティブアセンブリ | x86-64、Windows / Linux、各OSの呼出規約 | `.s` |
 | `emit-obj` | 自前のネイティブオブジェクト | 明示的なWindows x64 / Linux x86-64 | `.obj` / `.o` |
@@ -126,7 +126,7 @@ cerune emit-bytecode <file> [-o <output.cebc>]
 
 ### LLVMのターゲット指定
 
-`--target`は`x86_64-unknown-linux-gnu`または`x86_64-pc-windows-msvc`を受け付けます。文字列を使うプログラムでは、未使用の型・関数も含めて指定が必須です。数値だけでも、検査付き演算・変換・配列添字など実行時診断を持つ場合は指定が必要です。たとえば`print(1 + 2);`は指定が必要で、`print(1);`は省略できます。ホストOSからは推測しません。`--target`と`-o`（`--output`も可）の順序は自由ですが、同じオプションの重複、値の省略、未対応ターゲットはエラーです。
+`--target`は`x86_64-unknown-linux-gnu`または`x86_64-pc-windows-msvc`を受け付けます。文字列・動的配列を使うプログラムでは、未使用の型・関数も含めて指定が必須です。数値だけでも、検査付き演算・変換・配列添字など実行時診断を持つ場合は指定が必要です。たとえば`print(1 + 2);`は指定が必要で、`print(1);`は省略できます。ホストOSからは推測しません。`--target`と`-o`（`--output`も可）の順序は自由ですが、同じオプションの重複、値の省略、未対応ターゲットはエラーです。
 
 Linux x86-64上での例:
 
@@ -150,7 +150,7 @@ CeruneはLLVMの生成だけを行い、Clangや実行ファイルを起動し�
 
 ### QBEのターゲット指定
 
-文字列を含むQBE出力では`--target x86_64-unknown-linux-gnu`を指定します。省略・未対応のターゲット・オプションの重複は診断し、既存の出力ファイルを変更しません。数値だけの既存の呼び出しでは省略できます。
+QBEの`--target`は`x86_64-unknown-linux-gnu`または`x86_64-pc-windows-msvc`です。文字列・動的配列では必須です。省略・未対応のターゲット・オプションの重複は診断し、既存の出力ファイルを変更しません。数値だけの既存の呼び出しでは省略できますが、Windows用の出力・診断を選ぶには明示指定が必要です。
 
 ```sh
 cerune emit-qbe examples/string_lookup.ceru --target x86_64-unknown-linux-gnu -o target/string_lookup.ssa
@@ -159,7 +159,16 @@ cc target/string_lookup.s -o target/string_lookup
 ./target/string_lookup
 ```
 
-生成物のコメントにターゲットを残します。QBEとCリンカの起動は利用側の操作です。ライブラリでは`compile_to_qbe_with_target(source, Some(codegen::qbe::Target::X86_64UnknownLinuxGnu))`を使います。
+Windows x64では、QBE 1.3とClang、MSVCのCRT・リンカを用意します。
+
+```powershell
+cerune emit-qbe examples/function_arguments.ceru --target x86_64-pc-windows-msvc -o target/function_arguments.ssa
+qbe -t amd64_win -o target/function_arguments.s target/function_arguments.ssa
+clang --target=x86_64-pc-windows-msvc target/function_arguments.s -o target/function_arguments.exe
+./target/function_arguments.exe
+```
+
+生成物のコメントにターゲットとQBEの`-t`を残します。QBEとリンカの起動は利用側の操作です。ライブラリでは`compile_to_qbe_with_target(source, Some(codegen::qbe::Target::X86_64UnknownLinuxGnu))`、または`X86_64PcWindowsMsvc`を使います。[WindowsのABIと検証](../design/qbe-windows.ja.md)も参照してください。
 
 ### WATと直接アセンブリの文字列
 

@@ -79,7 +79,7 @@ LLVM loweringは式をソース順に命令化し、短絡評価やループの�
 
 再代入は変数や配列要素が持つ参照の置き換えです。共有する参照先が不変なので、以前のコピーは変わりません。積型・配列自体のコピーには既存の`blit`、メモリのload/store、スタックスロットのコピーを使います。動的文字列の保持・解放は共通IRから生成し、静的領域には作用しません。この実装上の参照はCeruneのポインタ型や外部ABIを追加するものではありません。
 
-QBEは静的データを読み取り専用の`.rodata`に置き、`loadl`で長さ、`loadub`で各バイトを読みます。文字列では`--target x86_64-unknown-linux-gnu`を必須にし、生成物へターゲットと`qbe -t amd64_sysv`の対応をコメントで残します。現在のCeruneの文字列対応はこの組み合わせを対象とします。後続のQBEに別のターゲットを渡しても、Ceruneが実行環境を変換したことにはなりません。
+QBEは静的データをLinuxでは`.rodata`、Windowsでは`.rdata`の読み取り専用領域に置き、`loadl`で長さ、`loadub`で各バイトを読みます。文字列では明示ターゲットが必須です。Linuxの`x86_64-unknown-linux-gnu`には`qbe -t amd64_sysv`、Windowsの`x86_64-pc-windows-msvc`には`qbe -t amd64_win`を対応させ、生成物のコメントにも残します。Windowsでは最初のCerune操作の前にstdout/stderrをバイナリモードにし、初期化失敗時は終了コード1で止めます。数値だけでも明示WindowsターゲットではLFを出力します。後続QBEのターゲットだけを変えてもCerune側の実行環境は変換されません。
 
 直接アセンブリはWindows/Linux x86-64ターゲットを選べます。以下のWindows初期化に対し、Linux版はSysV規約でバイト出力し、標準出力モードの切替は行いません。静的な長さとデータは読み取り専用領域へ置き、参照は`RAX`や8バイトのスタックスロットで運びます。比較時には左辺を退避してから右辺を評価し、補助関数へ渡します。出力の補助関数はWindows x64のshadow space・スタック境界・保存レジスタの規則を守ります。最初のCerune処理より前に`_setmode`を実行し、失敗時は終了コード1で停止します。
 
@@ -101,7 +101,7 @@ LLVMのスナップショットはLinuxターゲットを明示して固定し�
 
 `string-values`の観測fixtureは全8成果物を固定します。`tests/support/string_cases.rs`の共通入力と既知の期待値を、VM・C・LLVMに加え、`cargo test --test string_routes`でQBE・WAT・直接アセンブリでも検証します。出力バイトの一致、評価順、短絡評価、コピー後の独立性、範囲外アクセスでの停止を分けて確認します。未使用の既定値にだけ文字列がある場合も、WindowsのC・LLVM・ASMが同じ出力モードを選びます。
 
-QBEはLinux x86-64、ASMはWindows x64とLinux x86-64で実行します。WATはWABTで検証・変換してNodeのWebAssemblyエンジンで実行し、公開要素が`main`だけであることも検査します。テスト用ホストの浮動小数点出力は共通fixtureで正確に表せる値`1.5`・`2`・`2.5`・`4`に限定しており、一般的な数値整形実装ではありません。実行できない経路は理由を表示し、成功した比較とは区別します。CIでは両OSのジョブを合わせて全経路の実行を必須にします。
+QBEとASMはWindows x64とLinux x86-64で実行します。QBEのWindows比較は専用の`qbe_windows`テストで行い、生成段階ごとの表現を保存します。WATはWABTで検証・変換してNodeのWebAssemblyエンジンで実行し、公開要素が`main`だけであることも検査します。テスト用ホストの浮動小数点出力は共通fixtureで正確に表せる値`1.5`・`2`・`2.5`・`4`に限定しており、一般的な数値整形実装ではありません。実行できない経路は理由を表示し、成功した比較とは区別します。CIでは両OSのジョブを合わせて全経路の実行を必須にします。
 
 開発用ツールは`CERUNE_TEST_QBE`、`CERUNE_TEST_ASM_CLANG`、`CERUNE_TEST_NODE`、`CERUNE_TEST_WAT2WASM_JS`（WABTの`bin/wat2wasm`）で明示できます。指定したツールがない場合はテスト失敗です。WABTの導入例は`npm install --prefix target/wasm-tools --no-audit --no-fund wabt@1.0.39`です。ツールの起動は開発用テストの責務で、Ceruneの生成コマンドには追加しません。
 

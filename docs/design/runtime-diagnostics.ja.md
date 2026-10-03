@@ -14,7 +14,7 @@
 | 自前エンコーダのCOFF/ELF | ASMと同じlowering・診断処理を符号化 |
 | C | `runtime-v1`をC標準のstderrへ出し、`abort`で停止 |
 | LLVM | 明示したWindows/Linuxの出力ABIで`runtime-v1`を出し、trapで停止 |
-| QBE | Linux/SysVの出力ABIで`runtime-v1`を出し、`abort`で停止 |
+| QBE | 明示したWindows/Linuxの出力ABIで`runtime-v1`を出し、`abort`で停止 |
 | WAT | `cerune.write_error_byte`へ`runtime-v1`の各バイトを渡し、`unreachable`で停止 |
 
 IR Executor・VM・C・LLVM・QBE・WAT・直接ASM・自前オブジェクトで、言語の検査失敗の理由とソース位置を照合できます。OSやホストの終了コード自体を統一せず、各経路の意図した停止方法とレコードの両方を検証します。
@@ -76,7 +76,7 @@ Windowsの自前ASM/COFFは現時点で巻き戻し情報を出していませ�
 
 Cでは検査関数へ不変の位置文字列を渡し、失敗時にC標準の`stderr`へコードと位置を出します。QBEとLLVMでも、読み取り専用のデータと検査関数の引数で位置を保持します。正常経路でグローバルな位置を書き換えたり、呼び出し元の位置で関数内の失敗を上書きしたりしません。
 
-LLVMでは文字列に加え、失敗し得る演算・変換・添字検査を持つプログラムにも`--target`が必要です。たとえば`print(1 + 2);`も検査付き加算を生成します。未指定時は診断し、Windows/Linuxをホストから推測しません。QBEの診断ABIは従来の数値出力と同じLinux/SysV固定です。文字列を含むQBEでは従来どおり明示ターゲットを要求します。
+LLVMでは文字列に加え、失敗し得る演算・変換・添字検査を持つプログラムにも`--target`が必要です。たとえば`print(1 + 2);`も検査付き加算を生成します。未指定時は診断し、Windows/Linuxをホストから推測しません。QBEも明示ターゲットで診断ABIを選びます。文字列ではターゲットが必須で、数値だけの未指定呼び出しは従来のLinux/SysV前提を保ちます。Windowsは`_write`で記録後、CRTの追加メッセージとクラッシュ収集を無効にして`abort`で終了コード3を返します。詳細は[QBE Windows対応](qbe-windows.ja.md)を参照してください。
 
 WATは失敗箇所ごとの静的な検査関数から`cerune.write_error_byte(i32) -> void`へASCIIバイトを渡します。このimportは診断を持つモジュールに必要です。ホストはこれをstderrとして保持・出力し、trapが起きても先行したstdoutを捨てません。メモリや可変の診断状態は公開しません。ホストが出力を捨てる、importから例外を投げる、またはOSのI/Oが失敗する場合の完全な配送は保証しません。
 
@@ -86,7 +86,7 @@ WATは失敗箇所ごとの静的な検査関数から`cerune.write_error_byte(i
 
 ## 検証
 
-`cargo test --test runtime_routes`は以下の外部ツールを使います。設定したツールが利用できない場合は失敗とします。QBEの実行比較はLinux x86-64で行います。Windowsの数値専用stdoutは既存のCRTのCRLF規則を比較時にLFへ揃え、文字列を含む出力はNUL・CR/LFを含めて完全一致を要求します。
+`cargo test --test runtime_routes`は以下の外部ツールを使います。設定したツールが利用できない場合は失敗とします。このテストのQBE比較はLinux x86-64で行います。Windowsは`cargo test --test qbe_windows -- --include-ignored`で検証し、数値だけの場合もstdout/stderrの全バイトを一致させます。`runtime_routes`の既存C・LLVM経路では、Windowsの数値専用stdoutのCRLFを比較時にLFへ揃え、文字列を含む出力はNUL・CR/LFを含めて完全一致を要求します。
 
 | 環境変数 | ツール |
 | --- | --- |

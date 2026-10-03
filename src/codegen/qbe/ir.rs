@@ -1,5 +1,6 @@
 #[derive(Debug, Clone)]
 pub struct Module {
+    pub array_heap_limit: Option<u64>,
     pub string_heap_limit: Option<u64>,
     pub uses_write: bool,
     pub target: Option<super::Target>,
@@ -46,6 +47,8 @@ pub struct Slot {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Type {
+    /// 長さと所有領域を保持する内部記述子へのポインタです。
+    DynamicArray,
     /// 不変な長さ付き静的バイト列への参照です。
     String,
     Bool,
@@ -104,6 +107,44 @@ pub enum PrintFormat {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Instruction {
+    ArrayAllocate {
+        dest: Temp,
+        length: Operand,
+        width: u64,
+        stride: usize,
+        origin: FailureOrigin,
+    },
+    ArrayRangeCheck {
+        length: Operand,
+        start: Operand,
+        end: Operand,
+        origin: FailureOrigin,
+    },
+    ArrayAddress {
+        dest: Temp,
+        value: Operand,
+        index: Operand,
+        origin: FailureOrigin,
+    },
+    ArrayInitAddress {
+        dest: Temp,
+        value: Operand,
+    },
+    ArrayInitialized {
+        value: Operand,
+    },
+    ArrayLength {
+        dest: Temp,
+        value: Operand,
+    },
+    ArrayReleaseOwner {
+        dest: Temp,
+        value: Operand,
+    },
+    ArrayManage {
+        value: Operand,
+        retain: bool,
+    },
     StringConcat {
         dest: Temp,
         left: Operand,

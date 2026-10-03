@@ -42,7 +42,7 @@ cerune emit-llvm examples/string_concat.ceru --target x86_64-unknown-linux-gnu -
 
 The same commands also accept `--array-heap-limit <bytes>`, with the same default and numeric syntax as the string option. The budgets are independent. Array accounting measures live element storage using logical widths, not total physical memory. `check` and `emit-sources` reject this option.
 
-Dynamic arrays support `run` / `run-ir` / `run-vm` and IR/bytecode/C/LLVM output. QBE, WAT, ASM, and native objects diagnose unsupported arrays before modifying output files. IR, bytecode, and generated C/LLVM record the array budget in use. LLVM requires `--target`, including unused array types.
+Dynamic arrays support `run` / `run-ir` / `run-vm` and IR/bytecode/C/LLVM/QBE output. WAT, ASM, and native objects diagnose unsupported arrays before modifying output files. IR, bytecode, and generated C/LLVM/QBE record the array budget in use. LLVM and QBE require `--target`, including unused array types.
 
 ```sh
 cerune run examples/dynamic_arrays/copy.ceru --array-heap-limit 1024
@@ -114,7 +114,7 @@ Each command emits the following artifact:
 | --- | --- | --- | --- |
 | `emit-c` | C | not selected by Cerune | `.c` |
 | `emit-llvm` | LLVM IR | unspecified, or explicit Windows x64 / Linux x86-64 | `.ll` |
-| `emit-qbe` | QBE IR | unspecified, or explicit Linux x86-64. Windows x64 support in Cerune is pending (supported by QBE 1.3) | `.ssa` |
+| `emit-qbe` | QBE IR | unspecified, or explicit Windows x64 / Linux x86-64 | `.ssa` |
 | `emit-wat` | WebAssembly Text | WebAssembly | `.wat` |
 | `emit-asm` | native assembly | x86-64, Windows / Linux, respective calling conventions | `.s` |
 | `emit-obj` | Native object encoded by Cerune | explicit Windows x64 / Linux x86-64 | `.obj` / `.o` |
@@ -126,7 +126,7 @@ Text-producing `emit-*` commands write their observations to standard output by 
 
 ### LLVM target selection
 
-`--target` accepts `x86_64-unknown-linux-gnu` or `x86_64-pc-windows-msvc`. Programs using strings require it, including unused types and functions. Numeric-only programs also require it when checked operations, conversions, or array indexing emit runtime diagnostics. For example, `print(1 + 2);` requires a target, while `print(1);` does not. The host OS never supplies a default. `--target` and `-o` (also `--output`) may appear in either order; duplicate options, missing values, and unsupported targets are errors.
+`--target` accepts `x86_64-unknown-linux-gnu` or `x86_64-pc-windows-msvc`. Programs using strings or dynamic arrays require it, including unused types and functions. Numeric-only programs also require it when checked operations, conversions, or array indexing emit runtime diagnostics. For example, `print(1 + 2);` requires a target, while `print(1);` does not. The host OS never supplies a default. `--target` and `-o` (also `--output`) may appear in either order; duplicate options, missing values, and unsupported targets are errors.
 
 On Linux x86-64:
 
@@ -150,7 +150,7 @@ Library callers can use `compile_to_llvm_with_target(source, Some(codegen::llvm:
 
 ### QBE target selection
 
-QBE output containing strings requires `--target x86_64-unknown-linux-gnu`. Missing or unsupported targets and duplicate options produce diagnostics without changing existing output files. Existing numeric-only invocations may omit the target.
+QBE accepts `--target x86_64-unknown-linux-gnu` or `x86_64-pc-windows-msvc`. Strings and dynamic arrays require a target. Missing or unsupported targets and duplicate options produce diagnostics without changing existing output files. Existing numeric-only invocations may omit the target, but Windows output and diagnostics require explicit selection.
 
 ```sh
 cerune emit-qbe examples/string_lookup.ceru --target x86_64-unknown-linux-gnu -o target/string_lookup.ssa
@@ -159,7 +159,16 @@ cc target/string_lookup.s -o target/string_lookup
 ./target/string_lookup
 ```
 
-The artifact records the target in a comment. Invoking QBE and the C linker belongs to the consumer. Library callers use `compile_to_qbe_with_target(source, Some(codegen::qbe::Target::X86_64UnknownLinuxGnu))`.
+On Windows x64, install QBE 1.3, Clang, and the MSVC CRT and linker.
+
+```powershell
+cerune emit-qbe examples/function_arguments.ceru --target x86_64-pc-windows-msvc -o target/function_arguments.ssa
+qbe -t amd64_win -o target/function_arguments.s target/function_arguments.ssa
+clang --target=x86_64-pc-windows-msvc target/function_arguments.s -o target/function_arguments.exe
+./target/function_arguments.exe
+```
+
+The artifact records the target and QBE `-t` option in a comment. Invoking QBE and the linker belongs to the consumer. Library callers use `compile_to_qbe_with_target(source, Some(codegen::qbe::Target::X86_64UnknownLinuxGnu))`, or `X86_64PcWindowsMsvc`. See [Windows ABI and validation](../design/qbe-windows.en.md).
 
 ### WAT and direct assembly strings
 

@@ -10,8 +10,9 @@ pub fn emit(module: &Module) -> String {
     if let Some(target) = module.target {
         writeln!(
             output,
-            "# target: {} (qbe -t amd64_sysv)\n",
-            target.triple()
+            "# target: {} (qbe -t {})\n",
+            target.triple(),
+            target.qbe_name()
         )
         .unwrap();
     }
@@ -39,8 +40,18 @@ pub fn emit(module: &Module) -> String {
     if module.uses_strings {
         super::string::emit(module, &mut output);
         if let Some(limit) = module.string_heap_limit {
-            output.push_str(&super::heap::support(limit));
+            output.push_str(&super::heap::support(
+                limit,
+                module
+                    .target
+                    .unwrap_or(super::Target::X86_64UnknownLinuxGnu)
+                    .read_only_section(),
+            ));
         }
+    }
+
+    if let Some(limit) = module.array_heap_limit {
+        output.push_str(&super::array::support(limit));
     }
 
     // printf format strings.
@@ -68,13 +79,17 @@ pub fn emit(module: &Module) -> String {
 
     output.push_str("export function w $main() {\n");
     output.push_str("@start\n");
+    if module.target == Some(super::Target::X86_64PcWindowsMsvc) {
+        // CRTの改行変換を止め、文字列と診断のバイト列をそのまま渡します。
+        output.push_str("  %stdout_mode =w call $_setmode(w 1, w 32768)\n  %stderr_mode =w call $_setmode(w 2, w 32768)\n  %stdout_bad =w csltw %stdout_mode, 0\n  %stderr_bad =w csltw %stderr_mode, 0\n  %io_bad =w or %stdout_bad, %stderr_bad\n  jnz %io_bad, @io_failed, @io_ready\n@io_failed\n  ret 1\n@io_ready\n");
+    }
 
     for slot in &module.slots {
         writeln!(output, "  %slot_{} =l alloc8 {}", slot.name, slot.size).unwrap();
     }
 
-    for instruction in &module.instructions {
-        emit_instruction(instruction, &module.slots, module, &mut output);
+    for (index, instruction) in module.instructions.iter().enumerate() {
+        emit_instruction(instruction, &module.slots, module, index, &mut output);
     }
 
     if let Some(function_id) = module.explicit_main {
@@ -264,7 +279,12 @@ fn emit_function(function: &Function, module: &Module, output: &mut String) {
             ParameterPassing::Scalar(ty) => ty,
             ParameterPassing::Aggregate { .. } => Type::Pointer,
         };
-        write!(output, "{} %arg{index}", type_name(ty)).unwrap();
+        let position = index + usize::from(function.aggregate_return_size.is_some());
+        if let Some(bits) = stack_float_bits(module, position, ty) {
+            write!(output, "{bits} %bits_arg{index}").unwrap();
+        } else {
+            write!(output, "{} %arg{index}", type_name(ty)).unwrap();
+        }
         has_parameter = true;
     }
     output.push_str(") {\n@start\n");
@@ -275,6 +295,15 @@ fn emit_function(function: &Function, module: &Module, output: &mut String) {
     for (index, parameter) in function.parameters.iter().enumerate() {
         match parameter.passing {
             ParameterPassing::Scalar(ty) => {
+                let position = index + usize::from(function.aggregate_return_size.is_some());
+                if stack_float_bits(module, position, ty).is_some() {
+                    writeln!(
+                        output,
+                        "  %arg{index} ={} cast %bits_arg{index}",
+                        type_name(ty)
+                    )
+                    .unwrap();
+                }
                 writeln!(
                     output,
                     "  {} %arg{index}, %slot_{}",
@@ -293,8 +322,8 @@ fn emit_function(function: &Function, module: &Module, output: &mut String) {
             }
         }
     }
-    for instruction in &function.instructions {
-        emit_instruction(instruction, &function.slots, module, output);
+    for (index, instruction) in function.instructions.iter().enumerate() {
+        emit_instruction(instruction, &function.slots, module, index, output);
     }
     output.push_str("}\n");
 }
@@ -307,13 +336,105 @@ fn function_name(function: &Function) -> String {
     )
 }
 
+// QBE 1.3 amd64_winはスタックの浮動小数点引数を整数として読み込みます。
+// 内部呼び出しの第5引数以降を同幅の整数ビット列として渡し、入口で復元します。
+// 隠れた集約戻り値ポインタも引数位置に含めます。数値変換は行いません。
+fn stack_float_bits(module: &Module, position: usize, ty: Type) -> Option<&'static str> {
+    if module.target != Some(super::Target::X86_64PcWindowsMsvc) || position < 4 {
+        return None;
+    }
+    match ty {
+        Type::Single => Some("w"),
+        Type::Double => Some("l"),
+        _ => None,
+    }
+}
+
 fn emit_instruction(
     instruction: &Instruction,
     slots: &[Slot],
     module: &Module,
+    instruction_index: usize,
     output: &mut String,
 ) {
     match instruction {
+        Instruction::ArrayAllocate {
+            dest,
+            length,
+            width,
+            stride,
+            origin,
+        } => {
+            writeln!(
+                output,
+                "  {} =l call $cerune_array_allocate(l {}, l {width}, l {stride}, {})",
+                temp(*dest),
+                operand(length, slots),
+                super::failure::arguments(*origin)
+            )
+            .unwrap();
+        }
+        Instruction::ArrayRangeCheck {
+            length,
+            start,
+            end,
+            origin,
+        } => {
+            writeln!(
+                output,
+                "  call $cerune_array_check_range(l {}, l {}, l {}, {})",
+                operand(length, slots),
+                operand(start, slots),
+                operand(end, slots),
+                super::failure::arguments(*origin)
+            )
+            .unwrap();
+        }
+        Instruction::ArrayAddress {
+            dest,
+            value,
+            index,
+            origin,
+        } => {
+            writeln!(
+                output,
+                "  {} =l call $cerune_array_checked_address(l {}, l {}, {})",
+                temp(*dest),
+                operand(value, slots),
+                operand(index, slots),
+                super::failure::arguments(*origin)
+            )
+            .unwrap();
+        }
+        Instruction::ArrayInitAddress { dest, value }
+        | Instruction::ArrayLength { dest, value }
+        | Instruction::ArrayReleaseOwner { dest, value } => {
+            let (ty, name) = match instruction {
+                Instruction::ArrayInitAddress { .. } => ("l", "init_address"),
+                Instruction::ArrayLength { .. } => ("l", "length"),
+                _ => ("w", "release_owner_last"),
+            };
+            writeln!(
+                output,
+                "  {} ={ty} call $cerune_array_{name}(l {})",
+                temp(*dest),
+                operand(value, slots)
+            )
+            .unwrap();
+        }
+        Instruction::ArrayInitialized { value } | Instruction::ArrayManage { value, .. } => {
+            let name = match instruction {
+                Instruction::ArrayInitialized { .. } => "initialized",
+                Instruction::ArrayManage { retain: true, .. } => "retain_owner",
+                _ => "free_elements",
+            };
+            writeln!(
+                output,
+                "  call $cerune_array_{name}(l {})",
+                operand(value, slots)
+            )
+            .unwrap();
+        }
         Instruction::StringConcat {
             dest,
             left,
@@ -496,6 +617,16 @@ fn emit_instruction(
             return_type,
             arguments,
         } => {
+            for (index, (ty, argument)) in arguments.iter().enumerate() {
+                if let Some(bits) = stack_float_bits(module, index, *ty) {
+                    writeln!(
+                        output,
+                        "  %call_{instruction_index}_arg_{index} ={bits} cast {}",
+                        operand(argument, slots)
+                    )
+                    .unwrap();
+                }
+            }
             output.push_str("  ");
             if let (Some(dest), Some(return_type)) = (dest, return_type) {
                 write!(output, "{} ={} ", temp(*dest), type_name(*return_type)).unwrap();
@@ -510,7 +641,11 @@ fn emit_instruction(
                 if index > 0 {
                     output.push_str(", ");
                 }
-                write!(output, "{} {}", type_name(*ty), operand(argument, slots)).unwrap();
+                if let Some(bits) = stack_float_bits(module, index, *ty) {
+                    write!(output, "{bits} %call_{instruction_index}_arg_{index}").unwrap();
+                } else {
+                    write!(output, "{} {}", type_name(*ty), operand(argument, slots)).unwrap();
+                }
             }
             output.push_str(")\n");
         }
@@ -704,7 +839,7 @@ fn emit_instruction(
 fn type_name(ty: Type) -> &'static str {
     match ty {
         Type::Bool => "w",
-        Type::String | Type::I64 => "l",
+        Type::DynamicArray | Type::String | Type::I64 => "l",
         Type::Single => "s",
         Type::Double => "d",
         Type::Pointer => "l",
@@ -714,7 +849,7 @@ fn type_name(ty: Type) -> &'static str {
 fn store_name(ty: Type) -> &'static str {
     match ty {
         Type::Bool => "storew",
-        Type::String | Type::I64 => "storel",
+        Type::DynamicArray | Type::String | Type::I64 => "storel",
         Type::Single => "stores",
         Type::Double => "stored",
         Type::Pointer => unreachable!("pointers are passed without scalar stores"),
@@ -724,7 +859,7 @@ fn store_name(ty: Type) -> &'static str {
 fn load_name(ty: Type) -> &'static str {
     match ty {
         Type::Bool => "loadw",
-        Type::String | Type::I64 => "loadl",
+        Type::DynamicArray | Type::String | Type::I64 => "loadl",
         Type::Single => "loads",
         Type::Double => "loadd",
         Type::Pointer => unreachable!("pointers are passed without scalar loads"),
@@ -763,7 +898,9 @@ fn compare_name(op: CompareOp, ty: Type) -> &'static str {
         ) => {
             unreachable!("semantic analysis rejects boolean ordering")
         }
-        (_, Type::String | Type::Pointer) => unreachable!("string comparison uses its own helper"),
+        (_, Type::DynamicArray | Type::String | Type::Pointer) => {
+            unreachable!("string comparison uses its own helper")
+        }
     }
 }
 
@@ -806,8 +943,15 @@ fn operand(value: &Operand, slots: &[Slot]) -> String {
         Operand::String(id) => format!("$cerune_string_{id}"),
         Operand::Boolean(value) => i32::from(*value).to_string(),
         Operand::Integer(value) => value.to_string(),
-        Operand::Float32(text) => format!("s_{text}"),
-        Operand::Float64(text) => format!("d_{text}"),
+        // 非有限値はQBEをビルドしたCRTのscanf表記に依存しないビット定数にします。
+        Operand::Float32(text) => match text.parse::<f32>() {
+            Ok(value) if !value.is_finite() => value.to_bits().to_string(),
+            _ => format!("s_{text}"),
+        },
+        Operand::Float64(text) => match text.parse::<f64>() {
+            Ok(value) if !value.is_finite() => (value.to_bits() as i64).to_string(),
+            _ => format!("d_{text}"),
+        },
         Operand::Temp(temp) => self::temp(*temp),
         Operand::Slot(slot) => format!("%slot_{}", slots[*slot].name),
         Operand::ReturnPointer => "%result".into(),
