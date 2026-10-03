@@ -1,6 +1,6 @@
-Subject: Question: floating-point stack parameter lowering with amd64_win (QBE 1.3 and master)
-
 Hello,
+
+I am a native Japanese speaker, and I used AI assistance to help write and organize this report in English.  
 
 Could you confirm whether the following is valid QBE IL for amd64_win? I am not assuming this is a confirmed QBE bug: I would like to check my IL usage and the supported ABI contract as well as the generated code.
 
@@ -16,7 +16,7 @@ export function w $check(l %a, l %b, l %c, l %d, s %value) {
 
 Versions tested (unmodified):
 - v1.3: c0818978acec60ebb6167fade60fb7012cbf20ca.
-- Official master fetched on 2026-10-03 UTC: e786f06032fefa2e3790d6b1c9e31ed138f475a6.
+- Upstream master fetched on 2026-10-03 (UTC): e786f06032fefa2e3790d6b1c9e31ed138f475a6.
 - Repository: git://c9x.me/qbe.git.
 - qbe-1.3.tar.xz SHA-256: d587905d620dc5e1d2bfa7c2cc642b9b837aa89a3188c6e37b53d756cf66e320.
 - The results below are the same for both versions.
@@ -89,14 +89,10 @@ One possible location is the non-aggregate APS_InlineOnStack branch in amd64/win
 
 Am I using the IL/ABI correctly here, or is an additional annotation or a different representation required? If the input is valid and supported, would the class change during amd64_win parameter lowering warrant further investigation?
 
-Full commands for the controls are in COMMANDS.md.
+Full commands for the controls are included in the repository linked below.
 
-Attachments prepared alongside this draft:
-- inputs/callee-only.ssa: five-line assembler reproduction.
-- inputs/f32-arg5.ssa and inputs/f64-arg5.ssa: complete programs, expected exit 0.
-- inputs/*arg4.ssa: register-passed controls.
-- inputs/*nine-floats.ssa: stack-passed controls on both ABIs.
-- inputs/*caller.ssa and inputs/*callee.c: caller/callee separation.
-- observed/: generated assembly, diagnostics, and ABI debug dumps.
+Full reproduction artifacts are available here:
+https://github.com/Hokutaka/Cerune/tree/research/qbe-windows-abi/experiments/qbe-windows-abi
 
-This is a prepared draft; it has not been sent.
+Regards,
+Hokutaka
