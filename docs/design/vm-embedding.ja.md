@@ -69,7 +69,7 @@ Emitter
 Backend Artifact
 ```
 
-C、LLVM IR、QBE IR、WAT、Assembly、Native Objectなどを実際にどのツールでbuild・link・load・runするかは、成果物を受け取るアプリケーションの責務です。
+現行のemit成果物をどのツールでbuild・link・load・runするかは、受け取るアプリケーションが管理します。将来の[IR・VM・Nativeのbuild / release](owned-routes.ja.md)は別の操作であり、VM埋め込みAPIには組み込みません。C・LLVM・QBE・WAT等は引き続きemit-onlyです。
 
 Ceruneへ以下を追加しません。
 
@@ -212,4 +212,4 @@ VM埋め込みAPIでは、次を行いません。
 5. VMエラーと命令出自を既存の実行経路と同じように保持する。
 6. コンパイル済みbytecodeを使った繰り返し実行をテストする。
 
-この機能が成立した後も、Emitter成果物のbuildや実行はCeruneへ取り込みません。
+このAPIはemit-only経路の外部ビルドや実行を管理しません。Cerune-ownedのbuild / release計画とは責務を分けます。

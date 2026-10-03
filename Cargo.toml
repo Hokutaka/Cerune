@@ -10,4 +10,8 @@ license = "MIT"
 name = "cerune"
 path = "src/main.rs"
 
+[[example]]
+name = "lean_verification"
+path = "experiments/lean/main.rs"
+
 [dependencies]

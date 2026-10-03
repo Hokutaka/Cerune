@@ -4,6 +4,8 @@
 
 この文書では、Cerune v0.1のコマンドラインインターフェースを定義します。
 
+IR・VM・Nativeの[build / release](../design/owned-routes.ja.md)と[Lean出力](../design/lean-verification.ja.md)は設計・検証段階です。現行CLIには追加されていません。
+
 ## コマンド
 
 現在のCLIは次のコマンドを提供します。
