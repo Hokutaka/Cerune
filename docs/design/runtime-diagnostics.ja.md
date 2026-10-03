@@ -92,7 +92,7 @@ WATは失敗箇所ごとの静的な検査関数から`cerune.write_error_byte(i
 | --- | --- |
 | `CERUNE_TEST_CC` | CコンパイラとQBE生成ASMのリンカ（例: `clang`） |
 | `CERUNE_TEST_LLVM_CLANG` | 生成LLVMを処理するClang |
-| `CERUNE_TEST_QBE` | QBE 1.2の実行ファイル |
+| `CERUNE_TEST_QBE` | QBE 1.3の実行ファイル |
 | `CERUNE_TEST_NODE` | Node.js |
 | `CERUNE_TEST_WAT2WASM_JS` | WABTの`bin/wat2wasm`スクリプトへのパス |
 

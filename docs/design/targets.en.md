@@ -65,6 +65,12 @@ The current outputs can be described as follows:
 
 "Not selected by Cerune" does not mean inferred implicitly from the host environment. It means that Cerune does not include target-specific decisions in that observation and that the caller of a downstream tool selects the target.
 
+### QBE validation version
+
+CI uses [QBE 1.3](https://c9x.me/compile/releases.html), verified against its official SHA-256. Cerune's current QBE execution comparisons target Linux `amd64_sysv`.
+
+QBE 1.3 provides `amd64_win` for the Windows ABI. Cerune support still requires explicit target selection, Windows output and failure diagnostics, data placement, toolchain configuration, and execution tests. Updating QBE alone does not establish Windows support. [Official release notes](https://c9x.me/compile/release/qbe-1.3.html)
+
 ## Artifact consumer boundary
 
 An existing output route does not imply support for every language feature. Strings now lower through every route. LLVM and QBE diagnose a missing target before lowering, including unused definitions. Successful semantic validation is distinct from successful generation through each route.

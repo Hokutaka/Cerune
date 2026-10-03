@@ -46,6 +46,8 @@ Ceruneでは、書いた計算の意味と、それが実行される表現へ�
 
 [IR・VM・Nativeのbuild / release](owned-routes.ja.md)と[Leanによる変換の対応・プログラムの性質の検証](lean-verification.ja.md)を別の基盤作業として進めます。新しい分類や証明実験によって、下記の言語機能や生成経路の未対応を実装済みとはしません。
 
+当面は、経路整理・Lean検証実験 → QBE 1.3更新・Windows対応 → 動的配列の経路差解消 → build / release → Lean backendの拡充、の順で進めます。先に既存の意味と挙動を揃え、それを成果物構築と証明の基準にします。
+
 ## 次に持つべきもの：提案する順序
 
 `array_len`、配列の`for … in`、配列型の定数長`[T; COUNT]`、[型・長さを指定する関数](generic-functions.ja.md)と[明示的な丸め・飽和](rounding-conversions.ja.md)、[複合値の比較・表示とmatch式・ガード](aggregate-values.ja.md)、[動的文字列の連結・保持・解放](dynamic-data.ja.md)を実装しました。未対応機能は次の順で、小さな設計・example・全経路の比較を一組として追加します。構文や採用は各段階の設計で確定します。

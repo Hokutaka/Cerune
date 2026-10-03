@@ -92,7 +92,7 @@ Each source-derived failure site has a read-only record. This increases artifact
 | --- | --- |
 | `CERUNE_TEST_CC` | C compiler and linker for QBE-generated assembly, such as `clang` |
 | `CERUNE_TEST_LLVM_CLANG` | Clang for generated LLVM |
-| `CERUNE_TEST_QBE` | QBE 1.2 executable |
+| `CERUNE_TEST_QBE` | QBE 1.3 executable |
 | `CERUNE_TEST_NODE` | Node.js |
 | `CERUNE_TEST_WAT2WASM_JS` | Path to WABT's `bin/wat2wasm` script |
 
