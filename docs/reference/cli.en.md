@@ -42,7 +42,7 @@ cerune emit-llvm examples/string_concat.ceru --target x86_64-unknown-linux-gnu -
 
 The same commands also accept `--array-heap-limit <bytes>`, with the same default and numeric syntax as the string option. The budgets are independent. Array accounting measures live element storage using logical widths, not total physical memory. `check` and `emit-sources` reject this option.
 
-Dynamic arrays support `run` / `run-ir` / `run-vm` and IR/bytecode/C/LLVM output. QBE, WAT, ASM, and native objects diagnose unsupported arrays before modifying output files. IR, bytecode, and generated C/LLVM record the array budget in use. LLVM requires `--target`, including unused array types.
+Dynamic arrays support `run` / `run-ir` / `run-vm` and IR/bytecode/C/LLVM/QBE output. WAT, ASM, and native objects diagnose unsupported arrays before modifying output files. IR, bytecode, and generated C/LLVM/QBE record the array budget in use. LLVM and QBE require `--target`, including unused array types.
 
 ```sh
 cerune run examples/dynamic_arrays/copy.ceru --array-heap-limit 1024
@@ -126,7 +126,7 @@ Text-producing `emit-*` commands write their observations to standard output by 
 
 ### LLVM target selection
 
-`--target` accepts `x86_64-unknown-linux-gnu` or `x86_64-pc-windows-msvc`. Programs using strings require it, including unused types and functions. Numeric-only programs also require it when checked operations, conversions, or array indexing emit runtime diagnostics. For example, `print(1 + 2);` requires a target, while `print(1);` does not. The host OS never supplies a default. `--target` and `-o` (also `--output`) may appear in either order; duplicate options, missing values, and unsupported targets are errors.
+`--target` accepts `x86_64-unknown-linux-gnu` or `x86_64-pc-windows-msvc`. Programs using strings or dynamic arrays require it, including unused types and functions. Numeric-only programs also require it when checked operations, conversions, or array indexing emit runtime diagnostics. For example, `print(1 + 2);` requires a target, while `print(1);` does not. The host OS never supplies a default. `--target` and `-o` (also `--output`) may appear in either order; duplicate options, missing values, and unsupported targets are errors.
 
 On Linux x86-64:
 
@@ -150,7 +150,7 @@ Library callers can use `compile_to_llvm_with_target(source, Some(codegen::llvm:
 
 ### QBE target selection
 
-QBE accepts `--target x86_64-unknown-linux-gnu` or `x86_64-pc-windows-msvc`. Strings require a target. Missing or unsupported targets and duplicate options produce diagnostics without changing existing output files. Existing numeric-only invocations may omit the target, but Windows output and diagnostics require explicit selection.
+QBE accepts `--target x86_64-unknown-linux-gnu` or `x86_64-pc-windows-msvc`. Strings and dynamic arrays require a target. Missing or unsupported targets and duplicate options produce diagnostics without changing existing output files. Existing numeric-only invocations may omit the target, but Windows output and diagnostics require explicit selection.
 
 ```sh
 cerune emit-qbe examples/string_lookup.ceru --target x86_64-unknown-linux-gnu -o target/string_lookup.ssa

@@ -58,7 +58,7 @@ cerune emit-c examples/floating_point.ceru -o floating_point.c
 | 構造体 | 名前付きの型、フィールド参照・既定値、部分変更で新しい値を作る更新式、入れ子、値コピー |
 | 直和型 | `enum`の選択肢と値、網羅的な`match`文・式、`if`ガード |
 | 配列 | 固定長配列（長さに定数も指定可）、`array_len`で要素数取得、入れ子、要素の参照・更新、値コピー |
-| 動的配列（IR・VM・C・LLVM） | `[T]`、`array_copy`・`array_copy_range`、独立コピー、表示・比較・反復。QBE以降は未対応 |
+| 動的配列（IR・VM・C・LLVM・QBE） | `[T]`、`array_copy`・`array_copy_range`、独立コピー、表示・比較・反復。WAT・nativeは未対応 |
 | 関数 | 型付き引数・戻り値、`void`、`return`、型・配列長のパラメーター。複合値も受け渡し可能 |
 | 実行開始 | トップレベル実行文、または`fn main() -> void`（併用不可） |
 | 制御構文 | `if` / `else`、`while`・`for`・配列の`for … in`、`break` / `continue` |
@@ -68,7 +68,7 @@ cerune emit-c examples/floating_point.ceru -o floating_point.c
 
 **計算の規則：** 暗黙の数値変換はありません。整数の桁あふれ、不正な整数除算、範囲外参照、正確な変換で値を保てない場合や、丸め後に範囲を超える場合は停止します。飽和を明示すると型の端へ収めます。浮動小数点計算には丸めがあります。
 
-**未実装：** 再帰、動的配列のQBE以降への出力・`array_repeat`、文字列の添字参照、実行時停止の捕捉。
+**未実装：** 再帰、動的配列のWAT・nativeへの出力・`array_repeat`、文字列の添字参照、実行時停止の捕捉。
 
 ## 実行と出力
 
@@ -87,7 +87,7 @@ cerune emit-c examples/floating_point.ceru -o floating_point.c
 | `emit-asm` | アセンブリ（`.s`） | Windows / Linux x86-64 |
 | `emit-obj` | ELF / COFFオブジェクト（`.o` / `.obj`） | 外部リンカ。`--target`・`-o`必須 |
 
-テキストは標準出力へ、`-o`でファイルへ保存します。LLVM・QBEの文字列出力とLLVMの検査付き数値演算・動的配列には`--target`が必要です。WATは出力・診断用のホスト関数を使います。
+テキストは標準出力へ、`-o`でファイルへ保存します。LLVM・QBEの文字列・動的配列とLLVMの検査付き数値演算には`--target`が必要です。WATは出力・診断用のホスト関数を使います。
 
 ## サンプルと開発
 

@@ -9,7 +9,7 @@
 | `x86_64-unknown-linux-gnu` | `-t amd64_sysv` | Linux x86-64, Clang / cc |
 | `x86_64-pc-windows-msvc` | `-t amd64_win` | Windows x64, Clang, MSVC CRT and linker |
 
-`emit-qbe` only generates SSA. Consumers explicitly invoke external QBE and the linker. The host OS never chooses the target. Strings require a target; existing numeric-only output without one retains Linux/SysV assumptions.
+`emit-qbe` only generates SSA. Consumers explicitly invoke external QBE and the linker. The host OS never chooses the target. Strings and dynamic arrays require a target; existing numeric-only output without one retains Linux/SysV assumptions.
 
 CI verifies [official QBE 1.3](https://c9x.me/compile/release/qbe-1.3.html) against its SHA-256. The Windows job builds QBE itself using MinGW/UCRT and links generated programs using Clang/MSVC. QBE is not patched.
 
@@ -54,4 +54,4 @@ Both tool paths are required. Ordinary tests report the external execution test 
 
 Comparisons require exact stdout/stderr bytes without newline or floating-point display normalization. `target/qbe-windows-observations/<case>/` retains `.ceir`, `.cebc`, `.ssa`, `.s`, executable, expected output, and each process's output. CI uploads the same directory as an artifact.
 
-Dynamic arrays remain unsupported, as in the other compiled routes. QBE does not define a separate language subset; the next task is dynamic-array route parity.
+[Dynamic arrays](owned-arrays.en.md) also compare results, failure reasons, source origins, and prior output with IR/VM/C/LLVM. Run `cargo test --test dynamic_arrays` to check allocation, independent copies, ranges, ownership release, and Windows argument boundaries; CI sets the QBE variables above and runs these tests too.

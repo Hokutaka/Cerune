@@ -41,7 +41,7 @@
 
 バックエンドは実装上の構成要素です。出力経路、ターゲット、成果物をまとめて指す用語としては使用しません。
 
-動的配列`[T]`は現在IR Executor・Bytecode VM・生成C・LLVMで実行できます。QBE・WAT・ASM・native objectへの出力は、未使用の動的配列型も含めて明示的に診断します。[対応範囲](owned-arrays.ja.md)を参照してください。
+動的配列`[T]`は現在IR Executor・Bytecode VM・生成C・LLVM・QBEで実行できます。WAT・ASM・native objectへの出力は、未使用の動的配列型も含めて明示的に診断します。[対応範囲](owned-arrays.ja.md)を参照してください。
 
 ## 実行経路の責務
 

@@ -292,9 +292,9 @@ if (Flags { enabled: true, }).enabled {
 
 [構文と評価順の設計](../design/product-updates.ja.md)と[実行例](../../examples/product_update.ceru)を参照してください。
 
-## 動的配列（IR Executor・VM・C・LLVM）
+## 動的配列（IR Executor・VM・C・LLVM・QBE）
 
-`[T]`は実行時の長さを持つ所有値です。`run`／`run-ir`／`run-vm`で実行でき、`emit-ir`／`emit-bytecode`／`emit-c`／`emit-llvm`で処理を確認できます。生成C・LLVMは外部コンパイラでビルドできます。LLVMは`--target`の明示が必要です。QBE・WAT・ASM・native objectは未対応の診断を返します。
+`[T]`は実行時の長さを持つ所有値です。`run`／`run-ir`／`run-vm`で実行でき、`emit-ir`／`emit-bytecode`／`emit-c`／`emit-llvm`／`emit-qbe`で処理を確認できます。生成C・LLVM・QBEは外部コンパイラでビルドできます。LLVM・QBEは`--target`の明示が必要です。WAT・ASM・native objectは未対応の診断を返します。
 
 | 操作 | 意味 |
 | --- | --- |
@@ -387,7 +387,7 @@ print(array_len(same)); // 2
 
 ### 配列の要素数
 
-`array_len(values)`は配列を一つ受け取り、最外側の要素数を`i64`で返します。固定長`[T; N]`では`N`、動的`[T]`では実行時の長さです（動的配列はIR・VM・C・LLVM対応）。要素型は問いません。文字列のバイト数は`byte_len`で取得します。
+`array_len(values)`は配列を一つ受け取り、最外側の要素数を`i64`で返します。固定長`[T; N]`では`N`、動的`[T]`では実行時の長さです（動的配列はIR・VM・C・LLVM・QBE対応）。要素型は問いません。文字列のバイト数は`byte_len`で取得します。
 
 ```cerune
 matrix: [[i64; 3]; 2] = [[1, 2, 3], [4, 5, 6]];
@@ -404,7 +404,7 @@ print(array_len(matrix[0])); // 3
 
 ### 固定長配列の反復
 
-動的配列の反復もIR・VM・C・LLVMで同じ規則を使い、長さ0なら本体を実行しません。
+動的配列の反復もIR・VM・C・LLVM・QBEで同じ規則を使い、長さ0なら本体を実行しません。
 
 ```cerune
 values: [i64; 3] = [4, 7, 9];

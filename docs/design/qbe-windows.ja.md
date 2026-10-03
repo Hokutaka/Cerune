@@ -9,7 +9,7 @@
 | `x86_64-unknown-linux-gnu` | `-t amd64_sysv` | Linux x86-64、Clang / cc |
 | `x86_64-pc-windows-msvc` | `-t amd64_win` | Windows x64、Clang、MSVC CRT・リンカ |
 
-`emit-qbe`はSSAを生成するだけです。外部QBEとリンカは利用側が明示的に呼びます。ホストOSからターゲットを選びません。文字列には指定が必須で、既存の数値専用・未指定出力はLinux/SysV前提を保ちます。
+`emit-qbe`はSSAを生成するだけです。外部QBEとリンカは利用側が明示的に呼びます。ホストOSからターゲットを選びません。文字列と動的配列には指定が必須で、既存の数値専用・未指定出力はLinux/SysV前提を保ちます。
 
 CIは[公式QBE 1.3](https://c9x.me/compile/release/qbe-1.3.html)をSHA-256で確認します。WindowsジョブではMinGW/UCRTでQBE本体をビルドしますが、生成プログラムにはClang/MSVCを使います。QBEへのパッチは加えません。
 
@@ -54,4 +54,4 @@ cargo test --test qbe_windows -- --include-ignored
 
 改行や浮動小数点表示を正規化せず、stdout/stderrの全バイトを比較します。`target/qbe-windows-observations/<case>/`に`.ceir`・`.cebc`・`.ssa`・`.s`・実行ファイル・期待出力・各プロセスの出力を保存します。CIでも同じフォルダをartifactとして残します。
 
-動的配列は他のcompiled routeと同様に未対応です。QBEの対応範囲を独自の言語サブセットにはせず、次の作業で経路間の動的配列の差を解消します。
+[動的配列](owned-arrays.ja.md)もIR・VM・C・LLVMと実行結果・停止理由・出自・先行出力を比較します。`cargo test --test dynamic_arrays`で確保・独立コピー・範囲・所有解放とWindowsの引数境界を検証し、上記のQBE用環境変数を設定したCIでも実行します。

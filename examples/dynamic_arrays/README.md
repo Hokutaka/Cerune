@@ -2,10 +2,11 @@
 
 [English](README.en.md)
 
-IR Executor・VM・生成C・LLVMで実行できます。QBE・WAT・ASM・native objectは未対応です。
+IR Executor・VM・生成C・LLVM・QBEで実行できます。WAT・ASM・native objectは未対応です。
 
 | 例 | 確認すること |
 | --- | --- |
+| [batches.ceru](batches.ceru) | 二つの範囲を固定長配列に入れて返し、保存したコピーと更新を比較 |
 | [readings.ceru](readings.ceru) | 構造体配列の範囲を関数から返し、コピーを修正して集計 |
 | [window.ceru](window.ceru) | 実行時の長さで範囲を選び、関数から返した配列だけを更新 |
 | [copy.ceru](copy.ceru) | 独立コピー、範囲・空配列、要素更新、表示・比較・反復 |
@@ -34,3 +35,14 @@ clang readings.ll -o readings
 ```
 
 Windowsではターゲットを`x86_64-pc-windows-msvc`に変え、`clang readings.ll -o readings.exe`、`.\readings.exe`で実行します。元の範囲は`[{valid: false, value: 0}, {valid: true, value: 20}]`のまま、コピーは15と20になり、合計35を出力します。
+
+QBE 1.3での生成・実行例（Linux x86-64）：
+
+```sh
+cargo run --quiet -- emit-qbe examples/dynamic_arrays/batches.ceru --target x86_64-unknown-linux-gnu -o batches.ssa
+qbe -t amd64_sysv -o batches.s batches.ssa
+clang batches.s -o batches
+./batches
+```
+
+WindowsではCeruneのターゲットを`x86_64-pc-windows-msvc`、QBEを`-t amd64_win`に変え、`clang --target=x86_64-pc-windows-msvc batches.s -o batches.exe`でリンクします。`.\batches.exe`は更新後`[[99, 20], []]`、保存値`[[10, 20], [30]]`、外側の長さ2、空配列の長さ0を出力します。

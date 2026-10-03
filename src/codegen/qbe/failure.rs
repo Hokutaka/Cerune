@@ -6,7 +6,10 @@ use super::ir::{BinaryOp, FailureOrigin, Instruction, Module};
 
 fn origin(instruction: &Instruction) -> Option<FailureOrigin> {
     match instruction {
-        Instruction::StringConcat { origin, .. }
+        Instruction::ArrayAllocate { origin, .. }
+        | Instruction::ArrayRangeCheck { origin, .. }
+        | Instruction::ArrayAddress { origin, .. }
+        | Instruction::StringConcat { origin, .. }
         | Instruction::ConvertNumeric { origin, .. }
         | Instruction::IntegerBinary { origin, .. }
         | Instruction::CheckIntegerRange { origin, .. }
@@ -86,7 +89,8 @@ pub(super) fn emit(module: &Module, output: &mut String) {
             origins.push(item);
         }
     }
-    if origins.is_empty() && module.string_heap_limit.is_none() {
+    if origins.is_empty() && module.string_heap_limit.is_none() && module.array_heap_limit.is_none()
+    {
         return;
     }
     for origin in origins {
@@ -107,12 +111,15 @@ pub(super) fn emit(module: &Module, output: &mut String) {
         ConversionNegativeZero,
         ArrayIndexOutOfBounds,
     ];
-    if module.string_heap_limit.is_some() {
+    if module.string_heap_limit.is_some() || module.array_heap_limit.is_some() {
         codes.extend([
             AllocationSizeOverflow,
             AllocationLimitExceeded,
             AllocationFailed,
         ]);
+    }
+    if module.array_heap_limit.is_some() {
+        codes.push(ArrayRangeOutOfBounds);
     }
     for code in codes {
         data(

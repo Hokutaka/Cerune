@@ -1,10 +1,12 @@
-//! 動的配列のIR・VM・生成C・LLVMの結果・停止理由・出自を照合します。
+//! 動的配列のIR・VM・生成C・LLVM・QBEの結果・停止理由・出自を照合します。
 #[path = "support/c_arrays.rs"]
 mod c_arrays;
 #[path = "support/crash_dialogs.rs"]
 mod crash_dialogs;
 #[path = "support/llvm_arrays.rs"]
 mod llvm_arrays;
+#[path = "support/qbe_arrays.rs"]
+mod qbe_arrays;
 use cerune_lang::{bytecode, compile_to_ir, ir, ir_executor, run_bytecode};
 
 fn compare(source: &str, limit: u64) -> Result<String, ir_executor::ExecutionError> {
@@ -23,6 +25,7 @@ fn compare(source: &str, limit: u64) -> Result<String, ir_executor::ExecutionErr
     }
     c_arrays::compare(&program, &direct);
     llvm_arrays::compare(&program, &direct);
+    qbe_arrays::compare(&program, &direct);
     direct
 }
 fn success(source: &str, expected: &str) {
@@ -210,8 +213,8 @@ fn unimplemented_compiled_routes_diagnose_even_unused_dynamic_types() {
         let p = compile_to_ir(source).unwrap();
         c_arrays::compare(&p, &ir_executor::run(&p));
         llvm_arrays::compare(&p, &ir_executor::run(&p));
+        qbe_arrays::compare(&p, &ir_executor::run(&p));
         for result in [
-            codegen::emit_qbe(&p),
             codegen::emit_wat(&p),
             codegen::emit_x86_64_win_asm(&p),
             x86_64::emit_asm(&p, Target::X86_64UnknownLinuxGnu),
@@ -237,6 +240,10 @@ fn unimplemented_compiled_routes_diagnose_even_unused_dynamic_types() {
 
 #[test]
 fn examples_and_generated_steps_match_checked_artifacts() {
+    success(
+        include_str!("../examples/dynamic_arrays/batches.ceru"),
+        "[[99, 20], []]\n[[10, 20], [30]]\n2\n0\n",
+    );
     success(
         include_str!("../examples/dynamic_arrays/readings.ceru"),
         "[{valid: false, value: 0}, {valid: true, value: 20}]\n[{valid: true, value: 15}, {valid: true, value: 20}]\n35\n",
@@ -265,6 +272,14 @@ fn examples_and_generated_steps_match_checked_artifacts() {
         )
         .unwrap(),
         include_str!("fixtures/dynamic-arrays/llvm.ll")
+    );
+    assert_eq!(
+        cerune_lang::codegen::qbe::emit_qbe_with_target(
+            &p,
+            Some(cerune_lang::codegen::qbe::Target::X86_64UnknownLinuxGnu)
+        )
+        .unwrap(),
+        include_str!("fixtures/dynamic-arrays/qbe.ssa")
     );
     assert_eq!(
         cerune_lang::codegen::emit_c(&p).unwrap(),
@@ -298,6 +313,7 @@ fn array_and_string_budgets_are_independent() {
     p.string_heap_limit = 2;
     c_arrays::compare(&p, &ir_executor::run(&p));
     llvm_arrays::compare(&p, &ir_executor::run(&p));
+    qbe_arrays::compare(&p, &ir_executor::run(&p));
     assert_eq!(ir_executor::run(&p).unwrap(), "[\"ab\"]\n");
     assert_eq!(
         run_bytecode(&bytecode::lower(&p).unwrap()).unwrap(),
@@ -306,6 +322,7 @@ fn array_and_string_budgets_are_independent() {
     p.string_heap_limit = 1;
     c_arrays::compare(&p, &ir_executor::run(&p));
     llvm_arrays::compare(&p, &ir_executor::run(&p));
+    qbe_arrays::compare(&p, &ir_executor::run(&p));
     let e = ir_executor::run(&p).unwrap_err();
     assert_eq!(
         e.runtime_failure().unwrap().code.name(),
@@ -423,7 +440,14 @@ fn cli_examples_limits_modules_and_unsupported_output_are_explicit() {
             .contains("dynamic arrays require an explicit --target")
     );
     assert_eq!(fs::read(&preserved).unwrap(), b"keep");
-    for command in ["emit-qbe", "emit-wat", "emit-asm", "emit-obj"] {
+    let result = cli(&["emit-qbe", file, "-o", preserved.to_str().unwrap()]);
+    assert!(!result.status.success());
+    assert!(
+        String::from_utf8_lossy(&result.stderr)
+            .contains("dynamic arrays require an explicit --target")
+    );
+    assert_eq!(fs::read(&preserved).unwrap(), b"keep");
+    for command in ["emit-wat", "emit-asm", "emit-obj"] {
         let out = w.0.join("preserved-output");
         fs::write(&out, b"keep").unwrap();
         let mut args = vec![command, file, "-o", out.to_str().unwrap()];
@@ -497,6 +521,7 @@ fn cli_examples_limits_modules_and_unsupported_output_are_explicit() {
         }
         c_arrays::compare(&p, &direct);
         llvm_arrays::compare(&p, &direct);
+        qbe_arrays::compare(&p, &direct);
     }
     fs::write(
         w.0.join("values.ceru"),
@@ -583,6 +608,55 @@ fn llvm_requires_explicit_array_target_and_preserves_origins() {
                 .join("\n")
                 + "\n";
             assert_eq!(plain, stripped);
+        }
+    }
+}
+
+#[test]
+fn qbe_allocation_failures_keep_the_original_operation_and_prior_output() {
+    let p = compile_to_ir("print(7); print(array_copy([1]));").unwrap();
+    qbe_arrays::runtime_boundaries(&p);
+}
+
+#[test]
+fn dynamic_arrays_and_stack_float_parameters_keep_their_types() {
+    success(
+        r#"
+        fn choose(a:i64,b:i64,c:i64,d:i64,value:f32,source:[i64])->[f32] {
+            print(source); return array_copy([value]);
+        }
+        fn pair(a:i64,b:i64,c:i64,value:f64,source:[i64])->[[f64];1] {
+            print(source); return [array_copy([value])];
+        }
+        print(choose(1,2,3,4,1.5,array_copy([7])));
+        print(pair(1,2,3,2.5,array_copy([8])));
+    "#,
+        "[7]\n[1.5]\n[8]\n[[2.5]]\n",
+    );
+}
+#[test]
+fn qbe_requires_an_explicit_array_target_even_for_unused_types() {
+    use cerune_lang::codegen::qbe::{self, Target};
+    for source in [
+        "print(array_copy([1]));",
+        "type T{unused:[i64]} print(1);",
+        "fn unused(a:[i64])->void{} print(1);",
+    ] {
+        let p = compile_to_ir(source).unwrap();
+        assert!(
+            qbe::emit_qbe(&p)
+                .unwrap_err()
+                .message()
+                .contains("dynamic arrays require an explicit --target")
+        );
+        for target in [Target::X86_64UnknownLinuxGnu, Target::X86_64PcWindowsMsvc] {
+            let before = ir::text::emit(&p);
+            assert!(
+                qbe::emit_qbe_with_target(&p, Some(target))
+                    .unwrap()
+                    .contains(target.qbe_name())
+            );
+            assert_eq!(ir::text::emit(&p), before);
         }
     }
 }

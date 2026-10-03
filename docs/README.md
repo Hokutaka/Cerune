@@ -19,7 +19,7 @@ Cerune documentation is divided into `design`, which records design decisions, a
 | Lean verification / 意味の対応とプログラムの証明 | [日本語](design/lean-verification.ja.md) | [English](design/lean-verification.en.md) |
 | Output routes and targets / 出力経路とターゲット | [日本語](design/targets.ja.md) | [English](design/targets.en.md) |
 | QBE Windows support / QBEのWindows対応 | [日本語](design/qbe-windows.ja.md) | [English](design/qbe-windows.en.md) |
-| Owned arrays (IR/VM/C/LLVM) / 所有する動的配列（IR・VM・C・LLVM） | [日本語](design/owned-arrays.ja.md) | [English](design/owned-arrays.en.md) |
+| Owned arrays (IR/VM/C/LLVM/QBE) / 所有する動的配列（IR・VM・C・LLVM・QBE） | [日本語](design/owned-arrays.ja.md) | [English](design/owned-arrays.en.md) |
 | Dynamic strings and data / 動的文字列とデータ | [日本語](design/dynamic-data.ja.md) | [English](design/dynamic-data.en.md) |
 | Language capabilities and roadmap / 言語機能と今後の順序 | [日本語](design/language-roadmap.ja.md) | [English](design/language-roadmap.en.md) |
 | Rounding and saturation / 丸め方と飽和 | [日本語](design/rounding-conversions.ja.md) | [English](design/rounding-conversions.en.md) |

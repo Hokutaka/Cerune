@@ -50,6 +50,10 @@ pub fn emit(module: &Module) -> String {
         }
     }
 
+    if let Some(limit) = module.array_heap_limit {
+        output.push_str(&super::array::support(limit));
+    }
+
     // printf format strings.
     //
     // b 10 = '\n'
@@ -354,6 +358,83 @@ fn emit_instruction(
     output: &mut String,
 ) {
     match instruction {
+        Instruction::ArrayAllocate {
+            dest,
+            length,
+            width,
+            stride,
+            origin,
+        } => {
+            writeln!(
+                output,
+                "  {} =l call $cerune_array_allocate(l {}, l {width}, l {stride}, {})",
+                temp(*dest),
+                operand(length, slots),
+                super::failure::arguments(*origin)
+            )
+            .unwrap();
+        }
+        Instruction::ArrayRangeCheck {
+            length,
+            start,
+            end,
+            origin,
+        } => {
+            writeln!(
+                output,
+                "  call $cerune_array_check_range(l {}, l {}, l {}, {})",
+                operand(length, slots),
+                operand(start, slots),
+                operand(end, slots),
+                super::failure::arguments(*origin)
+            )
+            .unwrap();
+        }
+        Instruction::ArrayAddress {
+            dest,
+            value,
+            index,
+            origin,
+        } => {
+            writeln!(
+                output,
+                "  {} =l call $cerune_array_checked_address(l {}, l {}, {})",
+                temp(*dest),
+                operand(value, slots),
+                operand(index, slots),
+                super::failure::arguments(*origin)
+            )
+            .unwrap();
+        }
+        Instruction::ArrayInitAddress { dest, value }
+        | Instruction::ArrayLength { dest, value }
+        | Instruction::ArrayReleaseOwner { dest, value } => {
+            let (ty, name) = match instruction {
+                Instruction::ArrayInitAddress { .. } => ("l", "init_address"),
+                Instruction::ArrayLength { .. } => ("l", "length"),
+                _ => ("w", "release_owner_last"),
+            };
+            writeln!(
+                output,
+                "  {} ={ty} call $cerune_array_{name}(l {})",
+                temp(*dest),
+                operand(value, slots)
+            )
+            .unwrap();
+        }
+        Instruction::ArrayInitialized { value } | Instruction::ArrayManage { value, .. } => {
+            let name = match instruction {
+                Instruction::ArrayInitialized { .. } => "initialized",
+                Instruction::ArrayManage { retain: true, .. } => "retain_owner",
+                _ => "free_elements",
+            };
+            writeln!(
+                output,
+                "  call $cerune_array_{name}(l {})",
+                operand(value, slots)
+            )
+            .unwrap();
+        }
         Instruction::StringConcat {
             dest,
             left,
@@ -758,7 +839,7 @@ fn emit_instruction(
 fn type_name(ty: Type) -> &'static str {
     match ty {
         Type::Bool => "w",
-        Type::String | Type::I64 => "l",
+        Type::DynamicArray | Type::String | Type::I64 => "l",
         Type::Single => "s",
         Type::Double => "d",
         Type::Pointer => "l",
@@ -768,7 +849,7 @@ fn type_name(ty: Type) -> &'static str {
 fn store_name(ty: Type) -> &'static str {
     match ty {
         Type::Bool => "storew",
-        Type::String | Type::I64 => "storel",
+        Type::DynamicArray | Type::String | Type::I64 => "storel",
         Type::Single => "stores",
         Type::Double => "stored",
         Type::Pointer => unreachable!("pointers are passed without scalar stores"),
@@ -778,7 +859,7 @@ fn store_name(ty: Type) -> &'static str {
 fn load_name(ty: Type) -> &'static str {
     match ty {
         Type::Bool => "loadw",
-        Type::String | Type::I64 => "loadl",
+        Type::DynamicArray | Type::String | Type::I64 => "loadl",
         Type::Single => "loads",
         Type::Double => "loadd",
         Type::Pointer => unreachable!("pointers are passed without scalar loads"),
@@ -817,7 +898,9 @@ fn compare_name(op: CompareOp, ty: Type) -> &'static str {
         ) => {
             unreachable!("semantic analysis rejects boolean ordering")
         }
-        (_, Type::String | Type::Pointer) => unreachable!("string comparison uses its own helper"),
+        (_, Type::DynamicArray | Type::String | Type::Pointer) => {
+            unreachable!("string comparison uses its own helper")
+        }
     }
 }
 

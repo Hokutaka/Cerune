@@ -1,3 +1,4 @@
+mod array;
 mod conversion;
 mod emit;
 mod failure;
@@ -14,7 +15,7 @@ use lower::lower;
 
 use crate::{diagnostic::Diagnostic, ir as cerune_ir};
 
-/// QBEの文字列出力で検証する実行環境です。ホストOSからは選びません。
+/// QBEの文字列・動的配列・診断で検証する実行環境です。ホストOSからは選びません。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Target {
     X86_64UnknownLinuxGnu,
@@ -57,7 +58,14 @@ pub fn emit_qbe_with_target(
     program: &cerune_ir::Program,
     target: Option<Target>,
 ) -> Result<String, Diagnostic> {
-    super::support::require_static_arrays(program, "QBE")?;
+    if let Some(span) = program.first_dynamic_array_span()
+        && target.is_none()
+    {
+        return Err(Diagnostic::new(
+            "QBE dynamic arrays require an explicit --target: x86_64-unknown-linux-gnu or x86_64-pc-windows-msvc",
+            span,
+        ));
+    }
     if let Some(span) = super::support::first_string_span(program)
         && target.is_none()
     {
