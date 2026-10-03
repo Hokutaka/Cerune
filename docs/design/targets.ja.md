@@ -57,7 +57,7 @@ IR・VM・NativeはCeruneが完成成果物と実行契約を定義する経路�
 | --- | --- | --- |
 | C | Ceruneでは指定しない | Cソース `.c` |
 | LLVM IR | 未指定、または明示的なWindows x64 / Linux x86-64（文字列・実行時検査では必須） | LLVM IR `.ll` |
-| QBE IR | 未指定、または明示的なLinux x86-64（文字列では必須） | QBE IR `.ssa` |
+| QBE IR | 未指定、または明示的なLinux x86-64（文字列では必須）。Windows x64はCerune対応準備中（QBE 1.3の`amd64_win`） | QBE IR `.ssa` |
 | WebAssembly Text | WebAssembly | WAT `.wat` |
 | ネイティブアセンブリ | x86-64、Windows / Linux、各OSの呼出規約 | GNU形式のアセンブリ `.s` |
 | ネイティブオブジェクト | 明示的なWindows x64 / Linux x86-64 | COFF `.obj` / ELF64 `.o` |

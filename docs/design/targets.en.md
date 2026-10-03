@@ -57,7 +57,7 @@ The current outputs can be described as follows:
 | --- | --- | --- |
 | C | not selected by Cerune | C source `.c` |
 | LLVM IR | unspecified, or explicit Windows x64 / Linux x86-64 (required for strings and runtime checks) | LLVM IR `.ll` |
-| QBE IR | unspecified, or explicit Linux x86-64 (required for strings) | QBE IR `.ssa` |
+| QBE IR | unspecified, or explicit Linux x86-64 (required for strings). Windows x64 support in Cerune is pending (QBE 1.3 provides `amd64_win`) | QBE IR `.ssa` |
 | WebAssembly Text | WebAssembly | WAT `.wat` |
 | Native assembly | x86-64, Windows / Linux, respective calling conventions | GNU-style assembly `.s` |
 | Native object | explicit Windows x64 / Linux x86-64 | COFF `.obj` / ELF64 `.o` |
