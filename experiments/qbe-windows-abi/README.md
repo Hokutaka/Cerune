@@ -14,6 +14,9 @@ QBE upstreamへの問い合わせ本文は [UPSTREAM.md](UPSTREAM.md)、
 
 2026-10-05、06 原因が分かったので #92 で確認します。
 結論から言うと、既存のパッチが当たっていたバグだったようです。
+同ファイルに `qbe-winabi-float.mbox` のPATCHを保存します。
+
+- [正式な入手経路](https://lists.sr.ht/~mpu/qbe/patches/71380)
 
 ## 結論
 

@@ -1,0 +1,118 @@
+From nobody Mon Oct  5 16:14:32 2026
+Authentication-Results: mail-a.sr.ht; dkim=pass header.d=proton.me header.i=@proton.me
+Received: from mail-4316.protonmail.ch (mail-4316.protonmail.ch [185.70.43.16])
+	by mail-a.sr.ht (Postfix) with ESMTPS id 23E8A22289
+	for <~mpu/qbe@lists.sr.ht>; Wed, 09 Sep 2026 23:02:01 +0000 (UTC)
+DKIM-Signature: v=1; a=rsa-sha256; c=relaxed/relaxed; d=proton.me;
+	s=protonmail; t=1788994920; x=1789254120;
+	bh=mnUsusNer+7iadG7g/k5lGOc50qsXuy4GfMVVltciac=;
+	h=Date:To:From:Cc:Subject:Message-ID:Feedback-ID:From:To:Cc:Date:
+	 Subject:Reply-To:Feedback-ID:Message-ID:BIMI-Selector;
+	b=PraJ3VJu3arsEGI5HgUu60gvBPVZarlmaUG4eI/qc84Thwh3aFQrHb+cqSlthgTo+
+	 9z3XH10IQXCVxfsVoLiT8TAcvNA7x0vT0zBcczYDznwDJo6mT2FjGVz9WmuHhc8nGI
+	 qplpjpKpm7KjC9AOEz2kojuGXGagDmFN7NzsUCmHWnl6VyTDsdrLUPa4dfv+teKh5X
+	 LCHMGxGRRJ3UdDTEp9SU2IDDMruTUHbr5JFeuS58V3QDNmq4iJAydXhJMfCDjnAOwK
+	 M7UbPQ7NDSwossd114mF0ttFeif+h+oQCgyJtarIIEeHS8K/Qo6iAvu1Rd/r7Jf9HN
+	 OJY5HeSC9iyHw==
+Date: Wed, 09 Sep 2026 23:01:56 +0000
+To: ~mpu/qbe@lists.sr.ht
+From: elaeja <jeremiahlower@proton.me>
+Cc: elaeja <jeremiahlower@proton.me>
+Subject: [PATCH] winabi: fix class of stack-passed float parameters
+Message-ID: <20260909230112.1449-1-jeremiahlower@proton.me>
+Feedback-ID: 78399617:user:proton
+X-Pm-Message-ID: 33740ebb001e7bdd6009c6056ea6e107de28fd3d
+MIME-Version: 1.0
+Content-Type: text/plain; charset=utf-8
+Content-Transfer-Encoding: quoted-printable
+
+Stack-passed scalar parameters were copied with a hardcoded integer class, =
+so floats landed in general-purpose registers and later float operations fa=
+iled to assemble.  Use the parameter's own class instead, matching the othe=
+r copy paths in the same function.
+
+Add test/abi10.ssa covering a plain stack-passed float and the struct-retur=
+n case where the hidden pointer pushes the fourth float onto the stack.  It=
+ fails to assemble without the fix.
+
+Tested with make check and make check-amd64_win.
+---
+ amd64/winabi.c |  2 +-
+ test/abi10.ssa | 50 ++++++++++++++++++++++++++++++++++++++++++++++++++
+ 2 files changed, 51 insertions(+), 1 deletion(-)
+ create mode 100644 test/abi10.ssa
+
+diff --git a/amd64/winabi.c b/amd64/winabi.c
+index 5136e62..bf4b057 100755
+--- a/amd64/winabi.c
++++ b/amd64/winabi.c
+@@ -676,7 +676,7 @@ static RegisterUsage lower_func_parameters(Fn* func) {
+           emit(Ocopy, instr->cls, arg->ref, SLOT(-slot_offset), R);
+           emit(Oalloc8, Kl, instr->to, getcon(arg->size, func), R);
+         } else {
+-          emit(Ocopy, Kl, instr->to, SLOT(-slot_offset), R);
++          emit(Ocopy, instr->cls, instr->to, SLOT(-slot_offset), R);
+         }
+         slot_offset +=3D 2;
+         break;
+diff --git a/test/abi10.ssa b/test/abi10.ssa
+new file mode 100644
+index 0000000..015892d
+--- /dev/null
++++ b/test/abi10.ssa
+@@ -0,0 +1,50 @@
++# test stack-passed floating point
++# parameters; the microsoft x64
++# convention passes only the first
++# four arguments in registers, so
++# the rest arrive on the stack
++
++type :vec =3D { s 3 }
++
++export
++function s $addf(w %a, w %b, s %c, s %d, s %e, s %f) {
++@start
++=09%t1 =3Ds add %c, %d
++=09%t2 =3Ds add %t1, %e
++=09%t3 =3Ds add %t2, %f
++=09ret %t3
++}
++
++# a hidden struct-return pointer takes
++# the first slot, so the fourth float
++# is pushed onto the stack here
++
++export
++function :vec $mkvec(s %a, s %b, s %c, s %d) {
++@start
++=09%r =3Dl alloc4 12
++=09%p1 =3Dl add %r, 4
++=09%p2 =3Dl add %r, 8
++=09stores %b, %r
++=09stores %c, %p1
++=09stores %d, %p2
++=09ret %r
++}
++
++# >>> driver
++# #include <stdio.h>
++# typedef struct { float x, y, z; } vec;
++# extern float addf(int, int, float, float, float, float);
++# extern vec mkvec(float, float, float, float);
++# int main() {
++# =09vec v =3D mkvec(1, 2, 3, 4);
++# =09printf("%.1f\n", addf(1, 2, 1.5f, 2.5f, 3.5f, 4.5f));
++# =09printf("%.1f %.1f %.1f\n", v.x, v.y, v.z);
++# =09return 0;
++# }
++# <<<
++
++# >>> output
++# 12.0
++# 2.0 3.0 4.0
++# <<<
+--=20
+2.55.0
+
+
+
