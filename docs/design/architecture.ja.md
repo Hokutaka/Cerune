@@ -8,7 +8,7 @@ Ceruneは、コンパイラによる変換を観測可能にするための静�
 
 IR・VM・NativeをCerune-owned、C等をemit-onlyとする[経路図とbuild / releaseの計画](owned-routes.ja.md)を別途定めます。以下の実装図と、計画中の操作は区別します。
 
-[HIR／MIR／LIRの段階設計](ir-stages.ja.md)では、完成済みCerune IRをHIRとして位置づけ、共通MIRとNative LIRへの移行順序を定めます。MIR・SSA・最適化passは未実装で、以下は現在の構成です。
+[HIR／MIR／LIRの段階設計](ir-stages.ja.md)では、完成済みCerune IRをHIRとして位置づけ、共通MIRとNative LIRへの移行順序を定めます。MIRの型・検証器・変換・`emit-mir`を実装済みです。MIR実行器・Native移行・SSA・最適化passは未実装で、以下は現在の構成です。
 
 ## 設計原則
 
@@ -47,6 +47,7 @@ Cerune IR
   - backend independent
       │
       ├── Observation 1: emit-ir / .ceir
+      ├── MIR lowering → validation → emit-mir (observation only)
       ├── IR Executor: run / run-ir (direct structured execution)
       │
       ↓

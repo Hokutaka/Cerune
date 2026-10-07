@@ -4,13 +4,13 @@
 
 ## Status and direction
 
-The inspected baseline is `f39f55e`, merging Native dynamic arrays. **This change adds a stage design and a runnable baseline example. Common MIR, a MIR interpreter, SSA, and optimization passes remain unimplemented.**
+The inspected baseline is `f39f55e`, merging Native dynamic arrays. **Common MIR types, validation, HIR lowering, and `emit-mir` are implemented. The MIR interpreter, Native migration, SSA, and optimization passes remain unimplemented.**
 
 | Stage | Current implementation | Direction |
 | --- | --- | --- |
 | AST | Source syntax and positions, feeding common name/type/generic processing | Do not introduce another AST executor |
 | HIR | The completed `ir::Program` already serves this role: resolved types/references, ownership operations, structured control | Reuse Cerune IR rather than define its semantics twice |
-| MIR | Not implemented | Target-independent execution representation with typed temporaries, basic blocks, and explicit control flow |
+| MIR | `mir::Program`, HIR lowering, validation, observation text | Target-independent execution representation with typed temporaries, basic blocks, and explicit control flow |
 | LIR | `codegen::x86_64::ir` serves a similar role: register operations, stack slots, frames, target | Organize Native lowering around it; do not claim it is already a fully lowered machine-instruction IR |
 | Artifacts | Bytecode, C, LLVM, QBE, WAT, ASM, self-encoded COFF/ELF | Distinguish representations from completed artifacts in the [route design](owned-routes.en.md) |
 
@@ -33,7 +33,7 @@ File-based module resolution happens in [modules](../../src/modules.rs), preserv
 
 ## Baseline and migration
 
-Today HIR feeds direct execution, bytecode, and every backend. The following is a **future MIR plan**. Each executor receives a representation, not the previous executor's result.
+Today HIR feeds direct execution, bytecode, and every backend, alongside MIR generation for observation. The following is a **future MIR plan**. Each executor receives a representation, not the previous executor's result.
 
 ```text
 Source → frontend → HIR ─────────────→ IR Executor (reference)
@@ -59,7 +59,7 @@ Evaluate VM and external-backend migration individually. C/WAT need a verified w
 
 ## Initial MIR contract
 
-Start without SSA, allowing explicit assignments to typed locals and temporaries. The implementation PR will finalize concrete Rust types and public APIs.
+Start without SSA, allowing explicit assignments to typed locals and temporaries. The current Rust APIs are `mir::lower(&ir)`, `mir::validate(&mir)`, and `mir::text::emit(&mir)`.
 
 | Element | What it records |
 | --- | --- |
@@ -77,7 +77,22 @@ Reading a local or saving a temporary must not secretly deep-copy a value. Trans
 
 For-loop continue targets the update block; while-loop continue targets the condition; break targets the appropriate exit. Preserve HIR's explicit cleanup ordering, including return. Do not move a short-circuit RHS or argument copies before its branch.
 
-A MIR validator checks references, types, terminators, initialization before reads, language-level argument types/ownership, and failure origins. Ownership transfer/release paths also need validation. This is not a claim that external Images can safely be loaded: initially MIR is constructed inside the compiler.
+The current validator checks references, types, terminators, definite initialization before reads, language-level argument types/ownership, and failure origins. Initialization intersects all reachable predecessors to a fixed point. Array stores also require prior checks for every index-path prefix on every incoming path, without intervening reassignment to the root or indices. Tests fix the concrete lowering order that checks indices before evaluating the RHS.
+
+**Path validation of heap aliases, partial initialization, and retain/release lifetimes remains unimplemented.** Validation alone does not establish ownership safety or execution equivalence with HIR. Those remain work for the MIR interpreter comparisons and lifetime validation, distinct from validation for loading external Images.
+
+The implementation and observation data are organized as follows.
+
+| Implementation | Contents |
+| --- | --- |
+| [mir/mod.rs](../../src/mir/mod.rs) | Reuses HIR types/function IDs; typed locals/temporaries, atomic operations, blocks and terminators |
+| [mir/lower.rs](../../src/mir/lower.rs) | Translates all completed HIR execution operations; explicitly rejects unexpanded ArrayCopy/Let/Conditional |
+| [mir/validate.rs](../../src/mir/validate.rs) | Structure, types, initialization, preceding index checks, and call ownership categories |
+| [mir/text.rs](../../src/mir/text.rs) | Deterministic v0.1 observation text with budgets, types, locals, operations, edges, and origins |
+
+`BlockId` / `LocalId` / `InstructionId` are function-local IDs. Instruction IDs include terminators and are separate from HIR NodeIds. Origins distinguish original `Source` operations, `Derived` helper edges with their source, and `Synthetic` function entry/end. Failing execution operations retain a single primary origin. Unreachable statements/helper blocks remain present: there is no implicit dead-code elimination.
+
+Declaration metadata such as field defaults, constant declarations, and generic expansion origins stays in HIR. MIR holds expanded execution operations; NodeIds and HIR retain access to their declaration context. The Rust API returns an independent snapshot whose mutation does not affect the input HIR.
 
 ## Semantic preservation and resources
 
@@ -110,7 +125,7 @@ Observations are detached, read-only information. They do not expose mutable com
 
 ## CLI, bundles, and Lean
 
-`emit-hir` / `emit-mir` / `emit-lir`, pass selection, and a MIR execution CLI are **unimplemented candidates**. MIR extensions and snapshot schemas remain undecided. Preserve `emit-ir` compatibility; an interpreter does not automatically create another distribution route or build format.
+`emit-mir <file> [-o <output.txt>]` is implemented. `emit-hir` / `emit-lir`, pass selection, and a MIR execution CLI are **unimplemented candidates**. Observation text is versioned as `Cerune MIR v0.1`; a dedicated extension, loading format, and distribution snapshot remain undecided. Preserve `emit-ir` compatibility; an interpreter does not automatically create another distribution route or build format.
 
 The [#60 observation bundle](https://github.com/Hokutaka/Cerune/issues/60) can collect representations and correspondence from one frontend invocation. Its manifest indexes stages, targets, pass sequences, and artifacts; it is not another semantic IR. Bundling existing observations need not wait for MIR.
 
@@ -120,12 +135,13 @@ The [#81](https://github.com/Hokutaka/Cerune/issues/81) show/emit/build/run/via/
 
 ## Baseline example and implementation units
 
-[lowering_order.ceru](../../examples/dynamic_arrays/lowering_order.ceru) combines short-circuiting, for-loop continue/break, and dynamic-array argument copies.
+Start with [control_flow.ceru](../../examples/ir_stages/README.en.md) to inspect short-circuit and loop edges. [lowering_order.ceru](../../examples/dynamic_arrays/lowering_order.ceru) combines short-circuiting, for-loop continue/break, and dynamic-array argument copies.
 
 ```sh
 cargo run --quiet -- run examples/dynamic_arrays/lowering_order.ceru --array-heap-limit 48
 cargo run --quiet -- run-vm examples/dynamic_arrays/lowering_order.ceru --array-heap-limit 48
 cargo run --quiet -- emit-ir examples/dynamic_arrays/lowering_order.ceru --array-heap-limit 48
+cargo run --quiet -- emit-mir examples/dynamic_arrays/lowering_order.ceru --array-heap-limit 48 -o target/lowering_order.mir.txt
 cargo run --quiet -- emit-bytecode examples/dynamic_arrays/lowering_order.ceru --array-heap-limit 48
 cargo run --quiet -- emit-asm examples/dynamic_arrays/lowering_order.ceru --target x86_64-unknown-linux-gnu --annotate-origins --array-heap-limit 48
 ```
@@ -146,7 +162,7 @@ Implement and compare in these units, aiming for current feature parity rather t
 
 | Order | Work | Acceptance |
 | --- | --- | --- |
-| 1 | MIR types/blocks/instructions/validator, HIR→MIR, deterministic observation text | Fix evaluation order, short-circuiting, loop edges, and origins with baseline examples. Explicitly diagnose interim unsupported features; never discard instructions silently |
+| 1 (implemented) | MIR types/blocks/instructions/validator, HIR→MIR, `emit-mir` | Validate every example's lowering/determinism, order, short-circuit/loop edges, origins, and rejection of malformed MIR. Execution equivalence and heap lifetime guarantees remain subsequent work |
 | 2 | Independent MIR interpreter | Do not execute bytecode, VM, or HIR Executor internally. Share numeric/heap primitives and compare every current feature |
 | 3 | Native lowering from MIR | Match existing ASM/COFF/ELF known outputs, failures, origins, and ABI behavior on Windows/Linux |
 | 4 | Observation bundles, Lean correspondence, other backend migration as needed | Connect the same compilation and actual before/after representations; state proof scope and omissions |

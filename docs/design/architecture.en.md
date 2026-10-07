@@ -8,7 +8,7 @@ The boundaries that Cerune preserves for observability are defined in the [obser
 
 The [route diagram and build / release plan](owned-routes.en.md) define IR, VM, and Native as Cerune-owned and C-like outputs as emit-only. Planned operations are distinct from the implemented pipeline below.
 
-[The HIR/MIR/LIR design](ir-stages.en.md) identifies completed Cerune IR as HIR and plans common MIR and Native LIR migration. MIR, SSA, and optimization passes are unimplemented; the structure below describes the current compiler.
+[The HIR/MIR/LIR design](ir-stages.en.md) identifies completed Cerune IR as HIR and plans common MIR and Native LIR migration. MIR types, validation, lowering, and `emit-mir` are implemented. The MIR interpreter, Native migration, SSA, and optimization passes are unimplemented; the structure below describes the current compiler.
 
 ## Principles
 
@@ -47,6 +47,7 @@ Cerune IR
   - backend independent
       │
       ├── Observation 1: emit-ir / .ceir
+      ├── MIR lowering → validation → emit-mir (observation only)
       ├── IR Executor: run / run-ir (direct structured execution)
       │
       ↓

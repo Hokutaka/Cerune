@@ -1,0 +1,15 @@
+// 短絡で呼出しを省き、continueとbreakの行き先を観測します。
+fn accept(value: i64) -> bool {
+    print(value);
+    return value > 0;
+}
+
+mut total: i64 = 0;
+for (mut i: i64 = 0; i < 4; i = i + 1) {
+    if i == 1 { continue; }
+    if i == 3 { break; }
+    if i == 0 || accept(i) {
+        total = total + i + 1;
+    }
+}
+print(total);
