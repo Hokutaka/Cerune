@@ -14,6 +14,7 @@ IR・VM・Nativeの[build / release](../design/owned-routes.ja.md)と[Lean出力
 cerune check <file>
 cerune emit-sources <file> [-o <sources.json>]
 cerune emit-ir <file> [-o <output.ceir>]
+cerune emit-mir <file> [-o <output.txt>]
 cerune emit-c <file> [-o <output.c>]
 cerune emit-llvm <file> [--target <triple>] [-o <output.ll>]
 cerune emit-wat <file> [-o <output.wat>]
@@ -29,7 +30,7 @@ cerune --version
 
 ## 動的文字列の予算
 
-`run`・`run-ir`・`run-vm`・`emit-ir`・`emit-bytecode`・`emit-c`・`emit-llvm`・`emit-qbe`・`emit-wat`・`emit-asm`・`emit-obj`では`--string-heap-limit <bytes>`を指定できます。既定は67108864（64 MiB）。値は0〜9223372036854775807の十進整数で、省略・重複・負数を拒否します。`check`・`emit-sources`では受け付けません。
+`run`・`run-ir`・`run-vm`・`emit-ir`・`emit-mir`・`emit-bytecode`・`emit-c`・`emit-llvm`・`emit-qbe`・`emit-wat`・`emit-asm`・`emit-obj`では`--string-heap-limit <bytes>`を指定できます。既定は67108864（64 MiB）。値は0〜9223372036854775807の十進整数で、省略・重複・負数を拒否します。`check`・`emit-sources`では受け付けません。
 
 生存する動的文字列の内容を数え、共有領域は一度だけ、静的文字列は数えません。再代入中に共存する旧値・新値は両方数えます。コンパイル時評価には独立した64 MiBがあり、この設定では変更しません。物理メモリ全体の上限ではありません。値は生成物に固定され、実行中に変更するAPIはありません。
 
@@ -42,7 +43,7 @@ cerune emit-llvm examples/string_concat.ceru --target x86_64-unknown-linux-gnu -
 
 同じコマンドで`--array-heap-limit <bytes>`も指定できます。既定値・数値形式は文字列予算と同じで、二つの予算は独立です。要素の計算幅に基づく生存領域を数え、物理メモリ全体の上限ではありません。`check`・`emit-sources`では受け付けません。
 
-動的配列は`run`／`run-ir`／`run-vm`とIR・bytecode・C・LLVM・QBE・WAT・ASM・自前Object出力に対応しています。各成果物には使用した配列予算を記録します。LLVM・QBEは未使用の配列型も含め`--target`が必要です。ASM・Objectもターゲットを明示して生成し、外部ツールでリンクします。
+動的配列は`run`／`run-ir`／`run-vm`とIR・MIR・bytecode・C・LLVM・QBE・WAT・ASM・自前Object出力に対応しています。各成果物には使用した配列予算を記録します。LLVM・QBEは未使用の配列型も含め`--target`が必要です。ASM・Objectもターゲットを明示して生成し、外部ツールでリンクします。
 
 ```sh
 cerune run examples/dynamic_arrays/copy.ceru --array-heap-limit 1024
@@ -95,6 +96,16 @@ cerune emit-ir <file> [-o <output.ceir>]
 ```
 
 `cerune emit-ir`は、意味と型が解決されたバックエンド非依存のCerune IRを出力します。
+
+## MIRの観測
+
+```sh
+cerune emit-mir examples/ir_stages/control_flow.ceru -o target/control_flow.mir.txt
+```
+
+完成済みIRを最適化なし・非SSAのMIRへ変換し、検証後に観測テキストを出力します。`-o`省略時はstdoutへ出します。ターゲットは不要で、`--target`・`--ssa`・pass指定は受け付けません。二つのheap予算は出力に記録します。
+
+`Cerune MIR v0.1`には型付き局所値、明示的な評価順、basic block・辺、所有操作、HIR NodeId／SourceId／Spanを含めます。本文・パスは自動で含めません。ソースの文字列リテラルと識別子はプログラムの一部として表示します。専用の拡張子・loaderはなく、実行可能な配布成果物ではありません。`run`は引き続きHIR直接実行です。[検証範囲と今後の実行器](../design/ir-stages.ja.md)も参照してください。
 
 ## 出力成果物の生成
 

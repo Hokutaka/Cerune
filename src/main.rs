@@ -67,6 +67,22 @@ fn run() -> Result<(), String> {
             write_or_print(output, ir)
         }
 
+        // 型・制御フローを検証した、最適化なしのMIRを観測します。
+        "emit-mir" => {
+            let input = required_path(args.next(), "missing input file")?;
+            let output = parse_output_option(
+                &args.collect::<Vec<_>>(),
+                "cerune emit-mir <file> [-o <output.txt>]",
+            )?;
+            let source = read_source(&input)?;
+            let hir = ir_for(&source, string_heap_limit, array_heap_limit)?;
+            let mir = render_compilation_result(
+                cerune_lang::mir::lower(&hir).map_err(|e| e.diagnostic()),
+                &source,
+            )?;
+            write_or_print(output, cerune_lang::mir::text::emit(&mir))
+        }
+
         // C コード生成
         "emit-c" => {
             let input = required_path(args.next(), "missing input file")?;
@@ -345,6 +361,7 @@ fn parse_heap_limits(args: Vec<String>, command: &str) -> Result<(Vec<String>, u
                 | "run-ir"
                 | "run-vm"
                 | "emit-ir"
+                | "emit-mir"
                 | "emit-bytecode"
                 | "emit-c"
                 | "emit-llvm"
@@ -464,6 +481,7 @@ fn print_help() {
            cerune emit-qbe <file> [--target <triple>] [-o <output.ssa>]\n\
            cerune emit-asm <file> [--target <triple>] [--annotate-origins] [-o <output.s>]\n\
            cerune emit-obj <file> --target <triple> [--annotate-origins] -o <output.o>\n\
+           cerune emit-mir <file> [-o <output.txt>]\n\
            cerune emit-bytecode <file> [-o <output.cebc>]\n\
            cerune run <file> [--diagnostic-format runtime-v1]\n\
            cerune run-ir <file> [--diagnostic-format runtime-v1]\n\

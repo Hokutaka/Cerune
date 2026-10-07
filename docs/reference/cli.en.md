@@ -14,6 +14,7 @@ The current CLI provides the following commands:
 cerune check <file>
 cerune emit-sources <file> [-o <sources.json>]
 cerune emit-ir <file> [-o <output.ceir>]
+cerune emit-mir <file> [-o <output.txt>]
 cerune emit-c <file> [-o <output.c>]
 cerune emit-llvm <file> [--target <triple>] [-o <output.ll>]
 cerune emit-wat <file> [-o <output.wat>]
@@ -29,7 +30,7 @@ cerune --version
 
 ## Dynamic string budget
 
-`run`, `run-ir`, `run-vm`, `emit-ir`, `emit-bytecode`, `emit-c`, `emit-llvm`, `emit-qbe`, `emit-wat`, `emit-asm`, and `emit-obj` accept `--string-heap-limit <bytes>`. The default is 67108864 (64 MiB). Values are decimal integers from 0 through 9223372036854775807; missing, duplicate, and negative values are rejected. `check` and `emit-sources` do not accept this option.
+`run`, `run-ir`, `run-vm`, `emit-ir`, `emit-mir`, `emit-bytecode`, `emit-c`, `emit-llvm`, `emit-qbe`, `emit-wat`, `emit-asm`, and `emit-obj` accept `--string-heap-limit <bytes>`. The default is 67108864 (64 MiB). Values are decimal integers from 0 through 9223372036854775807; missing, duplicate, and negative values are rejected. `check` and `emit-sources` do not accept this option.
 
 The budget counts live dynamic string payload, shared allocations once, and static strings never. Old and new values both count while reassignment keeps them alive. Compile-time evaluation has an independent 64 MiB budget unaffected by this setting. This is not a physical-memory cap. Generated artifacts fix the value; no API changes it during execution.
 
@@ -42,7 +43,7 @@ cerune emit-llvm examples/string_concat.ceru --target x86_64-unknown-linux-gnu -
 
 The same commands also accept `--array-heap-limit <bytes>`, with the same default and numeric syntax as the string option. The budgets are independent. Array accounting measures live element storage using logical widths, not total physical memory. `check` and `emit-sources` reject this option.
 
-Dynamic arrays support `run` / `run-ir` / `run-vm` and IR/bytecode/C/LLVM/QBE/WAT/ASM/native-object output. Each artifact records the array budget in use. LLVM and QBE require `--target`, including unused array types. Select a target for ASM and objects, then link externally. `emit-asm` retains its fixed Windows default.
+Dynamic arrays support `run` / `run-ir` / `run-vm` and IR/MIR/bytecode/C/LLVM/QBE/WAT/ASM/native-object output. Each artifact records the array budget in use. LLVM and QBE require `--target`, including unused array types. Select a target for ASM and objects, then link externally. `emit-asm` retains its fixed Windows default.
 
 ```sh
 cerune run examples/dynamic_arrays/copy.ceru --array-heap-limit 1024
@@ -95,6 +96,16 @@ cerune emit-ir <file> [-o <output.ceir>]
 ```
 
 `cerune emit-ir` emits the backend-independent Cerune IR after semantic and type resolution.
+
+## Observing MIR
+
+```sh
+cerune emit-mir examples/ir_stages/control_flow.ceru -o target/control_flow.mir.txt
+```
+
+Lower completed IR into unoptimized, non-SSA MIR, validate it, then emit observation text. Without `-o`, output goes to stdout. No target is needed; `--target`, `--ssa`, and pass flags are rejected. Both heap budgets are recorded.
+
+`Cerune MIR v0.1` contains typed locals, explicit evaluation order, basic blocks/edges, ownership operations, and HIR NodeId/SourceId/Span. Full source contents and paths are not included automatically. String literals and identifiers are displayed as program contents. There is no dedicated extension or loader; this is not an executable distribution artifact. `run` still executes HIR directly. See [validation limits and the planned interpreter](../design/ir-stages.en.md).
 
 ## Output artifact emission
 

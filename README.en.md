@@ -79,6 +79,7 @@ During development, replace `cerune` with `cargo run --quiet --`.
 | `run-vm` | VM execution | Run Cerune source (`.ceru`) |
 | `emit-sources` | Source manifest (JSON) | Export loaded file names and contents |
 | `emit-ir` | Cerune IR (`.ceir`) | Inspect types and operations |
+| `emit-mir` | Non-SSA MIR (observation text) | Inspect temporaries, branches, ownership operations, and origins |
 | `emit-bytecode` | Bytecode text (`.cebc`) | Inspect instructions |
 | `emit-c` | C (`.c`) | GCC, Clang, or another C compiler |
 | `emit-llvm` | LLVM IR (`.ll`) | LLVM / Clang; Windows / Linux x86-64 |
