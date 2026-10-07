@@ -1,5 +1,6 @@
 mod aggregates;
 mod ownership;
+pub(crate) mod string_usage;
 
 pub const DEFAULT_STRING_HEAP_LIMIT: u64 = 64 * 1024 * 1024;
 pub const DEFAULT_ARRAY_HEAP_LIMIT: u64 = 64 * 1024 * 1024;

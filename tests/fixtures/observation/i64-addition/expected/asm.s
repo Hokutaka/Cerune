@@ -23,13 +23,17 @@ main:
   pushq %rbp
   movq %rsp, %rbp
   subq $80, %rsp
+  jmp .Lcerune_block_0
+.Lcerune_block_0: # mir_block
   movabsq $1, %rax
-  movq %rax, -16(%rbp)
+  movq %rax, -8(%rbp)
   movabsq $2, %rax
-  movq %rax, %rcx
+  movq %rax, -16(%rbp)
   movq -16(%rbp), %rax
+  movq %rax, %rcx
+  movq -8(%rbp), %rax
   addq %rcx, %rax
-  jno .Lcerune_main_integer_ok_0
+  jno .Lcerune_main_integer_ok_2
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
@@ -38,12 +42,18 @@ main:
   callq _write
   movl $7, %ecx
   int $0x29
-.Lcerune_main_integer_ok_0:
-  movq %rax, -8(%rbp)
-  movq -8(%rbp), %rax
+.Lcerune_main_integer_ok_2:
+  movq %rax, -24(%rbp)
+  movq -24(%rbp), %rax
+  movq %rax, -32(%rbp)
+  movq -32(%rbp), %rax
+  movq %rax, -40(%rbp)
+  movq -40(%rbp), %rax
   movq %rax, %rdx
   leaq .Lcerune_fmt_i64(%rip), %rcx
   callq printf
+  jmp .Lcerune_block_1
+.Lcerune_block_1: # main_exit
   xorl %eax, %eax
   addq $80, %rsp
   popq %rbp

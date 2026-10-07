@@ -12,7 +12,26 @@ mod string;
 mod unsigned;
 
 pub use emit::emit;
-use lower::lower;
+/// MIRから直接Native LIRを作ります。ターゲットは必須です。
+pub use lower::lower as lower_mir;
+
+#[cfg(test)]
+fn lower(program: &crate::ir::Program) -> ir::Module {
+    lower_mir(
+        &crate::mir::lower(program).unwrap(),
+        Target::X86_64PcWindowsMsvc,
+    )
+    .unwrap()
+}
+fn lower_with_target(
+    program: &crate::ir::Program,
+    target: Target,
+) -> Result<ir::Module, crate::diagnostic::Diagnostic> {
+    lower_mir(
+        &crate::mir::lower(program).map_err(|e| e.diagnostic())?,
+        target,
+    )
+}
 
 use crate::{diagnostic::Diagnostic, ir as cerune_ir};
 
@@ -44,8 +63,30 @@ impl Target {
     }
 }
 
+/// 既に構築したMIR snapshotから生成します。観測した値と同じ入力を使えます。
+pub fn emit_asm_from_mir(
+    program: &crate::mir::Program,
+    target: Target,
+    annotate_origins: bool,
+) -> Result<String, Diagnostic> {
+    Ok(emit::emit_with_origins(
+        &lower_mir(program, target)?,
+        annotate_origins,
+    ))
+}
+pub fn emit_object_from_mir(
+    program: &crate::mir::Program,
+    target: Target,
+    annotate_origins: bool,
+) -> Result<Vec<u8>, Diagnostic> {
+    object::assemble(
+        &emit_asm_from_mir(program, target, annotate_origins)?,
+        target,
+    )
+}
+
 pub fn emit_asm(program: &cerune_ir::Program, target: Target) -> Result<String, Diagnostic> {
-    Ok(emit(&lower::lower_with_target(program, target)))
+    Ok(emit(&lower_with_target(program, target)?))
 }
 
 /// 自前の符号化・オブジェクト生成です。リンクや外部プロセス起動は行いません。
@@ -54,8 +95,7 @@ pub fn emit_object(
     target: Target,
     annotate_origins: bool,
 ) -> Result<Vec<u8>, Diagnostic> {
-    let assembly =
-        emit::emit_with_origins(&lower::lower_with_target(program, target), annotate_origins);
+    let assembly = emit::emit_with_origins(&lower_with_target(program, target)?, annotate_origins);
     object::assemble(&assembly, target)
 }
 
@@ -64,13 +104,13 @@ pub fn emit_asm_with_origins(
     target: Target,
 ) -> Result<String, Diagnostic> {
     Ok(emit::emit_with_origins(
-        &lower::lower_with_target(program, target),
+        &lower_with_target(program, target)?,
         true,
     ))
 }
 
 pub fn emit_x86_64_win_asm(program: &cerune_ir::Program) -> Result<String, Diagnostic> {
-    let module = lower(program);
+    let module = lower_with_target(program, Target::X86_64PcWindowsMsvc)?;
 
     Ok(emit(&module))
 }

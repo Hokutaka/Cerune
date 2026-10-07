@@ -14,6 +14,8 @@ An output route describes which kind of representation is produced from Cerune I
 
 The current output routes are C, LLVM IR, QBE IR, WebAssembly Text, native assembly, native objects, and Cerune bytecode.
 
+Native uses [HIR→MIR→x86-64 LIR](native-mir.en.md). MIR is a shared execution representation, not a new OS target.
+
 ### Direct execution
 
 The [IR Executor](ir-executor.en.md), selected by `run` or `run-ir`, directly executes completed Cerune IR. It produces no new artifact and selects no target ABI, so it is separate from the output-route table. `run-vm` selects Bytecode → VM. `run-mir` executes HIR→MIR using the [independent MIR executor](mir-executor.en.md); `emit-mir` observes that representation.

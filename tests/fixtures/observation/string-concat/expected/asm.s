@@ -201,20 +201,28 @@ cerune_fn__ownership0_0:
   pushq %rbp
   movq %rsp, %rbp
   subq $112, %rsp
+  jmp .Lcerune_fn_0_block_0
+.Lcerune_fn_0_block_0: # mir_block
   leaq .Lcerune_string_0(%rip), %rax
   movq %rax, -8(%rbp)
-  leaq .Lcerune_string_1(%rip), %rax
-  movq %rax, -16(%rbp)
   movq -8(%rbp), %rax
+  movq %rax, -16(%rbp)
+  leaq .Lcerune_string_1(%rip), %rax
+  movq %rax, -24(%rbp)
+  movq -24(%rbp), %rax
   movq %rax, -32(%rbp)
   movq -16(%rbp), %rax
+  movq %rax, -40(%rbp)
+  movq -32(%rbp), %rax
+  movq %rax, -48(%rbp)
+  movq -48(%rbp), %rax
   movq %rax, %rdx
-  movq -32(%rbp), %rcx
+  movq -40(%rbp), %rcx
   callq cerune_string_concat
   testq %rdx, %rdx
-  je .Lfn_0_concat_ok_0
+  je .Lfn_0_concat_ok_3
   cmpq $1, %rdx
-  jne .Lfn_0_concat_limit_0
+  jne .Lfn_0_concat_limit_3
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
@@ -223,9 +231,9 @@ cerune_fn__ownership0_0:
   callq _write
   movl $7, %ecx
   int $0x29
-.Lfn_0_concat_limit_0:
+.Lfn_0_concat_limit_3:
   cmpq $2, %rdx
-  jne .Lfn_0_concat_failed_0
+  jne .Lfn_0_concat_failed_3
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
@@ -234,7 +242,7 @@ cerune_fn__ownership0_0:
   callq _write
   movl $7, %ecx
   int $0x29
-.Lfn_0_concat_failed_0:
+.Lfn_0_concat_failed_3:
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
@@ -243,12 +251,18 @@ cerune_fn__ownership0_0:
   callq _write
   movl $7, %ecx
   int $0x29
-.Lfn_0_concat_ok_0:
-  movq %rax, -24(%rbp)
-  movq -24(%rbp), %rax
+.Lfn_0_concat_ok_3:
+  movq %rax, -56(%rbp)
+  movq -56(%rbp), %rax
+  movq %rax, -64(%rbp)
+  movq -64(%rbp), %rax
+  movq %rax, -72(%rbp)
+  movq -72(%rbp), %rax
   addq $112, %rsp
   popq %rbp
   retq
+.Lcerune_fn_0_block_1: # mir_block
+  ud2
 
 .p2align 4
 cerune_fn__ownership1_1:
@@ -256,17 +270,29 @@ cerune_fn__ownership1_1:
   movq %rsp, %rbp
   subq $96, %rsp
   movq %rcx, -8(%rbp)
+  jmp .Lcerune_fn_1_block_0
+.Lcerune_fn_1_block_0: # mir_block
   movq -8(%rbp), %rax
   movq %rax, -16(%rbp)
   movq -16(%rbp), %rax
   movq %rax, -24(%rbp)
   movq -24(%rbp), %rax
+  movq %rax, -32(%rbp)
+  movq -32(%rbp), %rax
+  movq %rax, -40(%rbp)
+  movq -40(%rbp), %rax
+  movq %rax, -48(%rbp)
+  movq -48(%rbp), %rax
   movq %rax, %rcx
   callq cerune_string_retain
-  movq -24(%rbp), %rax
+  movq -40(%rbp), %rax
+  movq %rax, -56(%rbp)
+  movq -56(%rbp), %rax
   addq $96, %rsp
   popq %rbp
   retq
+.Lcerune_fn_1_block_1: # mir_block
+  ud2
 
 .p2align 4
 cerune_fn__ownership2_2:
@@ -274,20 +300,28 @@ cerune_fn__ownership2_2:
   movq %rsp, %rbp
   subq $112, %rsp
   movq %rcx, -8(%rbp)
+  jmp .Lcerune_fn_2_block_0
+.Lcerune_fn_2_block_0: # mir_block
   movq -8(%rbp), %rax
   movq %rax, -16(%rbp)
-  leaq .Lcerune_string_2(%rip), %rax
-  movq %rax, -24(%rbp)
   movq -16(%rbp), %rax
+  movq %rax, -24(%rbp)
+  leaq .Lcerune_string_2(%rip), %rax
+  movq %rax, -32(%rbp)
+  movq -32(%rbp), %rax
   movq %rax, -40(%rbp)
   movq -24(%rbp), %rax
+  movq %rax, -48(%rbp)
+  movq -40(%rbp), %rax
+  movq %rax, -56(%rbp)
+  movq -56(%rbp), %rax
   movq %rax, %rdx
-  movq -40(%rbp), %rcx
+  movq -48(%rbp), %rcx
   callq cerune_string_concat
   testq %rdx, %rdx
-  je .Lfn_2_concat_ok_0
+  je .Lfn_2_concat_ok_3
   cmpq $1, %rdx
-  jne .Lfn_2_concat_limit_0
+  jne .Lfn_2_concat_limit_3
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
@@ -296,9 +330,9 @@ cerune_fn__ownership2_2:
   callq _write
   movl $7, %ecx
   int $0x29
-.Lfn_2_concat_limit_0:
+.Lfn_2_concat_limit_3:
   cmpq $2, %rdx
-  jne .Lfn_2_concat_failed_0
+  jne .Lfn_2_concat_failed_3
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
@@ -307,7 +341,7 @@ cerune_fn__ownership2_2:
   callq _write
   movl $7, %ecx
   int $0x29
-.Lfn_2_concat_failed_0:
+.Lfn_2_concat_failed_3:
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
@@ -316,12 +350,18 @@ cerune_fn__ownership2_2:
   callq _write
   movl $7, %ecx
   int $0x29
-.Lfn_2_concat_ok_0:
-  movq %rax, -32(%rbp)
-  movq -32(%rbp), %rax
+.Lfn_2_concat_ok_3:
+  movq %rax, -64(%rbp)
+  movq -64(%rbp), %rax
+  movq %rax, -72(%rbp)
+  movq -72(%rbp), %rax
+  movq %rax, -80(%rbp)
+  movq -80(%rbp), %rax
   addq $112, %rsp
   popq %rbp
   retq
+.Lcerune_fn_2_block_1: # mir_block
+  ud2
 
 .p2align 4
 cerune_fn__ownership3_3:
@@ -330,13 +370,21 @@ cerune_fn__ownership3_3:
   subq $64, %rsp
   movq %rcx, -8(%rbp)
   movq %rdx, -16(%rbp)
+  jmp .Lcerune_fn_3_block_0
+.Lcerune_fn_3_block_0: # mir_block
   movq -8(%rbp), %rax
+  movq %rax, -24(%rbp)
+  movq -24(%rbp), %rax
   movq %rax, %rcx
   callq cerune_string_release
   movq -16(%rbp), %rax
+  movq %rax, -32(%rbp)
+  movq -32(%rbp), %rax
   addq $64, %rsp
   popq %rbp
   retq
+.Lcerune_fn_3_block_1: # mir_block
+  ud2
 
 .globl main
 .p2align 4
@@ -354,40 +402,62 @@ main:
   popq %rbp
   retq
 .Lstdout_ready:
+  jmp .Lcerune_block_0
+.Lcerune_block_0: # mir_block
   callq cerune_fn__ownership0_0
   movq %rax, -8(%rbp)
   movq -8(%rbp), %rax
-  movq %rax, -40(%rbp)
-  movq -40(%rbp), %rcx
-  callq cerune_fn__ownership1_1
   movq %rax, -16(%rbp)
-  movq -8(%rbp), %rax
-  movq %rax, -40(%rbp)
-  movq -8(%rbp), %rax
-  movq %rax, -72(%rbp)
-  movq -72(%rbp), %rcx
-  callq cerune_fn__ownership2_2
-  movq %rax, -48(%rbp)
-  movq -40(%rbp), %rcx
-  movq -48(%rbp), %rdx
-  callq cerune_fn__ownership3_3
-  movq %rax, -8(%rbp)
   movq -16(%rbp), %rax
   movq %rax, -24(%rbp)
-  movq -24(%rbp), %rax
-  movq %rax, %rcx
-  callq cerune_print_string
-  movq -8(%rbp), %rax
+  movq -24(%rbp), %rcx
+  callq cerune_fn__ownership1_1
   movq %rax, -32(%rbp)
   movq -32(%rbp), %rax
+  movq %rax, -40(%rbp)
+  movq -16(%rbp), %rax
+  movq %rax, -48(%rbp)
+  movq -16(%rbp), %rax
+  movq %rax, -56(%rbp)
+  movq -56(%rbp), %rcx
+  callq cerune_fn__ownership2_2
+  movq %rax, -64(%rbp)
+  movq -48(%rbp), %rcx
+  movq -64(%rbp), %rdx
+  callq cerune_fn__ownership3_3
+  movq %rax, -72(%rbp)
+  movq -72(%rbp), %rax
+  movq %rax, -16(%rbp)
+  movq -40(%rbp), %rax
+  movq %rax, -80(%rbp)
+  movq -80(%rbp), %rax
+  movq %rax, -88(%rbp)
+  movq -88(%rbp), %rax
+  movq %rax, -96(%rbp)
+  movq -96(%rbp), %rax
   movq %rax, %rcx
   callq cerune_print_string
   movq -16(%rbp), %rax
+  movq %rax, -104(%rbp)
+  movq -104(%rbp), %rax
+  movq %rax, -112(%rbp)
+  movq -112(%rbp), %rax
+  movq %rax, -120(%rbp)
+  movq -120(%rbp), %rax
+  movq %rax, %rcx
+  callq cerune_print_string
+  movq -40(%rbp), %rax
+  movq %rax, -128(%rbp)
+  movq -128(%rbp), %rax
   movq %rax, %rcx
   callq cerune_string_release
-  movq -8(%rbp), %rax
+  movq -16(%rbp), %rax
+  movq %rax, -136(%rbp)
+  movq -136(%rbp), %rax
   movq %rax, %rcx
   callq cerune_string_release
+  jmp .Lcerune_block_1
+.Lcerune_block_1: # main_exit
   xorl %eax, %eax
   addq $176, %rsp
   popq %rbp

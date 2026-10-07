@@ -38,6 +38,7 @@ Cerune documentation is divided into `design`, which records design decisions, a
 | Fixed arrays / 固定長配列 | [日本語](design/fixed-arrays.ja.md) | [English](design/fixed-arrays.en.md) |
 | Strings / 文字列 | [日本語](design/strings.ja.md) | [English](design/strings.en.md) |
 | Unsigned 64-bit integers / u64 | [日本語](design/u64.ja.md) | [English](design/u64.en.md) |
+| Native lowering from MIR / MIRからNativeへの変換 | [日本語](design/native-mir.ja.md) | [English](design/native-mir.en.md) |
 | Native-code observation / ネイティブコードの観測 | [日本語](design/native-code.ja.md) | [English](design/native-code.en.md) |
 | Native object encoder / 自前オブジェクトエンコーダ | [日本語](design/native-encoder.ja.md) | [English](design/native-encoder.en.md) |
 

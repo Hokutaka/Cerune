@@ -77,15 +77,46 @@ cerune_fn_echo_0:
   movq %rsp, %rbp
   subq $48, %rsp
 # cerune-origin: synthetic
+# cerune-mir: v1 synthetic ABI setup/exit
   movq %rcx, -8(%rbp)
+# cerune-origin: synthetic
+# cerune-mir: v1 synthetic ABI setup/exit
+  jmp .Lcerune_fn_0_block_0
+# cerune-origin: synthetic
+# cerune-mir: v1 fn_0 bb0 block -> lir 2 (function-entry)
+cerune_origin_mir_fn_0_bb0_block_lir2:
+.Lcerune_fn_0_block_0: # mir_block
 # cerune-origin: #1 bytes 36..41
-cerune_origin_n1_fn_0_1:
+cerune_origin_n1_fn_0_3:
+# cerune-mir: v1 fn_0 bb0 i0 -> lir 3 (source)
+cerune_origin_mir_fn_0_bb0_i0_lir3:
   movq -8(%rbp), %rax
+# cerune-origin: #1 bytes 36..41
+cerune_origin_n1_fn_0_4:
+# cerune-mir: v1 fn_0 bb0 i0 -> lir 4 (source)
+cerune_origin_mir_fn_0_bb0_i0_lir4:
+  movq %rax, -16(%rbp)
 # cerune-origin: #0 bytes 29..42
-cerune_origin_n0_fn_0_2:
+cerune_origin_n0_fn_0_5:
+# cerune-mir: v1 fn_0 bb0 i1 -> lir 5 (source)
+cerune_origin_mir_fn_0_bb0_i1_lir5:
+  movq -16(%rbp), %rax
+# cerune-origin: #0 bytes 29..42
+cerune_origin_n0_fn_0_6:
+# cerune-mir: v1 fn_0 bb0 i1 -> lir 6 (source)
+cerune_origin_mir_fn_0_bb0_i1_lir6:
   addq $48, %rsp
   popq %rbp
   retq
+# cerune-origin: #0 bytes 29..42
+cerune_origin_n0_fn_0_7:
+# cerune-mir: v1 fn_0 bb1 block -> lir 7 (after-return)
+cerune_origin_mir_fn_0_bb1_block_lir7:
+.Lcerune_fn_0_block_1: # mir_block
+# cerune-origin: synthetic
+# cerune-mir: v1 fn_0 bb1 i2 -> lir 8 (function-end)
+cerune_origin_mir_fn_0_bb1_i2_lir8:
+  ud2
 
 # cerune-origin: synthetic
 .globl main
@@ -104,28 +135,74 @@ main:
   popq %rbp
   retq
 .Lstdout_ready:
+# cerune-origin: synthetic
+# cerune-mir: v1 synthetic ABI setup/exit
+  jmp .Lcerune_block_0
+# cerune-origin: synthetic
+# cerune-mir: v1 main bb0 block -> lir 1 (function-entry)
+cerune_origin_mir_main_bb0_block_lir1:
+.Lcerune_block_0: # mir_block
 # cerune-origin: #3 bytes 51..58
-cerune_origin_n3_main_0:
+cerune_origin_n3_main_2:
+# cerune-mir: v1 main bb0 i0 -> lir 2 (source)
+cerune_origin_mir_main_bb0_i0_lir2:
   leaq .Lcerune_string_0(%rip), %rax
+# cerune-origin: #3 bytes 51..58
+cerune_origin_n3_main_3:
+# cerune-mir: v1 main bb0 i0 -> lir 3 (source)
+cerune_origin_mir_main_bb0_i0_lir3:
+  movq %rax, -8(%rbp)
 # cerune-origin: #2 bytes 45..60
-cerune_origin_n2_main_1:
+cerune_origin_n2_main_4:
+# cerune-mir: v1 main bb0 i1 -> lir 4 (source)
+cerune_origin_mir_main_bb0_i1_lir4:
+  movq -8(%rbp), %rax
+# cerune-origin: #2 bytes 45..60
+cerune_origin_n2_main_5:
+# cerune-mir: v1 main bb0 i1 -> lir 5 (source)
+cerune_origin_mir_main_bb0_i1_lir5:
   movq %rax, %rcx
   callq cerune_print_string
 # cerune-origin: #6 bytes 72..92
-cerune_origin_n6_main_2:
+cerune_origin_n6_main_6:
+# cerune-mir: v1 main bb0 i2 -> lir 6 (source)
+cerune_origin_mir_main_bb0_i2_lir6:
   movabsq $-1, %rax
+# cerune-origin: #6 bytes 72..92
+cerune_origin_n6_main_7:
+# cerune-mir: v1 main bb0 i2 -> lir 7 (source)
+cerune_origin_mir_main_bb0_i2_lir7:
+  movq %rax, -16(%rbp)
 # cerune-origin: #5 bytes 67..93
-cerune_origin_n5_main_3:
-  movq %rax, -8(%rbp)
-# cerune-origin: #5 bytes 67..93
-cerune_origin_n5_main_4:
-  movq -8(%rbp), %rcx
+cerune_origin_n5_main_8:
+# cerune-mir: v1 main bb0 i3 -> lir 8 (source)
+cerune_origin_mir_main_bb0_i3_lir8:
+  movq -16(%rbp), %rcx
   callq cerune_fn_echo_0
+# cerune-origin: #5 bytes 67..93
+cerune_origin_n5_main_9:
+# cerune-mir: v1 main bb0 i3 -> lir 9 (source)
+cerune_origin_mir_main_bb0_i3_lir9:
+  movq %rax, -24(%rbp)
 # cerune-origin: #4 bytes 61..95
-cerune_origin_n4_main_5:
+cerune_origin_n4_main_10:
+# cerune-mir: v1 main bb0 i4 -> lir 10 (source)
+cerune_origin_mir_main_bb0_i4_lir10:
+  movq -24(%rbp), %rax
+# cerune-origin: #4 bytes 61..95
+cerune_origin_n4_main_11:
+# cerune-mir: v1 main bb0 i4 -> lir 11 (source)
+cerune_origin_mir_main_bb0_i4_lir11:
   movq %rax, %rdx
   leaq .Lcerune_fmt_u64(%rip), %rcx
   callq printf
+# cerune-origin: synthetic
+# cerune-mir: v1 main bb0 i5 -> lir 12 (function-end)
+cerune_origin_mir_main_bb0_i5_lir12:
+  jmp .Lcerune_block_1
+# cerune-origin: synthetic
+# cerune-mir: v1 synthetic ABI setup/exit
+.Lcerune_block_1: # main_exit
 # cerune-origin: synthetic
   xorl %eax, %eax
   addq $64, %rsp

@@ -23,12 +23,20 @@ main:
   pushq %rbp
   movq %rsp, %rbp
   subq $64, %rsp
+  jmp .Lcerune_block_0
+.Lcerune_block_0: # mir_block
   movabsq $-9223372036854775808, %rax
   movq %rax, -8(%rbp)
   movq -8(%rbp), %rax
+  movq %rax, -16(%rbp)
+  movq -16(%rbp), %rax
+  movq %rax, -24(%rbp)
+  movq -24(%rbp), %rax
   movq %rax, %rdx
   leaq .Lcerune_fmt_i64(%rip), %rcx
   callq printf
+  jmp .Lcerune_block_1
+.Lcerune_block_1: # main_exit
   xorl %eax, %eax
   addq $64, %rsp
   popq %rbp

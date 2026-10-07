@@ -80,9 +80,17 @@ pub fn emit_with_origins(module: &Module, annotate: bool) -> String {
     }
 
     assert_eq!(module.instructions.len(), module.origins.len());
+    assert_eq!(module.instructions.len(), module.mir_origins.len());
     for (index, instruction) in module.instructions.iter().enumerate() {
         reporter.origin = module.origins[index];
         emit_origin(module.origins[index], "main", index, annotate, &mut output);
+        emit_mir_origin(
+            module.mir_origins[index],
+            "main",
+            index,
+            annotate,
+            &mut output,
+        );
         emit_instruction(
             instruction,
             module.frame_size,
@@ -95,12 +103,6 @@ pub fn emit_with_origins(module: &Module, annotate: bool) -> String {
 
     if annotate {
         output.push_str("# cerune-origin: synthetic\n");
-    }
-    if let Some(function_id) = module.explicit_main {
-        output.push_str(&format!(
-            "  callq {}\n",
-            function_name(&module.functions[function_id])
-        ));
     }
 
     emit_epilogue(module.frame_size, true, &mut output);
@@ -153,10 +155,18 @@ fn emit_function(
         ));
     }
     assert_eq!(function.instructions.len(), function.origins.len());
+    assert_eq!(function.instructions.len(), function.mir_origins.len());
     for (index, instruction) in function.instructions.iter().enumerate() {
         reporter.origin = function.origins[index];
         emit_origin(
             function.origins[index],
+            &format!("fn_{}", function.id),
+            index,
+            annotate,
+            output,
+        );
+        emit_mir_origin(
+            function.mir_origins[index],
             &format!("fn_{}", function.id),
             index,
             annotate,
@@ -614,6 +624,8 @@ fn emit_instruction(
             ));
         }
 
+        Instruction::ObserveOnly => {}
+        Instruction::Unreachable => output.push_str("  ud2\n"),
         Instruction::Return => emit_epilogue(frame_size, false, output),
 
         Instruction::LoadF32Constant(id) => {
@@ -987,6 +999,31 @@ fn uses_bool_print(module: &Module) -> bool {
                 Instruction::CallPrintBool | Instruction::CallPrintSysV(Type::Bool)
             )
         })
+}
+
+fn emit_mir_origin(
+    origin: Option<super::ir::MirOrigin>,
+    prefix: &str,
+    index: usize,
+    annotate: bool,
+    output: &mut String,
+) {
+    if !annotate {
+        return;
+    }
+    if let Some(o) = origin {
+        let item = o
+            .instruction
+            .map_or_else(|| "block".into(), |i| format!("i{}", i.0));
+        let reason = match o.origin {
+            crate::mir::Origin::Source(_) => "source",
+            crate::mir::Origin::Derived { reason, .. }
+            | crate::mir::Origin::Synthetic { reason } => reason,
+        };
+        output.push_str(&format!("# cerune-mir: v1 {prefix} bb{} {item} -> lir {index} ({reason})\ncerune_origin_mir_{prefix}_bb{}_{item}_lir{index}:\n", o.block.0, o.block.0));
+    } else {
+        output.push_str("# cerune-mir: v1 synthetic ABI setup/exit\n");
+    }
 }
 
 fn emit_origin(

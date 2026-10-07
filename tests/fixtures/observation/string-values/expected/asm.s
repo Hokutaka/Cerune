@@ -117,26 +117,42 @@ main:
   popq %rbp
   retq
 .Lstdout_ready:
+  jmp .Lcerune_block_0
+.Lcerune_block_0: # mir_block
   leaq .Lcerune_string_0(%rip), %rax
   movq %rax, -8(%rbp)
   movq -8(%rbp), %rax
   movq %rax, -16(%rbp)
-  leaq .Lcerune_string_1(%rip), %rax
-  movq %rax, -8(%rbp)
   movq -16(%rbp), %rax
   movq %rax, -24(%rbp)
+  movq -24(%rbp), %rax
+  movq %rax, -32(%rbp)
+  leaq .Lcerune_string_1(%rip), %rax
+  movq %rax, -40(%rbp)
+  movq -40(%rbp), %rax
+  movq %rax, -16(%rbp)
+  movq -32(%rbp), %rax
+  movq %rax, -48(%rbp)
   leaq .Lcerune_string_2(%rip), %rax
+  movq %rax, -56(%rbp)
+  movq -56(%rbp), %rax
   movq %rax, %rdx
-  movq -24(%rbp), %rcx
+  movq -48(%rbp), %rcx
   callq cerune_string_equal
+  movq %rax, -64(%rbp)
+  movq -64(%rbp), %rax
   testq %rax, %rax
   leaq .Lcerune_bool_false(%rip), %rcx
   leaq .Lcerune_bool_true(%rip), %rdx
   cmovne %rdx, %rcx
   callq puts
-  movq -8(%rbp), %rax
+  movq -16(%rbp), %rax
+  movq %rax, -72(%rbp)
+  movq -72(%rbp), %rax
   movq %rax, %rcx
   callq cerune_print_string
+  jmp .Lcerune_block_1
+.Lcerune_block_1: # main_exit
   xorl %eax, %eax
   addq $112, %rsp
   popq %rbp

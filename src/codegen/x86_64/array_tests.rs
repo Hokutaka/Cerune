@@ -1,5 +1,5 @@
 //! malloc失敗・サイズ計算・解放後の予算を両符号化経路で検証します。
-use super::super::{Target, emit, ir::Instruction, lower, object};
+use super::super::{Target, emit, ir::Instruction, lower_with_target, object};
 use crate::{compile_to_ir, ir_executor};
 #[path = "../../../tests/support/crash_dialogs.rs"]
 mod crash_dialogs;
@@ -65,16 +65,19 @@ fn allocation_size_and_malloc_failures_preserve_origin_and_prior_output() {
     for (length, width, stride) in [(-1, 8, 8), (i64::MAX, 8, 8), (i64::MAX, 0, 8)] {
         for_artifacts(
             |target| {
-                let mut module = lower::lower_with_target(&p, target);
+                let mut module = lower_with_target(&p, target).unwrap();
                 let mut changed = false;
-                for (instructions, origins) in
-                    std::iter::once((&mut module.instructions, &mut module.origins)).chain(
-                        module
-                            .functions
-                            .iter_mut()
-                            .map(|f| (&mut f.instructions, &mut f.origins)),
-                    )
-                {
+                for (instructions, origins, mir_origins) in std::iter::once((
+                    &mut module.instructions,
+                    &mut module.origins,
+                    &mut module.mir_origins,
+                ))
+                .chain(
+                    module
+                        .functions
+                        .iter_mut()
+                        .map(|f| (&mut f.instructions, &mut f.origins, &mut f.mir_origins)),
+                ) {
                     if let Some(index) = instructions
                         .iter()
                         .position(|i| matches!(i, Instruction::ArrayAllocate { .. }))
@@ -89,6 +92,7 @@ fn allocation_size_and_malloc_failures_preserve_origin_and_prior_output() {
                         };
                         instructions.insert(index, Instruction::MovI64ImmediateToRax(length));
                         origins.insert(index, origins[index]);
+                        mir_origins.insert(index, mir_origins[index]);
                         changed = true;
                         break;
                     }
@@ -102,7 +106,7 @@ fn allocation_size_and_malloc_failures_preserve_origin_and_prior_output() {
     p.array_heap_limit = 64;
     for_artifacts(
         |target| {
-            let text = emit::emit_with_origins(&lower::lower_with_target(&p, target), true);
+            let text = emit::emit_with_origins(&lower_with_target(&p, target).unwrap(), true);
             format!(
                 "{}\n.text\ncerune_test_malloc:\n  xorl %eax, %eax\n  retq\n",
                 text.replace("callq malloc", "callq cerune_test_malloc")
@@ -157,7 +161,7 @@ fn repeated_success_releases_nested_arrays_and_strings() {
     .unwrap();
     for_artifacts(
         |target| {
-            let mut text = emit::emit_with_origins(&lower::lower_with_target(&p, target), true)
+            let mut text = emit::emit_with_origins(&lower_with_target(&p, target).unwrap(), true)
                 .replace("\nmain:\n", "\ncerune_test_main:\n");
             text.push_str("\n.text\nmain:\n  pushq %rbp\n  movq %rsp, %rbp\n  subq $32, %rsp\n");
             for _ in 0..3 {

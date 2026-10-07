@@ -1,0 +1,16 @@
+fn choose(a: i64, b: f64, c: u64, d: f32, e: i64, f: f64, g: u64) -> f64 {
+    print(a);
+    print(c);
+    print(e);
+    print(g);
+    return b + convert<f64>(d) + convert<f64>(f);
+}
+
+fn main() -> void {
+    print("MIR → Native");
+    for (mut i: i64 = 0; i < 4; i = i + 1) {
+        if i == 1 { continue; }
+        if i == 3 { break; }
+        print(choose(i, 0.5, 18446744073709551615, 1.5f32, 7, 2.0, 9));
+    }
+}

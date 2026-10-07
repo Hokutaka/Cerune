@@ -205,6 +205,10 @@ WAT with runtime checks also imports `cerune.write_error_byte(i32) -> void`. Hos
 
 Generate Windows x64 direct assembly with `cerune emit-asm examples/string_lookup.ceru -o target/string_lookup.s` and build it with `clang --target=x86_64-pc-windows-msvc target/string_lookup.s -o target/string_lookup.exe`. Programs using strings switch standard output to binary mode before output.
 
+## Native input and origins
+
+`emit-asm` / `emit-obj` generate through HIR→MIR→x86-64 LIR. `--annotate-origins` retains original NodeId/source byte ranges and adds MIR block/instruction-to-LIR correspondence. Objects retain corresponding symbols. See [Native lowering from MIR](../design/native-mir.en.md). Existing target selection and artifact formats are retained.
+
 ## VM execution
 
 ```text

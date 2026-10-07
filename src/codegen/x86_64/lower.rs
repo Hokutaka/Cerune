@@ -1,1316 +1,799 @@
+use super::ir::{
+    Argument, BinaryOp, CompareOp, FloatConstant, Function, Instruction, MirOrigin, Module, Origin,
+    Type,
+};
+use crate::{
+    ir as hir,
+    mir::{self, InstructionKind as Kind, LocalId, Operation as Op, TerminatorKind as Term},
+};
 use std::collections::HashMap;
 
-use crate::ir as cerune_ir;
-
-use super::ir::{
-    Argument, BinaryOp, CompareOp, FloatConstant, Function, Instruction, Module, Origin, Type,
-};
-
-pub fn lower(program: &cerune_ir::Program) -> Module {
-    lower_with_target(program, super::Target::X86_64PcWindowsMsvc)
-}
-
-pub fn lower_with_target(program: &cerune_ir::Program, target: super::Target) -> Module {
-    let mut strings = Vec::new();
-    let mut float_id = 0;
-    let mut float_constants = Vec::new();
-    let mut functions = Vec::new();
-    for function in &program.function_definitions {
-        let lowered = lower_body(
-            program,
-            &function.parameters,
-            Some(&function.return_type),
-            &function.body,
-            &mut float_id,
-            &mut strings,
-            true,
-            target,
-        );
-        float_constants.extend(lowered.float_constants);
-        functions.push(Function {
-            origins: lowered.origins,
-            id: function.id.0,
-            name: function.name.clone(),
-            frame_size: lowered.frame_size,
-            instructions: lowered.instructions,
-        });
-    }
-
-    let lowered = lower_body(
-        program,
-        &[],
-        None,
-        &program.statements,
-        &mut float_id,
-        &mut strings,
-        false,
-        target,
-    );
-    float_constants.extend(lowered.float_constants);
-
-    Module {
-        array_heap_limit: program
-            .first_dynamic_array_span()
-            .map(|_| program.array_heap_limit),
-        string_heap_limit: crate::codegen::support::string_heap_limit(program),
-        uses_write: crate::codegen::display::uses_write(program),
-        origins: lowered.origins,
-        target,
-        uses_strings: crate::codegen::support::first_string_span(program).is_some(),
-        strings,
-        functions,
-        explicit_main: program
-            .function_definitions
-            .iter()
-            .find(|function| function.name == "main")
-            .map(|function| function.id.0),
-        frame_size: lowered.frame_size,
-        float_constants,
-        instructions: lowered.instructions,
-    }
-}
-
-struct LoweredBody {
-    origins: Vec<Origin>,
-    frame_size: usize,
-    float_constants: Vec<FloatConstant>,
-    instructions: Vec<Instruction>,
-}
-
-#[allow(clippy::too_many_arguments)]
-fn lower_body(
-    program: &cerune_ir::Program,
-    parameters: &[cerune_ir::Parameter],
-    return_type: Option<&cerune_ir::ReturnType>,
-    statements: &[cerune_ir::Statement],
-    float_id: &mut usize,
-    strings: &mut Vec<String>,
-    is_function: bool,
+/// 検証済みMIRだけを機械側の表現に変換します。HIRへ復元しません。
+pub fn lower(
+    program: &mir::Program,
     target: super::Target,
-) -> LoweredBody {
-    let (binding_slots, binding_slot_count) = assign_binding_slots(program, parameters, statements);
-
-    // 従来の式用領域を保ちつつ、入れ子の呼び出しに必要な引数領域だけを追加する。
-    let scratch_count = count_statements_expr_nodes(statements)
-        .max(required_scratch_slots(statements))
-        .max(1);
-    let scratch_base = binding_slot_count;
-    let aggregate_base = scratch_base + scratch_count;
-
-    let mut lowerer = Lowerer {
-        origins: Vec::new(),
-        origin: Origin::Synthetic,
+) -> Result<Module, crate::diagnostic::Diagnostic> {
+    mir::validate(program).map_err(|e| e.diagnostic())?;
+    let mut module = Module {
         target,
-        strings,
-        program,
-        binding_slots,
-        scratch_base,
-        next_aggregate_slot: aggregate_base,
-        float_id: *float_id,
-        float_constants: Vec::new(),
-        instructions: Vec::new(),
-        label: 0,
-        loops: Vec::new(),
-        aggregate_return_pointer_slot: None,
+        strings: vec![],
+        float_constants: vec![],
+        functions: vec![],
+        origins: vec![],
+        mir_origins: vec![],
+        instructions: vec![],
+        frame_size: 0,
+        string_heap_limit: None,
+        array_heap_limit: None,
+        uses_strings: program.uses_strings,
+        uses_write: false,
     };
-
-    let mut locations = super::abi::Arguments::new(target);
-    for parameter in parameters {
-        let location = locations.next(matches!(
-            parameter.ty,
-            cerune_ir::Type::F32 | cerune_ir::Type::F64
-        ));
-        match &parameter.ty {
-            cerune_ir::Type::DynamicArray { .. }
-            | cerune_ir::Type::String
-            | cerune_ir::Type::Bool
-            | cerune_ir::Type::Integer(_)
-            | cerune_ir::Type::F32
-            | cerune_ir::Type::F64 => {
-                lowerer.push(Instruction::StoreParameter {
-                    location,
-                    ty: scalar_type(&parameter.ty),
-                    offset: lowerer.binding_offset(parameter.id),
-                });
+    for f in program
+        .functions
+        .iter()
+        .chain(std::iter::once(&program.main))
+    {
+        for l in &f.locals {
+            module.uses_strings |= contains_string(&l.ty);
+            if contains_array(&l.ty) {
+                module.array_heap_limit = Some(program.array_heap_limit);
             }
-            cerune_ir::Type::Named(_) | cerune_ir::Type::Array { .. } => {
-                lowerer.push(Instruction::StoreAggregateParameter {
-                    location,
-                    slots: type_slot_count(program, &parameter.ty),
-                    destination_offset: lowerer.binding_offset(parameter.id),
-                });
+        }
+        for b in &f.blocks {
+            for i in &b.instructions {
+                match &i.kind {
+                    Kind::Output { newline: false, .. } => module.uses_write = true,
+                    Kind::StringManage { .. }
+                    | Kind::Assign {
+                        value: Op::StringConcat { .. },
+                        ..
+                    } => module.string_heap_limit = Some(program.string_heap_limit),
+                    _ => {}
+                }
+            }
+        }
+        let body = lower_body(
+            program,
+            f,
+            target,
+            &mut module.strings,
+            &mut module.float_constants,
+        );
+        if let Some(id) = f.id {
+            module.functions.push(Function {
+                id: id.0,
+                name: f.name.clone(),
+                frame_size: body.frame_size,
+                origins: body.origins,
+                mir_origins: body.mir_origins,
+                instructions: body.instructions,
+            });
+        } else {
+            module.frame_size = body.frame_size;
+            module.origins = body.origins;
+            module.mir_origins = body.mir_origins;
+            module.instructions = body.instructions;
+        }
+    }
+    for d in &program.types {
+        for (_, _, ty) in &d.fields {
+            module.uses_strings |= contains_string(ty);
+            if contains_array(ty) {
+                module.array_heap_limit = Some(program.array_heap_limit);
             }
         }
     }
-    if matches!(
-        return_type,
-        Some(cerune_ir::ReturnType::Value(
-            cerune_ir::Type::Named(_) | cerune_ir::Type::Array { .. }
-        ))
-    ) {
-        let slot = lowerer.next_aggregate_slot;
-        lowerer.next_aggregate_slot += 1;
-        lowerer.aggregate_return_pointer_slot = Some(slot);
-        lowerer.push(Instruction::StoreAggregateReturnPointer {
-            offset: slot_offset(slot),
+    Ok(module)
+}
+fn contains_string(ty: &hir::Type) -> bool {
+    match ty {
+        hir::Type::String => true,
+        hir::Type::Array { element, .. } | hir::Type::DynamicArray { element } => {
+            contains_string(element)
+        }
+        _ => false,
+    }
+}
+fn contains_array(ty: &hir::Type) -> bool {
+    match ty {
+        hir::Type::DynamicArray { .. } => true,
+        hir::Type::Array { element, .. } => contains_array(element),
+        _ => false,
+    }
+}
+struct Body {
+    frame_size: usize,
+    origins: Vec<Origin>,
+    mir_origins: Vec<Option<MirOrigin>>,
+    instructions: Vec<Instruction>,
+}
+struct Lowerer<'a> {
+    program: &'a mir::Program,
+    function: &'a mir::Function,
+    target: super::Target,
+    slots: Vec<usize>,
+    next_slot: usize,
+    label: usize,
+    return_pointer: Option<isize>,
+    checked: HashMap<(LocalId, Vec<LocalId>), isize>,
+    strings: &'a mut Vec<String>,
+    floats: &'a mut Vec<FloatConstant>,
+    origin: Origin,
+    mir_origin: Option<MirOrigin>,
+    body: Body,
+}
+fn lower_body(
+    program: &mir::Program,
+    f: &mir::Function,
+    target: super::Target,
+    strings: &mut Vec<String>,
+    floats: &mut Vec<FloatConstant>,
+) -> Body {
+    let mut next_slot = 0;
+    let slots = f
+        .locals
+        .iter()
+        .map(|l| {
+            let slot = next_slot;
+            next_slot += slots_for(program, &l.ty).max(1);
+            slot
+        })
+        .collect();
+    let mut l = Lowerer {
+        program,
+        function: f,
+        target,
+        slots,
+        next_slot,
+        label: f.blocks.len() + 1,
+        return_pointer: None,
+        checked: HashMap::new(),
+        strings,
+        floats,
+        origin: Origin::Synthetic,
+        mir_origin: None,
+        body: Body {
+            frame_size: 0,
+            origins: vec![],
+            mir_origins: vec![],
+            instructions: vec![],
+        },
+    };
+    let mut args = super::abi::Arguments::new(target);
+    for &p in &f.parameters {
+        let ty = &f.locals[p.0].ty;
+        let location = args.next(matches!(ty, hir::Type::F32 | hir::Type::F64));
+        let offset = l.offset(p);
+        if aggregate(ty) {
+            l.push(Instruction::StoreAggregateParameter {
+                location,
+                slots: slots_for(program, ty),
+                destination_offset: offset,
+            });
+        } else {
+            l.push(Instruction::StoreParameter {
+                location,
+                ty: scalar_type(ty),
+                offset,
+            });
+        }
+    }
+    if matches!(&f.return_type,hir::ReturnType::Value(ty) if aggregate(ty)) {
+        let offset = l.pointer();
+        l.return_pointer = Some(offset);
+        l.push(Instruction::StoreAggregateReturnPointer { offset });
+    }
+    // Storeは先行するCheckIndexが保存したアドレスを使います。右辺評価後に検査し直しません。
+    for b in &f.blocks {
+        for i in &b.instructions {
+            if let Kind::CheckIndex { root, path } = &i.kind {
+                let key = (*root, path.clone());
+                if !l.checked.contains_key(&key) {
+                    let p = l.pointer();
+                    l.checked.insert(key, p);
+                }
+            }
+        }
+    }
+    l.push(Instruction::Jump(f.entry.0));
+    for (bid, b) in f.blocks.iter().enumerate() {
+        l.set_origin(b.origin, mir::BlockId(bid), None);
+        l.push(Instruction::Label {
+            id: bid,
+            name: "mir_block",
+        });
+        for i in &b.instructions {
+            l.set_origin(i.origin, mir::BlockId(bid), Some(i.id));
+            let start = l.body.instructions.len();
+            l.instruction(&i.kind);
+            if l.body.instructions.len() == start {
+                l.push(Instruction::ObserveOnly);
+            }
+        }
+        l.set_origin(
+            b.terminator.origin,
+            mir::BlockId(bid),
+            Some(b.terminator.id),
+        );
+        match &b.terminator.kind {
+            Term::Jump(b) => l.push(Instruction::Jump(b.0)),
+            Term::Branch {
+                condition,
+                then_block,
+                else_block,
+            } => {
+                l.load(*condition);
+                l.push(Instruction::JumpIfZero(else_block.0));
+                l.push(Instruction::Jump(then_block.0));
+            }
+            Term::Return(v) => {
+                if let Some(v) = v {
+                    l.load(*v);
+                    if aggregate(l.ty(*v)) {
+                        l.push(Instruction::CopyToAggregateReturn {
+                            source_offset: l.offset(*v),
+                            slots: slots_for(program, l.ty(*v)),
+                            pointer_offset: l.return_pointer.expect("aggregate return"),
+                        });
+                    }
+                }
+                l.push(if f.id.is_some() {
+                    Instruction::Return
+                } else {
+                    Instruction::Jump(f.blocks.len())
+                });
+            }
+            Term::Unreachable => l.push(Instruction::Unreachable),
+        }
+    }
+    if f.id.is_none() {
+        l.origin = Origin::Synthetic;
+        l.mir_origin = None;
+        l.push(Instruction::Label {
+            id: f.blocks.len(),
+            name: "main_exit",
         });
     }
-    let terminates = lowerer.lower_statements(statements);
-    if is_function && !terminates {
-        lowerer.push(Instruction::Return);
-    }
-
-    // ローカル値と、呼び出し先へ渡すスタック引数が重ならないように確保します。
-    let outgoing_bytes = lowerer
+    let outgoing = l
+        .body
         .instructions
         .iter()
-        .filter_map(|instruction| {
-            if let Instruction::Call { arguments, .. } = instruction {
-                let mut locations = super::abi::Arguments::new(target);
-                for argument in arguments {
-                    locations.next(matches!(
-                        argument,
+        .filter_map(|i| {
+            if let Instruction::Call { arguments, .. } = i {
+                let mut a = super::abi::Arguments::new(target);
+                for arg in arguments {
+                    a.next(matches!(
+                        arg,
                         Argument::Scalar {
                             ty: Type::F32 | Type::F64,
                             ..
                         }
                     ));
                 }
-                Some(locations.stack_bytes())
+                Some(a.stack_bytes())
             } else {
                 None
             }
         })
         .max()
         .unwrap_or(super::abi::Arguments::new(target).stack_bytes());
-    let frame_size = align16(8 * lowerer.next_aggregate_slot + outgoing_bytes);
-    *float_id = lowerer.float_id;
-
-    LoweredBody {
-        origins: lowerer.origins,
-        frame_size,
-        float_constants: lowerer.float_constants,
-        instructions: lowerer.instructions,
-    }
+    l.body.frame_size = (8 * l.next_slot + outgoing + 15) & !15;
+    l.body
 }
-
-struct Lowerer<'a> {
-    origins: Vec<Origin>,
-    origin: Origin,
-    target: super::Target,
-    strings: &'a mut Vec<String>,
-    program: &'a cerune_ir::Program,
-    binding_slots: HashMap<cerune_ir::BindingId, usize>,
-    scratch_base: usize,
-    next_aggregate_slot: usize,
-    float_id: usize,
-    float_constants: Vec<FloatConstant>,
-    instructions: Vec<Instruction>,
-    label: usize,
-    loops: Vec<LoopContext>,
-    aggregate_return_pointer_slot: Option<usize>,
-}
-
-#[derive(Debug, Clone, Copy)]
-struct LoopContext {
-    continue_label: usize,
-    break_label: usize,
-}
-
-#[derive(Debug, Clone)]
-enum Value {
-    Scalar(Type),
-    Aggregate {
-        type_id: usize,
-        base_slot: usize,
-    },
-    Array {
-        element: ArrayElement,
-        length: usize,
-        base_slot: usize,
-    },
-}
-
-#[derive(Debug, Clone, PartialEq, Eq)]
-enum ArrayElement {
-    Scalar(Type),
-    Named(usize),
-    Array {
-        element: Box<ArrayElement>,
-        length: usize,
-    },
-}
-
-#[derive(Debug, Clone, Copy)]
-enum ArrayAddress {
-    Direct(isize),
-    Indirect(isize),
-}
-
 impl Lowerer<'_> {
-    fn allocate_pointer(&mut self) -> isize {
-        let slot = self.next_aggregate_slot;
-        self.next_aggregate_slot += 1;
-        slot_offset(slot)
+    fn set_origin(
+        &mut self,
+        o: mir::Origin,
+        block: mir::BlockId,
+        instruction: Option<mir::InstructionId>,
+    ) {
+        self.origin = match o.source() {
+            Some(s) => Origin::Source {
+                node_id: s.node_id,
+                span: s.span,
+            },
+            None => Origin::Synthetic,
+        };
+        self.mir_origin = Some(MirOrigin {
+            block,
+            instruction,
+            origin: o,
+        });
     }
-
-    fn lower_statements(&mut self, statements: &[cerune_ir::Statement]) -> bool {
-        for statement in statements {
-            if self.lower_statement(statement) {
-                return true;
+    fn push(&mut self, i: Instruction) {
+        self.body.instructions.push(i);
+        self.body.origins.push(self.origin);
+        self.body.mir_origins.push(self.mir_origin);
+    }
+    fn ty(&self, v: LocalId) -> &hir::Type {
+        &self.function.locals[v.0].ty
+    }
+    fn offset(&self, v: LocalId) -> isize {
+        slot_offset(self.slots[v.0])
+    }
+    fn pointer(&mut self) -> isize {
+        let s = self.next_slot;
+        self.next_slot += 1;
+        slot_offset(s)
+    }
+    fn next_label(&mut self) -> usize {
+        let n = self.label;
+        self.label += 1;
+        n
+    }
+    fn load(&mut self, v: LocalId) {
+        if !aggregate(self.ty(v)) {
+            self.load_scalar(scalar_type(self.ty(v)), self.offset(v));
+        }
+    }
+    fn copy(&mut self, ty: &hir::Type, source: usize, destination: usize) {
+        match ty {
+            hir::Type::Named(id) => {
+                let fields = self.program.types[id.0].fields.clone();
+                let mut off = 0;
+                for (_, _, ty) in fields {
+                    self.copy(&ty, source + off, destination + off);
+                    off += slots_for(self.program, &ty);
+                }
+            }
+            hir::Type::Array { element, length } => {
+                let stride = slots_for(self.program, element);
+                for i in 0..*length {
+                    self.copy(element, source + i * stride, destination + i * stride);
+                }
+            }
+            ty => {
+                self.load_scalar(scalar_type(ty), slot_offset(source));
+                self.store_scalar(scalar_type(ty), slot_offset(destination));
             }
         }
-
-        false
     }
-
-    fn push(&mut self, instruction: Instruction) {
-        self.instructions.push(instruction);
-        self.origins.push(self.origin);
+    fn copy_local(&mut self, source: LocalId, destination: usize) {
+        self.copy(&self.ty(source).clone(), self.slots[source.0], destination);
     }
-
-    fn lower_statement(&mut self, statement: &cerune_ir::Statement) -> bool {
-        let previous = self.origin;
-        self.origin = Origin::Source {
-            node_id: statement.id,
-            span: statement.span,
-        };
-        let result = self.lower_statement_body(statement);
-        self.origin = previous;
-        result
+    fn store_pointer(&mut self, v: LocalId, pointer: isize) {
+        self.load(v);
+        if aggregate(self.ty(v)) {
+            self.push(Instruction::CopyToPointer {
+                source_offset: self.offset(v),
+                slots: slots_for(self.program, self.ty(v)),
+                pointer_offset: pointer,
+            });
+        } else {
+            self.push(match self.ty(v) {
+                hir::Type::F32 => Instruction::StoreF32ToPointer(pointer),
+                hir::Type::F64 => Instruction::StoreF64ToPointer(pointer),
+                _ => Instruction::StoreI64ToPointer(pointer),
+            });
+        }
     }
-
-    fn lower_statement_body(&mut self, statement: &cerune_ir::Statement) -> bool {
-        match &statement.kind {
-            cerune_ir::StatementKind::ArrayInitialize { array, value } => {
-                self.lower_expr(array, 0);
-                let owner_offset = self.allocate_pointer();
-                self.push(Instruction::StoreI64ToStack(owner_offset));
-                let destination_offset = self.allocate_pointer();
+    fn address(&mut self, root: LocalId, path: &[LocalId], destination: isize) {
+        let mut ty = self.ty(root).clone();
+        let mut base_offset = self.offset(root);
+        let mut base_is_pointer = false;
+        for (n, &index) in path.iter().enumerate() {
+            self.load(index);
+            let label = self.next_label();
+            let out = if n + 1 == path.len() {
+                destination
+            } else {
+                self.pointer()
+            };
+            match &ty {
+                hir::Type::Array { element, length } => {
+                    self.push(Instruction::CheckedArrayAddress {
+                        base_offset,
+                        base_is_pointer,
+                        length: *length,
+                        element_slots: slots_for(self.program, element),
+                        destination_offset: out,
+                        label,
+                    });
+                    ty = (**element).clone();
+                }
+                hir::Type::DynamicArray { element } => {
+                    self.push(Instruction::DynamicArrayAddress {
+                        base_offset,
+                        base_is_pointer,
+                        destination_offset: out,
+                        label,
+                    });
+                    ty = (**element).clone();
+                }
+                _ => unreachable!("validated array path"),
+            }
+            base_offset = out;
+            base_is_pointer = true;
+        }
+    }
+    fn instruction(&mut self, k: &Kind) {
+        match k {
+            Kind::Assign { destination, value } => self.operation(*destination, value),
+            Kind::Call {
+                function,
+                arguments,
+                ..
+            } => self.call(*function, arguments, None),
+            Kind::CheckIndex { root, path } => {
+                self.address(*root, path, self.checked[&(*root, path.clone())])
+            }
+            Kind::Store { root, path, value } => {
+                if path.is_empty() {
+                    self.copy_local(*value, self.slots[root.0]);
+                } else {
+                    self.store_pointer(*value, self.checked[&(*root, path.clone())]);
+                }
+            }
+            Kind::Output {
+                value,
+                newline,
+                quoted,
+            } => {
+                self.load(*value);
+                if !newline {
+                    self.push(Instruction::Write {
+                        kind: crate::codegen::display::kind(self.ty(*value), *quoted),
+                    });
+                } else if crate::codegen::is_u64(self.ty(*value)) {
+                    self.push(Instruction::CallPrintU64);
+                } else {
+                    self.lower_print(scalar_type(self.ty(*value)));
+                }
+            }
+            Kind::ArrayInitialize { array, value } => {
+                let owner_offset = self.offset(*array);
+                let destination_offset = self.pointer();
                 self.push(Instruction::ArrayInitAddress {
                     owner_offset,
                     destination_offset,
                 });
-                let value = self.lower_expr(value, 0);
-                self.store_value_to_pointer(
-                    &array_element_ir_type(&array.ty),
-                    value,
-                    destination_offset,
-                );
+                self.store_pointer(*value, destination_offset);
                 self.push(Instruction::ArrayInitialized { owner_offset });
-                false
             }
-            cerune_ir::StatementKind::ArrayRetain { value } => {
-                self.lower_expr(value, 0);
+            Kind::ArrayRetain { value } => {
+                self.load(*value);
                 self.push(Instruction::ArrayRetain);
-                false
             }
-            cerune_ir::StatementKind::ArrayFree { value } => {
-                self.lower_expr(value, 0);
+            Kind::ArrayFree { value } => {
+                self.load(*value);
                 self.push(Instruction::ArrayFree);
-                false
             }
-            cerune_ir::StatementKind::ArrayRangeCheck { length, start, end } => {
-                self.lower_expr(length, 0);
-                let length_offset = self.allocate_pointer();
-                self.push(Instruction::StoreI64ToStack(length_offset));
-                self.lower_expr(start, 0);
-                let start_offset = self.allocate_pointer();
-                self.push(Instruction::StoreI64ToStack(start_offset));
-                self.lower_expr(end, 0);
+            Kind::ArrayRangeCheck { length, start, end } => {
+                self.load(*end);
                 let label = self.next_label();
                 self.push(Instruction::ArrayRangeCheck {
-                    length_offset,
-                    start_offset,
+                    length_offset: self.offset(*length),
+                    start_offset: self.offset(*start),
                     label,
                 });
-                false
             }
-            cerune_ir::StatementKind::Binding { id, ty, value, .. } => {
-                let value = self.lower_expr(value, 0);
-                let destination = self.binding_slot(*id);
-                self.store_value(ty, value, destination);
-                false
-            }
-
-            cerune_ir::StatementKind::Assignment { target, value } => {
-                if target.projections.is_empty() {
-                    let value = self.lower_expr(value, 0);
-                    self.store_value(&target.root_ty, value, self.binding_slot(target.id));
-                    return false;
-                }
-
-                let mut address = ArrayAddress::Direct(self.binding_offset(target.id));
-                for projection in &target.projections {
-                    let (index, span) = match projection {
-                        cerune_ir::AssignmentProjection::Index { index, span, .. }
-                        | cerune_ir::AssignmentProjection::DynamicIndex { index, span, .. } => {
-                            (index, span)
-                        }
-                    };
-                    let Value::Scalar(Type::I64) = self.lower_expr(index, 0) else {
-                        unreachable!("array index must be i64")
-                    };
-                    let pointer_slot = self.next_aggregate_slot;
-                    self.next_aggregate_slot += 1;
-                    let (base_offset, base_is_pointer) = match address {
-                        ArrayAddress::Direct(offset) => (offset, false),
-                        ArrayAddress::Indirect(offset) => (offset, true),
-                    };
-                    let label = self.next_label();
-                    let previous = self.origin;
-                    let Origin::Source { node_id, .. } = previous else {
-                        unreachable!()
-                    };
-                    self.origin = Origin::Source {
-                        node_id,
-                        span: *span,
-                    };
-                    match projection {
-                        cerune_ir::AssignmentProjection::Index {
-                            element, length, ..
-                        } => self.push(Instruction::CheckedArrayAddress {
-                            base_offset,
-                            base_is_pointer,
-                            length: *length,
-                            element_slots: type_slot_count(self.program, element),
-                            destination_offset: slot_offset(pointer_slot),
-                            label,
-                        }),
-                        cerune_ir::AssignmentProjection::DynamicIndex { .. } => {
-                            self.push(Instruction::DynamicArrayAddress {
-                                base_offset,
-                                base_is_pointer,
-                                destination_offset: slot_offset(pointer_slot),
-                                label,
-                            })
-                        }
-                    }
-                    self.origin = previous;
-                    address = ArrayAddress::Indirect(slot_offset(pointer_slot));
-                }
-
-                let value = self.lower_expr(value, 0);
-                let ArrayAddress::Indirect(pointer_offset) = address else {
-                    unreachable!("indexed assignment produces an indirect address")
-                };
-                self.store_value_to_pointer(&target.ty, value, pointer_offset);
-                false
-            }
-
-            cerune_ir::StatementKind::StringManage { value, retain } => {
-                self.lower_expr(value, 0);
+            Kind::StringManage { value, retain } => {
+                self.load(*value);
                 self.push(Instruction::StringManage { retain: *retain });
-                false
             }
-            cerune_ir::StatementKind::Write { value, quoted } => {
-                let kind = crate::codegen::display::kind(&value.ty, *quoted);
-                self.lower_expr(value, 0);
-                self.push(Instruction::Write { kind });
-                false
-            }
-            cerune_ir::StatementKind::Print { value } => {
-                let Value::Scalar(ty) = self.lower_expr(value, 0) else {
-                    unreachable!("semantic analysis rejects aggregate printing")
-                };
-                if crate::codegen::is_u64(&value.ty) {
-                    self.push(Instruction::CallPrintU64);
+        }
+    }
+    fn call(&mut self, function: hir::FunctionId, args: &[LocalId], destination: Option<LocalId>) {
+        let return_type = &self.program.functions[function.0].return_type;
+        let result = match return_type {
+            hir::ReturnType::Value(ty) if aggregate(ty) => Some(if let Some(d) = destination {
+                self.offset(d)
+            } else {
+                let s = self.next_slot;
+                self.next_slot += slots_for(self.program, ty).max(1);
+                slot_offset(s)
+            }),
+            _ => None,
+        };
+        let arguments = args
+            .iter()
+            .map(|v| {
+                if aggregate(self.ty(*v)) {
+                    Argument::Aggregate {
+                        offset: self.offset(*v),
+                    }
                 } else {
-                    self.lower_print(ty);
-                }
-                false
-            }
-
-            cerune_ir::StatementKind::If {
-                condition,
-                then_body,
-                else_body,
-            } => {
-                let Value::Scalar(Type::Bool) = self.lower_expr(condition, 0) else {
-                    unreachable!("semantic analysis requires a bool condition")
-                };
-                let else_label = self.next_label();
-                let end_label = self.next_label();
-                self.push(Instruction::JumpIfZero(if else_body.is_empty() {
-                    end_label
-                } else {
-                    else_label
-                }));
-
-                let then_terminates = self.lower_statements(then_body);
-                if !then_terminates {
-                    self.push(Instruction::Jump(end_label));
-                }
-
-                if else_body.is_empty() {
-                    self.push(Instruction::Label {
-                        id: end_label,
-                        name: "if_end",
-                    });
-                    false
-                } else {
-                    self.push(Instruction::Label {
-                        id: else_label,
-                        name: "if_else",
-                    });
-                    let else_terminates = self.lower_statements(else_body);
-
-                    if then_terminates && else_terminates {
-                        true
-                    } else {
-                        self.push(Instruction::Label {
-                            id: end_label,
-                            name: "if_end",
-                        });
-                        false
+                    Argument::Scalar {
+                        ty: scalar_type(self.ty(*v)),
+                        offset: self.offset(*v),
                     }
                 }
+            })
+            .collect();
+        self.push(Instruction::Call {
+            function_id: function.0,
+            arguments,
+            aggregate_result_offset: result,
+        });
+    }
+    fn operation(&mut self, d: LocalId, op: &Op) {
+        let ty = self.ty(d).clone();
+        let destination = self.slots[d.0];
+        match op {
+            Op::Copy(v) => {
+                self.copy_local(*v, destination);
+                return;
             }
-
-            cerune_ir::StatementKind::While { condition, body } => {
-                let condition_label = self.next_label();
-                let end_label = self.next_label();
-
-                self.push(Instruction::Label {
-                    id: condition_label,
-                    name: "while_condition",
-                });
-                let Value::Scalar(Type::Bool) = self.lower_expr(condition, 0) else {
-                    unreachable!("semantic analysis requires a bool condition")
+            Op::Array(values) => {
+                let hir::Type::Array { element, .. } = &ty else {
+                    unreachable!()
                 };
-                self.push(Instruction::JumpIfZero(end_label));
-
-                self.loops.push(LoopContext {
-                    continue_label: condition_label,
-                    break_label: end_label,
-                });
-                let body_terminates = self.lower_statements(body);
-                self.loops.pop().expect("while loop context must exist");
-
-                if !body_terminates {
-                    self.push(Instruction::Jump(condition_label));
+                let stride = slots_for(self.program, element);
+                for (n, v) in values.iter().enumerate() {
+                    self.copy_local(*v, destination + n * stride);
                 }
-                self.push(Instruction::Label {
-                    id: end_label,
-                    name: "while_end",
-                });
-                false
+                return;
             }
-
-            cerune_ir::StatementKind::For {
-                initializer,
-                condition,
-                update,
-                body,
+            Op::Construct {
+                ty: id,
+                base,
+                fields,
             } => {
-                self.lower_statement(initializer);
-
-                let condition_label = self.next_label();
-                let update_label = self.next_label();
-                let end_label = self.next_label();
-
-                self.push(Instruction::Label {
-                    id: condition_label,
-                    name: "for_condition",
-                });
-                let Value::Scalar(Type::Bool) = self.lower_expr(condition, 0) else {
-                    unreachable!("semantic analysis requires a bool condition")
-                };
-                self.push(Instruction::JumpIfZero(end_label));
-
-                self.loops.push(LoopContext {
-                    continue_label: update_label,
-                    break_label: end_label,
-                });
-                let body_terminates = self.lower_statements(body);
-                self.loops.pop().expect("for loop context must exist");
-
-                if !body_terminates {
-                    self.push(Instruction::Jump(update_label));
+                if let Some(base) = base {
+                    self.copy_local(*base, destination);
                 }
-                self.push(Instruction::Label {
-                    id: update_label,
-                    name: "for_update",
-                });
-                self.lower_statement(update);
-                self.push(Instruction::Jump(condition_label));
-                self.push(Instruction::Label {
-                    id: end_label,
-                    name: "for_end",
-                });
-                false
+                for (f, v) in fields {
+                    self.copy_local(*v, destination + field_slot(self.program, id.0, f.0));
+                }
+                return;
             }
-
-            cerune_ir::StatementKind::Break => {
-                let target = self
-                    .loops
-                    .last()
-                    .expect("semantic analysis rejects break outside a loop")
-                    .break_label;
-                self.push(Instruction::Jump(target));
-                true
+            Op::Field {
+                base,
+                ty: id,
+                field,
+            } => {
+                self.copy(
+                    &ty,
+                    self.slots[base.0] + field_slot(self.program, id.0, field.0),
+                    destination,
+                );
+                return;
             }
-
-            cerune_ir::StatementKind::Continue => {
-                let target = self
-                    .loops
-                    .last()
-                    .expect("semantic analysis rejects continue outside a loop")
-                    .continue_label;
-                self.push(Instruction::Jump(target));
-                true
+            Op::Index { base, index } => {
+                let pointer_offset = self.pointer();
+                self.address(*base, &[*index], pointer_offset);
+                if aggregate(&ty) {
+                    self.push(Instruction::CopyFromPointer {
+                        pointer_offset,
+                        destination_offset: self.offset(d),
+                        slots: slots_for(self.program, &ty),
+                    });
+                    return;
+                } else {
+                    self.push(Instruction::LoadFromPointer {
+                        ty: scalar_type(&ty),
+                        pointer_offset,
+                    });
+                }
             }
-            cerune_ir::StatementKind::Call {
-                function_id,
+            Op::Call {
+                function,
                 arguments,
                 ..
             } => {
-                self.lower_call(function_id.0, arguments, None, 0);
-                false
+                self.call(*function, arguments, Some(d));
+                if aggregate(&ty) {
+                    return;
+                }
             }
-            cerune_ir::StatementKind::Return { value } => {
-                if let Some(value) = value {
-                    match self.lower_expr(value, 0) {
-                        Value::Scalar(_) => {}
-                        Value::Aggregate { base_slot, .. } | Value::Array { base_slot, .. } => {
-                            let pointer_slot = self
-                                .aggregate_return_pointer_slot
-                                .expect("aggregate returns have a result pointer");
-                            self.push(Instruction::CopyToAggregateReturn {
-                                source_offset: slot_offset(base_slot),
-                                slots: type_slot_count(self.program, &value.ty),
-                                pointer_offset: slot_offset(pointer_slot),
-                            });
-                        }
+            Op::Literal(v) => match v {
+                mir::Literal::Boolean(b) => {
+                    self.push(Instruction::MovI64ImmediateToRax(i64::from(*b)))
+                }
+                mir::Literal::Integer(n) => self.push(Instruction::MovI64ImmediateToRax(*n as i64)),
+                mir::Literal::String(s) => {
+                    let id = self.strings.len();
+                    self.strings.push(s.clone());
+                    self.push(Instruction::LoadStringConstant(id));
+                }
+                mir::Literal::Float(s) => {
+                    let id = self.floats.len();
+                    self.floats.push(match ty {
+                        hir::Type::F32 => FloatConstant::F32 {
+                            id,
+                            bits: s.parse::<f32>().expect("validated literal").to_bits(),
+                        },
+                        hir::Type::F64 => FloatConstant::F64 {
+                            id,
+                            bits: s.parse::<f64>().expect("validated literal").to_bits(),
+                        },
+                        _ => unreachable!(),
+                    });
+                    self.push(if ty == hir::Type::F32 {
+                        Instruction::LoadF32Constant(id)
+                    } else {
+                        Instruction::LoadF64Constant(id)
+                    });
+                }
+            },
+            Op::Unary { op, value } => {
+                self.load(*value);
+                match (*op, scalar_type(&ty)) {
+                    (hir::UnaryOp::BitNot, Type::I64) => self.push(Instruction::BitNot {
+                        mask: crate::codegen::complement_mask(&ty),
+                    }),
+                    (hir::UnaryOp::Negate, Type::I64) => {
+                        self.push(Instruction::NegI64);
+                        let label = self.next_label();
+                        self.push(Instruction::TrapIfOverflow(label));
                     }
+                    (hir::UnaryOp::Negate, Type::F32) => self.push(Instruction::NegF32),
+                    (hir::UnaryOp::Negate, Type::F64) => self.push(Instruction::NegF64),
+                    (hir::UnaryOp::Not, Type::Bool) => self.push(Instruction::NotBool),
+                    _ => unreachable!("validated unary operation"),
                 }
-                self.push(Instruction::Return);
-                true
             }
-        }
-    }
-
-    fn lower_expr(&mut self, expr: &cerune_ir::Expr, depth: usize) -> Value {
-        let previous = self.origin;
-        self.origin = Origin::Source {
-            node_id: expr.id,
-            span: expr.span,
-        };
-        let value = self.lower_expr_value(expr, depth);
-        self.origin = previous;
-        value
-    }
-
-    fn lower_expr_value(&mut self, expr: &cerune_ir::Expr, depth: usize) -> Value {
-        let value = self.lower_expr_unchecked(expr, depth);
-        if let Some(ty) = super::super::integer_range_check(expr) {
-            let label = self.next_label();
-            use crate::runtime::FailureCode;
-            let failure = match expr.kind {
-                cerune_ir::ExprKind::ConvertInteger { .. } => {
-                    FailureCode::IntegerConversionOutOfRange
-                }
-                cerune_ir::ExprKind::Binary {
-                    op: cerune_ir::BinaryOp::Divide,
-                    ..
-                } => FailureCode::DivisionOverflow,
-                _ => FailureCode::IntegerOverflow,
-            };
-            self.push(Instruction::CheckIntegerRange { ty, label, failure });
-        }
-        value
-    }
-
-    fn lower_expr_unchecked(&mut self, expr: &cerune_ir::Expr, depth: usize) -> Value {
-        if let Some((value, conversion)) = crate::codegen::u64_integer_conversion(expr) {
-            self.lower_expr(value, depth);
-            let label = self.next_label();
-            self.push(Instruction::ConvertNumeric { conversion, label });
-            return Value::Scalar(Type::I64);
-        }
-
-        match &expr.kind {
-            cerune_ir::ExprKind::ArrayCopy { .. } => {
-                unreachable!("array copies are expanded in common IR")
-            }
-            cerune_ir::ExprKind::ArrayAllocate {
-                length,
-                element_width,
+            Op::Binary { op, left, right } => self.binary(*op, *left, *right, &ty),
+            Op::ConvertInteger {
+                value, from, to, ..
             } => {
-                self.lower_expr(length, depth);
-                let label = self.next_label();
-                self.push(Instruction::ArrayAllocate {
-                    width: *element_width,
-                    stride: 8 * type_slot_count(self.program, &array_element_ir_type(&expr.ty)),
-                    label,
-                });
-                Value::Scalar(Type::DynamicArray)
-            }
-            cerune_ir::ExprKind::ArrayReleaseOwner { value } => {
-                self.lower_expr(value, depth);
-                self.push(Instruction::ArrayReleaseOwner);
-                Value::Scalar(Type::Bool)
-            }
-            cerune_ir::ExprKind::Let { .. } | cerune_ir::ExprKind::Conditional { .. } => {
-                unreachable!("match expressions are lowered before code generation")
-            }
-            cerune_ir::ExprKind::Constant { value, .. } => self.lower_expr(value, depth),
-            cerune_ir::ExprKind::ArrayLength { value } => {
-                self.lower_expr(value, depth);
-                match &value.ty {
-                    cerune_ir::Type::Array { length, .. } => {
-                        self.push(Instruction::MovI64ImmediateToRax(*length as i64))
-                    }
-                    cerune_ir::Type::DynamicArray { .. } => self.push(Instruction::ArrayLength),
-                    _ => unreachable!(),
+                self.load(*value);
+                let conversion = crate::codegen::NumericConversion {
+                    mode: crate::types::ConversionMode::Exact,
+                    from: crate::types::NumericType::Integer(*from),
+                    to: crate::types::NumericType::Integer(*to),
+                };
+                if from != to && conversion.uses_u64() {
+                    let label = self.next_label();
+                    self.push(Instruction::ConvertNumeric { conversion, label });
                 }
-                Value::Scalar(Type::I64)
             }
-            cerune_ir::ExprKind::StringConcat { left, right } => {
-                self.lower_expr(left, depth + 1);
-                let left_offset = self.scratch_offset(depth);
-                self.store_scalar(Type::String, left_offset);
-                self.lower_expr(right, depth + 1);
-                let label = self.next_label();
-                self.push(Instruction::StringConcat { left_offset, label });
-                Value::Scalar(Type::String)
-            }
-            cerune_ir::ExprKind::StringByteLength { value } => {
-                self.lower_expr(value, depth);
-                self.push(Instruction::LoadStringLength);
-                Value::Scalar(Type::I64)
-            }
-            cerune_ir::ExprKind::String(value) => {
-                let id = self.strings.len();
-                self.strings.push(value.clone());
-                self.push(Instruction::LoadStringConstant(id));
-                Value::Scalar(Type::String)
-            }
-            cerune_ir::ExprKind::ConvertNumeric {
+            Op::ConvertNumeric {
                 value,
                 from,
                 to,
                 mode,
                 ..
             } => {
-                self.lower_expr(value, depth);
-                if from != to {
-                    let label = self.next_label();
-                    self.push(Instruction::ConvertNumeric {
-                        conversion: crate::codegen::NumericConversion {
-                            mode: *mode,
-                            from: *from,
-                            to: *to,
-                        },
-                        label,
-                    });
+                self.load(*value);
+                if from == to {
+                    self.store_scalar(scalar_type(&ty), self.offset(d));
+                    return;
                 }
-                Value::Scalar(scalar_type(&expr.ty))
+                let label = self.next_label();
+                self.push(Instruction::ConvertNumeric {
+                    conversion: crate::codegen::NumericConversion {
+                        from: *from,
+                        to: *to,
+                        mode: *mode,
+                    },
+                    label,
+                });
             }
-            cerune_ir::ExprKind::ConvertInteger { value, .. } => self.lower_expr(value, depth),
-            cerune_ir::ExprKind::Boolean(value) => {
-                self.push(Instruction::MovI64ImmediateToRax(i64::from(*value)));
-                Value::Scalar(Type::Bool)
-            }
-            cerune_ir::ExprKind::Integer(value) => {
-                self.push(Instruction::MovI64ImmediateToRax(*value as i64));
-                Value::Scalar(Type::I64)
-            }
-            cerune_ir::ExprKind::Float { text } => {
-                let ty = scalar_type(&expr.ty);
-                let id = self.add_float_constant(text, ty);
-                match ty {
-                    Type::F32 => self.push(Instruction::LoadF32Constant(id)),
-                    Type::F64 => self.push(Instruction::LoadF64Constant(id)),
-                    Type::DynamicArray | Type::String | Type::Bool | Type::I64 => {
-                        unreachable!("a float literal has a float type")
-                    }
+            Op::ArrayLength(v) => match self.ty(*v) {
+                hir::Type::Array { length, .. } => {
+                    self.push(Instruction::MovI64ImmediateToRax(*length as i64))
                 }
-                Value::Scalar(ty)
-            }
-            cerune_ir::ExprKind::Variable { id, .. } => match &expr.ty {
-                cerune_ir::Type::Named(type_id) => Value::Aggregate {
-                    type_id: type_id.0,
-                    base_slot: self.binding_slot(*id),
-                },
-                cerune_ir::Type::Array { element, length } => Value::Array {
-                    element: array_element_type(element),
-                    length: *length,
-                    base_slot: self.binding_slot(*id),
-                },
-                scalar => {
-                    let ty = scalar_type(scalar);
-                    self.load_scalar(ty, self.binding_offset(*id));
-                    Value::Scalar(ty)
+                _ => {
+                    self.load(*v);
+                    self.push(Instruction::ArrayLength);
                 }
             },
-            cerune_ir::ExprKind::Unary { op, value } => {
-                let Value::Scalar(ty) = self.lower_expr(value, depth) else {
-                    unreachable!("semantic analysis rejects aggregate unary operands")
+            Op::StringByteLength(v) => {
+                self.load(*v);
+                self.push(Instruction::LoadStringLength);
+            }
+            Op::StringConcat { left, right } => {
+                self.load(*right);
+                let label = self.next_label();
+                self.push(Instruction::StringConcat {
+                    left_offset: self.offset(*left),
+                    label,
+                });
+            }
+            Op::ArrayAllocate {
+                length,
+                element_width,
+            } => {
+                self.load(*length);
+                let hir::Type::DynamicArray { element } = &ty else {
+                    unreachable!()
                 };
-                match (*op, ty) {
-                    (cerune_ir::UnaryOp::BitNot, Type::I64) => self.push(Instruction::BitNot {
-                        mask: crate::codegen::complement_mask(&expr.ty),
-                    }),
-                    (cerune_ir::UnaryOp::Negate, Type::I64) => {
-                        self.push(Instruction::NegI64);
+                let label = self.next_label();
+                self.push(Instruction::ArrayAllocate {
+                    width: *element_width,
+                    stride: 8 * slots_for(self.program, element),
+                    label,
+                });
+            }
+            Op::ArrayReleaseOwner(v) => {
+                self.load(*v);
+                self.push(Instruction::ArrayReleaseOwner);
+            }
+        }
+        if let hir::Type::Integer(t) = ty
+            && !matches!(
+                t,
+                crate::types::IntegerType::I64 | crate::types::IntegerType::U64
+            )
+            && matches!(
+                op,
+                Op::Unary { .. } | Op::Binary { .. } | Op::ConvertInteger { .. }
+            )
+        {
+            use crate::runtime::FailureCode as F;
+            let failure = match op {
+                Op::ConvertInteger { .. } => F::IntegerConversionOutOfRange,
+                Op::Binary {
+                    op: hir::BinaryOp::Divide,
+                    ..
+                } => F::DivisionOverflow,
+                _ => F::IntegerOverflow,
+            };
+            let label = self.next_label();
+            self.push(Instruction::CheckIntegerRange {
+                ty: t,
+                label,
+                failure,
+            });
+        }
+        self.store_scalar(scalar_type(&ty), self.offset(d));
+    }
+    fn binary(&mut self, op: hir::BinaryOp, left: LocalId, right: LocalId, ty: &hir::Type) {
+        let operand_ty = scalar_type(self.ty(left));
+        let scratch = self.offset(left);
+        self.load(right);
+        match operand_ty {
+            Type::DynamicArray => {
+                unreachable!("array comparisons are expanded in common IR")
+            }
+            Type::String => {
+                self.push(Instruction::CompareString {
+                    left_offset: scratch,
+                    equal: op == hir::BinaryOp::Equal,
+                });
+            }
+            Type::Bool | Type::I64 => {
+                self.push(Instruction::MoveRaxToRcx);
+                self.push(Instruction::LoadI64ScratchToRax(scratch));
+
+                if let Some(op) = crate::codegen::integer_binary_op(op, self.ty(left)) {
+                    let label = self.next_label();
+                    self.push(Instruction::IntegerBinary {
+                        op,
+                        ty: crate::codegen::integer_type(ty),
+                        label,
+                    });
+                } else if let Some(op) = compare_op(op) {
+                    self.push(if crate::codegen::is_u64(self.ty(left)) {
+                        Instruction::CompareU64(op)
+                    } else {
+                        Instruction::CompareI64(op)
+                    });
+                } else {
+                    let op = (op).into();
+                    if op == BinaryOp::Divide {
+                        let label = self.next_label();
+                        self.push(Instruction::TrapIfInvalidI64Division(label));
+                        self.push(Instruction::SignExtendRax);
+                        self.push(Instruction::DivideRaxByRcx);
+                    } else {
+                        self.push(Instruction::I64Binary(op));
                         let label = self.next_label();
                         self.push(Instruction::TrapIfOverflow(label));
                     }
-                    (cerune_ir::UnaryOp::Negate, Type::F32) => self.push(Instruction::NegF32),
-                    (cerune_ir::UnaryOp::Negate, Type::F64) => self.push(Instruction::NegF64),
-                    (cerune_ir::UnaryOp::Not, Type::Bool) => self.push(Instruction::NotBool),
-                    _ => unreachable!("semantic analysis rejects invalid unary operands"),
-                }
-                Value::Scalar(ty)
-            }
-            cerune_ir::ExprKind::Logical { op, left, right } => {
-                self.lower_expr(left, depth);
-                let false_label = self.next_label();
-                let end_label = self.next_label();
-                self.push(Instruction::JumpIfZero(false_label));
-                if *op == cerune_ir::LogicalOp::And {
-                    self.lower_expr(right, depth);
-                }
-                self.push(Instruction::Jump(end_label));
-                self.push(Instruction::Label {
-                    id: false_label,
-                    name: "logical_false",
-                });
-                if *op == cerune_ir::LogicalOp::Or {
-                    self.lower_expr(right, depth);
-                }
-                self.push(Instruction::Label {
-                    id: end_label,
-                    name: "logical_end",
-                });
-                Value::Scalar(Type::Bool)
-            }
-            cerune_ir::ExprKind::Binary { op, left, right } => {
-                let Value::Scalar(operand_ty) = self.lower_expr(left, depth + 1) else {
-                    unreachable!("semantic analysis rejects aggregate binary operands")
-                };
-
-                // 左辺の計算結果を、右辺を計算している間だけ退避する。
-                let scratch = self.scratch_offset(depth);
-                self.store_scalar(operand_ty, scratch);
-
-                let Value::Scalar(right_ty) = self.lower_expr(right, depth + 1) else {
-                    unreachable!("semantic analysis rejects aggregate binary operands")
-                };
-                debug_assert_eq!(operand_ty, right_ty);
-
-                match operand_ty {
-                    Type::DynamicArray => {
-                        unreachable!("array comparisons are expanded in common IR")
-                    }
-                    Type::String => {
-                        self.push(Instruction::CompareString {
-                            left_offset: scratch,
-                            equal: *op == cerune_ir::BinaryOp::Equal,
-                        });
-                    }
-                    Type::Bool | Type::I64 => {
-                        self.push(Instruction::MoveRaxToRcx);
-                        self.push(Instruction::LoadI64ScratchToRax(scratch));
-
-                        if let Some(op) = crate::codegen::integer_binary_op(*op, &left.ty) {
-                            let label = self.next_label();
-                            self.push(Instruction::IntegerBinary {
-                                op,
-                                ty: crate::codegen::integer_type(&expr.ty),
-                                label,
-                            });
-                        } else if let Some(op) = compare_op(*op) {
-                            self.push(if crate::codegen::is_u64(&left.ty) {
-                                Instruction::CompareU64(op)
-                            } else {
-                                Instruction::CompareI64(op)
-                            });
-                        } else {
-                            let op = (*op).into();
-                            if op == BinaryOp::Divide {
-                                let label = self.next_label();
-                                self.push(Instruction::TrapIfInvalidI64Division(label));
-                                self.push(Instruction::SignExtendRax);
-                                self.push(Instruction::DivideRaxByRcx);
-                            } else {
-                                self.push(Instruction::I64Binary(op));
-                                let label = self.next_label();
-                                self.push(Instruction::TrapIfOverflow(label));
-                            }
-                        }
-                    }
-                    Type::F32 => {
-                        self.push(Instruction::CopyXmm0ToXmm1F32);
-                        self.push(Instruction::LoadF32ScratchToXmm0(scratch));
-                        if let Some(op) = compare_op(*op) {
-                            self.push(Instruction::CompareF32(op));
-                        } else {
-                            self.push(Instruction::F32Binary((*op).into()));
-                        }
-                    }
-                    Type::F64 => {
-                        self.push(Instruction::CopyXmm0ToXmm1F64);
-                        self.push(Instruction::LoadF64ScratchToXmm0(scratch));
-                        if let Some(op) = compare_op(*op) {
-                            self.push(Instruction::CompareF64(op));
-                        } else {
-                            self.push(Instruction::F64Binary((*op).into()));
-                        }
-                    }
-                }
-
-                Value::Scalar(scalar_type(&expr.ty))
-            }
-            cerune_ir::ExprKind::Construct {
-                type_id,
-                base,
-                fields,
-                ..
-            } => {
-                let destination = self.allocate_aggregate(&expr.ty);
-                if let Some(base) = base {
-                    let Value::Aggregate {
-                        base_slot: source, ..
-                    } = self.lower_expr(base, depth)
-                    else {
-                        unreachable!("update base has the same aggregate type")
-                    };
-                    self.copy_aggregate(type_id.0, source, destination);
-                }
-                for field in fields {
-                    let definition = &self.program.type_definitions[type_id.0].fields[field.id.0];
-                    let value = self.lower_expr(&field.value, depth);
-                    let field_slot =
-                        destination + field_slot_offset(self.program, type_id.0, field.id.0);
-                    match (&definition.ty, value) {
-                        (
-                            cerune_ir::Type::Named(nested),
-                            Value::Aggregate {
-                                type_id: actual,
-                                base_slot: source,
-                            },
-                        ) => {
-                            debug_assert_eq!(nested.0, actual);
-                            self.copy_aggregate(nested.0, source, field_slot);
-                        }
-                        (
-                            cerune_ir::Type::Array { element, length },
-                            Value::Array {
-                                element: actual_element,
-                                length: actual_length,
-                                base_slot: source,
-                            },
-                        ) => {
-                            let element = array_element_type(element);
-                            debug_assert_eq!(element, actual_element);
-                            debug_assert_eq!(*length, actual_length);
-                            self.copy_array(&element, *length, source, field_slot);
-                        }
-                        (scalar, Value::Scalar(actual)) => {
-                            debug_assert_eq!(scalar_type(scalar), actual);
-                            self.store_scalar(actual, slot_offset(field_slot));
-                        }
-                        _ => unreachable!("semantic analysis keeps field types equal"),
-                    }
-                }
-                Value::Aggregate {
-                    type_id: type_id.0,
-                    base_slot: destination,
                 }
             }
-            cerune_ir::ExprKind::FieldAccess {
-                type_id,
-                field_id,
-                base,
-                ..
-            } => {
-                let Value::Aggregate { base_slot, .. } = self.lower_expr(base, depth) else {
-                    unreachable!("semantic analysis requires an aggregate field base")
-                };
-                let field_slot = base_slot + field_slot_offset(self.program, type_id.0, field_id.0);
-                match &expr.ty {
-                    cerune_ir::Type::Named(nested) => Value::Aggregate {
-                        type_id: nested.0,
-                        base_slot: field_slot,
-                    },
-                    cerune_ir::Type::Array { element, length } => Value::Array {
-                        element: array_element_type(element),
-                        length: *length,
-                        base_slot: field_slot,
-                    },
-                    scalar => {
-                        let ty = scalar_type(scalar);
-                        self.load_scalar(ty, slot_offset(field_slot));
-                        Value::Scalar(ty)
-                    }
+            Type::F32 => {
+                self.push(Instruction::CopyXmm0ToXmm1F32);
+                self.push(Instruction::LoadF32ScratchToXmm0(scratch));
+                if let Some(op) = compare_op(op) {
+                    self.push(Instruction::CompareF32(op));
+                } else {
+                    self.push(Instruction::F32Binary((op).into()));
                 }
             }
-            cerune_ir::ExprKind::Array(values) => {
-                let cerune_ir::Type::Array { element, length } = &expr.ty else {
-                    unreachable!("array expression must have an array type")
-                };
-                let destination = self.allocate_aggregate(&expr.ty);
-                let element = array_element_type(element);
-                let stride = array_element_slot_count(self.program, &element);
-                for (index, value) in values.iter().enumerate() {
-                    let destination = destination + index * stride;
-                    match (element.clone(), self.lower_expr(value, depth)) {
-                        (ArrayElement::Scalar(expected), Value::Scalar(actual)) => {
-                            debug_assert_eq!(expected, actual);
-                            self.store_scalar(actual, slot_offset(destination));
-                        }
-                        (
-                            ArrayElement::Named(expected),
-                            Value::Aggregate {
-                                type_id,
-                                base_slot: source,
-                            },
-                        ) => {
-                            debug_assert_eq!(expected, type_id);
-                            self.copy_aggregate(type_id, source, destination);
-                        }
-                        (
-                            ArrayElement::Array {
-                                element: expected_element,
-                                length: expected_length,
-                            },
-                            Value::Array {
-                                element,
-                                length,
-                                base_slot: source,
-                            },
-                        ) => {
-                            debug_assert_eq!(*expected_element, element);
-                            debug_assert_eq!(expected_length, length);
-                            self.copy_array(
-                                &expected_element,
-                                expected_length,
-                                source,
-                                destination,
-                            );
-                        }
-                        _ => unreachable!("semantic analysis keeps array element types equal"),
-                    }
-                }
-                Value::Array {
-                    element,
-                    length: *length,
-                    base_slot: destination,
-                }
-            }
-            cerune_ir::ExprKind::Index { base, index } => {
-                if let cerune_ir::Type::DynamicArray { element } = &base.ty {
-                    self.lower_expr(base, depth);
-                    let owner_offset = self.allocate_pointer();
-                    self.push(Instruction::StoreI64ToStack(owner_offset));
-                    self.lower_expr(index, depth);
-                    let pointer_offset = self.allocate_pointer();
-                    let label = self.next_label();
-                    self.push(Instruction::DynamicArrayAddress {
-                        base_offset: owner_offset,
-                        base_is_pointer: false,
-                        destination_offset: pointer_offset,
-                        label,
-                    });
-                    return match &**element {
-                        ty @ (cerune_ir::Type::Named(_) | cerune_ir::Type::Array { .. }) => {
-                            let destination = self.allocate_aggregate(ty);
-                            self.push(Instruction::CopyFromPointer {
-                                pointer_offset,
-                                destination_offset: slot_offset(destination),
-                                slots: type_slot_count(self.program, ty),
-                            });
-                            match ty {
-                                cerune_ir::Type::Named(id) => Value::Aggregate {
-                                    type_id: id.0,
-                                    base_slot: destination,
-                                },
-                                cerune_ir::Type::Array { element, length } => Value::Array {
-                                    element: array_element_type(element),
-                                    length: *length,
-                                    base_slot: destination,
-                                },
-                                _ => unreachable!(),
-                            }
-                        }
-                        scalar => {
-                            let ty = scalar_type(scalar);
-                            self.push(Instruction::LoadFromPointer { ty, pointer_offset });
-                            Value::Scalar(ty)
-                        }
-                    };
-                }
-                let Value::Array {
-                    element,
-                    length,
-                    base_slot,
-                } = self.lower_expr(base, depth)
-                else {
-                    unreachable!("indexed expression must have an array base")
-                };
-                let Value::Scalar(Type::I64) = self.lower_expr(index, depth) else {
-                    unreachable!("array index must be i64")
-                };
-                let label = self.next_label();
-                match element {
-                    ArrayElement::Scalar(ty) => {
-                        self.push(Instruction::CheckedArrayLoad {
-                            ty,
-                            base_offset: slot_offset(base_slot),
-                            length,
-                            label,
-                        });
-                        Value::Scalar(ty)
-                    }
-                    ArrayElement::Named(type_id) => {
-                        let element_slots =
-                            array_element_slot_count(self.program, &ArrayElement::Named(type_id));
-                        let destination = self.allocate_aggregate(&cerune_ir::Type::Named(
-                            cerune_ir::TypeId(type_id),
-                        ));
-                        self.push(Instruction::CheckedArrayCopy {
-                            base_offset: slot_offset(base_slot),
-                            length,
-                            element_slots,
-                            destination_offset: slot_offset(destination),
-                            label,
-                        });
-                        Value::Aggregate {
-                            type_id,
-                            base_slot: destination,
-                        }
-                    }
-                    ArrayElement::Array {
-                        element: nested_element,
-                        length: nested_length,
-                    } => {
-                        let element = ArrayElement::Array {
-                            element: nested_element.clone(),
-                            length: nested_length,
-                        };
-                        let element_slots = array_element_slot_count(self.program, &element);
-                        let destination = self.next_aggregate_slot;
-                        self.next_aggregate_slot += element_slots;
-                        self.push(Instruction::CheckedArrayCopy {
-                            base_offset: slot_offset(base_slot),
-                            length,
-                            element_slots,
-                            destination_offset: slot_offset(destination),
-                            label,
-                        });
-                        Value::Array {
-                            element: *nested_element,
-                            length: nested_length,
-                            base_slot: destination,
-                        }
-                    }
-                }
-            }
-            cerune_ir::ExprKind::Call {
-                function_id,
-                arguments,
-                ..
-            } => self
-                .lower_call(function_id.0, arguments, Some(&expr.ty), depth)
-                .expect("value-producing calls have a result"),
-        }
-    }
-
-    fn lower_call(
-        &mut self,
-        function_id: usize,
-        arguments: &[cerune_ir::Expr],
-        result_type: Option<&cerune_ir::Type>,
-        depth: usize,
-    ) -> Option<Value> {
-        let mut lowered_arguments = Vec::with_capacity(arguments.len());
-        for (index, argument) in arguments.iter().enumerate() {
-            match self.lower_expr(argument, depth + arguments.len().max(4)) {
-                Value::Scalar(ty) => {
-                    let offset = self.scratch_offset(depth + index);
-                    self.store_scalar(ty, offset);
-                    lowered_arguments.push(Argument::Scalar { ty, offset });
-                }
-                Value::Aggregate { base_slot, .. } | Value::Array { base_slot, .. } => {
-                    lowered_arguments.push(Argument::Aggregate {
-                        offset: slot_offset(base_slot),
-                    });
-                }
-            }
-        }
-
-        let aggregate_result = result_type.and_then(|ty| match ty {
-            cerune_ir::Type::DynamicArray { .. } => None,
-            cerune_ir::Type::Named(_) | cerune_ir::Type::Array { .. } => {
-                Some((ty, self.allocate_aggregate(ty)))
-            }
-            cerune_ir::Type::String
-            | cerune_ir::Type::Bool
-            | cerune_ir::Type::Integer(_)
-            | cerune_ir::Type::F32
-            | cerune_ir::Type::F64 => None,
-        });
-        self.push(Instruction::Call {
-            function_id,
-            arguments: lowered_arguments,
-            aggregate_result_offset: aggregate_result
-                .as_ref()
-                .map(|(_, slot)| slot_offset(*slot)),
-        });
-
-        if let Some((ty, base_slot)) = aggregate_result {
-            return Some(match ty {
-                cerune_ir::Type::Named(type_id) => Value::Aggregate {
-                    type_id: type_id.0,
-                    base_slot,
-                },
-                cerune_ir::Type::Array { element, length } => Value::Array {
-                    element: array_element_type(element),
-                    length: *length,
-                    base_slot,
-                },
-                cerune_ir::Type::DynamicArray { .. }
-                | cerune_ir::Type::String
-                | cerune_ir::Type::Bool
-                | cerune_ir::Type::Integer(_)
-                | cerune_ir::Type::F32
-                | cerune_ir::Type::F64 => unreachable!("aggregate result type is checked above"),
-            });
-        }
-
-        result_type.map(|ty| Value::Scalar(scalar_type(ty)))
-    }
-
-    fn copy_aggregate(&mut self, type_id: usize, source: usize, destination: usize) {
-        for (field_id, field) in self.program.type_definitions[type_id]
-            .fields
-            .iter()
-            .enumerate()
-        {
-            let offset = field_slot_offset(self.program, type_id, field_id);
-            match &field.ty {
-                cerune_ir::Type::Named(nested) => {
-                    self.copy_aggregate(nested.0, source + offset, destination + offset)
-                }
-                cerune_ir::Type::Array { element, length } => self.copy_array(
-                    &array_element_type(element),
-                    *length,
-                    source + offset,
-                    destination + offset,
-                ),
-                scalar => {
-                    let ty = scalar_type(scalar);
-                    self.load_scalar(ty, slot_offset(source + offset));
-                    self.store_scalar(ty, slot_offset(destination + offset));
+            Type::F64 => {
+                self.push(Instruction::CopyXmm0ToXmm1F64);
+                self.push(Instruction::LoadF64ScratchToXmm0(scratch));
+                if let Some(op) = compare_op(op) {
+                    self.push(Instruction::CompareF64(op));
+                } else {
+                    self.push(Instruction::F64Binary((op).into()));
                 }
             }
         }
     }
-
-    fn store_value(&mut self, ty: &cerune_ir::Type, value: Value, destination: usize) {
-        match (ty, value) {
-            (
-                cerune_ir::Type::Named(type_id),
-                Value::Aggregate {
-                    type_id: actual,
-                    base_slot: source,
-                },
-            ) => {
-                debug_assert_eq!(type_id.0, actual);
-                self.copy_aggregate(type_id.0, source, destination);
-            }
-            (
-                cerune_ir::Type::Array { element, length },
-                Value::Array {
-                    element: actual_element,
-                    length: actual_length,
-                    base_slot: source,
-                },
-            ) => {
-                debug_assert_eq!(array_element_type(element), actual_element);
-                debug_assert_eq!(*length, actual_length);
-                self.copy_array(&actual_element, *length, source, destination);
-            }
-            (scalar, Value::Scalar(actual)) => {
-                debug_assert_eq!(scalar_type(scalar), actual);
-                self.store_scalar(actual, slot_offset(destination));
-            }
-            _ => unreachable!("semantic analysis keeps assignment types equal"),
-        }
-    }
-
-    fn store_value_to_pointer(
-        &mut self,
-        ty: &cerune_ir::Type,
-        value: Value,
-        pointer_offset: isize,
-    ) {
-        match (ty, value) {
-            (
-                cerune_ir::Type::DynamicArray { .. }
-                | cerune_ir::Type::String
-                | cerune_ir::Type::Bool
-                | cerune_ir::Type::Integer(_),
-                Value::Scalar(actual),
-            ) => {
-                debug_assert!(matches!(
-                    actual,
-                    Type::DynamicArray | Type::String | Type::Bool | Type::I64
-                ));
-                self.push(Instruction::StoreI64ToPointer(pointer_offset));
-            }
-            (cerune_ir::Type::F32, Value::Scalar(Type::F32)) => {
-                self.push(Instruction::StoreF32ToPointer(pointer_offset))
-            }
-            (cerune_ir::Type::F64, Value::Scalar(Type::F64)) => {
-                self.push(Instruction::StoreF64ToPointer(pointer_offset))
-            }
-            (
-                cerune_ir::Type::Named(_),
-                Value::Aggregate {
-                    base_slot: source, ..
-                },
-            )
-            | (
-                cerune_ir::Type::Array { .. },
-                Value::Array {
-                    base_slot: source, ..
-                },
-            ) => self.push(Instruction::CopyToPointer {
-                source_offset: slot_offset(source),
-                slots: type_slot_count(self.program, ty),
-                pointer_offset,
-            }),
-            _ => unreachable!("semantic analysis keeps assignment types equal"),
-        }
-    }
-
-    fn copy_array(
-        &mut self,
-        element: &ArrayElement,
-        length: usize,
-        source: usize,
-        destination: usize,
-    ) {
-        let stride = array_element_slot_count(self.program, element);
-        for index in 0..length {
-            let source = source + index * stride;
-            let destination = destination + index * stride;
-            match element {
-                ArrayElement::Scalar(ty) => {
-                    self.load_scalar(*ty, slot_offset(source));
-                    self.store_scalar(*ty, slot_offset(destination));
-                }
-                ArrayElement::Named(type_id) => self.copy_aggregate(*type_id, source, destination),
-                ArrayElement::Array { element, length } => {
-                    self.copy_array(element, *length, source, destination)
-                }
-            }
-        }
-    }
-
     fn load_scalar(&mut self, ty: Type, offset: isize) {
         self.push(match ty {
             Type::DynamicArray | Type::String | Type::Bool | Type::I64 => {
@@ -1361,418 +844,37 @@ impl Lowerer<'_> {
             }
         }
     }
-
-    fn add_float_constant(&mut self, text: &str, ty: Type) -> usize {
-        let id = self.float_id;
-        self.float_id += 1;
-
-        match ty {
-            Type::F32 => {
-                let value = text
-                    .parse::<f32>()
-                    .expect("validated floating-point literal");
-                self.float_constants.push(FloatConstant::F32 {
-                    id,
-                    bits: value.to_bits(),
-                });
-            }
-            Type::F64 => {
-                let value = text
-                    .parse::<f64>()
-                    .expect("validated floating-point literal");
-                self.float_constants.push(FloatConstant::F64 {
-                    id,
-                    bits: value.to_bits(),
-                });
-            }
-            Type::DynamicArray | Type::String | Type::Bool | Type::I64 => {
-                unreachable!("a float literal has a float type")
-            }
-        }
-
-        id
-    }
-
-    fn allocate_aggregate(&mut self, ty: &cerune_ir::Type) -> usize {
-        let base = self.next_aggregate_slot;
-        self.next_aggregate_slot += type_slot_count(self.program, ty);
-        base
-    }
-
-    fn binding_slot(&self, id: cerune_ir::BindingId) -> usize {
-        self.binding_slots[&id]
-    }
-
-    fn binding_offset(&self, id: cerune_ir::BindingId) -> isize {
-        slot_offset(self.binding_slot(id))
-    }
-
-    fn scratch_offset(&self, depth: usize) -> isize {
-        slot_offset(self.scratch_base + depth)
-    }
-
-    fn next_label(&mut self) -> usize {
-        let label = self.label;
-        self.label += 1;
-        label
-    }
 }
-
-fn assign_binding_slots(
-    program: &cerune_ir::Program,
-    parameters: &[cerune_ir::Parameter],
-    statements: &[cerune_ir::Statement],
-) -> (HashMap<cerune_ir::BindingId, usize>, usize) {
-    let mut slots = HashMap::new();
-    let mut next = 0;
-    for parameter in parameters {
-        slots.insert(parameter.id, next);
-        next += type_slot_count(program, &parameter.ty);
-    }
-    collect_binding_slots(statements, program, &mut slots, &mut next);
-    (slots, next)
+fn aggregate(ty: &hir::Type) -> bool {
+    matches!(ty, hir::Type::Named(_) | hir::Type::Array { .. })
 }
-
-fn collect_binding_slots(
-    statements: &[cerune_ir::Statement],
-    program: &cerune_ir::Program,
-    slots: &mut HashMap<cerune_ir::BindingId, usize>,
-    next: &mut usize,
-) {
-    for statement in statements {
-        match &statement.kind {
-            cerune_ir::StatementKind::ArrayInitialize { .. }
-            | cerune_ir::StatementKind::ArrayRetain { .. }
-            | cerune_ir::StatementKind::ArrayFree { .. }
-            | cerune_ir::StatementKind::ArrayRangeCheck { .. } => {}
-            cerune_ir::StatementKind::Binding { id, ty, .. } => {
-                slots.insert(*id, *next);
-                *next += type_slot_count(program, ty);
-            }
-            cerune_ir::StatementKind::If {
-                then_body,
-                else_body,
-                ..
-            } => {
-                collect_binding_slots(then_body, program, slots, next);
-                collect_binding_slots(else_body, program, slots, next);
-            }
-            cerune_ir::StatementKind::While { body, .. } => {
-                collect_binding_slots(body, program, slots, next)
-            }
-            cerune_ir::StatementKind::For {
-                initializer,
-                update,
-                body,
-                ..
-            } => {
-                collect_binding_slots(std::slice::from_ref(initializer), program, slots, next);
-                collect_binding_slots(std::slice::from_ref(update), program, slots, next);
-                collect_binding_slots(body, program, slots, next);
-            }
-            cerune_ir::StatementKind::Assignment { .. }
-            | cerune_ir::StatementKind::StringManage { .. }
-            | cerune_ir::StatementKind::Write { .. }
-            | cerune_ir::StatementKind::Print { .. }
-            | cerune_ir::StatementKind::Call { .. }
-            | cerune_ir::StatementKind::Return { .. }
-            | cerune_ir::StatementKind::Break
-            | cerune_ir::StatementKind::Continue => {}
-        }
-    }
-}
-
-fn type_slot_count(program: &cerune_ir::Program, ty: &cerune_ir::Type) -> usize {
+fn slots_for(p: &mir::Program, ty: &hir::Type) -> usize {
     match ty {
-        cerune_ir::Type::DynamicArray { .. }
-        | cerune_ir::Type::String
-        | cerune_ir::Type::Bool
-        | cerune_ir::Type::Integer(_)
-        | cerune_ir::Type::F32
-        | cerune_ir::Type::F64 => 1,
-        cerune_ir::Type::Named(id) => program.type_definitions[id.0]
+        hir::Type::Named(id) => p.types[id.0]
             .fields
             .iter()
-            .map(|field| type_slot_count(program, &field.ty))
+            .map(|(_, _, ty)| slots_for(p, ty))
             .sum(),
-        cerune_ir::Type::Array { element, length } => type_slot_count(program, element) * length,
+        hir::Type::Array { element, length } => slots_for(p, element) * length,
+        _ => 1,
     }
 }
-
-fn field_slot_offset(program: &cerune_ir::Program, type_id: usize, field_id: usize) -> usize {
-    program.type_definitions[type_id].fields[..field_id]
+fn field_slot(p: &mir::Program, id: usize, field: usize) -> usize {
+    p.types[id].fields[..field]
         .iter()
-        .map(|field| type_slot_count(program, &field.ty))
+        .map(|(_, _, ty)| slots_for(p, ty))
         .sum()
 }
-
-fn count_statements_expr_nodes(statements: &[cerune_ir::Statement]) -> usize {
-    statements
-        .iter()
-        .map(|statement| match &statement.kind {
-            cerune_ir::StatementKind::ArrayInitialize { array, value } => {
-                count_expr_nodes(array) + count_expr_nodes(value)
-            }
-            cerune_ir::StatementKind::ArrayRetain { value }
-            | cerune_ir::StatementKind::ArrayFree { value } => count_expr_nodes(value),
-            cerune_ir::StatementKind::ArrayRangeCheck { length, start, end } => {
-                count_expr_nodes(length) + count_expr_nodes(start) + count_expr_nodes(end)
-            }
-            cerune_ir::StatementKind::Assignment { target, value } => {
-                count_expr_nodes(value)
-                    + target
-                        .projections
-                        .iter()
-                        .map(|p| match p {
-                            cerune_ir::AssignmentProjection::Index { index, .. }
-                            | cerune_ir::AssignmentProjection::DynamicIndex { index, .. } => {
-                                count_expr_nodes(index)
-                            }
-                        })
-                        .sum::<usize>()
-            }
-            cerune_ir::StatementKind::Binding { value, .. }
-            | cerune_ir::StatementKind::StringManage { value, .. }
-            | cerune_ir::StatementKind::Write { value, .. }
-            | cerune_ir::StatementKind::Print { value } => count_expr_nodes(value),
-            cerune_ir::StatementKind::If {
-                condition,
-                then_body,
-                else_body,
-            } => {
-                count_expr_nodes(condition)
-                    + count_statements_expr_nodes(then_body)
-                    + count_statements_expr_nodes(else_body)
-            }
-            cerune_ir::StatementKind::While { condition, body } => {
-                count_expr_nodes(condition) + count_statements_expr_nodes(body)
-            }
-            cerune_ir::StatementKind::For {
-                initializer,
-                condition,
-                update,
-                body,
-            } => {
-                count_statements_expr_nodes(std::slice::from_ref(initializer))
-                    + count_expr_nodes(condition)
-                    + count_statements_expr_nodes(std::slice::from_ref(update))
-                    + count_statements_expr_nodes(body)
-            }
-            cerune_ir::StatementKind::Call { arguments, .. } => {
-                arguments.iter().map(count_expr_nodes).sum()
-            }
-            cerune_ir::StatementKind::Return { value } => {
-                value.as_ref().map_or(0, count_expr_nodes)
-            }
-            cerune_ir::StatementKind::Break | cerune_ir::StatementKind::Continue => 0,
-        })
-        .sum()
-}
-
-fn count_expr_nodes(expr: &cerune_ir::Expr) -> usize {
-    match &expr.kind {
-        cerune_ir::ExprKind::ArrayCopy { .. } => {
-            unreachable!("array copies are expanded in common IR")
-        }
-        cerune_ir::ExprKind::ArrayAllocate { length: value, .. }
-        | cerune_ir::ExprKind::ArrayReleaseOwner { value } => 1 + count_expr_nodes(value),
-        cerune_ir::ExprKind::Let { .. } | cerune_ir::ExprKind::Conditional { .. } => {
-            unreachable!("match expressions are lowered before code generation")
-        }
-        cerune_ir::ExprKind::Constant { value, .. } => 1 + count_expr_nodes(value),
-        cerune_ir::ExprKind::String(_)
-        | cerune_ir::ExprKind::Boolean(_)
-        | cerune_ir::ExprKind::Integer(_)
-        | cerune_ir::ExprKind::Float { .. }
-        | cerune_ir::ExprKind::Variable { .. } => 1,
-        cerune_ir::ExprKind::ConvertNumeric { value, .. }
-        | cerune_ir::ExprKind::ConvertInteger { value, .. } => count_expr_nodes(value),
-        cerune_ir::ExprKind::ArrayLength { value }
-        | cerune_ir::ExprKind::StringByteLength { value }
-        | cerune_ir::ExprKind::Unary { value, .. } => 1 + count_expr_nodes(value),
-        cerune_ir::ExprKind::Binary { left, right, .. }
-        | cerune_ir::ExprKind::StringConcat { left, right }
-        | cerune_ir::ExprKind::Logical { left, right, .. } => {
-            1 + count_expr_nodes(left) + count_expr_nodes(right)
-        }
-        cerune_ir::ExprKind::Construct { base, fields, .. } => {
-            1 + base.as_ref().map_or(0, |base| count_expr_nodes(base))
-                + fields
-                    .iter()
-                    .map(|field| count_expr_nodes(&field.value))
-                    .sum::<usize>()
-        }
-        cerune_ir::ExprKind::FieldAccess { base, .. } => 1 + count_expr_nodes(base),
-        cerune_ir::ExprKind::Array(values) => {
-            1 + values.iter().map(count_expr_nodes).sum::<usize>()
-        }
-        cerune_ir::ExprKind::Index { base, index } => {
-            1 + count_expr_nodes(base) + count_expr_nodes(index)
-        }
-        cerune_ir::ExprKind::Call { arguments, .. } => {
-            1 + arguments.iter().map(count_expr_nodes).sum::<usize>()
-        }
-    }
-}
-
-fn required_scratch_slots(statements: &[cerune_ir::Statement]) -> usize {
-    statements
-        .iter()
-        .map(|statement| match &statement.kind {
-            cerune_ir::StatementKind::ArrayInitialize { array, value } => {
-                required_expr_scratch(array, 0).max(required_expr_scratch(value, 0))
-            }
-            cerune_ir::StatementKind::ArrayRetain { value }
-            | cerune_ir::StatementKind::ArrayFree { value } => required_expr_scratch(value, 0),
-            cerune_ir::StatementKind::ArrayRangeCheck { length, start, end } => {
-                required_expr_scratch(length, 0)
-                    .max(required_expr_scratch(start, 0))
-                    .max(required_expr_scratch(end, 0))
-            }
-            cerune_ir::StatementKind::Assignment { target, value } => target
-                .projections
-                .iter()
-                .map(|p| match p {
-                    cerune_ir::AssignmentProjection::Index { index, .. }
-                    | cerune_ir::AssignmentProjection::DynamicIndex { index, .. } => {
-                        required_expr_scratch(index, 0)
-                    }
-                })
-                .fold(required_expr_scratch(value, 0), usize::max),
-            cerune_ir::StatementKind::Binding { value, .. }
-            | cerune_ir::StatementKind::StringManage { value, .. }
-            | cerune_ir::StatementKind::Write { value, .. }
-            | cerune_ir::StatementKind::Print { value } => required_expr_scratch(value, 0),
-            cerune_ir::StatementKind::Call { arguments, .. } => arguments
-                .iter()
-                .map(|argument| required_expr_scratch(argument, arguments.len().max(4)))
-                .max()
-                .unwrap_or(0)
-                .max(arguments.len()),
-            cerune_ir::StatementKind::Return { value } => value
-                .as_ref()
-                .map_or(0, |value| required_expr_scratch(value, 0)),
-            cerune_ir::StatementKind::If {
-                condition,
-                then_body,
-                else_body,
-            } => required_expr_scratch(condition, 0)
-                .max(required_scratch_slots(then_body))
-                .max(required_scratch_slots(else_body)),
-            cerune_ir::StatementKind::While { condition, body } => {
-                required_expr_scratch(condition, 0).max(required_scratch_slots(body))
-            }
-            cerune_ir::StatementKind::For {
-                initializer,
-                condition,
-                update,
-                body,
-            } => required_scratch_slots(std::slice::from_ref(initializer))
-                .max(required_expr_scratch(condition, 0))
-                .max(required_scratch_slots(std::slice::from_ref(update)))
-                .max(required_scratch_slots(body)),
-            cerune_ir::StatementKind::Break | cerune_ir::StatementKind::Continue => 0,
-        })
-        .max()
-        .unwrap_or(0)
-}
-
-fn required_expr_scratch(expr: &cerune_ir::Expr, depth: usize) -> usize {
-    match &expr.kind {
-        cerune_ir::ExprKind::ArrayCopy { .. } => {
-            unreachable!("array copies are expanded in common IR")
-        }
-        cerune_ir::ExprKind::ArrayAllocate { length: value, .. }
-        | cerune_ir::ExprKind::ArrayReleaseOwner { value } => required_expr_scratch(value, depth),
-        cerune_ir::ExprKind::Let { .. } | cerune_ir::ExprKind::Conditional { .. } => {
-            unreachable!("match expressions are lowered before code generation")
-        }
-        cerune_ir::ExprKind::Constant { value, .. } => required_expr_scratch(value, depth),
-        cerune_ir::ExprKind::String(_)
-        | cerune_ir::ExprKind::Boolean(_)
-        | cerune_ir::ExprKind::Integer(_)
-        | cerune_ir::ExprKind::Float { .. }
-        | cerune_ir::ExprKind::Variable { .. } => 0,
-        cerune_ir::ExprKind::ArrayLength { value }
-        | cerune_ir::ExprKind::StringByteLength { value }
-        | cerune_ir::ExprKind::Unary { value, .. }
-        | cerune_ir::ExprKind::ConvertNumeric { value, .. }
-        | cerune_ir::ExprKind::ConvertInteger { value, .. }
-        | cerune_ir::ExprKind::FieldAccess { base: value, .. } => {
-            required_expr_scratch(value, depth)
-        }
-        cerune_ir::ExprKind::Array(values) => values
-            .iter()
-            .map(|value| required_expr_scratch(value, depth))
-            .max()
-            .unwrap_or(0),
-        cerune_ir::ExprKind::Index { base, index } => {
-            required_expr_scratch(base, depth).max(required_expr_scratch(index, depth))
-        }
-        cerune_ir::ExprKind::Logical { left, right, .. } => {
-            required_expr_scratch(left, depth).max(required_expr_scratch(right, depth))
-        }
-        cerune_ir::ExprKind::StringConcat { left, right }
-        | cerune_ir::ExprKind::Binary { left, right, .. } => (depth + 1)
-            .max(required_expr_scratch(left, depth + 1))
-            .max(required_expr_scratch(right, depth + 1)),
-        cerune_ir::ExprKind::Construct { base, fields, .. } => base
-            .iter()
-            .map(|base| required_expr_scratch(base, depth))
-            .chain(
-                fields
-                    .iter()
-                    .map(|field| required_expr_scratch(&field.value, depth)),
-            )
-            .max()
-            .unwrap_or(0),
-        cerune_ir::ExprKind::Call { arguments, .. } => arguments
-            .iter()
-            .map(|argument| required_expr_scratch(argument, depth + arguments.len().max(4)))
-            .max()
-            .unwrap_or(0)
-            .max(depth + arguments.len()),
-    }
-}
-
-fn scalar_type(ty: &cerune_ir::Type) -> Type {
+fn scalar_type(ty: &hir::Type) -> Type {
     match ty {
-        cerune_ir::Type::DynamicArray { .. } => Type::DynamicArray,
-        cerune_ir::Type::String => Type::String,
-        cerune_ir::Type::Bool => Type::Bool,
-        cerune_ir::Type::Integer(_) => Type::I64,
-        cerune_ir::Type::F32 => Type::F32,
-        cerune_ir::Type::F64 => Type::F64,
-        cerune_ir::Type::Named(_) | cerune_ir::Type::Array { .. } => {
+        hir::Type::DynamicArray { .. } => Type::DynamicArray,
+        hir::Type::String => Type::String,
+        hir::Type::Bool => Type::Bool,
+        hir::Type::Integer(_) => Type::I64,
+        hir::Type::F32 => Type::F32,
+        hir::Type::F64 => Type::F64,
+        hir::Type::Named(_) | hir::Type::Array { .. } => {
             unreachable!("expected a scalar type")
-        }
-    }
-}
-
-fn array_element_type(element: &cerune_ir::Type) -> ArrayElement {
-    match element {
-        cerune_ir::Type::DynamicArray { .. } => ArrayElement::Scalar(Type::DynamicArray),
-        cerune_ir::Type::String => ArrayElement::Scalar(Type::String),
-        cerune_ir::Type::Bool => ArrayElement::Scalar(Type::Bool),
-        cerune_ir::Type::Integer(_) => ArrayElement::Scalar(Type::I64),
-        cerune_ir::Type::F32 => ArrayElement::Scalar(Type::F32),
-        cerune_ir::Type::F64 => ArrayElement::Scalar(Type::F64),
-        cerune_ir::Type::Named(id) => ArrayElement::Named(id.0),
-        cerune_ir::Type::Array { element, length } => ArrayElement::Array {
-            element: Box::new(array_element_type(element)),
-            length: *length,
-        },
-    }
-}
-
-fn array_element_slot_count(program: &cerune_ir::Program, element: &ArrayElement) -> usize {
-    match element {
-        ArrayElement::Scalar(_) => 1,
-        ArrayElement::Named(id) => {
-            type_slot_count(program, &cerune_ir::Type::Named(cerune_ir::TypeId(*id)))
-        }
-        ArrayElement::Array { element, length } => {
-            array_element_slot_count(program, element) * length
         }
     }
 }
@@ -1781,61 +883,50 @@ fn slot_offset(slot: usize) -> isize {
     -8 * (slot as isize + 1)
 }
 
-fn align16(value: usize) -> usize {
-    (value + 15) & !15
-}
-
-impl From<cerune_ir::BinaryOp> for BinaryOp {
-    fn from(value: cerune_ir::BinaryOp) -> Self {
+impl From<hir::BinaryOp> for BinaryOp {
+    fn from(value: hir::BinaryOp) -> Self {
         match value {
-            cerune_ir::BinaryOp::Add => Self::Add,
-            cerune_ir::BinaryOp::Subtract => Self::Subtract,
-            cerune_ir::BinaryOp::Multiply => Self::Multiply,
-            cerune_ir::BinaryOp::Divide => Self::Divide,
-            cerune_ir::BinaryOp::Remainder
-            | cerune_ir::BinaryOp::BitAnd
-            | cerune_ir::BinaryOp::BitOr
-            | cerune_ir::BinaryOp::BitXor
-            | cerune_ir::BinaryOp::ShiftLeft
-            | cerune_ir::BinaryOp::ShiftRight => {
+            hir::BinaryOp::Add => Self::Add,
+            hir::BinaryOp::Subtract => Self::Subtract,
+            hir::BinaryOp::Multiply => Self::Multiply,
+            hir::BinaryOp::Divide => Self::Divide,
+            hir::BinaryOp::Remainder
+            | hir::BinaryOp::BitAnd
+            | hir::BinaryOp::BitOr
+            | hir::BinaryOp::BitXor
+            | hir::BinaryOp::ShiftLeft
+            | hir::BinaryOp::ShiftRight => {
                 unreachable!("integer operation uses separate lowering")
             }
-            cerune_ir::BinaryOp::Equal
-            | cerune_ir::BinaryOp::NotEqual
-            | cerune_ir::BinaryOp::Less
-            | cerune_ir::BinaryOp::LessEqual
-            | cerune_ir::BinaryOp::Greater
-            | cerune_ir::BinaryOp::GreaterEqual => {
+            hir::BinaryOp::Equal
+            | hir::BinaryOp::NotEqual
+            | hir::BinaryOp::Less
+            | hir::BinaryOp::LessEqual
+            | hir::BinaryOp::Greater
+            | hir::BinaryOp::GreaterEqual => {
                 unreachable!("comparisons use dedicated x86-64 instructions")
             }
         }
     }
 }
 
-const fn compare_op(op: cerune_ir::BinaryOp) -> Option<CompareOp> {
+const fn compare_op(op: hir::BinaryOp) -> Option<CompareOp> {
     match op {
-        cerune_ir::BinaryOp::Add
-        | cerune_ir::BinaryOp::Subtract
-        | cerune_ir::BinaryOp::Multiply
-        | cerune_ir::BinaryOp::Divide
-        | cerune_ir::BinaryOp::Remainder
-        | cerune_ir::BinaryOp::BitAnd
-        | cerune_ir::BinaryOp::BitOr
-        | cerune_ir::BinaryOp::BitXor
-        | cerune_ir::BinaryOp::ShiftLeft
-        | cerune_ir::BinaryOp::ShiftRight => None,
-        cerune_ir::BinaryOp::Equal => Some(CompareOp::Equal),
-        cerune_ir::BinaryOp::NotEqual => Some(CompareOp::NotEqual),
-        cerune_ir::BinaryOp::Less => Some(CompareOp::Less),
-        cerune_ir::BinaryOp::LessEqual => Some(CompareOp::LessEqual),
-        cerune_ir::BinaryOp::Greater => Some(CompareOp::Greater),
-        cerune_ir::BinaryOp::GreaterEqual => Some(CompareOp::GreaterEqual),
+        hir::BinaryOp::Add
+        | hir::BinaryOp::Subtract
+        | hir::BinaryOp::Multiply
+        | hir::BinaryOp::Divide
+        | hir::BinaryOp::Remainder
+        | hir::BinaryOp::BitAnd
+        | hir::BinaryOp::BitOr
+        | hir::BinaryOp::BitXor
+        | hir::BinaryOp::ShiftLeft
+        | hir::BinaryOp::ShiftRight => None,
+        hir::BinaryOp::Equal => Some(CompareOp::Equal),
+        hir::BinaryOp::NotEqual => Some(CompareOp::NotEqual),
+        hir::BinaryOp::Less => Some(CompareOp::Less),
+        hir::BinaryOp::LessEqual => Some(CompareOp::LessEqual),
+        hir::BinaryOp::Greater => Some(CompareOp::Greater),
+        hir::BinaryOp::GreaterEqual => Some(CompareOp::GreaterEqual),
     }
-}
-
-fn array_element_ir_type(ty: &cerune_ir::Type) -> cerune_ir::Type {
-    let cerune_ir::Type::DynamicArray { element } = ty else {
-        unreachable!()
-    };
-    (**element).clone()
 }

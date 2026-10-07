@@ -214,9 +214,12 @@ fn emits_conditional_control_flow_in_every_backend() {
     assert!(llvm::compile(source).unwrap().contains("br i1"));
     assert!(compile_to_qbe(source).unwrap().contains("jnz"));
     assert!(compile_to_wat(source).unwrap().contains("if (result i32)"));
-    assert!(
-        compile_to_x86_64_win_asm(source)
-            .unwrap()
-            .contains("logical_end")
-    );
+    let asm = cerune_lang::compile_to_asm_with_origins(
+        source,
+        cerune_lang::codegen::x86_64::Target::X86_64PcWindowsMsvc,
+    )
+    .unwrap();
+    assert!(asm.contains("  je .Lcerune_block_"));
+    assert!(asm.contains("(short-circuit-rhs)"));
+    assert!(asm.contains("(short-circuit-join)"));
 }

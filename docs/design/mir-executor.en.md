@@ -13,7 +13,7 @@
 | `run-vm` | Bytecode | VM instruction execution |
 | `emit-mir` | None | Observe MIR operations, edges, and origins |
 
-MIR execution does not reconstruct HIR or bytecode for execution. It does not introduce another build/release artifact. Native migration to MIR, SSA, optimization, and external MIR loading remain unimplemented.
+MIR execution does not reconstruct HIR or bytecode for execution. It does not introduce another build/release artifact. [Native consumes the same MIR](native-mir.en.md). SSA, optimization, and external MIR loading remain unimplemented.
 
 ## Implementation and sharing
 

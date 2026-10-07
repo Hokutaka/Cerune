@@ -34,11 +34,11 @@ pub struct Module {
     pub array_heap_limit: Option<u64>,
     pub uses_write: bool,
     pub origins: Vec<Origin>,
+    pub mir_origins: Vec<Option<MirOrigin>>,
     pub target: super::Target,
     pub uses_strings: bool,
     pub strings: Vec<String>,
     pub functions: Vec<Function>,
-    pub explicit_main: Option<usize>,
     pub frame_size: usize,
     pub float_constants: Vec<FloatConstant>,
     pub instructions: Vec<Instruction>,
@@ -47,10 +47,18 @@ pub struct Module {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Function {
     pub origins: Vec<Origin>,
+    pub mir_origins: Vec<Option<MirOrigin>>,
     pub id: usize,
     pub name: String,
     pub frame_size: usize,
     pub instructions: Vec<Instruction>,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct MirOrigin {
+    pub block: crate::mir::BlockId,
+    pub instruction: Option<crate::mir::InstructionId>,
+    pub origin: crate::mir::Origin,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -89,6 +97,10 @@ pub enum FloatConstant {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Instruction {
+    /// 保存幅が0の値の操作もMIR対応に残します。機械バイトは生成しません。
+    ObserveOnly,
+    /// 到達不能blockの末尾。言語の異常停止とは区別します。
+    Unreachable,
     ArrayAllocate {
         width: u64,
         stride: usize,

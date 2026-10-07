@@ -9,6 +9,7 @@ pub fn lower(hir: &ir::Program) -> Result<Program, Error> {
         functions.push(Builder::function(hir, Some(f))?.finish(&f.body)?);
     }
     let result = Program {
+        uses_strings: ir::string_usage::first_string_span(hir).is_some(),
         string_heap_limit: hir.string_heap_limit,
         array_heap_limit: hir.array_heap_limit,
         types: hir

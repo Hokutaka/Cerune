@@ -10,12 +10,12 @@ Direct Linux x86-64 assembly supports all eight integer kinds including u64, f32
 
 SysV allocates integer and floating-point argument registers separately and passes the XMM argument count in AL for variadic printf calls. Windows uses positional registers, shadow space, and `__chkstk` when needed. Linux also touches each page during large stack allocations. Products and arrays retain independent value copies. Aggregate result storage is passed in RAX under Cerune's internal convention; external C ABI compatibility is not guaranteed.
 
-Strings remain immutable static length-prefixed data. Linux passes byte values to putchar; Windows enables binary stdout first. Japanese, NUL, CR, and LF survive without normalization.
+Strings are immutable length-prefixed values, with static literal data and dynamically owned concatenation results. Linux passes byte values to putchar; Windows enables binary stdout first. Japanese, NUL, CR, and LF survive without normalization.
 
 ## Observation stages
 
 ```text
-Cerune source → Cerune IR → shared x86-64 instructions
+Cerune source → Cerune IR (HIR) → MIR → x86-64 LIR
                                        ↓
                            assembly with source origins
                                        ↓ Cerune encoder or explicit external assembler

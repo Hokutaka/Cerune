@@ -13,7 +13,7 @@
 | `run-vm` | bytecode | VMの命令実行 |
 | `emit-mir` | 実行しない | MIRの操作・辺・出自を観測 |
 
-MIRからHIRやbytecodeを再構築して実行することはありません。MIR実行の追加は、新しいbuild／release成果物の追加でもありません。NativeのMIR入力への移行、SSA、最適化、外部MIRのloaderは未実装です。
+MIRからHIRやbytecodeを再構築して実行することはありません。MIR実行の追加は、新しいbuild／release成果物の追加でもありません。[Nativeも同じMIRを入力に使います](native-mir.ja.md)。SSA、最適化、外部MIRのloaderは未実装です。
 
 ## 実装と共有範囲
 

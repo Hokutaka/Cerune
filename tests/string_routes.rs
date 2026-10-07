@@ -117,7 +117,10 @@ fn every_route_generates_deterministic_artifacts() {
             !wat.contains("(export \"memory\"") && !wat.contains("(import \"cerune\" \"memory\"")
         );
         let asm = compile_to_x86_64_win_asm(source).unwrap();
-        assert!(asm.contains("callq _setmode") && asm.contains("movzbl"));
+        assert!(
+            asm.contains("callq _setmode") && asm.contains("movzbl"),
+            "{source}"
+        );
     }
 }
 

@@ -4,7 +4,7 @@
 
 ## 現状と今回の方針
 
-調査基点はNative動的配列対応を統合した`f39f55e`です。**共通MIRの型・検証器・HIRからの変換と`emit-mir`を実装しました。[MIR実行器](mir-executor.ja.md)・`run-mir`も実装済みです。NativeのMIR移行・SSA・最適化passは未実装です。**
+調査基点はNative動的配列対応を統合した`f39f55e`です。**共通MIRの型・検証器・HIRからの変換と`emit-mir`を実装しました。[MIR実行器](mir-executor.ja.md)・`run-mir`も実装済みです。[NativeのMIR入力への移行](native-mir.ja.md)も実装済みです。SSA・最適化passは未実装です。**
 
 | 段階 | 現在の実装 | 方針 |
 | --- | --- | --- |
@@ -33,7 +33,7 @@
 
 ## 基準経路と移行後の形
 
-現在はHIRからIR実行・bytecode・各backendへ直接分岐し、MIRの生成・独立実行も並存します。次の図は**未実装のMIR→LIR移行を含む計画**です。実行器へ渡すのは各表現であり、前の実行器の実行結果ではありません。
+現在はHIRからIR実行・bytecode・外部backendへ分岐し、NativeはMIR→LIRを通ります。次の図は現在の実装です。実行器へ渡すのは各表現であり、前の実行器の実行結果ではありません。
 
 ```text
 Source → frontend → HIR ─────────────→ IR Executor（基準）
@@ -44,7 +44,7 @@ Source → frontend → HIR ─────────────→ IR Execut
                      └→ 既存のbytecode／C／LLVM／QBE／WAT（移行中の比較対象）
 ```
 
-最初は新しいMIRを既存経路と並べて検証します。MIR実行が現行言語機能と揃った後、Nativeの入力をMIRへ移し、旧HIR→Nativeの結果と比較してから旧変換を取り除きます。非最適化のHIR→MIR→LIRは残しますが、同じNative変換を永久に二重保守する方針ではありません。
+MIRの独立実行を既存経路と比較した後、Nativeの入力をMIRへ移しました。旧HIR→Nativeと新経路の既知出力・失敗・出自・ABIをWindows/Linuxで検証し、旧変換を取り除きました。非最適化のHIR→MIR→LIRを基準として残します。
 
 未最適化の基準snapshotを上書きせず、選んだ変換の前後を別々に残します。将来の選択経路は次の形です。各passは任意で、SSA化そのものも最適化とは別の変換です。
 
@@ -63,7 +63,7 @@ VMや外部backendの移行は個別に判断します。C・WATでは構造化�
 
 | 項目 | 表現すること |
 | --- | --- |
-| Program／Function | HIRの型・関数との対応、入口、配列／文字列の予算 |
+| Program／Function | HIRの型・関数との対応、入口、配列／文字列の予算、定数化後も保持する文字列利用（`source-strings`） |
 | Block | 決定的なBlockIdと命令列。末尾はjump／branch／return等のterminatorを一つ持つ |
 | Operand／place | 型付きの定数・一時値・局所値。物理アドレスやCPUレジスタを含めない |
 | 値の計算 | 元の整数幅・符号、f32／f64、明示変換、既存の複合値を維持 |
@@ -165,8 +165,8 @@ callの結果: true → 加算 / false → update
 | --- | --- | --- |
 | 1（実装済み） | MIRの型・block・命令・検証器、HIR→MIR、`emit-mir` | 全exampleの変換と決定性、評価順・短絡・loopの辺・出自、破損したMIRの拒否を検証。実行比較は次段階、静的なheap寿命の保証は後続 |
 | 2（実装済み） | [独立したMIR Interpreter](mir-executor.ja.md)・`run-mir` | HIR・VMを内部実行せず、現在の言語機能・停止・出自・寿命を比較。動的配列はWindows/Linuxの9経路で照合 |
-| 3 | NativeをMIR入力へ移行 | 現行ASM・COFF/ELFとの既知出力・失敗・出自・ABI比較をWindows/Linuxで通す |
+| 3（実装済み） | [NativeをMIR入力へ移行](native-mir.ja.md) | 現行ASM・COFF/ELFとの既知出力・失敗・出自・ABI比較をWindows/Linuxで通す |
 | 4 | 観測bundle・Lean対応、必要な他backendの移行 | 同じコンパイル・同じ変換前後を結ぶ。証明対象と未対応を明記 |
 | 5 | SSA変換、個別の最適化pass | SSA化と最適化を別々に選択・観測。検証器と意味保存条件を各passに適用 |
 
-最初のMIR PRでSSA、最適化、全backendの付替え、Image loaderを一括導入しません。MIR実行は型・関数・module・generic・配列・文字列・所有・停止診断に対応しています。次はNativeの入力をMIRへ移し、従来のNative生成結果と比較します。
+最初のMIR PRでSSA、最適化、全backendの付替え、Image loaderを一括導入しません。MIR実行は型・関数・module・generic・配列・文字列・所有・停止診断に対応しています。NativeのMIR移行も実装しました。次は同じコンパイルで得たHIR・MIR・Nativeの対応を観測bundleへまとめる作業を進めます。
