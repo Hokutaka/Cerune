@@ -6,6 +6,7 @@ Run with IR Executor, VM, generated C, LLVM, QBE, WAT, Windows/Linux ASM, or sel
 
 | Example | Checks |
 | --- | --- |
+| [lowering_order.ceru](lowering_order.ceru) | Short-circuiting, continue/break, argument copies; succeeds at budget 48, stops before the call at 47 ([IR stages](../../docs/design/ir-stages.en.md)) |
 | [coordinates.ceru](coordinates.ceru) | Dynamic arrays of fixed coordinate pairs; translation, independent copies, and element updates |
 | [labels.ceru](labels.ceru) | Transform a string array in a function; compare the original, saved copy, and reassigned value |
 | [batches.ceru](batches.ceru) | Return two ranges in a fixed array and compare updates with a saved copy |

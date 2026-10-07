@@ -10,7 +10,8 @@ Neither operation selects an execution strategy or enables implicit optimization
 
 Current commands include `run` / `run-ir`, `run-vm`, and `emit-*`.
 **Build / release, saved Image loading, and the Lean backend are not implemented.**
-Dashed edges below are planned. Language coverage remains a separate concern; dynamic arrays currently execute only in IR and VM.
+Dashed edges below are plans; language-feature coverage is tracked separately.
+Dynamic arrays support IR/VM/C/LLVM/QBE/WAT, Windows/Linux ASM, and self-encoded objects. MIR in the [stage design](ir-stages.en.md) remains unimplemented and does not establish another distribution route.
 
 ## Route diagram
 
@@ -68,8 +69,7 @@ Libraries would be a distinct artifact kind. That choice and the external linker
 
 ## External tools
 
-C, LLVM, QBE, WAT, and future Rust, JavaScript, and Lean are emit-only.
-Their compilers, runtimes, and proof checkers are not managed by the normal Cerune CLI.
+C, LLVM, QBE, and WAT are currently emit-only; the normal CLI does not manage downstream tools. A future `run --via` is discussed in [#81](https://github.com/Hokutaka/Cerune/issues/81) as a separate operation from emission. Emit-only is not a permanent classification: responsibility depends on managing supported environments, artifacts, failures, and execution contracts. Invoking Lean remains separate verification work.
 **Cerune remains responsible for preserving IR semantics in generated output and testing that preservation.**
 Lean follows the same boundary for [semantic correspondence and program properties](lean-verification.en.md).
 

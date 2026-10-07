@@ -1,0 +1,155 @@
+# HIR, MIR, LIR, and observable transformations
+
+[日本語](ir-stages.ja.md) · [Issue #94](https://github.com/Hokutaka/Cerune/issues/94)
+
+## Status and direction
+
+The inspected baseline is `f39f55e`, merging Native dynamic arrays. **This change adds a stage design and a runnable baseline example. Common MIR, a MIR interpreter, SSA, and optimization passes remain unimplemented.**
+
+| Stage | Current implementation | Direction |
+| --- | --- | --- |
+| AST | Source syntax and positions, feeding common name/type/generic processing | Do not introduce another AST executor |
+| HIR | The completed `ir::Program` already serves this role: resolved types/references, ownership operations, structured control | Reuse Cerune IR rather than define its semantics twice |
+| MIR | Not implemented | Target-independent execution representation with typed temporaries, basic blocks, and explicit control flow |
+| LIR | `codegen::x86_64::ir` serves a similar role: register operations, stack slots, frames, target | Organize Native lowering around it; do not claim it is already a fully lowered machine-instruction IR |
+| Artifacts | Bytecode, C, LLVM, QBE, WAT, ASM, self-encoded COFF/ELF | Distinguish representations from completed artifacts in the [route design](owned-routes.en.md) |
+
+`run` / `run-ir` continue to execute completed Cerune IR directly; `run-vm` executes bytecode. This classification does not rename the `ir` module, `emit-ir`, or `.ceir`. “HIR” names the existing IR's role.
+
+The unimplemented SSA work here means SSA construction for common MIR, distinct from SSA representations in external LLVM/QBE output.
+
+## Findings from the code
+
+| Implementation | Current responsibility | Do not duplicate or misclassify |
+| --- | --- | --- |
+| [IR builder](../../src/ir/builder.rs) | Generic expansion, array-length resolution, sum/match expansion, semantic analysis, typed IR construction, aggregate and ownership lowering | Type inference, name resolution, and ownership rules inside MIR |
+| [Common IR](../../src/ir/mod.rs) | Types, BindingId/FunctionId, NodeId/Span, if/while/for, array allocation/initialization/retain/release | OS calling conventions or physical pointer widths |
+| [IR Executor](../../src/ir_executor.rs) | Direct structured statement/expression execution | Implementing MIR execution by returning to the HIR executor |
+| [Bytecode](../../src/bytecode.rs) | Operand stack, local slots, jumps, per-instruction origins | Renaming bytecode as common MIR |
+| [Native lowering](../../src/codegen/x86_64/lower.rs), [emitter](../../src/codegen/x86_64/emit.rs) | Stack/ABI layout and instruction selection; the emitter still expands checks and prologues | Claiming the current x86-64 IR already fixes every machine instruction |
+| [Runtime](../../src/runtime) | Shared numeric rules, string/array storage, display, failure codes | A new universal execution engine that makes comparison routes identical |
+
+File-based module resolution happens in [modules](../../src/modules.rs), preserving file origins before the common frontend. Required constant evaluation and generic expansion establish language semantics; they remain necessary without optimization and are distinct from optional optimization passes.
+
+## Baseline and migration
+
+Today HIR feeds direct execution, bytecode, and every backend. The following is a **future MIR plan**. Each executor receives a representation, not the previous executor's result.
+
+```text
+Source → frontend → HIR ─────────────→ IR Executor (reference)
+                     │
+                     └→ MIR (no optimization) ─→ MIR Interpreter
+                              │
+                              └→ x86-64 LIR → ASM → self-encoded object
+                     └→ existing bytecode/C/LLVM/QBE/WAT (migration references)
+```
+
+First validate MIR alongside existing routes. After MIR execution covers current language features, move Native lowering to MIR, compare it with the HIR→Native implementation, then remove the old conversion. Retain the unoptimized HIR→MIR→LIR baseline without maintaining duplicate Native lowering indefinitely.
+
+Keep the unoptimized baseline snapshot and separate before/after snapshots for selected transformations. The future selectable path is shown below. Passes are optional, and SSA construction itself is distinct from optimization.
+
+```text
+Baseline: HIR → MIR → LIR → artifacts
+Selected: HIR → HIR pass → MIR → SSA construction → MIR pass → LIR → LIR pass → artifacts
+```
+
+Do not hide selection and order behind a single opaque `-O2`. Record pass selection/order and correspondence, and reject unsupported combinations.
+
+Evaluate VM and external-backend migration individually. C/WAT need a verified way to express structured control; LLVM/QBE need verified mappings to their external IRs. Their backend IRs are not all machine-dependent LIR. Reject MIR-pass selections on routes that do not consume them rather than silently ignoring them.
+
+## Initial MIR contract
+
+Start without SSA, allowing explicit assignments to typed locals and temporaries. The implementation PR will finalize concrete Rust types and public APIs.
+
+| Element | What it records |
+| --- | --- |
+| Program/function | Correspondence to HIR types/functions, entry point, array/string budgets |
+| Block | Deterministic BlockId and instructions, ending in exactly one terminator such as jump/branch/return |
+| Operand/place | Typed constants, temporaries, and locals; no physical addresses or CPU registers |
+| Computation | Integer width/signedness, f32/f64, explicit conversions, existing aggregate types |
+| Call/return | Resolved callee and left-to-right argument preparation; ownership transfer versus internal reads |
+| Effects | Output, allocation, initialization, retain/release, free, and updates in execution order |
+| Checks | Distinct checked arithmetic, conversions, indexing, ranges, and allocation, retaining reasons/origins |
+
+Checked operations may remain typed MIR instructions initially. They need not all become machine comparisons and trap branches. A failing instruction stops subsequent computation; only success continues. Do not introduce recovery or catch semantics absent from the language.
+
+Reading a local or saving a temporary must not secretly deep-copy a value. Transform the copy loops and retain/release already present in completed HIR. Implementation-level storage and Cerune ownership operations are distinct. Array assignment checks the target and each index in order before evaluating the RHS; prepare the new element before releasing the old one.
+
+For-loop continue targets the update block; while-loop continue targets the condition; break targets the appropriate exit. Preserve HIR's explicit cleanup ordering, including return. Do not move a short-circuit RHS or argument copies before its branch.
+
+A MIR validator checks references, types, terminators, initialization before reads, language-level argument types/ownership, and failure origins. Ownership transfer/release paths also need validation. This is not a claim that external Images can safely be loaded: initially MIR is constructed inside the compiler.
+
+## Semantic preservation and resources
+
+For the same source and explicit budgets, preserve more than final values:
+
+- Normal completion, return values, and output bytes, including Japanese, NUL, CR/LF, without Unicode normalization.
+- Language failure codes, original NodeId/SourceId/Span, and prior output.
+- Evaluation order, short-circuiting, independent copies, and reading/releasing only initialized elements.
+- Separate logical array/string budgets, including old/new values coexisting and when budgets are returned.
+- Distinctions among success, language stops, internal inconsistencies, unsupported features, tool failures, and test timeouts.
+
+An unused copy may still exceed its allocation budget. Dead-code elimination that removes it changes the program's failure semantics. Treat allocation, checks, cleanup, and output as effects; equal final values alone do not justify moving or deleting them. Floating-point evaluation order, NaN, and negative zero also matter.
+
+Logical budgets are separate from physical exhaustion. Different OS allocators need not fail at identical points. Inject fixed allocation failures and verify each stage's appropriate reason, origin, and prior output. Divergence is not success; future proofs need an execution relation covering divergence or an explicitly bounded fuel claim.
+
+## Origins and observation
+
+HIR NodeId continues to identify the originating statement/expression. MIR block/instruction IDs and LIR instruction IDs use separate namespaces within snapshots, without promising stable numbering across source edits or passes.
+
+Each transformation records input-to-output correspondence, including one-to-many, many-to-one, and removal. Distinguish compiler-generated helpers from lost origins. A future pass may combine operations only if it can still diagnose the original operation that actually fails; arbitrarily selecting one origin from a set is insufficient.
+
+| Observation | Information retained |
+| --- | --- |
+| HIR→MIR | Structured control becoming blocks/edges, evaluation-order temporaries, original checks/ownership operations |
+| MIR→LIR | Typed operations becoming target/ABI/stack decisions |
+| Each pass | Input/output snapshots, pass name/version/order/explicit options, element correspondence |
+| LIR→artifacts | Existing ASM annotations/object symbols, including expansions still performed by the emitter |
+
+Observations are detached, read-only information. They do not expose mutable compiler state or runtime heaps. Version new public formats. Include source text/paths only on explicit request, and exclude timestamps, random IDs, and environment secrets.
+
+## CLI, bundles, and Lean
+
+`emit-hir` / `emit-mir` / `emit-lir`, pass selection, and a MIR execution CLI are **unimplemented candidates**. MIR extensions and snapshot schemas remain undecided. Preserve `emit-ir` compatibility; an interpreter does not automatically create another distribution route or build format.
+
+The [#60 observation bundle](https://github.com/Hokutaka/Cerune/issues/60) can collect representations and correspondence from one frontend invocation. Its manifest indexes stages, targets, pass sequences, and artifacts; it is not another semantic IR. Bundling existing observations need not wait for MIR.
+
+The [#81](https://github.com/Hokutaka/Cerune/issues/81) show/emit/build/run/via/release responsibilities are distinct from representation stages. Release is not an optimization alias. Select passes and their order explicitly, and record external-tool optimization separately from Cerune passes.
+
+[Lean verification](lean-verification.en.md) can first address unoptimized HIR→MIR correspondence, then individual passes. Matching interpreter runs is testing, not formal proof. The existing u8-function experiment does not prove MIR or the entire compiler.
+
+## Baseline example and implementation units
+
+[lowering_order.ceru](../../examples/dynamic_arrays/lowering_order.ceru) combines short-circuiting, for-loop continue/break, and dynamic-array argument copies.
+
+```sh
+cargo run --quiet -- run examples/dynamic_arrays/lowering_order.ceru --array-heap-limit 48
+cargo run --quiet -- run-vm examples/dynamic_arrays/lowering_order.ceru --array-heap-limit 48
+cargo run --quiet -- emit-ir examples/dynamic_arrays/lowering_order.ceru --array-heap-limit 48
+cargo run --quiet -- emit-bytecode examples/dynamic_arrays/lowering_order.ceru --array-heap-limit 48
+cargo run --quiet -- emit-asm examples/dynamic_arrays/lowering_order.ceru --target x86_64-unknown-linux-gnu --annotate-origins --array-heap-limit 48
+```
+
+Output is four lines: `begin`, `2`, `40`, `[10, 20, 30]`. At i=0 the call short-circuits; i=1 continues through update; only i=2 copies the argument and calls positive; i=3 exits before indexing. The 48-byte budget covers the original 24 bytes plus the 24-byte argument copy. At 47 bytes, `values` at the call fails with `allocation-limit-exceeded` and only `begin` is printed.
+
+The intended MIR edges are sketched below. **This is explanatory structure, not a generated MIR dump.** The sketch omits ownership-helper calls; adding MIR does not implicitly inline them. Actual conditions, copies, and cleanup need instructions/blocks within their respective functions.
+
+```text
+condition → continue check → break check → short-circuit LHS
+                 │              │            ├ true → add → update → condition
+                 └→ update      └→ exit      └ false → argument copy → call → result branch
+condition false → exit
+call result: true → add / false → update
+```
+
+Implement and compare in these units, aiming for current feature parity rather than a permanently restricted language subset:
+
+| Order | Work | Acceptance |
+| --- | --- | --- |
+| 1 | MIR types/blocks/instructions/validator, HIR→MIR, deterministic observation text | Fix evaluation order, short-circuiting, loop edges, and origins with baseline examples. Explicitly diagnose interim unsupported features; never discard instructions silently |
+| 2 | Independent MIR interpreter | Do not execute bytecode, VM, or HIR Executor internally. Share numeric/heap primitives and compare every current feature |
+| 3 | Native lowering from MIR | Match existing ASM/COFF/ELF known outputs, failures, origins, and ABI behavior on Windows/Linux |
+| 4 | Observation bundles, Lean correspondence, other backend migration as needed | Connect the same compilation and actual before/after representations; state proof scope and omissions |
+| 5 | SSA conversion and individual optimization passes | Select/observe SSA independently from optimization; apply validators and semantic-preservation conditions per pass |
+
+The first MIR PR should not combine SSA, optimization, every backend migration, and Image loading. Treat public MIR execution as equivalent to normal routes only after covering types, functions, modules, generics, arrays, strings, ownership, and runtime diagnostics.

@@ -11,7 +11,7 @@ Ceruneが完成成果物と実行契約を定義する経路はIR・VM・Native�
 現行実装には`run`／`run-ir`、`run-vm`、各`emit-*`があります。
 **build / release、Imageの保存・読み込み、Lean backendは未実装です。**
 以下の図の破線は計画を示します。言語機能の対応状況は経路ごとに別途管理します。
-たとえば動的配列は現在IR・VMのみで実行できます。
+動的配列はIR・VM・C・LLVM・QBE・WAT・Windows/Linux ASM・自前Objectで対応済みです。[IR段階設計](ir-stages.ja.md)のMIRは未実装で、新しい配布routeを確定するものではありません。
 
 ## 経路図
 
@@ -71,8 +71,7 @@ Nativeの最初の完成成果物には**実行ファイルを提案**します�
 
 ## 外部ツールとの境界
 
-C・LLVM・QBE・WAT、将来のRust・JavaScript・Leanはemit-onlyです。
-Ceruneがそれらのコンパイラ、ランタイム、証明器を通常のCLIで管理する構成にはしません。
+現在のC・LLVM・QBE・WATはemit-onlyで、通常のCLIは後続ツールを管理しません。将来の`run --via`は、生成と外部実行を別の操作として扱う[#81](https://github.com/Hokutaka/Cerune/issues/81)の検討事項です。emit-onlyを永久の分類とはせず、対応環境・成果物・失敗・実行契約を管理できるかで判断します。Leanの証明器起動は引き続き別の検証作業です。
 一方、**生成結果がCerune IRの意味を守る責任と、その検証はCerune側に残ります。**
 Leanも同じ境界で、[意味の対応とプログラムの性質](lean-verification.ja.md)を検証します。
 

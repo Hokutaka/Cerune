@@ -1,0 +1,155 @@
+# HIR／MIR／LIRと変換過程の観測
+
+[English](ir-stages.en.md) · [Issue #94](https://github.com/Hokutaka/Cerune/issues/94)
+
+## 現状と今回の方針
+
+調査基点はNative動的配列対応を統合した`f39f55e`です。**今回は段階設計と現行経路で動く基準例を追加します。共通MIR・MIR実行器・SSA・最適化passは未実装です。**
+
+| 段階 | 現在の実装 | 方針 |
+| --- | --- | --- |
+| AST | ソース構文と位置を保持。名前・型・generic等の共通処理への入力 | 新しいAST実行器は作らない |
+| HIR | 完成済み`ir::Program`が相当。型・参照先・所有処理を確定し、構造化制御を保持 | Cerune IRをそのまま使い、同じ意味表現を二重に定義しない |
+| MIR | 未実装 | 型付き一時値、basic block、明示的な制御フローを持つ、ターゲット非依存の実行表現 |
+| LIR | `codegen::x86_64::ir`が相当。レジスタ操作、stack slot、frame、ターゲットを持つ | Nativeへの変換段階として整理。完成した機械命令IRとはまだ呼ばない |
+| 成果物 | bytecode、C、LLVM、QBE、WAT、ASM、自前COFF/ELF | 表現と完成成果物の違いは[経路設計](owned-routes.ja.md)で扱う |
+
+`run`／`run-ir`は完成済みCerune IRの直接実行、`run-vm`はbytecode実行のままです。`ir`モジュール、`emit-ir`、`.ceir`をこの整理だけで改名しません。「HIR」は既存IRの役割を示す呼び方です。
+
+ここで未実装というSSAは共通MIRのSSA変換です。生成先のLLVM／QBEが持つSSA形式とは区別します。
+
+## 既存コードから分かること
+
+| 実装 | 現在担っている処理 | 新段階へ持ち込まないもの |
+| --- | --- | --- |
+| [IR builder](../../src/ir/builder.rs) | generic展開、配列型の長さ解決、sum/match展開、意味解析、型付きIR構築、aggregate展開、ownership展開 | MIRでの再型推論・再名前解決・所有規則の再定義 |
+| [共通IR](../../src/ir/mod.rs) | 型、BindingId／FunctionId、NodeId／Span、if／while／for、配列の確保・初期化・保持・解放 | OSの呼出規約、物理ポインタ幅 |
+| [IR Executor](../../src/ir_executor.rs) | 構造化された文・式を直接評価 | MIRの評価をHIR実行へ戻す実装 |
+| [bytecode](../../src/bytecode.rs) | operand stack、局所slot、ジャンプ、命令ごとの出自 | bytecodeを共通MIRと呼び替えること |
+| [Native lowering](../../src/codegen/x86_64/lower.rs)、[emitter](../../src/codegen/x86_64/emit.rs) | stack／ABIの配置、命令選択。emitterにも検査分岐やprologue等の展開が残る | 全機械命令が現行x86-64 IRで既に確定するという説明 |
+| [runtime](../../src/runtime) | 数値規則、文字列／配列領域、表示と停止コードの共有 | 汎用の実行エンジンを新設して比較経路を同一化すること |
+
+ファイル入力のモジュール解決は[modules](../../src/modules.rs)で行い、ファイルの出自を保って共通frontendへ渡します。ソースで要求する定数の評価やgeneric展開は、言語を具体化するための処理です。「最適化なし」でも必要であり、将来の任意の最適化passと区別します。
+
+## 基準経路と移行後の形
+
+現在はHIRからIR実行・bytecode・各backendへ直接分岐します。次の図は**将来のMIR導入後の計画**です。実行器へ渡すのは各表現であり、前の実行器の実行結果ではありません。
+
+```text
+Source → frontend → HIR ─────────────→ IR Executor（基準）
+                     │
+                     └→ MIR（最適化なし） ─→ MIR Interpreter
+                              │
+                              └→ x86-64 LIR → ASM → 自前Object
+                     └→ 既存のbytecode／C／LLVM／QBE／WAT（移行中の比較対象）
+```
+
+最初は新しいMIRを既存経路と並べて検証します。MIR実行が現行言語機能と揃った後、Nativeの入力をMIRへ移し、旧HIR→Nativeの結果と比較してから旧変換を取り除きます。非最適化のHIR→MIR→LIRは残しますが、同じNative変換を永久に二重保守する方針ではありません。
+
+未最適化の基準snapshotを上書きせず、選んだ変換の前後を別々に残します。将来の選択経路は次の形です。各passは任意で、SSA化そのものも最適化とは別の変換です。
+
+```text
+基準: HIR → MIR → LIR → 成果物
+選択: HIR → HIR pass → MIR → SSA変換 → MIR pass → LIR → LIR pass → 成果物
+```
+
+`-O2`一つで選択内容や順序が見えなくなる構成にはしません。passの集合と順序、変換前後の対応を記録し、未対応の組合せは拒否します。
+
+VMや外部backendの移行は個別に判断します。C・WATでは構造化制御を出力する方法、LLVM・QBEでは外部IRへの対応を検証してから共通MIRを利用します。これらのbackend IRを一律に機械依存LIRと呼びません。MIRのpassを消費しない経路へ指定された場合は拒否し、黙って無視しません。
+
+## 最初のMIRの契約
+
+最初はSSAにせず、型付きの局所領域と一時値への明示的な代入を許します。具体的なRustの型名・公開APIは実装PRで確定します。
+
+| 項目 | 表現すること |
+| --- | --- |
+| Program／Function | HIRの型・関数との対応、入口、配列／文字列の予算 |
+| Block | 決定的なBlockIdと命令列。末尾はjump／branch／return等のterminatorを一つ持つ |
+| Operand／place | 型付きの定数・一時値・局所値。物理アドレスやCPUレジスタを含めない |
+| 値の計算 | 元の整数幅・符号、f32／f64、明示変換、既存の複合値を維持 |
+| call／return | 確定した呼出先と左からの引数準備。所有値の受け渡しと内部読み取りを区別 |
+| 副作用 | 出力、確保、初期化、保持、解放、更新を実行順に並べる |
+| 検査 | checked算術・変換・添字・範囲・確保を区別し、停止理由と元の出自を保持 |
+
+初期MIRではchecked操作を型付き命令として保持してよく、機械用の比較とtrap分岐にすべて分解する必要はありません。失敗した命令で後続の計算を止め、成功時だけ次へ進む意味を定義します。言語にない例外回復やcatchは追加しません。
+
+局所値の読み取りや一時値への保存だけで隠れた深いコピーを発生させません。独立コピーのループとretain／releaseは、完成済みHIRで明示されたものを変換します。実装上の値の保持と、Ceruneの所有を増減させる操作を混同しません。配列代入は対象と各添字を順番に検査してから右辺を評価し、新しい要素の準備後に旧要素を解放します。
+
+`for`のcontinueは更新ブロック、`while`のcontinueは条件ブロック、breakは対応するループの出口へ進みます。returnも含め、HIRが既に挿入した解放を通る順序を維持します。短絡式の右辺と引数コピーを分岐の手前へ移しません。
+
+MIR検証器は、参照先、型、terminator、読取り前の初期化、呼出規約（言語上の引数型・所有）、停止出自を検査します。所有の受け渡し・解放の経路検証も必要です。これは将来の外部Imageを安全にloadできるという保証ではなく、初回はコンパイラ内で構築したMIRを対象にします。
+
+## 意味保存と資源の扱い
+
+比較するのは値だけではありません。同じソースと明示予算に対し、次を維持します。
+
+- 正常終了、戻り値、出力バイト列。日本語・NUL・CR/LFを保持し、Unicodeを正規化しない。
+- 言語の異常停止コード、元のNodeId／SourceId／Span、停止前の出力。
+- 評価順、短絡、コピー後の独立性、初期化済み要素だけの読取り・解放。
+- 配列／文字列の独立した論理予算。旧値と新値が共存する時点と、予算の返却時点。
+- 成功・言語の停止・内部不整合・未対応・外部ツール失敗・テスト時間切れの区別。
+
+たとえば使わないコピーでも確保時に予算超過する場合があります。dead-code eliminationがそれを消すと停止の意味が変わります。確保・検査・解放・出力は副作用として扱い、単に最終値が等しいだけでは移動・削除しません。浮動小数点の結合順やNaN・負のゼロも保存対象です。
+
+論理予算と物理メモリ不足は別です。異なるOS・allocatorの実際のmalloc失敗時点まで同一とは約束しません。固定した確保失敗条件を用い、各段階が適切な失敗・出自・先行出力を返すことを検証します。無限実行も成功に数えず、将来の証明では発散を扱う実行関係か明示したfuelの範囲を定めます。
+
+## 出自と観測
+
+HIRのNodeIdは引き続き意味上の元の文・式を指します。MIRのBlockId／命令ID、LIRの命令IDは別の名前空間とし、snapshot内の識別子です。ソース編集やpass間で同じ番号を保証しません。
+
+各変換は入力要素から出力要素への対応を保存します。一対多・多対一・削除を表し、生成された補助要素と出自欠落を区別します。将来複数の操作を統合するpassでも、実際に失敗する元の操作を診断できなければ変換しません。由来の集合から任意の一つを選んで停止位置にすることは認めません。
+
+| 観測対象 | 残すもの |
+| --- | --- |
+| HIR→MIR | 構造化制御からblock／辺への変換、評価順を決めた一時値、元の検査・所有操作 |
+| MIR→LIR | 型付き操作からtarget／ABI／stack配置への変換 |
+| 各pass | 入力・出力snapshot、pass名と版・順序・明示オプション、要素の対応 |
+| LIR→成果物 | 既存のASM注釈・Objectシンボルへの対応。命令選択後にemitterで行う展開も説明 |
+
+観測はコンパイラ状態から切り離した読み取り専用の情報とし、可変状態やruntimeのheapを公開しません。新しい公開形式には版を付けます。ソース本文・パスは明示要求時だけ含め、時刻・ランダムID・環境の秘密情報を保存しません。
+
+## CLI・bundle・Leanとの関係
+
+`emit-hir`／`emit-mir`／`emit-lir`、pass指定、MIR実行のCLIは**候補であって未実装**です。MIRの拡張子・snapshotスキーマも未確定です。`emit-ir`の互換性を維持し、MIR実行器の追加だけで新しい配布用routeやbuild形式まで増やしません。
+
+[#60](https://github.com/Hokutaka/Cerune/issues/60)の観測bundleには、一回のfrontend処理から得た各表現と対応表をまとめる方向です。manifestはstage・target・pass列と成果物を結ぶ索引であり、新しい意味IRではありません。MIR導入を待たず既存の観測結果を束ねる実装も可能です。
+
+[#81](https://github.com/Hokutaka/Cerune/issues/81)のshow／emit／build／run／via／releaseと、表現段階は別の分類です。最適化はreleaseの別名にせず、passとその順序を明示します。各backendの外部ツールによる最適化も、Ceruneのpassとは区別して記録します。
+
+[Lean検証](lean-verification.ja.md)では、まず非最適化のHIR→MIR対応、次に選択したpassの前後を検証対象にできます。MIR実行での一致はテストであり形式証明ではありません。現行のu8関数に対する実験をMIRや全処理系の証明済み範囲へ拡大解釈しません。
+
+## 基準例と次の実装単位
+
+[lowering_order.ceru](../../examples/dynamic_arrays/lowering_order.ceru)は、短絡、forのcontinue／break、動的配列の引数コピーを一緒に観測します。
+
+```sh
+cargo run --quiet -- run examples/dynamic_arrays/lowering_order.ceru --array-heap-limit 48
+cargo run --quiet -- run-vm examples/dynamic_arrays/lowering_order.ceru --array-heap-limit 48
+cargo run --quiet -- emit-ir examples/dynamic_arrays/lowering_order.ceru --array-heap-limit 48
+cargo run --quiet -- emit-bytecode examples/dynamic_arrays/lowering_order.ceru --array-heap-limit 48
+cargo run --quiet -- emit-asm examples/dynamic_arrays/lowering_order.ceru --target x86_64-unknown-linux-gnu --annotate-origins --array-heap-limit 48
+```
+
+出力は`begin`、`2`、`40`、`[10, 20, 30]`の4行です。i=0では呼出しを短絡し、i=1は更新へ進み、i=2だけが配列をコピーしてpositiveを呼び、i=3は添字参照の前に終了します。48バイトは元配列24＋引数コピー24です。47に下げると呼出し引数の`values`で`allocation-limit-exceeded`となり、`begin`だけが残ります。
+
+将来のMIRの辺は次のようになります。**これは構造の説明であり、生成済みMIRのダンプではありません。** 図ではownership補助関数への呼出しを省略しています。MIR導入だけでそれらをinline化しません。実際には各関数の条件計算・コピー・解放にも命令やblockが必要です。
+
+```text
+condition → continue判定 → break判定 → 短絡の左辺
+                 │              │            ├ true → 加算 → update → condition
+                 └→ update      └→ exit      └ false → 引数コピー → call → 結果の分岐
+condition false → exit
+callの結果: true → 加算 / false → update
+```
+
+次の単位で実装と比較を進めます。恒久的に狭い言語サブセットを作る方針ではありません。
+
+| 順序 | 作業 | 完了を判断する条件 |
+| --- | --- | --- |
+| 1 | MIRの型・block・命令・検証器、HIR→MIRと決定的な観測テキスト | 評価順・短絡・loopの辺・出自を基準例で固定。段階実装中の未対応は明示診断し、命令を黙って落とさない |
+| 2 | 独立したMIR Interpreter | bytecode／VM／HIR Executorを内部実行しない。数値・heap等のruntimeプリミティブは共有し、全現行機能を比較 |
+| 3 | NativeをMIR入力へ移行 | 現行ASM・COFF/ELFとの既知出力・失敗・出自・ABI比較をWindows/Linuxで通す |
+| 4 | 観測bundle・Lean対応、必要な他backendの移行 | 同じコンパイル・同じ変換前後を結ぶ。証明対象と未対応を明記 |
+| 5 | SSA変換、個別の最適化pass | SSA化と最適化を別々に選択・観測。検証器と意味保存条件を各passに適用 |
+
+最初のMIR PRでSSA、最適化、全backendの付替え、Image loaderを一括導入しません。公開のMIR実行を通常の経路と同等とするのは、型・関数・module・generic・配列・文字列・所有・停止診断の対応が揃ってからです。

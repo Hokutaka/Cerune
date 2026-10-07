@@ -46,7 +46,7 @@ Ceruneでは、書いた計算の意味と、それが実行される表現へ�
 
 [IR・VM・Nativeのbuild / release](owned-routes.ja.md)と[Leanによる変換の対応・プログラムの性質の検証](lean-verification.ja.md)を別の基盤作業として進めます。新しい分類や証明実験によって、下記の言語機能や生成経路の未対応を実装済みとはしません。
 
-動的配列のNative対応を完了し、次は[Issue #94](https://github.com/Hokutaka/Cerune/issues/94)のHIR／MIR／LIRと観測・最適化の設計へ進みます。共通MIR、MIR実行、SSA、最適化passは未実装です。build／releaseは[Issue #81](https://github.com/Hokutaka/Cerune/issues/81)の責務整理を基準に進め、最適化と配布を分けます。Lean検証は各段階の意味の対応を扱います。
+動的配列のNative対応を完了し、[Issue #94](https://github.com/Hokutaka/Cerune/issues/94)に基づく[段階設計](ir-stages.ja.md)を追加しました。次は非最適化MIRの型・検証・変換を実装します。共通MIR、MIR実行、SSA、最適化passは未実装です。build／releaseは[Issue #81](https://github.com/Hokutaka/Cerune/issues/81)の責務整理を基準に進め、最適化と配布を分けます。Lean検証は各段階の意味の対応を扱います。
 
 ## 次に持つべきもの：提案する順序
 
@@ -54,7 +54,7 @@ Ceruneでは、書いた計算の意味と、それが実行される表現へ�
 
 | 順序 | 未対応機能 | 最初に決める契約・確認例 |
 | --- | --- | --- |
-| 1 | HIR／MIR／LIRの設計 | まず意味・制御フロー・機械依存の役割を整理。MIRの最初の実装とSSA化・最適化を分けて観測 |
+| 1 | [HIR／MIR／LIR](ir-stages.ja.md)の実装 | 段階設計と基準exampleを追加済み。次はMIRの型・検証・HIRからの変換。MIR実行、SSA、最適化は別段階 |
 | 2 | [動的配列の追加操作](owned-arrays.ja.md) | 既存操作は全経路対応済み。`array_repeat`を後続として検討。借用スライスは寿命と更新の型規則を別途定義 |
 | 3 | 再帰・外部入出力 | 呼び出し領域・資源上限・入出力失敗・終了処理を定義 |
 | 4 | モジュールの配布 | 再export、依存・版・再現可能なビルド。現行の明示importを基準に拡張 |

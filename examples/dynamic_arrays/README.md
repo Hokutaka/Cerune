@@ -6,6 +6,7 @@ IR Executor・VM・生成C・LLVM・QBE・WATで実行できます。
 
 | 例 | 確認すること |
 | --- | --- |
+| [lowering_order.ceru](lowering_order.ceru) | 短絡・continue／breakと引数コピー。予算48で成功、47で呼出前に停止（[IR段階設計](../../docs/design/ir-stages.ja.md)） |
 | [coordinates.ceru](coordinates.ceru) | 固定長の座標ペアを動的配列に入れ、コピーの平行移動と要素更新を確認 |
 | [labels.ceru](labels.ceru) | 文字列配列を関数で加工し、元の配列・保存したコピー・再代入後を比較 |
 | [batches.ceru](batches.ceru) | 二つの範囲を固定長配列に入れて返し、保存したコピーと更新を比較 |

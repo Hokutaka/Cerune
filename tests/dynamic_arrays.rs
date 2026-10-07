@@ -779,3 +779,18 @@ fn native_origins_and_saved_assembly_match() {
         assert!(!x86_64::emit_object(&p, target, true).unwrap().is_empty());
     }
 }
+
+#[test]
+fn lowering_order_example_preserves_short_circuit_loop_edges_and_copy_failure() {
+    let source = include_str!("../examples/dynamic_arrays/lowering_order.ceru");
+    assert_eq!(compare(source, 48).unwrap(), "begin\n2\n40\n[10, 20, 30]\n");
+    let error = compare(source, 47).unwrap_err();
+    assert_eq!(error.output(), "begin\n");
+    assert_eq!(
+        error.runtime_failure().unwrap().code.name(),
+        "allocation-limit-exceeded"
+    );
+    let start = source.find("positive(values, i)").unwrap() + "positive(".len();
+    let span = error.origin().unwrap().span;
+    assert_eq!((span.start(), span.end()), (start, start + "values".len()));
+}

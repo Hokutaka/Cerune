@@ -1,0 +1,19 @@
+// 短絡した呼び出しでは引数コピーも行いません。
+// continueはforの更新へ進み、breakは更新を通らず終了します。
+fn positive(values: [i64], index: i64) -> bool {
+    print(index);
+    return values[index] > 0;
+}
+
+values: [i64] = array_copy([10, 20, 30]);
+mut total: i64 = 0;
+print("begin");
+for (mut i: i64 = 0; i < 4; i = i + 1) {
+    if i == 1 { continue; }
+    if i == 3 { break; }
+    if i == 0 || positive(values, i) {
+        total = total + values[i];
+    }
+}
+print(total);
+print(values);
