@@ -49,6 +49,9 @@ pub fn lower_with_target(program: &cerune_ir::Program, target: super::Target) ->
     float_constants.extend(lowered.float_constants);
 
     Module {
+        array_heap_limit: program
+            .first_dynamic_array_span()
+            .map(|_| program.array_heap_limit),
         string_heap_limit: crate::codegen::support::string_heap_limit(program),
         uses_write: crate::codegen::display::uses_write(program),
         origins: lowered.origins,
@@ -118,10 +121,8 @@ fn lower_body(
             cerune_ir::Type::F32 | cerune_ir::Type::F64
         ));
         match &parameter.ty {
-            cerune_ir::Type::DynamicArray { .. } => {
-                unreachable!("dynamic arrays are rejected before backend lowering")
-            }
-            cerune_ir::Type::String
+            cerune_ir::Type::DynamicArray { .. }
+            | cerune_ir::Type::String
             | cerune_ir::Type::Bool
             | cerune_ir::Type::Integer(_)
             | cerune_ir::Type::F32
@@ -247,6 +248,12 @@ enum ArrayAddress {
 }
 
 impl Lowerer<'_> {
+    fn allocate_pointer(&mut self) -> isize {
+        let slot = self.next_aggregate_slot;
+        self.next_aggregate_slot += 1;
+        slot_offset(slot)
+    }
+
     fn lower_statements(&mut self, statements: &[cerune_ir::Statement]) -> bool {
         for statement in statements {
             if self.lower_statement(statement) {
@@ -275,11 +282,49 @@ impl Lowerer<'_> {
 
     fn lower_statement_body(&mut self, statement: &cerune_ir::Statement) -> bool {
         match &statement.kind {
-            cerune_ir::StatementKind::ArrayInitialize { .. }
-            | cerune_ir::StatementKind::ArrayRetain { .. }
-            | cerune_ir::StatementKind::ArrayFree { .. }
-            | cerune_ir::StatementKind::ArrayRangeCheck { .. } => {
-                unreachable!("dynamic arrays are rejected before backend lowering")
+            cerune_ir::StatementKind::ArrayInitialize { array, value } => {
+                self.lower_expr(array, 0);
+                let owner_offset = self.allocate_pointer();
+                self.push(Instruction::StoreI64ToStack(owner_offset));
+                let destination_offset = self.allocate_pointer();
+                self.push(Instruction::ArrayInitAddress {
+                    owner_offset,
+                    destination_offset,
+                });
+                let value = self.lower_expr(value, 0);
+                self.store_value_to_pointer(
+                    &array_element_ir_type(&array.ty),
+                    value,
+                    destination_offset,
+                );
+                self.push(Instruction::ArrayInitialized { owner_offset });
+                false
+            }
+            cerune_ir::StatementKind::ArrayRetain { value } => {
+                self.lower_expr(value, 0);
+                self.push(Instruction::ArrayRetain);
+                false
+            }
+            cerune_ir::StatementKind::ArrayFree { value } => {
+                self.lower_expr(value, 0);
+                self.push(Instruction::ArrayFree);
+                false
+            }
+            cerune_ir::StatementKind::ArrayRangeCheck { length, start, end } => {
+                self.lower_expr(length, 0);
+                let length_offset = self.allocate_pointer();
+                self.push(Instruction::StoreI64ToStack(length_offset));
+                self.lower_expr(start, 0);
+                let start_offset = self.allocate_pointer();
+                self.push(Instruction::StoreI64ToStack(start_offset));
+                self.lower_expr(end, 0);
+                let label = self.next_label();
+                self.push(Instruction::ArrayRangeCheck {
+                    length_offset,
+                    start_offset,
+                    label,
+                });
+                false
             }
             cerune_ir::StatementKind::Binding { id, ty, value, .. } => {
                 let value = self.lower_expr(value, 0);
@@ -297,14 +342,11 @@ impl Lowerer<'_> {
 
                 let mut address = ArrayAddress::Direct(self.binding_offset(target.id));
                 for projection in &target.projections {
-                    let cerune_ir::AssignmentProjection::Index {
-                        index,
-                        element,
-                        length,
-                        span,
-                    } = projection
-                    else {
-                        unreachable!("dynamic arrays are rejected before backend lowering")
+                    let (index, span) = match projection {
+                        cerune_ir::AssignmentProjection::Index { index, span, .. }
+                        | cerune_ir::AssignmentProjection::DynamicIndex { index, span, .. } => {
+                            (index, span)
+                        }
                     };
                     let Value::Scalar(Type::I64) = self.lower_expr(index, 0) else {
                         unreachable!("array index must be i64")
@@ -324,14 +366,26 @@ impl Lowerer<'_> {
                         node_id,
                         span: *span,
                     };
-                    self.push(Instruction::CheckedArrayAddress {
-                        base_offset,
-                        base_is_pointer,
-                        length: *length,
-                        element_slots: type_slot_count(self.program, element),
-                        destination_offset: slot_offset(pointer_slot),
-                        label,
-                    });
+                    match projection {
+                        cerune_ir::AssignmentProjection::Index {
+                            element, length, ..
+                        } => self.push(Instruction::CheckedArrayAddress {
+                            base_offset,
+                            base_is_pointer,
+                            length: *length,
+                            element_slots: type_slot_count(self.program, element),
+                            destination_offset: slot_offset(pointer_slot),
+                            label,
+                        }),
+                        cerune_ir::AssignmentProjection::DynamicIndex { .. } => {
+                            self.push(Instruction::DynamicArrayAddress {
+                                base_offset,
+                                base_is_pointer,
+                                destination_offset: slot_offset(pointer_slot),
+                                label,
+                            })
+                        }
+                    }
                     self.origin = previous;
                     address = ArrayAddress::Indirect(slot_offset(pointer_slot));
                 }
@@ -576,21 +630,40 @@ impl Lowerer<'_> {
         }
 
         match &expr.kind {
-            cerune_ir::ExprKind::ArrayCopy { .. }
-            | cerune_ir::ExprKind::ArrayAllocate { .. }
-            | cerune_ir::ExprKind::ArrayReleaseOwner { .. } => {
-                unreachable!("dynamic arrays are rejected before backend lowering")
+            cerune_ir::ExprKind::ArrayCopy { .. } => {
+                unreachable!("array copies are expanded in common IR")
+            }
+            cerune_ir::ExprKind::ArrayAllocate {
+                length,
+                element_width,
+            } => {
+                self.lower_expr(length, depth);
+                let label = self.next_label();
+                self.push(Instruction::ArrayAllocate {
+                    width: *element_width,
+                    stride: 8 * type_slot_count(self.program, &array_element_ir_type(&expr.ty)),
+                    label,
+                });
+                Value::Scalar(Type::DynamicArray)
+            }
+            cerune_ir::ExprKind::ArrayReleaseOwner { value } => {
+                self.lower_expr(value, depth);
+                self.push(Instruction::ArrayReleaseOwner);
+                Value::Scalar(Type::Bool)
             }
             cerune_ir::ExprKind::Let { .. } | cerune_ir::ExprKind::Conditional { .. } => {
                 unreachable!("match expressions are lowered before code generation")
             }
             cerune_ir::ExprKind::Constant { value, .. } => self.lower_expr(value, depth),
             cerune_ir::ExprKind::ArrayLength { value } => {
-                let cerune_ir::Type::Array { length, .. } = &value.ty else {
-                    unreachable!()
-                };
                 self.lower_expr(value, depth);
-                self.push(Instruction::MovI64ImmediateToRax(*length as i64));
+                match &value.ty {
+                    cerune_ir::Type::Array { length, .. } => {
+                        self.push(Instruction::MovI64ImmediateToRax(*length as i64))
+                    }
+                    cerune_ir::Type::DynamicArray { .. } => self.push(Instruction::ArrayLength),
+                    _ => unreachable!(),
+                }
                 Value::Scalar(Type::I64)
             }
             cerune_ir::ExprKind::StringConcat { left, right } => {
@@ -649,7 +722,7 @@ impl Lowerer<'_> {
                 match ty {
                     Type::F32 => self.push(Instruction::LoadF32Constant(id)),
                     Type::F64 => self.push(Instruction::LoadF64Constant(id)),
-                    Type::String | Type::Bool | Type::I64 => {
+                    Type::DynamicArray | Type::String | Type::Bool | Type::I64 => {
                         unreachable!("a float literal has a float type")
                     }
                 }
@@ -728,6 +801,9 @@ impl Lowerer<'_> {
                 debug_assert_eq!(operand_ty, right_ty);
 
                 match operand_ty {
+                    Type::DynamicArray => {
+                        unreachable!("array comparisons are expanded in common IR")
+                    }
                     Type::String => {
                         self.push(Instruction::CompareString {
                             left_offset: scratch,
@@ -925,6 +1001,47 @@ impl Lowerer<'_> {
                 }
             }
             cerune_ir::ExprKind::Index { base, index } => {
+                if let cerune_ir::Type::DynamicArray { element } = &base.ty {
+                    self.lower_expr(base, depth);
+                    let owner_offset = self.allocate_pointer();
+                    self.push(Instruction::StoreI64ToStack(owner_offset));
+                    self.lower_expr(index, depth);
+                    let pointer_offset = self.allocate_pointer();
+                    let label = self.next_label();
+                    self.push(Instruction::DynamicArrayAddress {
+                        base_offset: owner_offset,
+                        base_is_pointer: false,
+                        destination_offset: pointer_offset,
+                        label,
+                    });
+                    return match &**element {
+                        ty @ (cerune_ir::Type::Named(_) | cerune_ir::Type::Array { .. }) => {
+                            let destination = self.allocate_aggregate(ty);
+                            self.push(Instruction::CopyFromPointer {
+                                pointer_offset,
+                                destination_offset: slot_offset(destination),
+                                slots: type_slot_count(self.program, ty),
+                            });
+                            match ty {
+                                cerune_ir::Type::Named(id) => Value::Aggregate {
+                                    type_id: id.0,
+                                    base_slot: destination,
+                                },
+                                cerune_ir::Type::Array { element, length } => Value::Array {
+                                    element: array_element_type(element),
+                                    length: *length,
+                                    base_slot: destination,
+                                },
+                                _ => unreachable!(),
+                            }
+                        }
+                        scalar => {
+                            let ty = scalar_type(scalar);
+                            self.push(Instruction::LoadFromPointer { ty, pointer_offset });
+                            Value::Scalar(ty)
+                        }
+                    };
+                }
                 let Value::Array {
                     element,
                     length,
@@ -1025,9 +1142,7 @@ impl Lowerer<'_> {
         }
 
         let aggregate_result = result_type.and_then(|ty| match ty {
-            cerune_ir::Type::DynamicArray { .. } => {
-                unreachable!("dynamic arrays are rejected before backend lowering")
-            }
+            cerune_ir::Type::DynamicArray { .. } => None,
             cerune_ir::Type::Named(_) | cerune_ir::Type::Array { .. } => {
                 Some((ty, self.allocate_aggregate(ty)))
             }
@@ -1047,9 +1162,6 @@ impl Lowerer<'_> {
 
         if let Some((ty, base_slot)) = aggregate_result {
             return Some(match ty {
-                cerune_ir::Type::DynamicArray { .. } => {
-                    unreachable!("dynamic arrays are rejected before backend lowering")
-                }
                 cerune_ir::Type::Named(type_id) => Value::Aggregate {
                     type_id: type_id.0,
                     base_slot,
@@ -1059,7 +1171,8 @@ impl Lowerer<'_> {
                     length: *length,
                     base_slot,
                 },
-                cerune_ir::Type::String
+                cerune_ir::Type::DynamicArray { .. }
+                | cerune_ir::Type::String
                 | cerune_ir::Type::Bool
                 | cerune_ir::Type::Integer(_)
                 | cerune_ir::Type::F32
@@ -1136,10 +1249,16 @@ impl Lowerer<'_> {
     ) {
         match (ty, value) {
             (
-                cerune_ir::Type::String | cerune_ir::Type::Bool | cerune_ir::Type::Integer(_),
+                cerune_ir::Type::DynamicArray { .. }
+                | cerune_ir::Type::String
+                | cerune_ir::Type::Bool
+                | cerune_ir::Type::Integer(_),
                 Value::Scalar(actual),
             ) => {
-                debug_assert!(matches!(actual, Type::String | Type::Bool | Type::I64));
+                debug_assert!(matches!(
+                    actual,
+                    Type::DynamicArray | Type::String | Type::Bool | Type::I64
+                ));
                 self.push(Instruction::StoreI64ToPointer(pointer_offset));
             }
             (cerune_ir::Type::F32, Value::Scalar(Type::F32)) => {
@@ -1194,7 +1313,9 @@ impl Lowerer<'_> {
 
     fn load_scalar(&mut self, ty: Type, offset: isize) {
         self.push(match ty {
-            Type::String | Type::Bool | Type::I64 => Instruction::LoadI64FromStack(offset),
+            Type::DynamicArray | Type::String | Type::Bool | Type::I64 => {
+                Instruction::LoadI64FromStack(offset)
+            }
             Type::F32 => Instruction::LoadF32FromStack(offset),
             Type::F64 => Instruction::LoadF64FromStack(offset),
         });
@@ -1202,7 +1323,9 @@ impl Lowerer<'_> {
 
     fn store_scalar(&mut self, ty: Type, offset: isize) {
         self.push(match ty {
-            Type::String | Type::Bool | Type::I64 => Instruction::StoreI64ToStack(offset),
+            Type::DynamicArray | Type::String | Type::Bool | Type::I64 => {
+                Instruction::StoreI64ToStack(offset)
+            }
             Type::F32 => Instruction::StoreF32ToStack(offset),
             Type::F64 => Instruction::StoreF64ToStack(offset),
         });
@@ -1214,6 +1337,7 @@ impl Lowerer<'_> {
             return;
         }
         match ty {
+            Type::DynamicArray => unreachable!("array display is expanded in common IR"),
             Type::String => self.push(Instruction::PrintString),
             Type::Bool => self.push(Instruction::CallPrintBool),
             Type::I64 => {
@@ -1261,7 +1385,7 @@ impl Lowerer<'_> {
                     bits: value.to_bits(),
                 });
             }
-            Type::String | Type::Bool | Type::I64 => {
+            Type::DynamicArray | Type::String | Type::Bool | Type::I64 => {
                 unreachable!("a float literal has a float type")
             }
         }
@@ -1320,9 +1444,7 @@ fn collect_binding_slots(
             cerune_ir::StatementKind::ArrayInitialize { .. }
             | cerune_ir::StatementKind::ArrayRetain { .. }
             | cerune_ir::StatementKind::ArrayFree { .. }
-            | cerune_ir::StatementKind::ArrayRangeCheck { .. } => {
-                unreachable!("dynamic arrays are rejected before backend lowering")
-            }
+            | cerune_ir::StatementKind::ArrayRangeCheck { .. } => {}
             cerune_ir::StatementKind::Binding { id, ty, .. } => {
                 slots.insert(*id, *next);
                 *next += type_slot_count(program, ty);
@@ -1362,10 +1484,8 @@ fn collect_binding_slots(
 
 fn type_slot_count(program: &cerune_ir::Program, ty: &cerune_ir::Type) -> usize {
     match ty {
-        cerune_ir::Type::DynamicArray { .. } => {
-            unreachable!("dynamic arrays are rejected before backend lowering")
-        }
-        cerune_ir::Type::String
+        cerune_ir::Type::DynamicArray { .. }
+        | cerune_ir::Type::String
         | cerune_ir::Type::Bool
         | cerune_ir::Type::Integer(_)
         | cerune_ir::Type::F32
@@ -1390,14 +1510,28 @@ fn count_statements_expr_nodes(statements: &[cerune_ir::Statement]) -> usize {
     statements
         .iter()
         .map(|statement| match &statement.kind {
-            cerune_ir::StatementKind::ArrayInitialize { .. }
-            | cerune_ir::StatementKind::ArrayRetain { .. }
-            | cerune_ir::StatementKind::ArrayFree { .. }
-            | cerune_ir::StatementKind::ArrayRangeCheck { .. } => {
-                unreachable!("dynamic arrays are rejected before backend lowering")
+            cerune_ir::StatementKind::ArrayInitialize { array, value } => {
+                count_expr_nodes(array) + count_expr_nodes(value)
+            }
+            cerune_ir::StatementKind::ArrayRetain { value }
+            | cerune_ir::StatementKind::ArrayFree { value } => count_expr_nodes(value),
+            cerune_ir::StatementKind::ArrayRangeCheck { length, start, end } => {
+                count_expr_nodes(length) + count_expr_nodes(start) + count_expr_nodes(end)
+            }
+            cerune_ir::StatementKind::Assignment { target, value } => {
+                count_expr_nodes(value)
+                    + target
+                        .projections
+                        .iter()
+                        .map(|p| match p {
+                            cerune_ir::AssignmentProjection::Index { index, .. }
+                            | cerune_ir::AssignmentProjection::DynamicIndex { index, .. } => {
+                                count_expr_nodes(index)
+                            }
+                        })
+                        .sum::<usize>()
             }
             cerune_ir::StatementKind::Binding { value, .. }
-            | cerune_ir::StatementKind::Assignment { value, .. }
             | cerune_ir::StatementKind::StringManage { value, .. }
             | cerune_ir::StatementKind::Write { value, .. }
             | cerune_ir::StatementKind::Print { value } => count_expr_nodes(value),
@@ -1437,11 +1571,11 @@ fn count_statements_expr_nodes(statements: &[cerune_ir::Statement]) -> usize {
 
 fn count_expr_nodes(expr: &cerune_ir::Expr) -> usize {
     match &expr.kind {
-        cerune_ir::ExprKind::ArrayCopy { .. }
-        | cerune_ir::ExprKind::ArrayAllocate { .. }
-        | cerune_ir::ExprKind::ArrayReleaseOwner { .. } => {
-            unreachable!("dynamic arrays are rejected before backend lowering")
+        cerune_ir::ExprKind::ArrayCopy { .. } => {
+            unreachable!("array copies are expanded in common IR")
         }
+        cerune_ir::ExprKind::ArrayAllocate { length: value, .. }
+        | cerune_ir::ExprKind::ArrayReleaseOwner { value } => 1 + count_expr_nodes(value),
         cerune_ir::ExprKind::Let { .. } | cerune_ir::ExprKind::Conditional { .. } => {
             unreachable!("match expressions are lowered before code generation")
         }
@@ -1485,14 +1619,27 @@ fn required_scratch_slots(statements: &[cerune_ir::Statement]) -> usize {
     statements
         .iter()
         .map(|statement| match &statement.kind {
-            cerune_ir::StatementKind::ArrayInitialize { .. }
-            | cerune_ir::StatementKind::ArrayRetain { .. }
-            | cerune_ir::StatementKind::ArrayFree { .. }
-            | cerune_ir::StatementKind::ArrayRangeCheck { .. } => {
-                unreachable!("dynamic arrays are rejected before backend lowering")
+            cerune_ir::StatementKind::ArrayInitialize { array, value } => {
+                required_expr_scratch(array, 0).max(required_expr_scratch(value, 0))
             }
+            cerune_ir::StatementKind::ArrayRetain { value }
+            | cerune_ir::StatementKind::ArrayFree { value } => required_expr_scratch(value, 0),
+            cerune_ir::StatementKind::ArrayRangeCheck { length, start, end } => {
+                required_expr_scratch(length, 0)
+                    .max(required_expr_scratch(start, 0))
+                    .max(required_expr_scratch(end, 0))
+            }
+            cerune_ir::StatementKind::Assignment { target, value } => target
+                .projections
+                .iter()
+                .map(|p| match p {
+                    cerune_ir::AssignmentProjection::Index { index, .. }
+                    | cerune_ir::AssignmentProjection::DynamicIndex { index, .. } => {
+                        required_expr_scratch(index, 0)
+                    }
+                })
+                .fold(required_expr_scratch(value, 0), usize::max),
             cerune_ir::StatementKind::Binding { value, .. }
-            | cerune_ir::StatementKind::Assignment { value, .. }
             | cerune_ir::StatementKind::StringManage { value, .. }
             | cerune_ir::StatementKind::Write { value, .. }
             | cerune_ir::StatementKind::Print { value } => required_expr_scratch(value, 0),
@@ -1532,11 +1679,11 @@ fn required_scratch_slots(statements: &[cerune_ir::Statement]) -> usize {
 
 fn required_expr_scratch(expr: &cerune_ir::Expr, depth: usize) -> usize {
     match &expr.kind {
-        cerune_ir::ExprKind::ArrayCopy { .. }
-        | cerune_ir::ExprKind::ArrayAllocate { .. }
-        | cerune_ir::ExprKind::ArrayReleaseOwner { .. } => {
-            unreachable!("dynamic arrays are rejected before backend lowering")
+        cerune_ir::ExprKind::ArrayCopy { .. } => {
+            unreachable!("array copies are expanded in common IR")
         }
+        cerune_ir::ExprKind::ArrayAllocate { length: value, .. }
+        | cerune_ir::ExprKind::ArrayReleaseOwner { value } => required_expr_scratch(value, depth),
         cerune_ir::ExprKind::Let { .. } | cerune_ir::ExprKind::Conditional { .. } => {
             unreachable!("match expressions are lowered before code generation")
         }
@@ -1590,9 +1737,7 @@ fn required_expr_scratch(expr: &cerune_ir::Expr, depth: usize) -> usize {
 
 fn scalar_type(ty: &cerune_ir::Type) -> Type {
     match ty {
-        cerune_ir::Type::DynamicArray { .. } => {
-            unreachable!("dynamic arrays are rejected before backend lowering")
-        }
+        cerune_ir::Type::DynamicArray { .. } => Type::DynamicArray,
         cerune_ir::Type::String => Type::String,
         cerune_ir::Type::Bool => Type::Bool,
         cerune_ir::Type::Integer(_) => Type::I64,
@@ -1606,9 +1751,7 @@ fn scalar_type(ty: &cerune_ir::Type) -> Type {
 
 fn array_element_type(element: &cerune_ir::Type) -> ArrayElement {
     match element {
-        cerune_ir::Type::DynamicArray { .. } => {
-            unreachable!("dynamic arrays are rejected before backend lowering")
-        }
+        cerune_ir::Type::DynamicArray { .. } => ArrayElement::Scalar(Type::DynamicArray),
         cerune_ir::Type::String => ArrayElement::Scalar(Type::String),
         cerune_ir::Type::Bool => ArrayElement::Scalar(Type::Bool),
         cerune_ir::Type::Integer(_) => ArrayElement::Scalar(Type::I64),
@@ -1688,4 +1831,11 @@ const fn compare_op(op: cerune_ir::BinaryOp) -> Option<CompareOp> {
         cerune_ir::BinaryOp::Greater => Some(CompareOp::Greater),
         cerune_ir::BinaryOp::GreaterEqual => Some(CompareOp::GreaterEqual),
     }
+}
+
+fn array_element_ir_type(ty: &cerune_ir::Type) -> cerune_ir::Type {
+    let cerune_ir::Type::DynamicArray { element } = ty else {
+        unreachable!()
+    };
+    (**element).clone()
 }

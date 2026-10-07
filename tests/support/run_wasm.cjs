@@ -6,7 +6,7 @@ const diagnostics = [];
 const writeText = value => output.push(Buffer.from(`${value}\n`, 'utf8'));
 // fixtureで使う、二進数でも十進数でも正確な値だけを整形します。
 const exactFloat = value => {
-  if (![0, 1.5, 2, 2.5, 4, 10, 15, 20, 35].includes(value)) throw new Error('unsupported test float');
+  if (![0, 1, 1.5, 2, 2.5, 3, 4, 10, 11, 13, 15, 20, 35, 99].includes(value)) throw new Error('unsupported test float');
   return value.toString();
 };
 const imports = { cerune: {

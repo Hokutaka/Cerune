@@ -2,10 +2,11 @@
 
 [日本語](README.md)
 
-Run with IR Executor, VM, generated C, LLVM, QBE, or WAT. ASM and native objects are pending.
+Run with IR Executor, VM, generated C, LLVM, QBE, WAT, Windows/Linux ASM, or self-encoded COFF/ELF.
 
 | Example | Checks |
 | --- | --- |
+| [coordinates.ceru](coordinates.ceru) | Dynamic arrays of fixed coordinate pairs; translation, independent copies, and element updates |
 | [labels.ceru](labels.ceru) | Transform a string array in a function; compare the original, saved copy, and reassigned value |
 | [batches.ceru](batches.ceru) | Return two ranges in a fixed array and compare updates with a saved copy |
 | [readings.ceru](readings.ceru) | Return a range of records, edit a copy, and total its values |
@@ -57,3 +58,16 @@ node tests/support/run_wasm.cjs labels.wasm
 ```
 
 Install WABT with `npm install --prefix target/wasm-tools --no-audit --no-fund wabt@1.0.39`. Output is `["月", "火"]`, `["予定:月", "予定:火"]`, `["休み", "予定:火"]`, then `false`. Tests compare the same output through IR/VM/C/LLVM/QBE. Copies, releases, and checks remain visible in generated WAT; array memory is not exposed to the host.
+
+Native generation and execution (Linux x86-64):
+
+```sh
+cargo run --quiet -- emit-asm examples/dynamic_arrays/coordinates.ceru --target x86_64-unknown-linux-gnu --annotate-origins -o coordinates.s
+clang coordinates.s -o coordinates-asm
+./coordinates-asm
+cargo run --quiet -- emit-obj examples/dynamic_arrays/coordinates.ceru --target x86_64-unknown-linux-gnu --annotate-origins -o coordinates.o
+clang coordinates.o -o coordinates-native
+./coordinates-native
+```
+
+On Windows, select `x86_64-pc-windows-msvc`, link with `clang --target=x86_64-pc-windows-msvc coordinates.o -o coordinates.exe`, then run `.\coordinates.exe`. Link ASM with the same target. Output is the original `[[1, 2], [3, 4]]`, translated saved value `[[11, 1], [13, 3]]`, edited value `[[99, 1], [13, 3]]`, and `false`. All routes check the same result.

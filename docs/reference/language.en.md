@@ -294,7 +294,7 @@ See the [syntax and evaluation design](../design/product-updates.en.md) and [exa
 
 ## Dynamic arrays (IR Executor, VM, C, LLVM, QBE, and WAT)
 
-`[T]` is an owned value with a runtime length. Execute it with `run` / `run-ir` / `run-vm`; inspect it with `emit-ir` / `emit-bytecode` / `emit-c` / `emit-llvm` / `emit-qbe` / `emit-wat`. Build generated C/LLVM/QBE with external tools; LLVM and QBE require an explicit `--target`. Convert WAT to Wasm and run it with output host functions. ASM and native object generation currently return an unsupported-feature diagnostic.
+`[T]` is an owned value with a runtime length. Execute it with `run` / `run-ir` / `run-vm`; inspect it with `emit-ir` / `emit-bytecode` / `emit-c` / `emit-llvm` / `emit-qbe` / `emit-wat`. Build generated C/LLVM/QBE with external tools; LLVM and QBE require an explicit `--target`. Convert WAT to Wasm and run it with output host functions. Use `emit-asm` / `emit-obj` with an explicit Windows/Linux target, then link with external tools.
 
 | Operation | Meaning |
 | --- | --- |
@@ -387,7 +387,7 @@ The shared resource limit is 100,000 scalar units per aggregate value and type-c
 
 ### Array element count
 
-`array_len(values)` accepts one array and returns its outermost element count as `i64`, regardless of the element type: `N` for `[T; N]`, or the runtime length for `[T]` (dynamic arrays currently support IR/VM/C/LLVM/QBE/WAT). Use `byte_len` for string bytes.
+`array_len(values)` accepts one array and returns its outermost element count as `i64`, regardless of the element type: `N` for `[T; N]`, or the runtime length for `[T]` (dynamic arrays currently support IR/VM/C/LLVM/QBE/WAT/ASM/native objects). Use `byte_len` for string bytes.
 
 ```cerune
 matrix: [[i64; 3]; 2] = [[1, 2, 3], [4, 5, 6]];
@@ -404,7 +404,7 @@ Functions, constants, and import aliases cannot use this name. Variable and func
 
 ### Fixed-array iteration
 
-Dynamic arrays use the same iteration rules in IR/VM/C/LLVM/QBE/WAT; zero length skips the body.
+Dynamic arrays use the same iteration rules in IR/VM/C/LLVM/QBE/WAT/ASM/native objects; zero length skips the body.
 
 ```cerune
 values: [i64; 3] = [4, 7, 9];

@@ -1,10 +1,12 @@
-//! 動的配列のIR・VM・生成C・LLVM・QBE・WATの結果・停止理由・出自を照合します。
+//! 動的配列のIR・VM・生成C・LLVM・QBE・WAT・ASM・自前Objectの結果・停止理由・出自を照合します。
 #[path = "support/c_arrays.rs"]
 mod c_arrays;
 #[path = "support/crash_dialogs.rs"]
 mod crash_dialogs;
 #[path = "support/llvm_arrays.rs"]
 mod llvm_arrays;
+#[path = "support/native_arrays.rs"]
+mod native_arrays;
 #[path = "support/qbe_arrays.rs"]
 mod qbe_arrays;
 #[path = "support/wat_arrays.rs"]
@@ -29,6 +31,7 @@ fn compare(source: &str, limit: u64) -> Result<String, ir_executor::ExecutionErr
     llvm_arrays::compare(&program, &direct);
     qbe_arrays::compare(&program, &direct);
     wat_arrays::compare(&program, &direct);
+    native_arrays::compare(&program, &direct);
     direct
 }
 fn success(source: &str, expected: &str) {
@@ -203,7 +206,7 @@ fn copied_and_returned_parameters_have_one_owner_boundary() {
     assert_eq!(compare(source, 24).unwrap(), "[1]\n");
 }
 #[test]
-fn unimplemented_compiled_routes_diagnose_even_unused_dynamic_types() {
+fn compiled_routes_accept_even_unused_dynamic_types() {
     use cerune_lang::codegen::{
         self,
         x86_64::{self, Target},
@@ -218,31 +221,26 @@ fn unimplemented_compiled_routes_diagnose_even_unused_dynamic_types() {
         llvm_arrays::compare(&p, &ir_executor::run(&p));
         qbe_arrays::compare(&p, &ir_executor::run(&p));
         wat_arrays::compare(&p, &ir_executor::run(&p));
+        native_arrays::compare(&p, &ir_executor::run(&p));
         for result in [
             codegen::emit_x86_64_win_asm(&p),
             x86_64::emit_asm(&p, Target::X86_64UnknownLinuxGnu),
             x86_64::emit_asm_with_origins(&p, Target::X86_64PcWindowsMsvc),
         ] {
-            assert!(
-                result
-                    .unwrap_err()
-                    .message()
-                    .contains("dynamic arrays are not yet supported")
-            );
+            assert!(!result.unwrap().is_empty());
         }
         for t in [Target::X86_64UnknownLinuxGnu, Target::X86_64PcWindowsMsvc] {
-            assert!(
-                x86_64::emit_object(&p, t, true)
-                    .unwrap_err()
-                    .message()
-                    .contains("dynamic arrays are not yet supported")
-            );
+            assert!(!x86_64::emit_object(&p, t, true).unwrap().is_empty());
         }
     }
 }
 
 #[test]
 fn examples_and_generated_steps_match_checked_artifacts() {
+    success(
+        include_str!("../examples/dynamic_arrays/coordinates.ceru"),
+        "[[1, 2], [3, 4]]\n[[11, 1], [13, 3]]\n[[99, 1], [13, 3]]\nfalse\n",
+    );
     success(
         include_str!("../examples/dynamic_arrays/labels.ceru"),
         "[\"月\", \"火\"]\n[\"予定:月\", \"予定:火\"]\n[\"休み\", \"予定:火\"]\nfalse\n",
@@ -327,6 +325,7 @@ fn array_and_string_budgets_are_independent() {
     llvm_arrays::compare(&p, &ir_executor::run(&p));
     qbe_arrays::compare(&p, &ir_executor::run(&p));
     wat_arrays::compare(&p, &ir_executor::run(&p));
+    native_arrays::compare(&p, &ir_executor::run(&p));
     assert_eq!(ir_executor::run(&p).unwrap(), "[\"ab\"]\n");
     assert_eq!(
         run_bytecode(&bytecode::lower(&p).unwrap()).unwrap(),
@@ -337,6 +336,7 @@ fn array_and_string_budgets_are_independent() {
     llvm_arrays::compare(&p, &ir_executor::run(&p));
     qbe_arrays::compare(&p, &ir_executor::run(&p));
     wat_arrays::compare(&p, &ir_executor::run(&p));
+    native_arrays::compare(&p, &ir_executor::run(&p));
     let e = ir_executor::run(&p).unwrap_err();
     assert_eq!(
         e.runtime_failure().unwrap().code.name(),
@@ -377,7 +377,7 @@ fn rejects_invalid_types_calls_recursion_and_constant_allocation() {
 mod process;
 
 #[test]
-fn cli_examples_limits_modules_and_unsupported_output_are_explicit() {
+fn cli_examples_limits_modules_and_target_requirements_are_explicit() {
     use std::{
         fs,
         process::Command,
@@ -493,21 +493,20 @@ fn cli_examples_limits_modules_and_unsupported_output_are_explicit() {
     );
     assert_eq!(fs::read(&preserved).unwrap(), b"keep");
     for command in ["emit-asm", "emit-obj"] {
-        let out = w.0.join("preserved-output");
-        fs::write(&out, b"keep").unwrap();
-        let mut args = vec![command, file, "-o", out.to_str().unwrap()];
-        if matches!(command, "emit-llvm" | "emit-qbe" | "emit-asm" | "emit-obj") {
-            args.extend(["--target", "x86_64-unknown-linux-gnu"]);
+        for target in ["x86_64-unknown-linux-gnu", "x86_64-pc-windows-msvc"] {
+            let out = w.0.join("native-output");
+            let result = cli(&[
+                command,
+                file,
+                "-o",
+                out.to_str().unwrap(),
+                "--target",
+                target,
+                "--annotate-origins",
+            ]);
+            assert!(result.status.success(), "{command}: {result:?}");
+            assert!(!fs::read(&out).unwrap().is_empty());
         }
-        let result = cli(&args);
-        assert!(!result.status.success(), "{command}");
-        assert!(
-            String::from_utf8_lossy(&result.stderr)
-                .contains("dynamic arrays are not yet supported"),
-            "{command}: {:?}",
-            result.stderr
-        );
-        assert_eq!(fs::read(&out).unwrap(), b"keep");
     }
     for options in [
         vec!["--array-heap-limit"],
@@ -568,6 +567,7 @@ fn cli_examples_limits_modules_and_unsupported_output_are_explicit() {
         llvm_arrays::compare(&p, &direct);
         qbe_arrays::compare(&p, &direct);
         wat_arrays::compare(&p, &direct);
+        native_arrays::compare(&p, &direct);
     }
     fs::write(
         w.0.join("values.ceru"),
@@ -733,5 +733,49 @@ fn dynamic_index_keeps_all_i64_bits_before_wasm32_addressing() {
             "array-index-out-of-bounds",
             "7\n",
         );
+    }
+}
+
+#[test]
+fn mixed_array_assignment_preserves_nested_index_call_temporaries() {
+    success(
+        r#"
+        fn add(a:i64,b:i64)->i64 {print(a);return a+b;}
+        mut a:[[i64;2]]=array_copy([[1,2],[3,4]]);
+        keep:infer=a;
+        a[add(0,add(0,1))][add(0,add(0,1))]=8;
+        print(a);print(keep);
+        mut b:[[i64];2]=[array_copy([1,2]),array_copy([3,4])];
+        b[add(0,add(0,1))][add(0,add(0,1))]=9;
+        print(b);
+        "#,
+        "0\n0\n0\n0\n[[1, 2], [3, 8]]\n[[1, 2], [3, 4]]\n0\n0\n0\n0\n[[1, 2], [3, 9]]\n",
+    );
+}
+#[test]
+fn native_origins_and_saved_assembly_match() {
+    use cerune_lang::codegen::x86_64::{self, Target};
+    let p = compile_to_ir(include_str!("fixtures/dynamic-arrays/source.ceru")).unwrap();
+    for (target, expected) in [
+        (
+            Target::X86_64UnknownLinuxGnu,
+            include_str!("fixtures/dynamic-arrays/linux.s"),
+        ),
+        (
+            Target::X86_64PcWindowsMsvc,
+            include_str!("fixtures/dynamic-arrays/windows.s"),
+        ),
+    ] {
+        let plain = x86_64::emit_asm(&p, target).unwrap();
+        assert_eq!(plain, expected);
+        let annotated = x86_64::emit_asm_with_origins(&p, target).unwrap();
+        let stripped = annotated
+            .lines()
+            .filter(|line| !line.starts_with("# cerune-") && !line.starts_with("cerune_origin_"))
+            .collect::<Vec<_>>()
+            .join("\n")
+            + "\n";
+        assert_eq!(plain, stripped);
+        assert!(!x86_64::emit_object(&p, target, true).unwrap().is_empty());
     }
 }

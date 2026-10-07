@@ -49,6 +49,10 @@ pub fn emit_with_origins(module: &Module, annotate: bool) -> String {
         output.push_str(&super::heap::support(limit, module.target.is_linux()));
     }
 
+    if let Some(limit) = module.array_heap_limit {
+        output.push_str(&super::array::support(limit, module.target.is_linux()));
+    }
+
     for function in &module.functions {
         emit_function(function, module, annotate, &mut reporter, &mut output);
         output.push('\n');
@@ -234,7 +238,21 @@ fn emit_instruction(
     reporter: &mut Reporter,
     output: &mut String,
 ) {
+    if super::array::emit(instruction, label_prefix, module.target, reporter, output) {
+        return;
+    }
     match instruction {
+        Instruction::ArrayAllocate { .. }
+        | Instruction::ArrayRangeCheck { .. }
+        | Instruction::DynamicArrayAddress { .. }
+        | Instruction::ArrayInitAddress { .. }
+        | Instruction::ArrayInitialized { .. }
+        | Instruction::ArrayLength
+        | Instruction::ArrayRetain
+        | Instruction::ArrayReleaseOwner
+        | Instruction::ArrayFree
+        | Instruction::LoadFromPointer { .. }
+        | Instruction::CopyFromPointer { .. } => unreachable!(),
         Instruction::Write { kind } => output.push_str(&crate::codegen::display::asm_call(
             kind,
             module.target.is_linux(),
@@ -412,7 +430,7 @@ fn emit_instruction(
             output.push_str(&format!("  jge {trap}\n"));
             output.push_str("  negq %rax\n");
             match ty {
-                Type::String | Type::Bool | Type::I64 => {
+                Type::DynamicArray | Type::String | Type::Bool | Type::I64 => {
                     output.push_str(&format!("  movq {base_offset}(%rbp,%rax,8), %rax\n"));
                 }
                 Type::F32 => {
@@ -762,6 +780,7 @@ fn block_label(prefix: &str, id: usize) -> String {
 
 fn emit_sysv_print(ty: Type, output: &mut String) {
     match ty {
+        Type::DynamicArray => unreachable!("array display is expanded in common IR"),
         Type::String => output.push_str("  movq %rax, %rdi\n  callq cerune_print_string\n"),
         Type::Bool => output.push_str("  testq %rax, %rax\n  leaq .Lcerune_bool_false(%rip), %rdi\n  leaq .Lcerune_bool_true(%rip), %rsi\n  cmovne %rsi, %rdi\n  callq puts\n"),
         Type::I64 => output.push_str("  movq %rax, %rsi\n  leaq .Lcerune_fmt_i64(%rip), %rdi\n  xorl %eax, %eax\n  callq printf\n"),
@@ -794,7 +813,7 @@ fn emit_store_parameter(
         return;
     };
     match ty {
-        Type::String | Type::Bool | Type::I64 => {
+        Type::DynamicArray | Type::String | Type::Bool | Type::I64 => {
             let register = integer_argument_register(index, target);
             output.push_str(&format!("  movq {register}, {offset}(%rbp)\n"));
         }
@@ -827,7 +846,7 @@ fn emit_load_argument(
         return;
     };
     match ty {
-        Type::String | Type::Bool | Type::I64 => {
+        Type::DynamicArray | Type::String | Type::Bool | Type::I64 => {
             let register = integer_argument_register(index, target);
             output.push_str(&format!("  movq {offset}(%rbp), {register}\n"));
         }

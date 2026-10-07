@@ -2,7 +2,7 @@
 
 [日本語](language-roadmap.ja.md)
 
-As of 2026-10-07, this inventory includes IR/VM/C/LLVM/QBE/WAT dynamic arrays plus modules, removal of the parameter limit, product updates, compile-time constants, sum types with match, array-length queries, array iteration, constants in array type lengths, functions with explicit type/length parameters, rounding/saturation, aggregate equality/display, and match expressions/guards. “Current” means implemented; candidates are proposals awaiting design and implementation. This document does not commit to candidate syntax or adoption. See the [language reference](../reference/language.en.md) for the current specification.
+As of 2026-10-07, this inventory includes IR/VM/C/LLVM/QBE/WAT/ASM/native-object dynamic arrays plus modules, removal of the parameter limit, product updates, compile-time constants, sum types with match, array-length queries, array iteration, constants in array type lengths, functions with explicit type/length parameters, rounding/saturation, aggregate equality/display, and match expressions/guards. “Current” means implemented; candidates are proposals awaiting design and implementation. This document does not commit to candidate syntax or adoption. See the [language reference](../reference/language.en.md) for the current specification.
 
 ## Properties Cerune should preserve
 
@@ -24,7 +24,7 @@ Cerune prioritizes explaining a computation's meaning and its transformation int
 | Booleans | `bool`, comparisons, `!`, short-circuiting `&&` and `||` | No implicit numeric conversion | [short_circuit](../../examples/short_circuit.ceru) |
 | Strings | `string`, printing, `==`, `!=`, `byte_len`, `concat` | No indexing, character count, or numeric conversion | [string_byte_length](../../examples/string_byte_length.ceru), [string_lookup](../../examples/string_lookup.ceru) |
 | Fixed arrays | `[T; N]`, `array_len`, `for … in`, nesting, value passing, updates through `mut` | Length belongs to the type; indices are `i64`; no dynamic lengths or slices | [array_iteration](../../examples/array_iteration.ceru), [heat_diffusion](../../examples/heat_diffusion.ceru) |
-| Dynamic arrays | `[T]`, explicit/range copies, independent nesting, display/equality/iteration | IR/VM/C/LLVM/QBE/WAT supported; native routes and `array_repeat` pending | [copy](../../examples/dynamic_arrays/copy.ceru), [nested](../../examples/dynamic_arrays/nested.ceru) |
+| Dynamic arrays | `[T]`, explicit/range copies, independent nesting, display/equality/iteration | IR/VM/C/LLVM/QBE/WAT/ASM/native objects supported; `array_repeat` pending | [copy](../../examples/dynamic_arrays/copy.ceru), [nested](../../examples/dynamic_arrays/nested.ceru) |
 | Named product types | Fields, defaults, update expressions, nesting, value passing | No direct field assignment; construct a new value and reassign the whole binding | [product-point](../../examples/product-point.ceru), [packet_counter](../../examples/packet_counter.ceru) |
 | Functions and control flow | Typed parameters/results, explicit type/length parameters, `void`, `if`/`else`, `while`/`for`, `break`/`continue`/`return` | No fixed parameter-count limit; no recursion | [function_values](../../examples/function_values.ceru), [loop_control](../../examples/loop_control.ceru) |
 | Bindings and conversions | Immutable by default, `mut`, explicit `infer`, `T(value)` and `convert<T>(value)` | `infer` is not a runtime type; five float-to-integer rounding modes and explicit saturation are supported | [integer_conversions](../../examples/integer_conversions.ceru) |
@@ -36,7 +36,7 @@ The [example type tables](../../examples/README.en.md) list ranges and applicati
 
 ## Separate language features from output routes
 
-Dynamic arrays support IR Executor, VM, generated C, LLVM, QBE, and WAT so far. The other features above are supported by the [IR Executor](ir-executor.en.md), VM, generated C, LLVM, QBE, WAT, Windows/Linux direct assembly, and objects from Cerune's own encoder. Windows/Linux distinguish targets; assembly/objects distinguish artifacts. Use the [route and target table](targets.en.md) when counting them.
+All features above, including dynamic arrays, are supported by the [IR Executor](ir-executor.en.md), VM, generated C, LLVM, QBE, WAT, Windows/Linux direct assembly, and objects from Cerune's own encoder. Windows/Linux distinguish targets; assembly/objects distinguish artifacts. Use the [route and target table](targets.en.md) when counting them.
 
 The native encoder generates x86-64 instructions and COFF/ELF objects. It shares assembly lowering and currently reads an internal assembly representation to encode it. Linking uses external tools. A typed machine-instruction IR or an internal linker would be compiler implementation work, not new language features. See the [native encoder design](native-encoder.en.md).
 
@@ -46,7 +46,7 @@ Language support does not imply equal observation detail. Language check failure
 
 [IR/VM/Native build / release](owned-routes.en.md) and [Lean correspondence and program-property verification](lean-verification.en.md) are separate foundation work. A new classification or proof experiment does not complete the missing language features or route support below.
 
-Next complete dynamic-array native support, then investigate HIR/MIR/LIR, observation, and optimization under [Issue #94](https://github.com/Hokutaka/Cerune/issues/94). A common MIR, MIR interpreter, SSA, and optimization passes remain unimplemented. Build/release follows the responsibility model in [Issue #81](https://github.com/Hokutaka/Cerune/issues/81), keeping optimization separate from distribution. Lean verification will address correspondence between representations.
+Dynamic-array native support is complete. Next investigate HIR/MIR/LIR, observation, and optimization under [Issue #94](https://github.com/Hokutaka/Cerune/issues/94). A common MIR, MIR interpreter, SSA, and optimization passes remain unimplemented. Build/release follows the responsibility model in [Issue #81](https://github.com/Hokutaka/Cerune/issues/81), keeping optimization separate from distribution. Lean verification will address correspondence between representations.
 
 ## Proposed priorities
 
@@ -54,8 +54,8 @@ Next complete dynamic-array native support, then investigate HIR/MIR/LIR, observ
 
 | Order | Missing feature | First contract and example |
 | --- | --- | --- |
-| 1 | [Dynamic arrays and ranges](owned-arrays.en.md) on compiled routes | Bring native routes to IR/VM/C/LLVM/QBE/WAT parity; `array_repeat` remains a later operation; borrowed slices need separate lifetime and mutation type rules |
-| 2 | HIR/MIR/LIR design | Separate semantic, control-flow, and machine-specific roles; observe initial MIR lowering independently from SSA and optimization |
+| 1 | HIR/MIR/LIR design | Separate semantic, control-flow, and machine-specific roles; observe initial MIR lowering independently from SSA and optimization |
+| 2 | [Additional dynamic-array operations](owned-arrays.en.md) | Existing operations work across routes; consider `array_repeat` later; borrowed slices need separate lifetime and mutation type rules |
 | 3 | Recursion and external I/O | Define call storage, resource limits, I/O failure, and cleanup |
 | 4 | Module distribution | Re-exports, dependencies/versions, reproducible builds; extend explicit imports |
 | Experiment | GPU numeric computation | Narrow the supported types, memory, synchronization, and diagnostics; compare independent element computations with the CPU |
@@ -66,10 +66,11 @@ Existing foundations are [common failure records](runtime-diagnostics.en.md), [f
 
 This is not a commitment to implement everything together. GPU experiments need not await every stage. Inheritance, implicit shared mutable references, automatic GPU dispatch, and general async facilities are not prioritized without evidence from current examples.
 
-Further investigations are tracked in issues. Their syntax and adoption are not finalized.
+The roadmap records priorities, dependencies, and current progress; each issue holds detailed checks and discussion. The investigations below do not finalize syntax or adoption.
 
 | Investigation | Approach |
 | --- | --- |
+| [#60 Observation bundle](https://github.com/Hokutaka/Cerune/issues/60) | Save representations and correspondence from one compilation, aligned with #94 stages and #81 CLI responsibilities |
 | [#88 Integer arithmetic policies](https://github.com/Hokutaka/Cerune/issues/88) | Keep ordinary arithmetic checked; design explicit wrapping and other policies separately |
 | [#89 External input and interaction](https://github.com/Hokutaka/Cerune/issues/89) | Derive inputs, resources, and failures from real uses, preserving semantics across routes |
 | [#90 Optional let](https://github.com/Hokutaka/Cerune/issues/90) | Consider together with the formatter, without adding binding semantics or IR distinctions |
