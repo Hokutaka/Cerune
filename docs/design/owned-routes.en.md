@@ -11,7 +11,7 @@ Neither operation selects an execution strategy or enables implicit optimization
 Current commands include `run` / `run-ir`, `run-vm`, and `emit-*`.
 **Build / release, saved Image loading, and the Lean backend are not implemented.**
 Dashed edges below are plans; language-feature coverage is tracked separately.
-Dynamic arrays support IR/VM/C/LLVM/QBE/WAT, Windows/Linux ASM, and self-encoded objects. MIR in the [stage design](ir-stages.en.md) remains unimplemented and does not establish another distribution route.
+Dynamic arrays support IR/MIR/VM/C/LLVM/QBE/WAT, Windows/Linux ASM, and self-encoded objects. MIR generation and independent execution in the [stage design](ir-stages.en.md) are implemented; this does not establish another build/release distribution route.
 
 ## Route diagram
 

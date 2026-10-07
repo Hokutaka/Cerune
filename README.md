@@ -76,6 +76,7 @@ cerune emit-c examples/floating_point.ceru -o floating_point.c
 | --- | --- | --- |
 | `check` | 構文・型検査 | Ceruneソース（`.ceru`）を検証 |
 | `run` / `run-ir` | IR直接実行 | Ceruneソース（`.ceru`）を共通IRから実行 |
+| `run-mir` | MIR実行 | 明示的な制御フローへ変換して実行・比較 |
 | `run-vm` | VM実行 | Ceruneソース（`.ceru`）を実行 |
 | `emit-sources` | ソース一覧（JSON） | 読み込んだファイル名・本文を出力 |
 | `emit-ir` | Cerune IR（`.ceir`） | 型・演算を確認 |

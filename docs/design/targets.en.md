@@ -16,7 +16,7 @@ The current output routes are C, LLVM IR, QBE IR, WebAssembly Text, native assem
 
 ### Direct execution
 
-The [IR Executor](ir-executor.en.md), selected by `run` or `run-ir`, directly executes completed Cerune IR. It produces no new artifact and selects no target ABI, so it is separate from the output-route table. `run-vm` selects Bytecode → VM.
+The [IR Executor](ir-executor.en.md), selected by `run` or `run-ir`, directly executes completed Cerune IR. It produces no new artifact and selects no target ABI, so it is separate from the output-route table. `run-vm` selects Bytecode → VM. `run-mir` executes HIR→MIR using the [independent MIR executor](mir-executor.en.md); `emit-mir` observes that representation.
 
 ### Target
 
@@ -41,7 +41,7 @@ A backend is an internal implementation component that lowers Cerune IR for a pa
 
 Backend is an implementation term. It is not used as a collective name for an output route, target, and artifact.
 
-Dynamic arrays `[T]` currently execute in IR Executor, Bytecode VM, generated C, LLVM, QBE, WAT, Windows/Linux ASM, and self-encoded COFF/ELF. See [support status](owned-arrays.en.md).
+Dynamic arrays `[T]` currently execute in IR Executor, MIR Executor, Bytecode VM, generated C, LLVM, QBE, WAT, Windows/Linux ASM, and self-encoded COFF/ELF. See [support status](owned-arrays.en.md).
 
 ## Execution-route responsibilities
 

@@ -14,6 +14,7 @@ Cerune documentation is divided into `design`, which records design decisions, a
 | Observability contract / 可観測性の契約 | [日本語](design/observability.ja.md) | [English](design/observability.en.md) |
 | Runtime diagnostics / 実行時停止の共通記録 | [日本語](design/runtime-diagnostics.ja.md) | [English](design/runtime-diagnostics.en.md) |
 | AST execution study / AST直接実行の調査 | [日本語](design/ast-executor-study.ja.md) | [English](design/ast-executor-study.en.md) |
+| MIR execution / MIRの独立実行 | [日本語](design/mir-executor.ja.md) | [English](design/mir-executor.en.md) |
 | IR Executor / IRの直接実行 | [日本語](design/ir-executor.ja.md) | [English](design/ir-executor.en.md) |
 | VM embedding / VMの埋め込み実行 | [日本語](design/vm-embedding.ja.md) | [English](design/vm-embedding.en.md) |
 | Owned routes and build / release / 実行・配布の責務 | [日本語](design/owned-routes.ja.md) | [English](design/owned-routes.en.md) |

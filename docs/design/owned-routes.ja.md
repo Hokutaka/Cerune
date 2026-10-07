@@ -11,7 +11,7 @@ Ceruneが完成成果物と実行契約を定義する経路はIR・VM・Native�
 現行実装には`run`／`run-ir`、`run-vm`、各`emit-*`があります。
 **build / release、Imageの保存・読み込み、Lean backendは未実装です。**
 以下の図の破線は計画を示します。言語機能の対応状況は経路ごとに別途管理します。
-動的配列はIR・VM・C・LLVM・QBE・WAT・Windows/Linux ASM・自前Objectで対応済みです。[IR段階設計](ir-stages.ja.md)のMIRは未実装で、新しい配布routeを確定するものではありません。
+動的配列はIR・MIR・VM・C・LLVM・QBE・WAT・Windows/Linux ASM・自前Objectで対応済みです。[IR段階設計](ir-stages.ja.md)のMIR生成・独立実行は実装済みです。これは新しいbuild／releaseの配布routeを確定するものではありません。
 
 ## 経路図
 

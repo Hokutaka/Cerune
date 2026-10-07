@@ -1,0 +1,18 @@
+// 関数へ渡す動的配列は独立コピー。文字列の内容は不変です。
+fn decorate(values: [string]) -> [string] {
+    mut result: [string] = values;
+    result[0] = concat(result[0], "！");
+    return result;
+}
+
+labels: [string] = array_copy(["こんにちは", "Cerune"]);
+decorated: [string] = decorate(labels);
+print(labels);
+print(decorated);
+
+// 毎回同じ領域を使い終えて解放することも確認します。
+for (mut i: i64 = 0; i < 3; i = i + 1) {
+    scratch: [string] = array_copy([concat("反", "復")]);
+    if i < 2 { continue; }
+    print(scratch);
+}

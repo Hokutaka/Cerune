@@ -10,6 +10,7 @@ pub mod ir_executor;
 mod iteration;
 pub mod lexer;
 pub mod mir;
+pub mod mir_executor;
 pub mod modules;
 pub mod parser;
 pub mod runtime;
@@ -241,6 +242,20 @@ pub fn run_vm(source: &str) -> Result<String, RunError> {
 /// ファイル識別子を持つIRからlowerしたbytecodeも、同じ出自付きエラーを返します。
 pub fn run_bytecode(bytecode: &bytecode::BytecodeProgram) -> Result<String, ExecutionError> {
     vm::run(bytecode).map_err(|vm_error| ExecutionError::from_vm_error(bytecode, vm_error))
+}
+
+/// ソースの構築・MIR変換と、MIR実行中の停止を区別します。
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub enum MirRunError {
+    Compilation(Diagnostic),
+    Execution(mir_executor::ExecutionError),
+}
+/// 完成済みIRをMIRへ変換し、独立したMIR実行器で実行します。
+/// importを持つ入力にはmodules::loadとmir::lowerを使用してください。
+pub fn run_mir(source: &str) -> Result<String, MirRunError> {
+    let hir = compile_to_ir(source).map_err(MirRunError::Compilation)?;
+    let mir = mir::lower(&hir).map_err(|e| MirRunError::Compilation(e.diagnostic()))?;
+    mir_executor::run(&mir).map_err(MirRunError::Execution)
 }
 
 #[cfg(test)]

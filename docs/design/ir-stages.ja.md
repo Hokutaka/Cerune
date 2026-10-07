@@ -4,13 +4,13 @@
 
 ## 現状と今回の方針
 
-調査基点はNative動的配列対応を統合した`f39f55e`です。**共通MIRの型・検証器・HIRからの変換と`emit-mir`を実装しました。MIR実行器・NativeのMIR移行・SSA・最適化passは未実装です。**
+調査基点はNative動的配列対応を統合した`f39f55e`です。**共通MIRの型・検証器・HIRからの変換と`emit-mir`を実装しました。[MIR実行器](mir-executor.ja.md)・`run-mir`も実装済みです。NativeのMIR移行・SSA・最適化passは未実装です。**
 
 | 段階 | 現在の実装 | 方針 |
 | --- | --- | --- |
 | AST | ソース構文と位置を保持。名前・型・generic等の共通処理への入力 | 新しいAST実行器は作らない |
 | HIR | 完成済み`ir::Program`が相当。型・参照先・所有処理を確定し、構造化制御を保持 | Cerune IRをそのまま使い、同じ意味表現を二重に定義しない |
-| MIR | `mir::Program`、HIRからの変換・検証・観測テキスト | 型付き一時値、basic block、明示的な制御フローを持つ、ターゲット非依存の実行表現 |
+| MIR | `mir::Program`、HIRからの変換・検証・観測テキスト・独立実行 | 型付き一時値、basic block、明示的な制御フローを持つ、ターゲット非依存の実行表現 |
 | LIR | `codegen::x86_64::ir`が相当。レジスタ操作、stack slot、frame、ターゲットを持つ | Nativeへの変換段階として整理。完成した機械命令IRとはまだ呼ばない |
 | 成果物 | bytecode、C、LLVM、QBE、WAT、ASM、自前COFF/ELF | 表現と完成成果物の違いは[経路設計](owned-routes.ja.md)で扱う |
 
@@ -33,7 +33,7 @@
 
 ## 基準経路と移行後の形
 
-現在はHIRからIR実行・bytecode・各backendへ直接分岐し、観測用のMIR生成も並存します。次の図は**将来のMIR導入後の計画**です。実行器へ渡すのは各表現であり、前の実行器の実行結果ではありません。
+現在はHIRからIR実行・bytecode・各backendへ直接分岐し、MIRの生成・独立実行も並存します。次の図は**未実装のMIR→LIR移行を含む計画**です。実行器へ渡すのは各表現であり、前の実行器の実行結果ではありません。
 
 ```text
 Source → frontend → HIR ─────────────→ IR Executor（基準）
@@ -79,7 +79,7 @@ VMや外部backendの移行は個別に判断します。C・WATでは構造化�
 
 現行のMIR検証器は、参照先、型、terminator、読取り前の確実な初期化、言語上の引数型・所有区分、停止出自を検査します。初期化は到達可能な全前任ブロックの積集合を不動点まで求めます。配列代入は、各添字列の検査が全流入経路で先行し、その後に対象や添字が再代入されていないことも確認します。右辺より先に添字を検査する具体的な展開順はテストで固定します。
 
-**heapのalias・部分初期化・retain／releaseを通した寿命の経路検証は未実装です。** 検証成功だけで所有の安全性やHIRとの実行結果一致を保証しません。MIR実行器での比較と寿命検証を後続作業に残し、将来の外部Imageを安全にloadするための検査とは区別します。
+**heapのalias・部分初期化・retain／releaseを通した寿命の経路検証は未実装です。** 検証成功だけで所有の安全性やHIRとの実行結果一致を保証しません。MIR実行器で既存経路と比較し、正常終了時の未解放領域も検出します。静的な寿命検証は後続作業に残し、将来の外部Imageを安全にloadするための検査とは区別します。
 
 実装の配置と観測情報は次のとおりです。
 
@@ -90,7 +90,7 @@ VMや外部backendの移行は個別に判断します。C・WATでは構造化�
 | [mir/validate.rs](../../src/mir/validate.rs) | 構造・型・初期化・添字検査の先行・呼出しの所有区分を検証 |
 | [mir/text.rs](../../src/mir/text.rs) | 決定的なv0.1観測テキスト。予算、型、局所値、操作、辺、出自を出力 |
 
-`BlockId`／`LocalId`／`InstructionId`は関数内の識別子です。命令番号はterminatorとも共有し、HIR NodeIdと区別します。元操作の`Source`、元操作に由来する補助辺の`Derived`、関数入口・末尾の`Synthetic`を区別します。実行操作の停止位置は単一の元操作です。未到達の文・補助ブロックも残し、暗黙のdead-code eliminationをしません。
+`BlockId`／`LocalId`／`InstructionId`は関数内の識別子です。命令番号はterminatorとも共有し、HIR NodeIdと区別します。元操作の`Source`、元操作に由来する補助辺の`Derived`、関数入口・末尾・明示的なmain呼出しの`Synthetic`を区別します。実行操作の停止位置は単一の元操作です。未到達の文・補助ブロックも残し、暗黙のdead-code eliminationをしません。
 
 型の既定値・定数宣言・genericの展開元等の宣言情報はHIRに残します。MIRは展開済みの実行操作を保持し、元の宣言情報はNodeIdとHIRから観測します。Rust APIの値を変更しても元HIRに干渉しない独立したsnapshotです。
 
@@ -125,7 +125,7 @@ HIRのNodeIdは引き続き意味上の元の文・式を指します。MIRのBl
 
 ## CLI・bundle・Leanとの関係
 
-`emit-mir <file> [-o <output.txt>]`を実装しました。`emit-hir`／`emit-lir`、pass指定、MIR実行のCLIは**候補であって未実装**です。観測テキストは`Cerune MIR v0.1`で、専用拡張子・load形式・配布用snapshotは未確定です。`emit-ir`の互換性を維持し、MIR実行器の追加だけで新しい配布用routeやbuild形式まで増やしません。
+`emit-mir <file> [-o <output.txt>]`を実装しました。`run-mir`で独立実行できます。`emit-hir`／`emit-lir`とpass指定は**候補であって未実装**です。観測テキストは`Cerune MIR v0.1`で、専用拡張子・load形式・配布用snapshotは未確定です。`emit-ir`の互換性を維持し、MIR実行器の追加だけで新しい配布用routeやbuild形式まで増やしません。
 
 [#60](https://github.com/Hokutaka/Cerune/issues/60)の観測bundleには、一回のfrontend処理から得た各表現と対応表をまとめる方向です。manifestはstage・target・pass列と成果物を結ぶ索引であり、新しい意味IRではありません。MIR導入を待たず既存の観測結果を束ねる実装も可能です。
 
@@ -140,6 +140,7 @@ HIRのNodeIdは引き続き意味上の元の文・式を指します。MIRのBl
 ```sh
 cargo run --quiet -- run examples/dynamic_arrays/lowering_order.ceru --array-heap-limit 48
 cargo run --quiet -- run-vm examples/dynamic_arrays/lowering_order.ceru --array-heap-limit 48
+cargo run --quiet -- run-mir examples/dynamic_arrays/lowering_order.ceru --array-heap-limit 48
 cargo run --quiet -- emit-ir examples/dynamic_arrays/lowering_order.ceru --array-heap-limit 48
 cargo run --quiet -- emit-mir examples/dynamic_arrays/lowering_order.ceru --array-heap-limit 48 -o target/lowering_order.mir.txt
 cargo run --quiet -- emit-bytecode examples/dynamic_arrays/lowering_order.ceru --array-heap-limit 48
@@ -148,7 +149,7 @@ cargo run --quiet -- emit-asm examples/dynamic_arrays/lowering_order.ceru --targ
 
 出力は`begin`、`2`、`40`、`[10, 20, 30]`の4行です。i=0では呼出しを短絡し、i=1は更新へ進み、i=2だけが配列をコピーしてpositiveを呼び、i=3は添字参照の前に終了します。48バイトは元配列24＋引数コピー24です。47に下げると呼出し引数の`values`で`allocation-limit-exceeded`となり、`begin`だけが残ります。
 
-将来のMIRの辺は次のようになります。**これは構造の説明であり、生成済みMIRのダンプではありません。** 図ではownership補助関数への呼出しを省略しています。MIR導入だけでそれらをinline化しません。実際には各関数の条件計算・コピー・解放にも命令やblockが必要です。
+MIRの制御フローをソースに対応させると、次のようになります。**これは構造の説明であり、生成済みMIRのダンプではありません。** 図ではownership補助関数への呼出しを省略しています。MIR導入だけでそれらをinline化しません。実際には各関数の条件計算・コピー・解放にも命令やblockが必要です。
 
 ```text
 condition → continue判定 → break判定 → 短絡の左辺
@@ -162,10 +163,10 @@ callの結果: true → 加算 / false → update
 
 | 順序 | 作業 | 完了を判断する条件 |
 | --- | --- | --- |
-| 1（実装済み） | MIRの型・block・命令・検証器、HIR→MIR、`emit-mir` | 全exampleの変換と決定性、評価順・短絡・loopの辺・出自、破損したMIRの拒否を検証。実行の一致・heap寿命の保証は後続 |
-| 2 | 独立したMIR Interpreter | bytecode／VM／HIR Executorを内部実行しない。数値・heap等のruntimeプリミティブは共有し、全現行機能を比較 |
+| 1（実装済み） | MIRの型・block・命令・検証器、HIR→MIR、`emit-mir` | 全exampleの変換と決定性、評価順・短絡・loopの辺・出自、破損したMIRの拒否を検証。実行比較は次段階、静的なheap寿命の保証は後続 |
+| 2（実装済み） | [独立したMIR Interpreter](mir-executor.ja.md)・`run-mir` | HIR・VMを内部実行せず、現在の言語機能・停止・出自・寿命を比較。動的配列はWindows/Linuxの9経路で照合 |
 | 3 | NativeをMIR入力へ移行 | 現行ASM・COFF/ELFとの既知出力・失敗・出自・ABI比較をWindows/Linuxで通す |
 | 4 | 観測bundle・Lean対応、必要な他backendの移行 | 同じコンパイル・同じ変換前後を結ぶ。証明対象と未対応を明記 |
 | 5 | SSA変換、個別の最適化pass | SSA化と最適化を別々に選択・観測。検証器と意味保存条件を各passに適用 |
 
-最初のMIR PRでSSA、最適化、全backendの付替え、Image loaderを一括導入しません。公開のMIR実行を通常の経路と同等とするのは、型・関数・module・generic・配列・文字列・所有・停止診断の対応が揃ってからです。
+最初のMIR PRでSSA、最適化、全backendの付替え、Image loaderを一括導入しません。MIR実行は型・関数・module・generic・配列・文字列・所有・停止診断に対応しています。次はNativeの入力をMIRへ移し、従来のNative生成結果と比較します。

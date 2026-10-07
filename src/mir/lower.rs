@@ -180,6 +180,25 @@ impl<'a> Builder<'a> {
     }
     fn finish(mut self, body: &[ir::Statement]) -> Result<Function, Error> {
         self.statements(body)?;
+        // 入口本体の後に呼ぶmainも、MIR内の明示命令にします。
+        if self.function.id.is_none()
+            && let Some(main) = self
+                .hir
+                .function_definitions
+                .iter()
+                .find(|f| f.name == "main")
+        {
+            self.emit(
+                InstructionKind::Call {
+                    function: main.id,
+                    arguments: vec![],
+                    ownership: main.argument_ownership(),
+                },
+                Origin::Synthetic {
+                    reason: "entry-main-call",
+                },
+            );
+        }
         let kind = match self.function.return_type {
             ir::ReturnType::Void => TerminatorKind::Return(None),
             _ => TerminatorKind::Unreachable,

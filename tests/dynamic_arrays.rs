@@ -1,4 +1,4 @@
-//! 動的配列のIR・VM・生成C・LLVM・QBE・WAT・ASM・自前Objectの結果・停止理由・出自を照合します。
+//! 動的配列のIR・MIR・VM・生成C・LLVM・QBE・WAT・ASM・自前Objectの結果・停止理由・出自を照合します。
 #[path = "support/c_arrays.rs"]
 mod c_arrays;
 #[path = "support/crash_dialogs.rs"]
@@ -17,6 +17,17 @@ fn compare(source: &str, limit: u64) -> Result<String, ir_executor::ExecutionErr
     let mut program = compile_to_ir(source).unwrap_or_else(|e| panic!("{source}\n{e:?}"));
     program.array_heap_limit = limit;
     let direct = ir_executor::run(&program);
+    let mir_program = cerune_lang::mir::lower(&program).unwrap();
+    let mir = cerune_lang::mir_executor::run(&mir_program);
+    match (&direct, &mir) {
+        (Ok(a), Ok(b)) => assert_eq!(a, b),
+        (Err(a), Err(b)) => {
+            assert!(a.runtime_failure().is_some(), "{a:?}");
+            assert_eq!(a.runtime_failure(), b.runtime_failure(), "{b:?}");
+            assert_eq!(a.output(), b.output());
+        }
+        _ => panic!("HIR: {direct:?}\nMIR: {mir:?}"),
+    }
     let vm = run_bytecode(&bytecode::lower(&program).unwrap());
     match (&direct, &vm) {
         (Ok(a), Ok(b)) => assert_eq!(a, b, "{source}"),
@@ -793,4 +804,12 @@ fn lowering_order_example_preserves_short_circuit_loop_edges_and_copy_failure() 
     let start = source.find("positive(values, i)").unwrap() + "positive(".len();
     let span = error.origin().unwrap().span;
     assert_eq!((span.start(), span.end()), (start, start + "values".len()));
+}
+
+#[test]
+fn mir_owned_values_example_matches_all_routes() {
+    success(
+        include_str!("../examples/ir_stages/owned_values.ceru"),
+        "[\"こんにちは\", \"Cerune\"]\n[\"こんにちは！\", \"Cerune\"]\n[\"反復\"]\n",
+    );
 }

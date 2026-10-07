@@ -72,4 +72,4 @@ Executorのエラーは、言語の停止理由と不正IR等の内部問題を�
 
 未対応は、テキストIRの読み込み、任意関数を外部から呼ぶ埋め込みAPI、実行の一時停止・再開です。実行途中の介入APIは設けません。再帰は未対応です。[動的配列](owned-arrays.ja.md)は後続の言語機能としてIR・VMで実装し、確保・コピー・解放を共通IRから実行します。公開Rust APIはフロントエンドの完成済みIRを前提とし、手作りIRの完全な検証器ではありません。検出した構造・型・所有の不整合は`InvalidIr`とし、未展開の`Let`/`Conditional`を黙って展開・VMへ委譲しません。
 
-実装は`src/ir_executor.rs`（制御・フレーム・診断）、`src/ir_executor/value.rs`（内部値・演算）、`src/runtime/{numeric,float_output,string_heap}.rs`（共有部品）に分けています。VM用の変換は`src/vm`に残し、直接実行からVMの値・命令列へ依存しません。
+実装は`src/ir_executor.rs`（制御・フレーム・診断）、`src/runtime/value.rs`（MIRと共有する内部値・原子的演算）、`src/runtime/{numeric,float_output,string_heap,array_heap}.rs`（共有部品）に分けています。VM用の変換は`src/vm`に残し、直接実行からVMの値・命令列へ依存しません。
