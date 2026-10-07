@@ -54,5 +54,5 @@ Cerune documentation is divided into `design`, which records design decisions, a
 
 | Document | 日本語 | English |
 | --- | --- | --- |
-| アイデアカタログ / idea-catalog | [日本語](idea/idea-catalog.ja.md) | [English](idea/idea-catalog.en.md) |
+| アイデアカタログ / Idea-catalog | [日本語](idea/idea-catalog.ja.md) | [English](idea/idea-catalog.en.md) |
 
