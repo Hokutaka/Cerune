@@ -2,13 +2,16 @@
 
 [English](architecture.en.md)
 
-Ceruneは、コンパイラによる変換を観測可能にするための静的型付き実験言語です。コンパイラの構造と変換境界を明示します。
+Ceruneは静的型付きの実験言語です。型・意味の決定と、実行表現への変換を観測可能に保ちます。[可観測性の契約](observability.ja.md)と[出力経路・ターゲット](targets.ja.md)が、観測と生成物の条件を定めます。
 
-可観測性についてCeruneが守る境界は、[可観測性の契約](observability.ja.md)で定めます。生成物に関する用語と条件は、[出力経路とターゲット](targets.ja.md)で定めます。
+現在の実装と計画は次のとおりです。
 
-IR・VM・NativeをCerune-owned、C等をemit-onlyとする[経路図とbuild / releaseの計画](owned-routes.ja.md)を別途定めます。以下の実装図と、計画中の操作は区別します。
-
-[HIR／MIR／LIRの段階設計](ir-stages.ja.md)では、完成済みCerune IRをHIRとして位置づけ、共通MIRとNative LIRへの移行順序を定めます。MIRの型・検証器・変換・`emit-mir`を実装済みです。[MIR実行器](mir-executor.ja.md)と`run-mir`も実装済みです。[NativeのMIR入力への移行](native-mir.ja.md)も実装済みです。SSA・最適化passは未実装で、以下は現在の構成です。
+| 状態 | 内容 |
+| --- | --- |
+| 実装済み | 完成済みCerune IR（HIR）の直接実行、bytecode VM、C・LLVM・QBE・WAT生成 |
+| 実装済み | 非SSAのMIRの型・変換・検証・`emit-mir`・[独立実行](mir-executor.ja.md)、[MIR→Native生成](native-mir.ja.md) |
+| 計画・未実装 | SSA・最適化pass・観測bundle。[段階設計](ir-stages.ja.md)で意味保存と観測を定める |
+| 計画・未実装 | IR・VM・Nativeの[build / release](owned-routes.ja.md)。C等はemit-onlyとして整理 |
 
 ## 設計原則
 
@@ -27,76 +30,34 @@ Cerune v0.1は、数値変換を暗黙に挿入したり、観測に有用な変
 
 ## コンパイラ構成
 
-コンパイラの処理経路は次のとおりです。
+共通frontendが意味を確定し、各実行器・生成経路へ渡します。
 
 ```text
-Cerune Source
-      ↓
-Lexer / Parser
-      ↓
-AST
-      ↓
-Cerune IR Builder
-  - shared enum/match expansion
-  - semantic validation
-  - type resolution
-  - contextual float resolution
-      ↓
-Cerune IR
-  - typed
-  - backend independent
-      │
-      ├── Observation 1: emit-ir / .ceir
-      ├── MIR lowering → validation → emit-mir / MIR Executor (run-mir)
-      │                            └→ Native LIR → ASM → Object
-      ├── IR Executor: run / run-ir (direct structured execution)
-      │
-      ↓
-Bytecode / C / LLVM / QBE / WAT Lowering
-      ↓
-Backend-specific Rust IR
-      ↓
-Emitter
-      ↓
-Backend Artifact
-      │
-      └── Observation 2
+Source → Lexer / Parser → AST → 共通frontend → Cerune IR (HIR)
+                                               ├→ emit-ir / .ceir
+                                               ├→ IR Executor: run / run-ir
+                                               ├→ MIR変換・検証
+                                               │    ├→ emit-mir / run-mir
+                                               │    └→ x86-64 LIR → ASM → 自前Object
+                                               ├→ Bytecode → emit-bytecode / run-vm
+                                               └→ C / LLVM / QBE / WAT向けIR → emit-*
 ```
 
-この構成で中心となる境界はCerune IRです。[IR Executor](ir-executor.ja.md)は完成済みIRの文・式を直接実行します。lowering・emitterを持つ生成バックエンドとは責務が異なり、共通展開後の制御構造と出自をそのまま使います。
-
-フロントエンドはCeruneプログラムの意味を決定します。バックエンドは、すでに解決された意味を対象の表現へ変換する方法を決定します。
+frontendは名前・型・文脈上の浮動小数点型を解決し、generic・enum/match・所有処理を共通展開します。[IR Executor](ir-executor.ja.md)は完成済みHIRの文・式を直接実行し、生成経路は確定済みの意味を対象の表現へ変換します。
 
 ### 構造上の不変条件
 
-次の規則をコンパイラ設計の一部とします。
+各段階の責務と識別子の意味を保ちます。
 
-1. バックエンドのコンパイルは、ASTではなくCerune IRから開始します。
-2. 意味検証と型の解決は、バックエンドへのloweringより前に行います。
-3. バックエンドのlowererは、Cerune IRと自身のバックエンドIRの両方を参照できます。
-4. バックエンドのemitterは、Cerune IR、AST、意味解析の状態に依存してはいけません。
-5. バックエンド固有のRust IRは、内部実装の境界です。
-6. 公開する観測結果は、Cerune IRのテキストと出力されたバックエンド成果物です。
-7. 最適化を暗黙に行いません。将来最適化を導入する場合は、明示的で観測可能なパスにします。
-8. Cerune IRは束縛へcompilation-localな決定的IDを付け、名前がshadowingされても参照先を明示します。
-9. 構造化された`if`、`while`、`for`、`break`、`continue`はCerune IRに保持します。`for`の初期化、条件、本文、更新は区別して保持し、branch、合流点、更新経路、後方経路、loop exitはBytecodeおよび各バックエンドIRへのloweringで導入します。
-10. Cerune IRの文と式には、一回のコンパイル内で一意な決定的`NodeId`を付けます。`NodeId`は要素の同一性、`Span`はソース上の位置を表し、互いの代わりには使いません。
+1. ASTからbackendへ直接進まず、共通の意味検証・型解決を済ませたHIRを使います。NativeはHIRからMIRへ変換した後にloweringします。
+2. lowererは入力IRと出力IRを参照します。emitterは自身のbackend IRを読み、ASTや意味解析状態から意味を再決定しません。
+3. backend固有のRust IRは内部実装です。公開する観測はHIR・MIRのテキストと生成成果物で、内部構造を安定したシリアライズ契約とはしません。
+4. 最適化は暗黙に行わず、将来のpassも選択と変換過程を明示します。
+5. 束縛にはコンパイル内で決定的なIDを付け、shadowing後も参照先を区別します。
+6. HIRは`if`・`while`・`for`・`break`・`continue`を保持し、forの初期化・条件・本文・更新を分けます。MIR・bytecodeや各backendへの変換が分岐・合流・更新・後方辺・出口を具体化します。
+7. HIRの文・式の`NodeId`はコンパイル内で一意です。要素の同一性を示すIDと、ソース位置を示す`Span`を混同しません。MIRのblock・命令IDは別の番号空間です。
 
-概念上、すべてのバックエンドは同じ構造に従います。
-
-```text
-Cerune IR
-    ↓
-backend::lower()
-    ↓
-Backend-specific Rust IR
-    ↓
-backend::emit()
-    ↓
-Artifact
-```
-
-Rustモジュールの物理的な配置はバックエンドごとに異なる場合がありますが、構造上の境界は同じです。
+Rustモジュールの配置は経路ごとに異なります。NativeはMIR→LIR→ASM、他の生成backendはHIR→backend IR→成果物へ変換します。
 
 ## Cerune IR
 
@@ -157,9 +118,9 @@ ASTとCerune IRは`&&`・`||`を通常の二項演算とは別の`Logical`とし
 
 bytecodeでは、左辺を取り出す条件付きジャンプと合流先へのジャンプに分解します。分岐命令には論理式の`NodeId`と左辺の`Span`を付け、右辺の命令は右辺自身の出自を保ちます。実行した右辺が失敗した場合、論理式全体ではなく失敗した処理の位置へ戻れます。
 
-Cでは短絡評価を持つ論理式へ、WATでは`bool`を返す`if`へ変換します。LLVMとQBEでは、左辺の結果をコンパイラ生成の保存領域へ置き、右辺を実行する分岐でだけ更新して合流後に読み取ります。Windows x86-64では結果をレジスタに残して分岐・合流します。いずれも右辺の評価を分岐の外へ持ち出しません。
+Cでは短絡評価を持つ論理式へ、WATでは`bool`を返す`if`へ変換します。LLVMとQBEでは、左辺の結果をコンパイラ生成の保存領域へ置き、右辺を実行する分岐でだけ更新して合流後に読み取ります。Windows/Linux x86-64では、MIRの一時値と条件分岐をLIRの保存領域・分岐へ変換します。いずれも右辺の評価を分岐の外へ持ち出しません。
 
-これらは既存の観測境界で調べられる変換であり、新しい公開観測APIや実行履歴を導入するものではありません。
+これらの変換はHIR・MIR・生成物で観測します。実行履歴とは区別します。
 
 ### 剰余とビット演算
 
@@ -173,7 +134,7 @@ C・LLVM・QBE・WATは、必要な演算と型の組を順序付き集合に集
 
 ### 各出力先への変換
 
-各バックエンドは、出力を生成する前にCerune IRをバックエンド固有のRust表現へloweringします。
+NativeはMIRからx86-64 LIRへ、他の生成バックエンドはHIRから各バックエンド固有のRust表現へloweringします。
 
 Cerune IRで一つの整数演算として見える式は、backend loweringで演算本体と桁あふれ検査へ分かれる場合があります。検査を外部ツールの偶然の動作へ任せず、backend内部表現では検査付き整数演算または明示的なtrap条件として保持します。生成成果物ではhelper呼び出し、overflow flagの分岐、`unreachable`など、対象に適した形として観測できます。
 
@@ -185,7 +146,7 @@ Cerune IRで一つの整数演算として見える式は、backend loweringで�
 | LLVM | LLVM IR表現 | `.ll` |
 | QBE | QBE IR表現 | `.ssa` |
 | WebAssembly | WAT指向の命令IR | `.wat` |
-| Windows/Linux x86-64直接アセンブリ | アセンブリIR | `.s` |
+| Windows/Linux x86-64直接アセンブリ | MIRから変換したx86-64 LIR | `.s` |
 | ネイティブオブジェクト | 共通ASMの読み取り・命令符号化・ELF/COFF生成 | `.o` / `.obj` |
 | Cerune bytecode | `BytecodeProgram` | `.cebc` |
 
@@ -218,57 +179,35 @@ VMは実行エラーをbytecode命令番号で報告します。`run_vm`はそ�
 
 ## 観測境界
 
-Ceruneは二つの主要な観測境界を公開します。
+現在はHIR、MIR、各経路の生成物を観測できます。実行結果・実行履歴とは区別します。
 
 ### 観測1: 解決済みのCeruneの意味
 
-```text
-cerune emit-ir <file> [-o <output.ceir>]
-```
+`emit-ir <file> [-o <output.ceir>]`は、構文・意味検証、式と文脈上の浮動小数点型の解決を終えた、backend非依存のHIRを出力します。「ソースをどう解釈したか」を示し、ABI・物理的な値配置・stack machine・対象命令の選択は含めません。
 
-`.ceir`は、フロントエンドによる意味と型の解決後、バックエンドへのlowering前に生成されます。
+### MIR: 明示的な実行手順
 
-この観測結果は、次の問いに答えるためのものです。
-
-> Ceruneは、このソースプログラムをどのような意味として解釈したか。
-
-`emit-ir`が成功した場合、次のことが保証されます。
-
-- 構文解析に成功しています。
-- 意味検証に成功しています。
-- 式の型が解決されています。
-- 文脈に基づく浮動小数点型が解決されています。
-- 結果はバックエンドに依存しません。
-
-バックエンドの値割り当て、ABI、スタックマシン、対象命令に関する決定は、この観測結果に含めません。
+`emit-mir <file> [-o <output.txt>]`は、型付き局所値・一時値、block・分岐、所有操作、元の出自を持つ非SSAのMIRを出力します。`Cerune MIR v0.1`は観測テキストであり、安定した配布形式やload可能なImageではありません。`run-mir`は同じ表現を独立実行する操作です。
 
 ### 観測2: 出力成果物
 
-各出力経路のemitコマンドは、バックエンドへのloweringと出力を終えた結果を公開します。
+生成物は「選択した経路・ターゲットが、確定済みの意味をどう表現したか」を示します。
 
-```text
-cerune emit-c <file> [-o <output.c>]
-cerune emit-llvm <file> [--target <triple>] [-o <output.ll>]
-cerune emit-qbe <file> [--target <triple>] [-o <output.ssa>]
-cerune emit-wat <file> [-o <output.wat>]
-cerune emit-asm <file> [--target <triple>] [--annotate-origins] [-o <output.s>]
-cerune emit-obj <file> --target <triple> [--annotate-origins] -o <output.o>
-cerune emit-bytecode <file> [-o <output.cebc>]
-```
+| コマンド | 成果物 | 指定 |
+| --- | --- | --- |
+| `emit-c` | `.c` | `-o`で保存 |
+| `emit-llvm` | `.ll` | `--target`、`--annotate-origins`、`-o` |
+| `emit-qbe` | `.ssa` | `--target`、`-o` |
+| `emit-wat` | `.wat` | `-o`で保存 |
+| `emit-asm` | `.s` | `--target`、`--annotate-origins`、`-o` |
+| `emit-obj` | `.o` / `.obj` | `--target`・`-o`必須。出自注釈も指定可 |
+| `emit-bytecode` | `.cebc` | `-o`で保存 |
 
-これらの観測結果は、次の問いに答えるためのものです。
-
-> 選択した出力経路とターゲットは、解決済みのCeruneプログラムをどのように表現したか。
-
-既存の`emit-*`コマンドが観測APIです。同じ機能を重複させる別の`observe`コマンドは、現在のCeruneには必要ありません。
+各コマンドは`<file>`を入力に取ります。ターゲットが必須になる機能や省略時の扱いは[CLI](../reference/cli.ja.md)で定めます。既存の`emit-*`が観測APIであり、同じ出力を重複させる汎用`observe`コマンドは設けません。
 
 ### 内部バックエンドIRは観測契約ではない
 
-バックエンド固有のRust IRは観測1と観測2の間にありますが、内部表現のままにします。
-
-バックエンドIRを公開すると、実装の詳細が互換性の要件になります。将来の実験で有用になる可能性はありますが、v0.1の観測契約には含めません。
-
-バックエンドIRの明示的な観測点は、具体的な必要性が生じた場合にのみ追加します。
+内部のRust構造を公開互換形式にすると実装詳細まで固定するため、v0.1では安定したシリアライズ契約に含めません。LIRはRust APIとASM/Objectの対応情報から調べられますが、`emit-lir`は未実装です。新しい公開観測点は、具体的な必要性と形式を定めて追加します。
 
 ## コード生成
 
@@ -359,7 +298,7 @@ Ceruneの回帰テストは、型・診断・生成物・実行結果が言語�
 
 - バックエンド固有のRust IRを公開するシリアライズ形式
 - 既存の`emit-*`コマンドと重複する汎用的な`observe`コマンド
-- すべてのバックエンドが共有する汎用SSA表現
+- すべてのバックエンドへのSSAの強制（MIRのSSA化は将来の明示的な選択肢）
 - 暗黙の最適化
 - emit-only経路の外部コンパイラやランタイムの統括（Cerune-ownedのbuild計画とは区別）
 - Cerune内部でのベンチマークまたは性能測定

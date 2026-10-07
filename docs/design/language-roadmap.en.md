@@ -2,7 +2,7 @@
 
 [日本語](language-roadmap.ja.md)
 
-As of 2026-10-07, this inventory includes IR/VM/C/LLVM/QBE/WAT/ASM/native-object dynamic arrays plus modules, removal of the parameter limit, product updates, compile-time constants, sum types with match, array-length queries, array iteration, constants in array type lengths, functions with explicit type/length parameters, rounding/saturation, aggregate equality/display, and match expressions/guards. “Current” means implemented; candidates are proposals awaiting design and implementation. This document does not commit to candidate syntax or adoption. See the [language reference](../reference/language.en.md) for the current specification.
+This inventory records capabilities, execution routes, and next steps as of 2026-10-07. Implemented work is distinguished from unimplemented plans; each design stage determines candidate syntax and adoption. See the [language reference](../reference/language.en.md) for the exact specification.
 
 ## Properties Cerune should preserve
 
@@ -23,8 +23,8 @@ Cerune prioritizes explaining a computation's meaning and its transformation int
 | Floating point | `f32`, `f64` | Arithmetic rounds at the selected precision; `convert` preserves values; float-to-integer rounding and saturation are explicit | [floating_point](../../examples/floating_point.ceru) |
 | Booleans | `bool`, comparisons, `!`, short-circuiting `&&` and `||` | No implicit numeric conversion | [short_circuit](../../examples/short_circuit.ceru) |
 | Strings | `string`, printing, `==`, `!=`, `byte_len`, `concat` | No indexing, character count, or numeric conversion | [string_byte_length](../../examples/string_byte_length.ceru), [string_lookup](../../examples/string_lookup.ceru) |
-| Fixed arrays | `[T; N]`, `array_len`, `for … in`, nesting, value passing, updates through `mut` | Length belongs to the type; indices are `i64`; no dynamic lengths or slices | [array_iteration](../../examples/array_iteration.ceru), [heat_diffusion](../../examples/heat_diffusion.ceru) |
-| Dynamic arrays | `[T]`, explicit/range copies, independent nesting, display/equality/iteration | IR/VM/C/LLVM/QBE/WAT/ASM/native objects supported; `array_repeat` pending | [copy](../../examples/dynamic_arrays/copy.ceru), [nested](../../examples/dynamic_arrays/nested.ceru) |
+| Fixed arrays | `[T; N]`, `array_len`, `for … in`, nesting, value passing, updates through `mut` | Length belongs to the type; indices are `i64`; use `[T]` for dynamic lengths; no borrowed slices | [array_iteration](../../examples/array_iteration.ceru), [heat_diffusion](../../examples/heat_diffusion.ceru) |
+| Dynamic arrays | `[T]`, explicit/range copies, independent nesting, display/equality/iteration | IR/MIR/VM/C/LLVM/QBE/WAT/ASM/native objects supported; `array_repeat` pending | [copy](../../examples/dynamic_arrays/copy.ceru), [nested](../../examples/dynamic_arrays/nested.ceru) |
 | Named product types | Fields, defaults, update expressions, nesting, value passing | No direct field assignment; construct a new value and reassign the whole binding | [product-point](../../examples/product-point.ceru), [packet_counter](../../examples/packet_counter.ceru) |
 | Functions and control flow | Typed parameters/results, explicit type/length parameters, `void`, `if`/`else`, `while`/`for`, `break`/`continue`/`return` | No fixed parameter-count limit; no recursion | [function_values](../../examples/function_values.ceru), [loop_control](../../examples/loop_control.ceru) |
 | Bindings and conversions | Immutable by default, `mut`, explicit `infer`, `T(value)` and `convert<T>(value)` | `infer` is not a runtime type; five float-to-integer rounding modes and explicit saturation are supported | [integer_conversions](../../examples/integer_conversions.ceru) |
@@ -36,7 +36,7 @@ The [example type tables](../../examples/README.en.md) list ranges and applicati
 
 ## Separate language features from output routes
 
-All features above, including dynamic arrays, are supported by the [IR Executor](ir-executor.en.md), VM, generated C, LLVM, QBE, WAT, Windows/Linux direct assembly, and objects from Cerune's own encoder. Windows/Linux distinguish targets; assembly/objects distinguish artifacts. Use the [route and target table](targets.en.md) when counting them.
+All features above, including dynamic arrays, are supported by the [IR Executor](ir-executor.en.md), [MIR Executor](mir-executor.en.md), VM, generated C, LLVM, QBE, WAT, Windows/Linux direct assembly, and objects from Cerune's own encoder. Windows/Linux distinguish targets; assembly/objects distinguish artifacts. Use the [route and target table](targets.en.md) when counting them.
 
 The native encoder generates x86-64 instructions and COFF/ELF objects. It shares assembly lowering and currently reads an internal assembly representation to encode it. Linking uses external tools. A typed machine-instruction IR or an internal linker would be compiler implementation work, not new language features. See the [native encoder design](native-encoder.en.md).
 
@@ -44,17 +44,24 @@ Language support does not imply equal observation detail. Language check failure
 
 ## Execution, distribution, and proof foundations
 
-[IR/VM/Native build / release](owned-routes.en.md) and [Lean correspondence and program-property verification](lean-verification.en.md) are separate foundation work. A new classification or proof experiment does not complete the missing language features or route support below.
+Language features are tracked separately from compiler stages, distribution, and proof. A new classification or proof experiment does not complete missing language features or route support.
 
-Dynamic-array native support is complete. The [stage design](ir-stages.en.md) addresses [Issue #94](https://github.com/Hokutaka/Cerune/issues/94). Unoptimized MIR types, validation, lowering, and `emit-mir` are implemented. The [independent MIR interpreter](mir-executor.en.md) and `run-mir` are implemented, with output/failure/origin/lifetime comparisons against existing routes. [Native lowering from MIR](native-mir.en.md) is implemented, with before/after execution comparisons and MIR→LIR→ASM/Object provenance. Next comes an observation bundle, followed separately by Lean correspondence work, SSA, and optimization passes; these remain unimplemented. Build/release follows the responsibility model in [Issue #81](https://github.com/Hokutaka/Cerune/issues/81), keeping optimization separate from distribution. Lean verification will address correspondence between representations.
+| Status | Foundation | Progress and remaining work |
+| --- | --- | --- |
+| Implemented | [MIR](ir-stages.en.md) and [independent interpreter](mir-executor.en.md) | Non-SSA types, lowering, validation, `emit-mir`, and `run-mir`; output, failures, origins, and ownership lifetimes compared with existing routes |
+| Implemented | [Native lowering from MIR](native-mir.en.md) | Before/after execution comparisons and MIR→LIR→ASM/Object provenance verified |
+| Planned, unimplemented | Observation bundle | Save stages and correspondence from one compilation ([#60](https://github.com/Hokutaka/Cerune/issues/60)) |
+| Partial experiment | [Lean verification](lean-verification.en.md) | Correspondence and program properties checked for actual HIR `u8` functions; no whole-language, MIR-transformation, or whole-compiler proof, or public `emit-lean` |
+| Planned, unimplemented | SSA and optimization passes | Make selection, transformation, and semantic preservation observable under the [#94 stage design](https://github.com/Hokutaka/Cerune/issues/94) |
+| Planned, unimplemented | [IR/VM/Native build / release](owned-routes.en.md) | Follow [#81](https://github.com/Hokutaka/Cerune/issues/81), keeping completed artifacts and distribution separate from optimization |
 
 ## Proposed priorities
 
-`array_len`, array `for … in`, constant lengths `[T; COUNT]`, and [functions with type/length parameters](generic-functions.en.md) are implemented, along with [explicit rounding and saturation](rounding-conversions.en.md) and [aggregate operations, match expressions, and guards](aggregate-values.en.md). [Dynamic string concatenation and ownership](dynamic-data.en.md) are also implemented. Add missing features in the order below, pairing a small design with examples and cross-route comparisons. Each stage determines its syntax and adoption.
+Proceed in the order below, pairing a small design with examples, known expected results, and cross-route comparisons. Each stage determines syntax and adoption.
 
-| Order | Missing feature | First contract and example |
+| Order | Next work | First contract and example |
 | --- | --- | --- |
-| 1 | [HIR/MIR/LIR implementation](ir-stages.en.md) | MIR types, validation, HIR lowering, and observation examples implemented. The independent MIR interpreter and comparisons are also implemented. Native migration is implemented. Next: observations from one compilation, then Lean correspondence, SSA, and optimization |
+| 1 | Observation bundle and stage comparisons | Collect observations from one compilation; then address Lean correspondence, SSA, and optimization passes separately under the [stage design](ir-stages.en.md) |
 | 2 | [Additional dynamic-array operations](owned-arrays.en.md) | Existing operations work across routes; consider `array_repeat` later; borrowed slices need separate lifetime and mutation type rules |
 | 3 | Recursion and external I/O | Define call storage, resource limits, I/O failure, and cleanup |
 | 4 | Module distribution | Re-exports, dependencies/versions, reproducible builds; extend explicit imports |

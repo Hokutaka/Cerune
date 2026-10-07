@@ -217,7 +217,7 @@ cerune run-vm <file>
 
 `cerune run-vm`はCerune bytecodeへloweringし、生成された`BytecodeProgram`をCerune VMで実行します。
 
-実行結果は検証や実験に利用できますが、[コンパイラ設計](../design/architecture.ja.md)で定める二つのコンパイラ観測境界とは区別します。
+実行結果は検証や実験に利用できますが、[コンパイラ設計](../design/architecture.ja.md)で定めるHIR・MIR・生成物の観測とは区別します。
 
 実行時エラーがソースコードに由来するbytecode命令で発生した場合、診断にはソース位置とbytecode命令番号の両方を表示します。
 

@@ -26,8 +26,9 @@ Ceruneは、ソースコードから生成物に至る変換過程を観測で�
 
 ## 公開観測面
 
-- 現在の公開契約は、Cerune IRと各出力経路が生成する成果物です。
+- 現在の公開観測は、Cerune IR（HIR）、MIR、各出力経路が生成する成果物です。
 - Cerune IRのテキスト表現は、文と式の`NodeId`を`#N`として公開します。
+- `emit-mir`の`Cerune MIR v0.1`は型・評価順・所有操作・分岐と出自を示す観測テキストです。安定した配布形式やロード可能なImageではありません。MIRのblock・命令IDとHIRの`NodeId`は別の番号空間です。
 - 内部で観測情報を保持することと、それを公開互換APIにすることは区別します。
 - 新しい公開形式を追加する場合は、明示的にバージョン化したスキーマとして定義します。
 
@@ -64,10 +65,12 @@ Lowererは各命令の本体と別に`Source { NodeId, Span }`または`Syntheti
 
 注釈にはソース本文・パスを含めません。注釈の有無はloweringに入力せず、出力時のコメント追加だけを切り替えます。注釈を除いたLLVMは通常出力と一致し、実行結果も同じであることをexampleで検証します。
 
-最初の対応経路はLLVMです。既存の公開観測面であるIRと生成物を使い、内部状態を書き換える窓口は追加しません。IRと注釈付きLLVMの対は`tests/fixtures/observation/string-origins/expected/`に固定しています。
+LLVM注釈はIRと生成物の対応を示し、内部状態を書き換える窓口は追加しません。IRと注釈付きLLVMの対は`tests/fixtures/observation/string-origins/expected/`に固定しています。
 
 ## ASMと機械語の出自
 
 `emit-asm --annotate-origins`もNodeIdとUTF-8バイト範囲を保持します。コメントと`cerune_origin_nN_...`ラベルを加え、オブジェクトのシンボル・逆アセンブルからIRへ辿れます。両ターゲットのIR/ASMの対は`tests/fixtures/observation/native-values/expected/`に固定しています。注釈を除いたASMの一致と、注釈の有無による命令バイトの一致をテストします。
+
+Nativeは[HIR→MIR→LIR→ASM/Object](native-mir.ja.md)の順で変換します。注釈付きASMには`# cerune-mir: v1`の対応情報、Objectには`cerune_origin_mir_...`シンボルも残します。一つのMIR操作から複数のLIR命令が生まれ、LIRの検査・ABI処理はさらにASM命令へ展開されるため、命令数は一対一ではありません。出自にはソース由来・意味処理からの派生・コンパイラ生成を区別する情報を保持します。
 
 機械語の符号化は[自前エンコーダ](native-encoder.ja.md)と外部アセンブラから選び、リンクは明示した外部ツールが担当します。生成、想定した停止、正常実行、失敗を記録します。出自の範囲とアドレスの意味、実行手順は[ASMから機械語までを辿る](native-code.ja.md)を参照してください。
