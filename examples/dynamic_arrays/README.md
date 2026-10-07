@@ -2,10 +2,11 @@
 
 [English](README.en.md)
 
-IR Executor・VM・生成C・LLVM・QBEで実行できます。WAT・ASM・native objectは未対応です。
+IR Executor・VM・生成C・LLVM・QBE・WATで実行できます。ASM・native objectは未対応です。
 
 | 例 | 確認すること |
 | --- | --- |
+| [labels.ceru](labels.ceru) | 文字列配列を関数で加工し、元の配列・保存したコピー・再代入後を比較 |
 | [batches.ceru](batches.ceru) | 二つの範囲を固定長配列に入れて返し、保存したコピーと更新を比較 |
 | [readings.ceru](readings.ceru) | 構造体配列の範囲を関数から返し、コピーを修正して集計 |
 | [window.ceru](window.ceru) | 実行時の長さで範囲を選び、関数から返した配列だけを更新 |
@@ -46,3 +47,13 @@ clang batches.s -o batches
 ```
 
 WindowsではCeruneのターゲットを`x86_64-pc-windows-msvc`、QBEを`-t amd64_win`に変え、`clang --target=x86_64-pc-windows-msvc batches.s -o batches.exe`でリンクします。`.\batches.exe`は更新後`[[99, 20], []]`、保存値`[[10, 20], [30]]`、外側の長さ2、空配列の長さ0を出力します。
+
+WATでの生成・実行例（NodeとWABTを使う開発用ホスト）：
+
+```sh
+cargo run --quiet -- emit-wat examples/dynamic_arrays/labels.ceru -o labels.wat
+node target/wasm-tools/node_modules/wabt/bin/wat2wasm labels.wat -o labels.wasm
+node tests/support/run_wasm.cjs labels.wasm
+```
+
+WABTは`npm install --prefix target/wasm-tools --no-audit --no-fund wabt@1.0.39`で用意できます。出力は順に`["月", "火"]`、`["予定:月", "予定:火"]`、`["休み", "予定:火"]`、`false`です。IR・VM・C・LLVM・QBEでも同じ出力をテストします。コピー・解放・検査は生成WATにも残り、配列を置くmemoryは外部へ公開しません。

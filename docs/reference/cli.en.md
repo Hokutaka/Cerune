@@ -42,7 +42,7 @@ cerune emit-llvm examples/string_concat.ceru --target x86_64-unknown-linux-gnu -
 
 The same commands also accept `--array-heap-limit <bytes>`, with the same default and numeric syntax as the string option. The budgets are independent. Array accounting measures live element storage using logical widths, not total physical memory. `check` and `emit-sources` reject this option.
 
-Dynamic arrays support `run` / `run-ir` / `run-vm` and IR/bytecode/C/LLVM/QBE output. WAT, ASM, and native objects diagnose unsupported arrays before modifying output files. IR, bytecode, and generated C/LLVM/QBE record the array budget in use. LLVM and QBE require `--target`, including unused array types.
+Dynamic arrays support `run` / `run-ir` / `run-vm` and IR/bytecode/C/LLVM/QBE/WAT output. ASM and native objects diagnose unsupported arrays before modifying output files. IR, bytecode, and generated C/LLVM/QBE/WAT record the array budget in use. LLVM and QBE require `--target`, including unused array types.
 
 ```sh
 cerune run examples/dynamic_arrays/copy.ceru --array-heap-limit 1024

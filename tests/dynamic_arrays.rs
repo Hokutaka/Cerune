@@ -1,4 +1,4 @@
-//! 動的配列のIR・VM・生成C・LLVM・QBEの結果・停止理由・出自を照合します。
+//! 動的配列のIR・VM・生成C・LLVM・QBE・WATの結果・停止理由・出自を照合します。
 #[path = "support/c_arrays.rs"]
 mod c_arrays;
 #[path = "support/crash_dialogs.rs"]
@@ -7,6 +7,8 @@ mod crash_dialogs;
 mod llvm_arrays;
 #[path = "support/qbe_arrays.rs"]
 mod qbe_arrays;
+#[path = "support/wat_arrays.rs"]
+mod wat_arrays;
 use cerune_lang::{bytecode, compile_to_ir, ir, ir_executor, run_bytecode};
 
 fn compare(source: &str, limit: u64) -> Result<String, ir_executor::ExecutionError> {
@@ -26,6 +28,7 @@ fn compare(source: &str, limit: u64) -> Result<String, ir_executor::ExecutionErr
     c_arrays::compare(&program, &direct);
     llvm_arrays::compare(&program, &direct);
     qbe_arrays::compare(&program, &direct);
+    wat_arrays::compare(&program, &direct);
     direct
 }
 fn success(source: &str, expected: &str) {
@@ -214,8 +217,8 @@ fn unimplemented_compiled_routes_diagnose_even_unused_dynamic_types() {
         c_arrays::compare(&p, &ir_executor::run(&p));
         llvm_arrays::compare(&p, &ir_executor::run(&p));
         qbe_arrays::compare(&p, &ir_executor::run(&p));
+        wat_arrays::compare(&p, &ir_executor::run(&p));
         for result in [
-            codegen::emit_wat(&p),
             codegen::emit_x86_64_win_asm(&p),
             x86_64::emit_asm(&p, Target::X86_64UnknownLinuxGnu),
             x86_64::emit_asm_with_origins(&p, Target::X86_64PcWindowsMsvc),
@@ -241,6 +244,11 @@ fn unimplemented_compiled_routes_diagnose_even_unused_dynamic_types() {
 #[test]
 fn examples_and_generated_steps_match_checked_artifacts() {
     success(
+        include_str!("../examples/dynamic_arrays/labels.ceru"),
+        "[\"月\", \"火\"]\n[\"予定:月\", \"予定:火\"]\n[\"休み\", \"予定:火\"]\nfalse\n",
+    );
+
+    success(
         include_str!("../examples/dynamic_arrays/batches.ceru"),
         "[[99, 20], []]\n[[10, 20], [30]]\n2\n0\n",
     );
@@ -265,6 +273,10 @@ fn examples_and_generated_steps_match_checked_artifacts() {
         success(source, expected);
     }
     let p = compile_to_ir(include_str!("fixtures/dynamic-arrays/source.ceru")).unwrap();
+    assert_eq!(
+        cerune_lang::codegen::emit_wat(&p).unwrap(),
+        include_str!("fixtures/dynamic-arrays/wat.wat")
+    );
     assert_eq!(
         cerune_lang::codegen::llvm::emit_llvm_with_target(
             &p,
@@ -314,6 +326,7 @@ fn array_and_string_budgets_are_independent() {
     c_arrays::compare(&p, &ir_executor::run(&p));
     llvm_arrays::compare(&p, &ir_executor::run(&p));
     qbe_arrays::compare(&p, &ir_executor::run(&p));
+    wat_arrays::compare(&p, &ir_executor::run(&p));
     assert_eq!(ir_executor::run(&p).unwrap(), "[\"ab\"]\n");
     assert_eq!(
         run_bytecode(&bytecode::lower(&p).unwrap()).unwrap(),
@@ -323,6 +336,7 @@ fn array_and_string_budgets_are_independent() {
     c_arrays::compare(&p, &ir_executor::run(&p));
     llvm_arrays::compare(&p, &ir_executor::run(&p));
     qbe_arrays::compare(&p, &ir_executor::run(&p));
+    wat_arrays::compare(&p, &ir_executor::run(&p));
     let e = ir_executor::run(&p).unwrap_err();
     assert_eq!(
         e.runtime_failure().unwrap().code.name(),
@@ -431,6 +445,37 @@ fn cli_examples_limits_modules_and_unsupported_output_are_explicit() {
         assert!(!result.status.success());
         assert!(String::from_utf8_lossy(&result.stderr).contains("allocation-limit-exceeded"));
     }
+    for limit in ["32", "31"] {
+        let wat = cli(&[
+            "emit-wat",
+            file,
+            "--array-heap-limit",
+            limit,
+            "--string-heap-limit",
+            "0",
+        ]);
+        assert!(wat.status.success(), "{wat:?}");
+        let text = String::from_utf8(wat.stdout).unwrap();
+        if let Some(actual) = wat_arrays::execute(&text) {
+            let mut p = compile_to_ir(include_str!("fixtures/dynamic-arrays/source.ceru")).unwrap();
+            p.array_heap_limit = limit.parse().unwrap();
+            match ir_executor::run(&p) {
+                Ok(expected) => {
+                    assert!(actual.status.success(), "{actual:?}");
+                    assert_eq!(actual.stdout, expected.as_bytes());
+                    assert!(actual.stderr.is_empty());
+                }
+                Err(expected) => {
+                    assert!(!actual.status.success());
+                    assert_eq!(actual.stdout, expected.output().as_bytes());
+                    assert_eq!(
+                        String::from_utf8(actual.stderr).unwrap(),
+                        format!("cerune: {}\n", expected.runtime_failure().unwrap().record())
+                    );
+                }
+            }
+        }
+    }
     let preserved = w.0.join("missing-llvm-target.ll");
     fs::write(&preserved, b"keep").unwrap();
     let result = cli(&["emit-llvm", file, "-o", preserved.to_str().unwrap()]);
@@ -447,7 +492,7 @@ fn cli_examples_limits_modules_and_unsupported_output_are_explicit() {
             .contains("dynamic arrays require an explicit --target")
     );
     assert_eq!(fs::read(&preserved).unwrap(), b"keep");
-    for command in ["emit-wat", "emit-asm", "emit-obj"] {
+    for command in ["emit-asm", "emit-obj"] {
         let out = w.0.join("preserved-output");
         fs::write(&out, b"keep").unwrap();
         let mut args = vec![command, file, "-o", out.to_str().unwrap()];
@@ -522,6 +567,7 @@ fn cli_examples_limits_modules_and_unsupported_output_are_explicit() {
         c_arrays::compare(&p, &direct);
         llvm_arrays::compare(&p, &direct);
         qbe_arrays::compare(&p, &direct);
+        wat_arrays::compare(&p, &direct);
     }
     fs::write(
         w.0.join("values.ceru"),
@@ -658,5 +704,34 @@ fn qbe_requires_an_explicit_array_target_even_for_unused_types() {
             );
             assert_eq!(ir::text::emit(&p), before);
         }
+    }
+}
+
+#[test]
+fn wat_allocation_and_memory_boundaries_keep_original_origins() {
+    let p = compile_to_ir("print(7); print(array_copy([1]));").unwrap();
+    wat_arrays::runtime_boundaries(&p);
+}
+
+#[test]
+fn wat_reuses_array_storage_and_string_storage_without_overlap() {
+    wat_arrays::reuse_and_growth();
+}
+
+#[test]
+fn dynamic_index_keeps_all_i64_bits_before_wasm32_addressing() {
+    for index in ["-1", "4294967296", "9223372036854775807"] {
+        failure(
+            &format!("a:[i64]=array_copy([42]);print(7);print(a[{index}]);"),
+            ir::DEFAULT_ARRAY_HEAP_LIMIT,
+            "array-index-out-of-bounds",
+            "7\n",
+        );
+        failure(
+            &format!("mut a:[i64]=array_copy([42]);print(7);a[{index}]=9;"),
+            ir::DEFAULT_ARRAY_HEAP_LIMIT,
+            "array-index-out-of-bounds",
+            "7\n",
+        );
     }
 }

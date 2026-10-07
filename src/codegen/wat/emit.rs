@@ -76,6 +76,13 @@ pub fn emit(module: &Module) -> String {
         }
     }
 
+    if let Some(limit) = module.array_heap_limit {
+        output.push_str(&super::array::support(
+            limit,
+            module.string_heap_start,
+            !(module.uses_strings && module.string_heap_limit.is_some()),
+        ));
+    }
     if module.uses_write {
         output.push_str(&crate::codegen::display::wat());
     }
@@ -171,6 +178,9 @@ fn collect_helpers<'a>(
 
 fn emit_helper(instruction: &Instruction, origin: Origin, name: &str, output: &mut String) {
     match instruction {
+        Instruction::ArrayAllocate { .. }
+        | Instruction::ArrayAddress
+        | Instruction::ArrayRangeCheck => super::array::checked(instruction, origin, name, output),
         Instruction::StringConcat => super::heap::concat(origin, name, output),
         Instruction::ConvertNumeric { conversion } => {
             super::conversion::emit_support(*conversion, origin, name, output)
@@ -271,6 +281,21 @@ fn emit_instruction(
         Instruction::I64LeU => writeln!(output, "{prefix}i64.le_u").unwrap(),
         Instruction::I64GtU => writeln!(output, "{prefix}i64.gt_u").unwrap(),
         Instruction::I64GeU => writeln!(output, "{prefix}i64.ge_u").unwrap(),
+        Instruction::ArrayAllocate { .. }
+        | Instruction::ArrayAddress
+        | Instruction::ArrayRangeCheck => unreachable!("checked arrays carry their source origin"),
+        Instruction::ArrayInitAddress => {
+            writeln!(output, "{prefix}call $cerune_array_init_address").unwrap()
+        }
+        Instruction::ArrayInitialized => {
+            writeln!(output, "{prefix}call $cerune_array_initialized").unwrap()
+        }
+        Instruction::ArrayLength => writeln!(output, "{prefix}call $cerune_array_length").unwrap(),
+        Instruction::ArrayRetain => writeln!(output, "{prefix}call $cerune_array_retain").unwrap(),
+        Instruction::ArrayReleaseOwner => {
+            writeln!(output, "{prefix}call $cerune_array_release_owner").unwrap()
+        }
+        Instruction::ArrayFree => writeln!(output, "{prefix}call $cerune_array_free").unwrap(),
         Instruction::StringConcat => unreachable!("concat carries its source origin"),
         Instruction::StringManage { retain } => {
             writeln!(
@@ -450,7 +475,9 @@ fn emit_instruction(
                 Type::I64 => "$print_i64",
                 Type::F32 => "$print_f32",
                 Type::F64 => "$print_f64",
-                Type::Pointer => unreachable!("pointers are not printable Cerune values"),
+                Type::DynamicArray | Type::Pointer => {
+                    unreachable!("pointers are not printable Cerune values")
+                }
             };
 
             writeln!(output, "{prefix}call {function}").unwrap();
@@ -472,7 +499,7 @@ fn emit_memory(instruction: &str, offset: u32, prefix: &str, output: &mut String
 
 fn wat_type(ty: Type) -> &'static str {
     match ty {
-        Type::String | Type::Bool => "i32",
+        Type::DynamicArray | Type::String | Type::Bool => "i32",
         Type::I64 => "i64",
         Type::F32 => "f32",
         Type::F64 => "f64",

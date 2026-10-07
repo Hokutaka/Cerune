@@ -7,7 +7,7 @@
 | 場所 | 内容 |
 | --- | --- |
 | このディレクトリ | 一括実行できるプログラム |
-| [dynamic_arrays](dynamic_arrays/README.md) | 動的配列の作成・範囲コピー・入れ子。IR・VM・生成C・LLVM・QBEで実行 |
+| [dynamic_arrays](dynamic_arrays/README.md) | 動的配列の作成・範囲コピー・入れ子。IR・VM・生成C・LLVM・QBE・WATで実行 |
 | [modules](modules/README.md) | import、単一ファイル版との比較、意図した停止 |
 | [runtime_failures](runtime_failures/README.md) | 停止前の出力と失敗する式を追う4例 |
 | [source_files](source_files/README.md) | 型・関数のファイルを別々に解析し、出自を比較するRust API例。importは使わない |
@@ -99,7 +99,7 @@ cargo run --quiet -- emit-c examples/linear_regression.ceru
 
 | 型の形 | サンプル | 確認すること |
 | --- | --- | --- |
-| 動的配列 `[T]`（IR・VM・C・LLVM・QBE） | [copy.ceru](dynamic_arrays/copy.ceru)、[nested.ceru](dynamic_arrays/nested.ceru) | 空範囲、独立コピー、入れ子・関数・enum・反復 |
+| 動的配列 `[T]`（IR・VM・C・LLVM・QBE・WAT） | [copy.ceru](dynamic_arrays/copy.ceru)、[nested.ceru](dynamic_arrays/nested.ceru) | 空範囲、独立コピー、入れ子・関数・enum・反復 |
 | 固定長配列 `[T; N]` | [fixed_arrays.ceru](fixed_arrays.ceru)、[bubble_sort.ceru](bubble_sort.ceru) | 添字、要素の更新、コピー後の独立性 |
 | 構造体 `type Point { ... }` | [product-point.ceru](product-point.ceru)、[product_arrays.ceru](product_arrays.ceru) | フィールド・既定値と、構造体を要素にする配列 |
 | 入れ子の配列・構造体 | [function_values.ceru](function_values.ceru)、[u64_values.ceru](u64_values.ceru)、[string_lookup.ceru](string_lookup.ceru) | 数値や文字列を組み合わせ、関数へ値として渡す |
@@ -258,7 +258,7 @@ cargo run --quiet -- emit-c examples/linear_regression.ceru
 
 ## 生成と検証
 
-VM・C・LLVM・QBE・WAT・Windows/Linux ASM・自前オブジェクトで、上記の型と言語機能を扱います。可変配列によるその場でのソートや動的計画法も可能です。再帰と動的長のコレクションは未対応です。
+VM・C・LLVM・QBE・WAT・Windows/Linux ASM・自前オブジェクトで、動的配列を除く上記の型と言語機能を扱います。可変配列によるその場でのソートや動的計画法も可能です。再帰は未対応です。動的配列はIR・VM・C・LLVM・QBE・WATで対応し、ASM・native objectは未対応です。
 
 | 経路 | 実行条件・確認内容 |
 | --- | --- |

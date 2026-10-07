@@ -2,10 +2,11 @@
 
 [日本語](README.md)
 
-Run with IR Executor, VM, generated C, LLVM, or QBE. WAT, ASM, and native objects are pending.
+Run with IR Executor, VM, generated C, LLVM, QBE, or WAT. ASM and native objects are pending.
 
 | Example | Checks |
 | --- | --- |
+| [labels.ceru](labels.ceru) | Transform a string array in a function; compare the original, saved copy, and reassigned value |
 | [batches.ceru](batches.ceru) | Return two ranges in a fixed array and compare updates with a saved copy |
 | [readings.ceru](readings.ceru) | Return a range of records, edit a copy, and total its values |
 | [window.ceru](window.ceru) | Choose a runtime-sized range; update the returned array independently |
@@ -46,3 +47,13 @@ clang batches.s -o batches
 ```
 
 On Windows, select Cerune target `x86_64-pc-windows-msvc` and QBE `-t amd64_win`, then link with `clang --target=x86_64-pc-windows-msvc batches.s -o batches.exe`. Run `.\batches.exe`: it prints the updated `[[99, 20], []]`, saved `[[10, 20], [30]]`, outer length 2, and empty-array length 0.
+
+Generate and run WAT with the development host (Node and WABT):
+
+```sh
+cargo run --quiet -- emit-wat examples/dynamic_arrays/labels.ceru -o labels.wat
+node target/wasm-tools/node_modules/wabt/bin/wat2wasm labels.wat -o labels.wasm
+node tests/support/run_wasm.cjs labels.wasm
+```
+
+Install WABT with `npm install --prefix target/wasm-tools --no-audit --no-fund wabt@1.0.39`. Output is `["月", "火"]`, `["予定:月", "予定:火"]`, `["休み", "予定:火"]`, then `false`. Tests compare the same output through IR/VM/C/LLVM/QBE. Copies, releases, and checks remain visible in generated WAT; array memory is not exposed to the host.

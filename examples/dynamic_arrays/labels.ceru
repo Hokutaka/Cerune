@@ -1,0 +1,20 @@
+// 配列は独立コピー、文字列の内容は不変です。
+// Arrays copy independently; string contents remain immutable.
+fn labelled(values: [string], prefix: string) -> [string] {
+    mut result: [string] = values;
+    mut index: i64 = 0;
+    while index < array_len(result) {
+        result[index] = concat(prefix, result[index]);
+        index = index + 1;
+    }
+    return result;
+}
+
+original: [string] = array_copy(["月", "火"]);
+mut labels: [string] = labelled(original, "予定:");
+saved: [string] = labels;
+labels[0] = "休み";
+print(original);
+print(saved);
+print(labels);
+print(labels == saved);

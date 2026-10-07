@@ -1,3 +1,4 @@
+mod array;
 mod conversion;
 mod emit;
 mod failure;
@@ -15,7 +16,6 @@ use lower::lower;
 use crate::{diagnostic::Diagnostic, ir as cerune_ir};
 
 pub fn emit_wat(program: &cerune_ir::Program) -> Result<String, Diagnostic> {
-    super::support::require_static_arrays(program, "WAT")?;
     let module = lower(program);
 
     Ok(emit(&module))

@@ -2,7 +2,7 @@
 
 [English](language-roadmap.en.md)
 
-2026-10-03時点、動的配列のIR・VM・C・LLVM・QBE対応に加え、モジュール・引数制限の解消・構造体の更新式・コンパイル時定数・直和型とmatch・配列長の取得・配列反復・配列型の定数長・型と長さを指定するジェネリック関数・丸めと飽和・複合値の比較と表示・match式とガードまでを反映しています。「現在」は実装済み、「候補」は設計・実装前の提案です。候補の構文や採用を確定する文書ではありません。現在の正確な仕様は[言語リファレンス](../reference/language.ja.md)を参照してください。
+2026-10-07時点、動的配列のIR・VM・C・LLVM・QBE・WAT対応に加え、モジュール・引数制限の解消・構造体の更新式・コンパイル時定数・直和型とmatch・配列長の取得・配列反復・配列型の定数長・型と長さを指定するジェネリック関数・丸めと飽和・複合値の比較と表示・match式とガードまでを反映しています。「現在」は実装済み、「候補」は設計・実装前の提案です。候補の構文や採用を確定する文書ではありません。現在の正確な仕様は[言語リファレンス](../reference/language.ja.md)を参照してください。
 
 ## Ceruneが持つべき性質
 
@@ -24,7 +24,7 @@ Ceruneでは、書いた計算の意味と、それが実行される表現へ�
 | 真偽値 | `bool`、比較、`!`、短絡評価する`&&`・`||` | 数値との暗黙変換なし | [short_circuit](../../examples/short_circuit.ceru) |
 | 文字列 | `string`、表示、`==`・`!=`、`byte_len`、`concat` | 添字参照・文字数・数値変換は未実装 | [string_byte_length](../../examples/string_byte_length.ceru)、[string_lookup](../../examples/string_lookup.ceru) |
 | 固定長配列 | `[T; N]`、`array_len`、`for … in`、入れ子、値渡し、`mut`な要素の更新 | 長さは型の一部。添字は`i64`。動的長・スライスなし | [array_iteration](../../examples/array_iteration.ceru)、[heat_diffusion](../../examples/heat_diffusion.ceru) |
-| 動的配列 | `[T]`、明示コピー・範囲コピー、独立した入れ子、表示・比較・反復 | IR・VM・C・LLVM・QBE対応。WAT・native・`array_repeat`は後続 | [copy](../../examples/dynamic_arrays/copy.ceru)、[nested](../../examples/dynamic_arrays/nested.ceru) |
+| 動的配列 | `[T]`、明示コピー・範囲コピー、独立した入れ子、表示・比較・反復 | IR・VM・C・LLVM・QBE・WAT対応。native・`array_repeat`は後続 | [copy](../../examples/dynamic_arrays/copy.ceru)、[nested](../../examples/dynamic_arrays/nested.ceru) |
 | 名前付きproduct type | フィールド、既定値、更新式、入れ子、値渡し | フィールドの直接代入なし。新しい値を構築して全体を再代入 | [product-point](../../examples/product-point.ceru)、[packet_counter](../../examples/packet_counter.ceru) |
 | 関数と制御構文 | 型付き引数・戻り値、型・長さの明示パラメーター、`void`、`if`・`else`、`while`・`for`、`break`・`continue`・`return` | 引数数の固定上限なし。再帰なし | [function_values](../../examples/function_values.ceru)、[loop_control](../../examples/loop_control.ceru) |
 | 束縛と変換 | 既定で不変、`mut`、明示的な`infer`、`T(value)`と`convert<T>(value)` | `infer`は実行時型ではない。浮動小数点から整数への全5丸め方と明示的な飽和に対応 | [integer_conversions](../../examples/integer_conversions.ceru) |
@@ -36,7 +36,7 @@ Ceruneでは、書いた計算の意味と、それが実行される表現へ�
 
 ## 言語機能と出力経路を分ける
 
-動的配列はIR Executor・VM・生成C・LLVM・QBEまで対応しています。それ以外の上記機能を[IR Executor](ir-executor.ja.md)、VM、生成C、LLVM、QBE、WAT、Windows/Linuxの直接ASM、および自前エンコーダのオブジェクトで扱えます。Windows/Linuxはターゲットの違い、ASM/オブジェクトは成果物の違いです。[経路とターゲットの表](targets.ja.md#現在の構成)を基準に数えます。
+動的配列はIR Executor・VM・生成C・LLVM・QBE・WATまで対応しています。それ以外の上記機能を[IR Executor](ir-executor.ja.md)、VM、生成C、LLVM、QBE、WAT、Windows/Linuxの直接ASM、および自前エンコーダのオブジェクトで扱えます。Windows/Linuxはターゲットの違い、ASM/オブジェクトは成果物の違いです。[経路とターゲットの表](targets.ja.md#現在の構成)を基準に数えます。
 
 自前エンコーダはx86-64命令とCOFF/ELFを生成します。ASMと共通のloweringを使い、現在は内部ASM表現を読み取って符号化します。リンクは外部ツールです。将来の型付き機械命令IRや自前リンカはコンパイラ実装の候補であり、新しい言語機能ではありません。[自前エンコーダの設計](native-encoder.ja.md)を参照してください。
 
@@ -46,7 +46,7 @@ Ceruneでは、書いた計算の意味と、それが実行される表現へ�
 
 [IR・VM・Nativeのbuild / release](owned-routes.ja.md)と[Leanによる変換の対応・プログラムの性質の検証](lean-verification.ja.md)を別の基盤作業として進めます。新しい分類や証明実験によって、下記の言語機能や生成経路の未対応を実装済みとはしません。
 
-当面は、経路整理・Lean検証実験 → QBE 1.3更新・Windows対応 → 動的配列の経路差解消 → build / release → Lean backendの拡充、の順で進めます。先に既存の意味と挙動を揃え、それを成果物構築と証明の基準にします。
+次は動的配列のnative対応で経路差を解消し、[Issue #94](https://github.com/Hokutaka/Cerune/issues/94)のHIR／MIR／LIRと観測・最適化の設計へ進みます。共通MIR、MIR実行、SSA、最適化passは未実装です。build／releaseは[Issue #81](https://github.com/Hokutaka/Cerune/issues/81)の責務整理を基準に進め、最適化と配布を分けます。Lean検証は各段階の意味の対応を扱います。
 
 ## 次に持つべきもの：提案する順序
 
@@ -54,9 +54,10 @@ Ceruneでは、書いた計算の意味と、それが実行される表現へ�
 
 | 順序 | 未対応機能 | 最初に決める契約・確認例 |
 | --- | --- | --- |
-| 1 | [動的配列と範囲](owned-arrays.ja.md)の生成経路 | IR・VM・C・LLVM・QBEの実装にWAT・nativeを揃え、`array_repeat`へ進む。借用スライスは寿命と更新の型規則を別途定義 |
-| 2 | 再帰・外部入出力 | 呼び出し領域・資源上限・入出力失敗・終了処理を定義 |
-| 3 | モジュールの配布 | 再export、依存・版・再現可能なビルド。現行の明示importを基準に拡張 |
+| 1 | [動的配列と範囲](owned-arrays.ja.md)の生成経路 | IR・VM・C・LLVM・QBE・WATの実装にnativeを揃える。`array_repeat`は後続の操作。借用スライスは寿命と更新の型規則を別途定義 |
+| 2 | HIR／MIR／LIRの設計 | まず意味・制御フロー・機械依存の役割を整理。MIRの最初の実装とSSA化・最適化を分けて観測 |
+| 3 | 再帰・外部入出力 | 呼び出し領域・資源上限・入出力失敗・終了処理を定義 |
+| 4 | モジュールの配布 | 再export、依存・版・再現可能なビルド。現行の明示importを基準に拡張 |
 | 実験枠 | GPUの数値計算 | 対応型・メモリ・同期・診断を限定し、要素ごとの独立した計算をCPUと比較 |
 
 [固定容量の使用数](../../examples/bounded_sequence.ceru)と[範囲コピー](../../examples/array_window.ceru)の例は現行機能で実行できます。動的配列や借用スライスの実装済みサンプルではありません。
@@ -64,6 +65,16 @@ Ceruneでは、書いた計算の意味と、それが実行される表現へ�
 既存の基盤は[共通の停止記録](runtime-diagnostics.ja.md)、[ファイルの出自](source-files.ja.md)、[モジュール](modules.ja.md)、[定数](constants.ja.md)、[関数](functions.ja.md)、[構造体更新](product-updates.ja.md)、[直和型](sum-types.ja.md)、[固定長配列](fixed-arrays.ja.md)です。[混在引数](../../examples/function_arguments.ceru)・[配列長](../../examples/array_length.ceru)の例で値渡しと評価順を確認できます。
 
 この表は一括実装の約束ではありません。GPU実験は上記すべての完了を前提にしません。継承、暗黙の共有可変参照、自動GPU振り分け、汎用非同期処理は、現在の例から必要性が確認できていないため先行させません。
+
+追加の検討事項はIssueで管理します。現段階で構文や採用を確定したものではありません。
+
+| 検討 | 進め方 |
+| --- | --- |
+| [#88 整数演算の方針](https://github.com/Hokutaka/Cerune/issues/88) | 通常演算のcheckedを維持し、明示的wrappingなどの意味を分けて設計 |
+| [#89 外部入力と連携](https://github.com/Hokutaka/Cerune/issues/89) | 実用途から必要な入力・資源・失敗を整理し、各経路で意味を合わせる |
+| [#90 optional let](https://github.com/Hokutaka/Cerune/issues/90) | formatterと同時に検討し、束縛の意味やIRを増やさない |
+| [#92 QBEの上流patch](https://github.com/Hokutaka/Cerune/issues/92) | 既存回避処理を維持して検証し、正式な上流変更を基準に更新 |
+| [#93 FPGA](https://github.com/Hokutaka/Cerune/issues/93) | 同じIRの意味を別の実装形態で実現できるかを調査。言語の意味を分けない |
 
 ## GPUをどう扱うか
 

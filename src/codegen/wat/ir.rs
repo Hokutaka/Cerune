@@ -2,6 +2,8 @@
 pub enum Type {
     /// 不変な長さ付き静的バイト列への参照です。
     String,
+    /// 非公開linear memory上の動的配列ownerへの参照です。
+    DynamicArray,
     Bool,
     I64,
     F32,
@@ -14,6 +16,7 @@ pub enum Type {
 pub struct Module {
     pub string_heap_start: usize,
     pub string_heap_limit: Option<u64>,
+    pub array_heap_limit: Option<u64>,
     pub uses_write: bool,
     pub uses_strings: bool,
     pub strings: Vec<(usize, String)>,
@@ -48,6 +51,18 @@ pub enum LoopKind {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Instruction {
+    ArrayAllocate {
+        width: u64,
+        stride: usize,
+    },
+    ArrayRangeCheck,
+    ArrayAddress,
+    ArrayInitAddress,
+    ArrayInitialized,
+    ArrayLength,
+    ArrayRetain,
+    ArrayReleaseOwner,
+    ArrayFree,
     StringConcat,
     StringManage {
         retain: bool,
