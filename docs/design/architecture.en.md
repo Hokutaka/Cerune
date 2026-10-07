@@ -2,13 +2,16 @@
 
 [日本語](architecture.ja.md)
 
-Cerune is a statically typed experimental language designed to make compiler transformations observable. Its compiler architecture and transformation boundaries are explicit.
+Cerune is a statically typed experimental language that keeps type/semantic decisions and transformations into executable representations observable. The [observability contract](observability.en.md) and [output routes/targets](targets.en.md) define observation and artifact conditions.
 
-The boundaries that Cerune preserves for observability are defined in the [observability contract](observability.en.md). Terminology and conditions for generated output are defined in [output routes and targets](targets.en.md).
+Current implementation and plans are summarized below.
 
-The [route diagram and build / release plan](owned-routes.en.md) define IR, VM, and Native as Cerune-owned and C-like outputs as emit-only. Planned operations are distinct from the implemented pipeline below.
-
-[The HIR/MIR/LIR design](ir-stages.en.md) identifies completed Cerune IR as HIR and plans common MIR and Native LIR migration. MIR types, validation, lowering, and `emit-mir` are implemented. The [MIR interpreter](mir-executor.en.md) and `run-mir` are implemented. [Native lowering from MIR](native-mir.en.md) is also implemented. SSA and optimization passes remain unimplemented; the structure below describes the current compiler.
+| Status | Contents |
+| --- | --- |
+| Implemented | Direct execution of completed Cerune IR (HIR), bytecode VM, C/LLVM/QBE/WAT generation |
+| Implemented | Non-SSA MIR types/lowering/validation, `emit-mir`, [independent execution](mir-executor.en.md), and [MIR→Native generation](native-mir.en.md) |
+| Planned, unimplemented | SSA, optimization passes, observation bundles; the [stage design](ir-stages.en.md) defines semantic preservation and observation |
+| Planned, unimplemented | IR/VM/Native [build / release](owned-routes.en.md), with C-like routes classified as emit-only |
 
 ## Principles
 
@@ -27,76 +30,34 @@ Cerune v0.1 does not silently insert numeric conversions or hide transformations
 
 ## Compiler architecture
 
-The compiler pipeline is:
+The common frontend resolves meaning before passing it to execution and generation routes.
 
 ```text
-Cerune Source
-      ↓
-Lexer / Parser
-      ↓
-AST
-      ↓
-Cerune IR Builder
-  - shared enum/match expansion
-  - semantic validation
-  - type resolution
-  - contextual float resolution
-      ↓
-Cerune IR
-  - typed
-  - backend independent
-      │
-      ├── Observation 1: emit-ir / .ceir
-      ├── MIR lowering → validation → emit-mir / MIR Executor (run-mir)
-      │                            └→ Native LIR → ASM → Object
-      ├── IR Executor: run / run-ir (direct structured execution)
-      │
-      ↓
-Bytecode / C / LLVM / QBE / WAT Lowering
-      ↓
-Backend-specific Rust IR
-      ↓
-Emitter
-      ↓
-Backend Artifact
-      │
-      └── Observation 2
+Source → Lexer / Parser → AST → Common frontend → Cerune IR (HIR)
+                                                  ├→ emit-ir / .ceir
+                                                  ├→ IR Executor: run / run-ir
+                                                  ├→ MIR lowering / validation
+                                                  │    ├→ emit-mir / run-mir
+                                                  │    └→ x86-64 LIR → ASM → self-encoded object
+                                                  ├→ Bytecode → emit-bytecode / run-vm
+                                                  └→ C / LLVM / QBE / WAT IR → emit-*
 ```
 
-The key architectural boundary is Cerune IR. The [IR Executor](ir-executor.en.md) directly walks completed IR statements and expressions. Unlike generating backends with lowerers and emitters, it uses common expanded control structures and origins as they stand.
-
-The frontend decides what the Cerune program means. Backends decide how that already-resolved meaning is represented for a target.
+The frontend resolves names, types, and contextual floats, and expands generics, enum/match, and ownership. The [IR Executor](ir-executor.en.md) directly executes completed HIR statements/expressions; generating routes translate resolved meaning into target representations.
 
 ### Architectural invariants
 
-The following rules are part of the compiler design:
+Responsibilities and identifier meanings remain explicit.
 
-1. Backend compilation starts from Cerune IR, not directly from the AST.
-2. Semantic validation and type resolution happen before backend lowering.
-3. A backend lowerer may know both Cerune IR and its own backend IR.
-4. A backend emitter must not depend on Cerune IR, the AST, or semantic-analysis state.
-5. Backend-specific Rust IR is an internal implementation boundary.
-6. Public observations are Cerune IR text and emitted backend artifacts.
-7. Optimization is not implicit. A future optimization stage must be an explicit, observable pass.
-8. Cerune IR gives each binding a deterministic compilation-local ID so references remain explicit across shadowing.
-9. Structured `if`, `while`, `for`, `break`, and `continue` statements remain in Cerune IR. A `for` keeps its initializer, condition, body, and update distinct; branches, merge points, update paths, back edges, and loop exits are introduced during lowering into Bytecode and each backend IR.
-10. Every Cerune IR statement and expression has a deterministic `NodeId` that is unique within one compilation. A `NodeId` identifies an element, while a `Span` locates source text; neither substitutes for the other.
+1. Backends do not consume AST directly. They use HIR after common semantic/type resolution; Native first lowers HIR into MIR.
+2. A lowerer reads its input and output IRs. An emitter reads its backend IR without redetermining semantics from AST or semantic-analysis state.
+3. Backend-specific Rust IR is internal. Public observations are HIR/MIR text and generated artifacts, not stable serialization of internal structures.
+4. Optimization is never implicit; future passes expose selection and transformation.
+5. Bindings have deterministic compilation-local IDs that distinguish references across shadowing.
+6. HIR retains `if`, `while`, `for`, `break`, and `continue`, including separate for initializer/condition/body/update. MIR, bytecode, and backend lowering introduce branches, merges, updates, back edges, and exits.
+7. HIR statement/expression `NodeId` values are unique within a compilation. Element identity is distinct from source-location `Span`; MIR block/instruction IDs use separate namespaces.
 
-Conceptually, every backend follows the same structure:
-
-```text
-Cerune IR
-    ↓
-backend::lower()
-    ↓
-Backend-specific Rust IR
-    ↓
-backend::emit()
-    ↓
-Artifact
-```
-
-The physical Rust module layout may differ between backends, but the architectural boundary is the same.
+Rust module layout varies by route. Native uses MIR→LIR→ASM; other generating backends use HIR→backend IR→artifact.
 
 ## Cerune IR
 
@@ -157,9 +118,9 @@ The AST and Cerune IR retain `&&` and `||` as `Logical`, separate from eager bin
 
 Bytecode lowering uses a conditional jump consuming the left value and a jump to the merge point. The branch carries the logical expression's `NodeId` and the left operand's `Span`; right-operand instructions retain their own origins. A failure in an evaluated right operand therefore points to the failed operation, not merely the containing logical expression.
 
-C uses short-circuit logical expressions, and WAT uses a Boolean-producing `if`. LLVM and QBE store the left result in compiler-generated storage, update it only in the right-operand branch, and load it after merging. Windows/Linux x86-64 retains the result in a register across branch and merge. None moves right-operand evaluation outside its branch.
+C uses short-circuit logical expressions, and WAT uses a Boolean-producing `if`. LLVM and QBE store the left result in compiler-generated storage, update it only in the right-operand branch, and load it after merging. Windows/Linux x86-64 lowers MIR temporaries and conditional blocks into LIR storage and branches. None moves right-operand evaluation outside its branch.
 
-These transformations can be inspected through existing observation boundaries. They do not introduce a new public observation API or runtime history.
+These transformations are observable in HIR, MIR, and artifacts, separately from execution traces.
 
 ### Remainder and bit operations
 
@@ -173,7 +134,7 @@ Shift counts are checked against the original width first. Left shift then check
 
 ### Target-specific lowering
 
-Each backend lowers Cerune IR into a backend-specific Rust representation before emission.
+Native lowers MIR into x86-64 LIR; other code generation backends lower HIR into their own Rust representations.
 
 An expression represented as one integer operation in Cerune IR may become the operation plus an overflow check during backend lowering. The check is not left to accidental behavior in an external tool. Backend IR retains it as a checked integer operation or an explicit trap condition. The generated artifact exposes the target-appropriate result, such as a helper call, an overflow-flag branch, or `unreachable`.
 
@@ -185,7 +146,7 @@ The current output routes and implementation boundaries are:
 | LLVM | LLVM IR representation | `.ll` |
 | QBE | QBE IR representation | `.ssa` |
 | WebAssembly | WAT-oriented instruction IR | `.wat` |
-| Direct x86-64 Windows/Linux assembly | assembly IR | `.s` |
+| Direct x86-64 Windows/Linux assembly | x86-64 LIR lowered from MIR | `.s` |
 | Native object | shared ASM reader, instruction encoding, ELF/COFF writer | `.o` / `.obj` |
 | Cerune bytecode | `BytecodeProgram` | `.cebc` |
 
@@ -218,57 +179,35 @@ The VM reports an execution error using its bytecode instruction index. `run_vm`
 
 ## Observation boundaries
 
-Cerune exposes two primary observation boundaries.
+HIR, MIR, and generated artifacts are observable. These are distinct from runtime results and execution traces.
 
 ### Observation 1: resolved Cerune meaning
 
-```text
-cerune emit-ir <file> [-o <output.ceir>]
-```
+`emit-ir <file> [-o <output.ceir>]` emits backend-independent HIR after parsing, semantic validation, expression typing, and contextual float resolution. It explains how the source was interpreted, without ABI, physical value allocation, stack-machine, or target-instruction decisions.
 
-The `.ceir` observation is produced after frontend semantic and type resolution but before backend lowering.
+### MIR: explicit execution steps
 
-It is intended to answer:
-
-> What does Cerune consider this source program to mean?
-
-An `emit-ir` result guarantees that:
-
-- parsing succeeded;
-- semantic validation succeeded;
-- expression types are resolved;
-- contextual floating-point types are resolved;
-- the result is backend independent.
-
-Backend allocation, ABI, stack-machine, or target-instruction decisions do not belong in this observation.
+`emit-mir <file> [-o <output.txt>]` emits non-SSA MIR with typed locals/temporaries, blocks/branches, ownership operations, and original provenance. `Cerune MIR v0.1` is observation text, not a stable distribution format or loadable Image. `run-mir` independently executes that representation.
 
 ### Observation 2: output artifact
 
-Emit commands for each output route expose the result after backend lowering and emission:
+Artifacts show how the selected route and target represent resolved meaning.
 
-```text
-cerune emit-c <file> [-o <output.c>]
-cerune emit-llvm <file> [--target <triple>] [-o <output.ll>]
-cerune emit-qbe <file> [--target <triple>] [-o <output.ssa>]
-cerune emit-wat <file> [-o <output.wat>]
-cerune emit-asm <file> [--target <triple>] [--annotate-origins] [-o <output.s>]
-cerune emit-obj <file> --target <triple> [--annotate-origins] -o <output.o>
-cerune emit-bytecode <file> [-o <output.cebc>]
-```
+| Command | Artifact | Options |
+| --- | --- | --- |
+| `emit-c` | `.c` | `-o` to save |
+| `emit-llvm` | `.ll` | `--target`, `--annotate-origins`, `-o` |
+| `emit-qbe` | `.ssa` | `--target`, `-o` |
+| `emit-wat` | `.wat` | `-o` to save |
+| `emit-asm` | `.s` | `--target`, `--annotate-origins`, `-o` |
+| `emit-obj` | `.o` / `.obj` | Required `--target`/`-o`; optional origins |
+| `emit-bytecode` | `.cebc` | `-o` to save |
 
-These observations are intended to answer:
-
-> How did the selected output route and target represent the resolved Cerune program?
-
-The existing `emit-*` commands are the observation API. Cerune does not currently need a second `observe` command that duplicates them.
+Each command accepts `<file>`. The [CLI reference](../reference/cli.en.md) defines features requiring targets and omission behavior. Existing `emit-*` commands are the observation API; a generic `observe` command duplicating them is unnecessary.
 
 ### Internal backend IR is not an observation contract
 
-Backend-specific Rust IR sits between Observation 1 and Observation 2, but it remains internal.
-
-Making backend IR public would turn implementation details into compatibility requirements. That may be useful for a future experiment, but it is not part of the v0.1 observation contract.
-
-A future explicit backend-IR observation point may be added only if there is a concrete need for it.
+Exposing internal Rust structures as a compatibility format would freeze implementation details, so v0.1 does not include stable serialization of those structures. LIR can be inspected through Rust APIs and ASM/Object correspondence, but `emit-lir` is unimplemented. New public observation points require a concrete use and defined format.
 
 ## Code generation
 
@@ -359,7 +298,7 @@ The current design intentionally does not require:
 
 - a public serialization format for backend-specific Rust IR;
 - a generic `observe` command duplicating the existing `emit-*` commands;
-- a universal SSA representation shared by all backends;
+- mandatory SSA for every backend (MIR SSA conversion is a future explicit option);
 - implicit optimization;
 - orchestration of external compilers and runtimes for emit-only routes (distinct from planned Cerune-owned builds);
 - benchmarking or performance measurement inside Cerune.

@@ -2,7 +2,7 @@
 
 [English](language-roadmap.en.md)
 
-2026-10-07時点、動的配列のIR・VM・C・LLVM・QBE・WAT・ASM・自前Object対応に加え、モジュール・引数制限の解消・構造体の更新式・コンパイル時定数・直和型とmatch・配列長の取得・配列反復・配列型の定数長・型と長さを指定するジェネリック関数・丸めと飽和・複合値の比較と表示・match式とガードまでを反映しています。「現在」は実装済み、「候補」は設計・実装前の提案です。候補の構文や採用を確定する文書ではありません。現在の正確な仕様は[言語リファレンス](../reference/language.ja.md)を参照してください。
+2026-10-07時点の機能・実行経路・次の作業をまとめます。「実装済み」と「計画・未実装」を区別し、候補の構文や採用は各段階の設計で決めます。正確な仕様は[言語リファレンス](../reference/language.ja.md)を参照してください。
 
 ## Ceruneが持つべき性質
 
@@ -23,8 +23,8 @@ Ceruneでは、書いた計算の意味と、それが実行される表現へ�
 | 浮動小数点 | `f32`、`f64` | 演算には各精度の丸めがある。`convert`は値を保持、整数化では丸め方と飽和を明示 | [floating_point](../../examples/floating_point.ceru) |
 | 真偽値 | `bool`、比較、`!`、短絡評価する`&&`・`||` | 数値との暗黙変換なし | [short_circuit](../../examples/short_circuit.ceru) |
 | 文字列 | `string`、表示、`==`・`!=`、`byte_len`、`concat` | 添字参照・文字数・数値変換は未実装 | [string_byte_length](../../examples/string_byte_length.ceru)、[string_lookup](../../examples/string_lookup.ceru) |
-| 固定長配列 | `[T; N]`、`array_len`、`for … in`、入れ子、値渡し、`mut`な要素の更新 | 長さは型の一部。添字は`i64`。動的長・スライスなし | [array_iteration](../../examples/array_iteration.ceru)、[heat_diffusion](../../examples/heat_diffusion.ceru) |
-| 動的配列 | `[T]`、明示コピー・範囲コピー、独立した入れ子、表示・比較・反復 | IR・VM・C・LLVM・QBE・WAT・ASM・自前Object対応。`array_repeat`は後続 | [copy](../../examples/dynamic_arrays/copy.ceru)、[nested](../../examples/dynamic_arrays/nested.ceru) |
+| 固定長配列 | `[T; N]`、`array_len`、`for … in`、入れ子、値渡し、`mut`な要素の更新 | 長さは型の一部。添字は`i64`。動的長には`[T]`を使う。借用スライスなし | [array_iteration](../../examples/array_iteration.ceru)、[heat_diffusion](../../examples/heat_diffusion.ceru) |
+| 動的配列 | `[T]`、明示コピー・範囲コピー、独立した入れ子、表示・比較・反復 | IR・MIR・VM・C・LLVM・QBE・WAT・ASM・自前Object対応。`array_repeat`は後続 | [copy](../../examples/dynamic_arrays/copy.ceru)、[nested](../../examples/dynamic_arrays/nested.ceru) |
 | 名前付きproduct type | フィールド、既定値、更新式、入れ子、値渡し | フィールドの直接代入なし。新しい値を構築して全体を再代入 | [product-point](../../examples/product-point.ceru)、[packet_counter](../../examples/packet_counter.ceru) |
 | 関数と制御構文 | 型付き引数・戻り値、型・長さの明示パラメーター、`void`、`if`・`else`、`while`・`for`、`break`・`continue`・`return` | 引数数の固定上限なし。再帰なし | [function_values](../../examples/function_values.ceru)、[loop_control](../../examples/loop_control.ceru) |
 | 束縛と変換 | 既定で不変、`mut`、明示的な`infer`、`T(value)`と`convert<T>(value)` | `infer`は実行時型ではない。浮動小数点から整数への全5丸め方と明示的な飽和に対応 | [integer_conversions](../../examples/integer_conversions.ceru) |
@@ -36,7 +36,7 @@ Ceruneでは、書いた計算の意味と、それが実行される表現へ�
 
 ## 言語機能と出力経路を分ける
 
-動的配列を含む上記機能を[IR Executor](ir-executor.ja.md)、VM、生成C、LLVM、QBE、WAT、Windows/Linuxの直接ASM、および自前エンコーダのオブジェクトで扱えます。Windows/Linuxはターゲットの違い、ASM/オブジェクトは成果物の違いです。[経路とターゲットの表](targets.ja.md#現在の構成)を基準に数えます。
+動的配列を含む上記機能を[IR Executor](ir-executor.ja.md)、[MIR Executor](mir-executor.ja.md)、VM、生成C、LLVM、QBE、WAT、Windows/Linuxの直接ASM、および自前エンコーダのオブジェクトで扱えます。Windows/Linuxはターゲットの違い、ASM/オブジェクトは成果物の違いです。[経路とターゲットの表](targets.ja.md#現在の構成)を基準に数えます。
 
 自前エンコーダはx86-64命令とCOFF/ELFを生成します。ASMと共通のloweringを使い、現在は内部ASM表現を読み取って符号化します。リンクは外部ツールです。将来の型付き機械命令IRや自前リンカはコンパイラ実装の候補であり、新しい言語機能ではありません。[自前エンコーダの設計](native-encoder.ja.md)を参照してください。
 
@@ -44,17 +44,24 @@ Ceruneでは、書いた計算の意味と、それが実行される表現へ�
 
 ## 実行・配布・証明の基盤
 
-[IR・VM・Nativeのbuild / release](owned-routes.ja.md)と[Leanによる変換の対応・プログラムの性質の検証](lean-verification.ja.md)を別の基盤作業として進めます。新しい分類や証明実験によって、下記の言語機能や生成経路の未対応を実装済みとはしません。
+言語機能と、コンパイラの段階・配布・証明を分けて管理します。新しい分類や証明実験だけで、言語機能や生成経路の未対応を実装済みとはしません。
 
-動的配列のNative対応を完了し、[Issue #94](https://github.com/Hokutaka/Cerune/issues/94)に基づく[段階設計](ir-stages.ja.md)を追加しました。非最適化MIRの型・検証・変換・`emit-mir`を実装しました。[独立したMIR実行器](mir-executor.ja.md)・`run-mir`も実装し、出力・停止理由・出自・所有の寿命を既存経路と比較しました。[NativeのMIR移行](native-mir.ja.md)も実装し、旧経路との実行比較とMIR→LIR→ASM/Objectの出自対応を検証しました。次は観測bundle、続いてLeanでの対応検証やSSA・最適化passを個別に進めます。これらは未実装です。build／releaseは[Issue #81](https://github.com/Hokutaka/Cerune/issues/81)の責務整理を基準に進め、最適化と配布を分けます。Lean検証は各段階の意味の対応を扱います。
+| 状態 | 基盤 | 到達点・残る作業 |
+| --- | --- | --- |
+| 実装済み | [MIR](ir-stages.ja.md)・[独立実行器](mir-executor.ja.md) | 非SSAの型・変換・検証・`emit-mir`・`run-mir`。既存経路と出力・停止理由・出自・所有の寿命を比較 |
+| 実装済み | [NativeのMIR入力](native-mir.ja.md) | 旧経路との実行比較、MIR→LIR→ASM/Objectの出自対応を検証 |
+| 計画・未実装 | 観測bundle | 同一コンパイルの各段階・対応情報を保存（[#60](https://github.com/Hokutaka/Cerune/issues/60)） |
+| 一部実験済み | [Lean検証](lean-verification.ja.md) | 実際のHIRの`u8`関数で意味の対応とプログラムの性質を検証。全言語・MIR変換・処理系全体の証明や公開`emit-lean`は未実装 |
+| 計画・未実装 | SSA・最適化pass | [#94の段階設計](https://github.com/Hokutaka/Cerune/issues/94)に沿い、選択・変換・意味保存を観測可能にする |
+| 計画・未実装 | [IR・VM・Nativeのbuild / release](owned-routes.ja.md) | [#81](https://github.com/Hokutaka/Cerune/issues/81)の責務整理を基準に、完成成果物・配布を最適化と分ける |
 
 ## 次に持つべきもの：提案する順序
 
-`array_len`、配列の`for … in`、配列型の定数長`[T; COUNT]`、[型・長さを指定する関数](generic-functions.ja.md)と[明示的な丸め・飽和](rounding-conversions.ja.md)、[複合値の比較・表示とmatch式・ガード](aggregate-values.ja.md)、[動的文字列の連結・保持・解放](dynamic-data.ja.md)を実装しました。未対応機能は次の順で、小さな設計・example・全経路の比較を一組として追加します。構文や採用は各段階の設計で確定します。
+未対応の作業は次の順で、小さな設計・example・既知の期待値・経路間比較を一組として進めます。構文や採用は各段階の設計で確定します。
 
-| 順序 | 未対応機能 | 最初に決める契約・確認例 |
+| 順序 | 次の作業 | 最初に決める契約・確認例 |
 | --- | --- | --- |
-| 1 | [HIR／MIR／LIR](ir-stages.ja.md)の実装 | MIRの型・検証・HIRからの変換と観測exampleを実装済み。独立したMIR実行器と既存経路の比較も実装済み。NativeのMIR移行も実装済み。次は同一コンパイルの観測bundle、その後Lean対応・SSA・最適化へ進む |
+| 1 | 観測bundleと段階間の検証 | 同一コンパイルの観測をまとめる。その後、[段階設計](ir-stages.ja.md)に沿ってLeanでの対応検証・SSA・最適化passを個別に進める |
 | 2 | [動的配列の追加操作](owned-arrays.ja.md) | 既存操作は全経路対応済み。`array_repeat`を後続として検討。借用スライスは寿命と更新の型規則を別途定義 |
 | 3 | 再帰・外部入出力 | 呼び出し領域・資源上限・入出力失敗・終了処理を定義 |
 | 4 | モジュールの配布 | 再export、依存・版・再現可能なビルド。現行の明示importを基準に拡張 |

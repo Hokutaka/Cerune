@@ -26,10 +26,12 @@ Cerune prioritizes the ability to observe the transformation process from source
 
 ## Public observation surfaces
 
-- The current public contracts are Cerune IR and the artifacts produced by each output route.
+- Current public observations are Cerune IR (HIR), MIR, and artifacts produced by each output route.
 - Cerune IR text exposes statement and expression `NodeId` values as `#N`.
 - Retaining information for internal observation does not make that information a public compatibility API.
 - A new public format must be defined as an explicitly versioned schema.
+
+`emit-mir` produces `Cerune MIR v0.1` observation text recording types, evaluation order, ownership operations, branches, and provenance. It is not a stable distribution format or loadable Image. MIR block/instruction IDs and HIR `NodeId` values occupy separate namespaces.
 
 ## Security
 
@@ -55,10 +57,12 @@ The lowerer stores `Source { NodeId, Span }` or `Synthetic` separately from each
 
 Annotations contain no source text or paths. The option affects comments at emission only: removing the annotations reproduces ordinary LLVM exactly. Tests verify this for every example and execute annotated and ordinary LLVM for `string_origins.ceru`. Paired IR/LLVM fixtures are in `tests/fixtures/observation/string-origins/expected/`.
 
-LLVM is the first supported route. This uses the existing IR/artifact observation surface and adds no interface for changing compiler state.
+LLVM annotations use the IR/artifact observation surface and add no interface for changing compiler state.
 
 ## ASM and machine-code origins
 
 `emit-asm --annotate-origins` also preserves NodeId and UTF-8 byte ranges. Comments and `cerune_origin_nN_...` labels connect object symbols and disassembly to Cerune IR. Paired IR/ASM fixtures for both targets live in `tests/fixtures/observation/native-values/expected/`. Tests compare annotation-stripped ASM with ordinary output and compare instruction bytes with and without annotations.
+
+Native follows [HIR→MIR→LIR→ASM/Object](native-mir.en.md). Annotated ASM also contains `# cerune-mir: v1` correspondence, and objects retain `cerune_origin_mir_...` symbols. One MIR operation can produce multiple LIR instructions; LIR checks and ABI operations expand further into ASM instructions, so instruction counts are not one-to-one. Provenance distinguishes source operations, derived semantic steps, and compiler-generated operations.
 
 Encoding can use the [Cerune encoder](native-encoder.en.md) or an external assembler; linking uses an explicit external tool. Generation, expected traps, successful execution, and failures are recorded separately. See [Following ASM into machine code](native-code.en.md) for the mapping contract, address interpretation, and execution commands.

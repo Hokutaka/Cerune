@@ -217,7 +217,7 @@ cerune run-vm <file>
 
 `cerune run-vm` lowers the program to Cerune bytecode and executes the resulting `BytecodeProgram` in the Cerune VM.
 
-Runtime output is useful for validation and experiments, but it is distinct from the two compiler observation boundaries defined in the [compiler design](../design/architecture.en.md).
+Runtime output is useful for validation and experiments, but it is distinct from observations of HIR, MIR, and artifacts defined in the [compiler design](../design/architecture.en.md).
 
 When a runtime error occurs in a bytecode instruction derived from source, the diagnostic includes both the source location and the bytecode instruction index:
 
