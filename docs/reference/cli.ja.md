@@ -42,7 +42,7 @@ cerune emit-llvm examples/string_concat.ceru --target x86_64-unknown-linux-gnu -
 
 同じコマンドで`--array-heap-limit <bytes>`も指定できます。既定値・数値形式は文字列予算と同じで、二つの予算は独立です。要素の計算幅に基づく生存領域を数え、物理メモリ全体の上限ではありません。`check`・`emit-sources`では受け付けません。
 
-動的配列は`run`／`run-ir`／`run-vm`とIR・bytecode・C・LLVM・QBE出力に対応しています。WAT・ASM・native objectでは、出力ファイルを書き換える前に未対応と診断します。IR・bytecode・生成C・LLVM・QBEには使用した配列予算を記録します。LLVM・QBEは未使用の配列型も含め`--target`が必要です。
+動的配列は`run`／`run-ir`／`run-vm`とIR・bytecode・C・LLVM・QBE・WAT出力に対応しています。ASM・native objectでは、出力ファイルを書き換える前に未対応と診断します。IR・bytecode・生成C・LLVM・QBE・WATには使用した配列予算を記録します。LLVM・QBEは未使用の配列型も含め`--target`が必要です。
 
 ```sh
 cerune run examples/dynamic_arrays/copy.ceru --array-heap-limit 1024

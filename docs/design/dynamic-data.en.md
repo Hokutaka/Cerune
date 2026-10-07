@@ -2,7 +2,7 @@
 
 [日本語](dynamic-data.ja.md)
 
-**String concatenation is implemented across routes. [Dynamic arrays](owned-arrays.en.md) support IR/VM execution; compiled routes and borrowed slices remain pending.** For string ownership below, the IR Executor, VM, C, LLVM, QBE, WAT, Windows/Linux ASM, and native COFF/ELF routes share value semantics and ownership lowering.
+**String concatenation is implemented across routes. [Dynamic arrays](owned-arrays.en.md) support IR/VM/C/LLVM/QBE/WAT execution; native routes and borrowed slices remain pending.** For string ownership below, the IR Executor, VM, C, LLVM, QBE, WAT, Windows/Linux ASM, and native COFF/ELF routes share value semantics and ownership lowering.
 
 ## String concatenation
 
@@ -96,13 +96,13 @@ LLVM uses explicit targets rather than the compiler host OS. Native COFF/ELF put
 
 `string_heap_routes` passes the same small budget through every route and compares known output, budget failures, prior output, origins, and index-check order. Internal WAT tests cap memory at one page to verify reuse and repeat successful calls on the same instance. C is also checked with ASan/UBSan. Internal tests distinguish fixed allocation-failure conditions from size overflow.
 
-## Next: dynamic arrays and borrowed slices (unimplemented)
+## Dynamic arrays and future borrowed slices
 
-Implement owned dynamic arrays and range copies before borrowed slices. The [owned-array proposal](owned-arrays.en.md) specifies copy points, read-only access, common budget accounting, failure order, and cross-route acceptance criteria. It refines the candidates below; it is not implemented language behavior.
+Implement owned dynamic arrays and range copies before borrowed slices. The [owned-array design](owned-arrays.en.md) specifies copy points, read-only access, common budget accounting, failure order, and cross-route acceptance criteria. Owned arrays work in IR/VM/C/LLVM/QBE/WAT; native support and borrowed slices remain pending.
 
-- Proposed `[T]` differs from `[T; N]`, permits zero length, and maintains `0 <= length <= capacity`. Capacity counts elements; initially allocate only the requested amount.
+- `[T]` differs from `[T; N]`, permits zero length, and maintains `0 <= length <= capacity`. Capacity counts elements; initially allocate only the requested amount.
 - Copies own independent nested mutable storage. Immutable string content can be shared. Lower typed copy/release into common IR and check size products/sums.
-- Proposed `array_copy_range(values, start, end)` evaluates its three operands once from left to right, checks `0 <= start <= end <= length`, and copies half-open `[start, end)` into an independent owner, including an empty end range.
+- `array_copy_range(values, start, end)` evaluates its three operands once from left to right, checks `0 <= start <= end <= length`, and copies half-open `[start, end)` into an independent owner, including an empty end range.
 - Design access, update, parameters, results, equality, display, and iteration together. Fixed-array conversions are explicit. Reservation and growth policies are later operations.
 - Before borrowing, define owner lifetime, mutation, and reallocation rules. Resolve escaping-owner returns and mutation during a borrow explicitly. Keep byte ranges distinct from UTF-8 character boundaries.
 
