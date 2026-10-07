@@ -76,6 +76,7 @@ During development, replace `cerune` with `cargo run --quiet --`.
 | --- | --- | --- |
 | `check` | Syntax and type checking | Validate Cerune source (`.ceru`) |
 | `run` / `run-ir` | Direct IR execution | Execute Cerune source (`.ceru`) from common IR |
+| `run-mir` | MIR execution | Execute and compare explicitly lowered control flow |
 | `run-vm` | VM execution | Run Cerune source (`.ceru`) |
 | `emit-sources` | Source manifest (JSON) | Export loaded file names and contents |
 | `emit-ir` | Cerune IR (`.ceir`) | Inspect types and operations |

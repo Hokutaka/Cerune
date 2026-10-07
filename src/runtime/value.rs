@@ -1,5 +1,19 @@
-//! IRの値。集約値は独立したコピー、不変文字列の内容だけは共有します。
-use super::{Fault, Result};
+//! IR/MIRで共有する値と原子的な演算です。制御フローや命令の実行は含めません。
+//! Rustのcloneは値表現の保存であり、動的領域の論理的な所有数を変えません。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum Error {
+    Invalid(&'static str),
+    Runtime(crate::runtime::FailureCode),
+}
+type Result<T> = std::result::Result<T, Error>;
+impl Error {
+    pub(crate) fn invalid(reason: &'static str) -> Self {
+        Self::Invalid(reason)
+    }
+    pub(crate) fn failure(code: crate::runtime::FailureCode) -> Self {
+        Self::Runtime(code)
+    }
+}
 use crate::{
     ir::{self, BinaryOp as B, UnaryOp as U},
     runtime::{
@@ -11,7 +25,7 @@ use crate::{
 };
 
 #[derive(Debug, Clone)]
-pub(super) enum Value {
+pub(crate) enum Value {
     DynamicArray {
         element: ir::Type,
         storage: crate::runtime::array_heap::ArrayValue<Value>,
@@ -29,7 +43,7 @@ pub(super) enum Value {
     },
 }
 impl Value {
-    pub(super) fn ty(&self) -> ir::Type {
+    pub(crate) fn ty(&self) -> ir::Type {
         match self {
             Self::DynamicArray { element, .. } => ir::Type::DynamicArray {
                 element: Box::new(element.clone()),
@@ -46,38 +60,38 @@ impl Value {
             },
         }
     }
-    pub(super) fn check(&self, ty: &ir::Type) -> Result<()> {
+    pub(crate) fn check(&self, ty: &ir::Type) -> Result<()> {
         if &self.ty() == ty {
             Ok(())
         } else {
-            Err(Fault::invalid("value does not match the IR type"))
+            Err(Error::invalid("value does not match the IR type"))
         }
     }
-    pub(super) fn boolean(self) -> Result<bool> {
+    pub(crate) fn boolean(self) -> Result<bool> {
         if let Self::Bool(v) = self {
             Ok(v)
         } else {
-            Err(Fault::invalid("expected bool"))
+            Err(Error::invalid("expected bool"))
         }
     }
-    pub(super) fn integer(self, ty: IntegerType) -> Result<i128> {
+    pub(crate) fn integer(self, ty: IntegerType) -> Result<i128> {
         if let Self::Number(Number::Integer(v, t)) = self
             && t == ty
             && t.contains(v)
         {
             Ok(v)
         } else {
-            Err(Fault::invalid("expected a valid integer"))
+            Err(Error::invalid("expected a valid integer"))
         }
     }
-    pub(super) fn string(self) -> Result<StringValue> {
+    pub(crate) fn string(self) -> Result<StringValue> {
         if let Self::String(v) = self {
             Ok(v)
         } else {
-            Err(Fault::invalid("expected string"))
+            Err(Error::invalid("expected string"))
         }
     }
-    pub(super) fn text(self) -> Result<String> {
+    pub(crate) fn text(self) -> Result<String> {
         Ok(match self {
             Self::Bool(v) => v.to_string(),
             Self::String(v) => v.text(),
@@ -85,36 +99,36 @@ impl Value {
             Self::Number(Number::F32(v)) => crate::runtime::float_output::f32(v),
             Self::Number(Number::F64(v)) => crate::runtime::float_output::f64(v),
             _ => {
-                return Err(Fault::invalid(
+                return Err(Error::invalid(
                     "aggregate display must use common IR expansion",
                 ));
             }
         })
     }
-    pub(super) fn number(self) -> Result<Number> {
+    pub(crate) fn number(self) -> Result<Number> {
         if let Self::Number(v) = self {
             Ok(v)
         } else {
-            Err(Fault::invalid("expected numeric value"))
+            Err(Error::invalid("expected numeric value"))
         }
     }
 }
 
-pub(super) fn numeric_error(error: numeric::Error) -> Fault {
+pub(crate) fn numeric_error(error: numeric::Error) -> Error {
     use numeric::NumericConversionFailure as N;
     match error {
-        numeric::Error::NumericConversionFailed { reason, .. } => Fault::failure(match reason {
+        numeric::Error::NumericConversionFailed { reason, .. } => Error::failure(match reason {
             N::OutOfRange => Code::ConversionOutOfRange,
             N::Inexact => Code::ConversionInexact,
             N::NotFinite => Code::ConversionNotFinite,
             N::NaN => Code::ConversionNaN,
             N::NegativeZero => Code::ConversionNegativeZero,
         }),
-        _ => Fault::invalid("invalid numeric conversion in IR"),
+        _ => Error::invalid("invalid numeric conversion in IR"),
     }
 }
 
-pub(super) fn unary(op: U, value: Value) -> Result<Value> {
+pub(crate) fn unary(op: U, value: Value) -> Result<Value> {
     match (op, value) {
         (U::Not, Value::Bool(v)) => Ok(Value::Bool(!v)),
         (U::BitNot, Value::Number(Number::Integer(v, t))) => Ok(Value::Number(Number::Integer(
@@ -123,17 +137,17 @@ pub(super) fn unary(op: U, value: Value) -> Result<Value> {
         ))),
         (U::Negate, Value::Number(Number::Integer(v, t))) if t.is_signed() => {
             if !t.contains(-v) {
-                return Err(Fault::failure(Code::IntegerOverflow));
+                return Err(Error::failure(Code::IntegerOverflow));
             }
             Ok(Value::Number(Number::Integer(-v, t)))
         }
         (U::Negate, Value::Number(Number::F32(v))) => Ok(Value::Number(Number::F32(-v))),
         (U::Negate, Value::Number(Number::F64(v))) => Ok(Value::Number(Number::F64(-v))),
-        _ => Err(Fault::invalid("invalid unary operator for this type")),
+        _ => Err(Error::invalid("invalid unary operator for this type")),
     }
 }
 
-pub(super) fn binary(op: B, left: Value, right: Value) -> Result<Value> {
+pub(crate) fn binary(op: B, left: Value, right: Value) -> Result<Value> {
     right.check(&left.ty())?;
     let comparison = matches!(
         op,
@@ -153,7 +167,7 @@ pub(super) fn binary(op: B, left: Value, right: Value) -> Result<Value> {
             if matches!(op, B::ShiftLeft | B::ShiftRight)
                 && (b < 0 || b >= i128::from(t.bit_width()))
             {
-                return Err(Fault::failure(Code::InvalidShiftCount));
+                return Err(Error::failure(Code::InvalidShiftCount));
             }
             let result = match op {
                 B::Add => a.checked_add(b),
@@ -161,17 +175,17 @@ pub(super) fn binary(op: B, left: Value, right: Value) -> Result<Value> {
                 B::Multiply => a.checked_mul(b),
                 B::Divide => {
                     if b == 0 {
-                        return Err(Fault::failure(Code::DivisionByZero));
+                        return Err(Error::failure(Code::DivisionByZero));
                     }
                     let result = a / b;
                     if !t.contains(result) {
-                        return Err(Fault::failure(Code::DivisionOverflow));
+                        return Err(Error::failure(Code::DivisionOverflow));
                     }
                     Some(result)
                 }
                 B::Remainder => {
                     if b == 0 {
-                        return Err(Fault::failure(Code::RemainderByZero));
+                        return Err(Error::failure(Code::RemainderByZero));
                     }
                     Some(a % b)
                 }
@@ -180,10 +194,10 @@ pub(super) fn binary(op: B, left: Value, right: Value) -> Result<Value> {
                 B::BitXor => Some(a ^ b),
                 B::ShiftLeft => Some(a << b),
                 B::ShiftRight => Some(a >> b),
-                _ => return Err(Fault::invalid("invalid integer operator")),
+                _ => return Err(Error::invalid("invalid integer operator")),
             }
             .filter(|v| t.contains(*v))
-            .ok_or_else(|| Fault::failure(Code::IntegerOverflow))?;
+            .ok_or_else(|| Error::failure(Code::IntegerOverflow))?;
             Ok(Value::Number(Number::Integer(result, t)))
         }
         (Value::Number(Number::F32(a)), Value::Number(Number::F32(b))) => {
@@ -195,7 +209,7 @@ pub(super) fn binary(op: B, left: Value, right: Value) -> Result<Value> {
                 B::Subtract => a - b,
                 B::Multiply => a * b,
                 B::Divide => a / b,
-                _ => return Err(Fault::invalid("invalid floating-point operator")),
+                _ => return Err(Error::invalid("invalid floating-point operator")),
             })))
         }
         (Value::Number(Number::F64(a)), Value::Number(Number::F64(b))) => {
@@ -207,10 +221,10 @@ pub(super) fn binary(op: B, left: Value, right: Value) -> Result<Value> {
                 B::Subtract => a - b,
                 B::Multiply => a * b,
                 B::Divide => a / b,
-                _ => return Err(Fault::invalid("invalid floating-point operator")),
+                _ => return Err(Error::invalid("invalid floating-point operator")),
             })))
         }
-        _ => Err(Fault::invalid("invalid binary operator for this type")),
+        _ => Err(Error::invalid("invalid binary operator for this type")),
     }
 }
 fn compare<T: PartialEq + PartialOrd>(op: B, a: T, b: T) -> Result<bool> {
@@ -221,14 +235,31 @@ fn compare<T: PartialEq + PartialOrd>(op: B, a: T, b: T) -> Result<bool> {
         B::LessEqual => a <= b,
         B::Greater => a > b,
         B::GreaterEqual => a >= b,
-        _ => return Err(Fault::invalid("expected comparison")),
+        _ => return Err(Error::invalid("expected comparison")),
     })
 }
-pub(super) fn numeric_type(ty: &ir::Type) -> Option<NumericType> {
+pub(crate) fn numeric_type(ty: &ir::Type) -> Option<NumericType> {
     match ty {
         ir::Type::Integer(t) => Some(NumericType::Integer(*t)),
         ir::Type::F32 => Some(NumericType::F32),
         ir::Type::F64 => Some(NumericType::F64),
         _ => None,
     }
+}
+
+pub(crate) fn write_quoted(output: &mut String, text: &str) {
+    output.push('"');
+    for ch in text.chars() {
+        match ch {
+            '"' => output.push_str("\\\""),
+            '\\' => output.push_str("\\\\"),
+            '\0' => output.push_str("\\0"),
+            '\n' => output.push_str("\\n"),
+            '\r' => output.push_str("\\r"),
+            '\t' => output.push_str("\\t"),
+            ch if ch < ' ' || ch == '\x7f' => output.push_str(&format!("\\u{{{:02x}}}", ch as u32)),
+            _ => output.push(ch),
+        }
+    }
+    output.push('"');
 }

@@ -303,7 +303,13 @@ fn instruction(p: &Program, f: &Function, i: &Instruction) -> Result<(), Error> 
             ..
         }
     );
-    if may_fail {
+    let entry_call = matches!((&i.kind, o),
+        (InstructionKind::Call { function, arguments, .. },
+         Origin::Synthetic { reason: "entry-main-call" })
+         if f.id.is_none() && arguments.is_empty()
+             && p.functions.get(function.0).is_some_and(|f|
+                 f.name == "main" && f.parameters.is_empty() && f.return_type == ir::ReturnType::Void));
+    if may_fail && !entry_call {
         require(
             matches!(o, Origin::Source(_)),
             "operation needs primary HIR origin",

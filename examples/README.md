@@ -7,7 +7,7 @@
 | 場所 | 内容 |
 | --- | --- |
 | このディレクトリ | 一括実行できるプログラム |
-| [dynamic_arrays](dynamic_arrays/README.md) | 動的配列の作成・範囲コピー・入れ子。IR・VM・C・LLVM・QBE・WAT・ASM・自前Objectで実行 |
+| [dynamic_arrays](dynamic_arrays/README.md) | 動的配列の作成・範囲コピー・入れ子。IR・MIR・VM・C・LLVM・QBE・WAT・ASM・自前Objectで実行 |
 | [ir_stages](ir_stages/README.md) | 短絡・loopの実行結果と、HIR→MIRの変換を観測 |
 | [modules](modules/README.md) | import、単一ファイル版との比較、意図した停止 |
 | [runtime_failures](runtime_failures/README.md) | 停止前の出力と失敗する式を追う4例 |

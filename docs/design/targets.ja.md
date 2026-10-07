@@ -16,7 +16,7 @@
 
 ### 直接実行
 
-`run`／`run-ir`の[IR Executor](ir-executor.ja.md)は、完成済みCerune IRを直接実行する経路です。新しい成果物を生成せず、ターゲットABIの選択も行いません。出力経路の表とは別に扱います。`run-vm`はBytecode → VMです。
+`run`／`run-ir`の[IR Executor](ir-executor.ja.md)は、完成済みCerune IRを直接実行する経路です。新しい成果物を生成せず、ターゲットABIの選択も行いません。出力経路の表とは別に扱います。`run-vm`はBytecode → VMです。`run-mir`は[独立したMIR実行器](mir-executor.ja.md)で、HIR→MIRを経て実行します。`emit-mir`はその表現を観測する操作です。
 
 ### ターゲット
 
@@ -41,7 +41,7 @@
 
 バックエンドは実装上の構成要素です。出力経路、ターゲット、成果物をまとめて指す用語としては使用しません。
 
-動的配列`[T]`は現在IR Executor・Bytecode VM・生成C・LLVM・QBE・WAT・Windows/Linux ASM・自前COFF/ELFで実行できます。[対応範囲](owned-arrays.ja.md)を参照してください。
+動的配列`[T]`は現在IR Executor・MIR Executor・Bytecode VM・生成C・LLVM・QBE・WAT・Windows/Linux ASM・自前COFF/ELFで実行できます。[対応範囲](owned-arrays.ja.md)を参照してください。
 
 ## 実行経路の責務
 

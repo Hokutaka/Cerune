@@ -1,6 +1,6 @@
 //! 完成済みのCerune IRを直接実行します。命令列や別のIRへ変換しません。
-mod value;
 use crate::runtime::array_heap::{ArrayError, ArrayHeap};
+use crate::runtime::value::{self, write_quoted};
 use crate::{
     ir::{self, Expr, ExprKind as E, Statement, StatementKind as S},
     runtime::{
@@ -75,6 +75,14 @@ struct Fault {
     origin: Option<Origin>,
 }
 type Result<T> = std::result::Result<T, Fault>;
+impl From<value::Error> for Fault {
+    fn from(error: value::Error) -> Self {
+        match error {
+            value::Error::Invalid(reason) => Self::invalid(reason),
+            value::Error::Runtime(code) => Self::failure(code),
+        }
+    }
+}
 impl Fault {
     fn invalid(reason: &'static str) -> Self {
         Self {
@@ -428,7 +436,10 @@ impl Executor<'_> {
         let value = self
             .expr_inner(e, frame)
             .map_err(|error| error.at(e.id, e.span))?;
-        value.check(&e.ty).map_err(|error| error.at(e.id, e.span))?;
+        value
+            .check(&e.ty)
+            .map_err(Fault::from)
+            .map_err(|error| error.at(e.id, e.span))?;
         Ok(value)
     }
     fn expr_inner(&mut self, e: &Expr, frame: &mut Frame) -> Result<Value> {
@@ -690,22 +701,6 @@ fn set_path(current: &mut Value, path: &[usize], replacement: Value) -> Result<(
         }
         _ => Err(Fault::invalid("invalid array path")),
     }
-}
-fn write_quoted(output: &mut String, text: &str) {
-    output.push('"');
-    for ch in text.chars() {
-        match ch {
-            '"' => output.push_str("\\\""),
-            '\\' => output.push_str("\\\\"),
-            '\0' => output.push_str("\\0"),
-            '\n' => output.push_str("\\n"),
-            '\r' => output.push_str("\\r"),
-            '\t' => output.push_str("\\t"),
-            ch if ch < ' ' || ch == '\x7f' => output.push_str(&format!("\\u{{{:02x}}}", ch as u32)),
-            _ => output.push(ch),
-        }
-    }
-    output.push('"');
 }
 
 #[cfg(test)]

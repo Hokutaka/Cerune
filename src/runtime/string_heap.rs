@@ -58,6 +58,9 @@ impl StringHeap {
     pub(crate) fn fail_next_allocation(&mut self) {
         self.fail_next_allocation = true;
     }
+    pub(crate) fn is_empty(&self) -> bool {
+        self.live == 0 && self.allocations.is_empty()
+    }
     #[cfg(test)]
     pub(crate) fn assert_empty(&self) {
         assert_eq!(self.live, 0);

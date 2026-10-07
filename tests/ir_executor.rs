@@ -1,4 +1,4 @@
-//! 同じ完成済みIRを独立した2経路で実行し、既知の期待値も照合します。
+//! 同じ完成済みIRを独立した3経路で実行し、既知の期待値も照合します。
 use string_cases::aggregate_cases;
 #[allow(dead_code)]
 #[path = "support/runtime_cases.rs"]
@@ -15,6 +15,17 @@ use std::{fs, path::Path};
 fn compare(program: &ir::Program) -> Result<String, ir_executor::ExecutionError> {
     let before = ir::text::emit(program);
     let direct = ir_executor::run(program);
+    let mir_program = cerune_lang::mir::lower(program).unwrap();
+    let mir = cerune_lang::mir_executor::run(&mir_program);
+    match (&direct, &mir) {
+        (Ok(a), Ok(b)) => assert_eq!(a, b),
+        (Err(a), Err(b)) => {
+            assert!(a.runtime_failure().is_some(), "{a:?}");
+            assert_eq!(a.runtime_failure(), b.runtime_failure(), "{b:?}");
+            assert_eq!(a.output(), b.output());
+        }
+        _ => panic!("HIR: {direct:?}\nMIR: {mir:?}"),
+    }
     let vm = run_bytecode(&bytecode::lower(program).unwrap());
     match (&direct, &vm) {
         (Ok(a), Ok(b)) => assert_eq!(a, b),

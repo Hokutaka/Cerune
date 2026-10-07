@@ -1,0 +1,70 @@
+# MIRの独立実行
+
+[English](mir-executor.en.md) · [IR段階](ir-stages.ja.md)
+
+## 役割と現在の対応
+
+`run-mir`は、完成済みCerune IRを非SSAのMIRへ変換し、MIRの局所値・命令・ブロックを直接実行します。現在の型、関数、module、generic、match、固定／動的配列、文字列、所有操作、停止診断に対応します。frontendによる名前・型・所有の確定は共通です。
+
+| コマンド | 実行する表現 | 位置づけ |
+| --- | --- | --- |
+| `run`／`run-ir` | 完成済みCerune IR（HIR） | 既定の直接実行 |
+| `run-mir` | 非SSAのMIR | HIR→MIRの意味保存を比較する独立経路 |
+| `run-vm` | bytecode | VMの命令実行 |
+| `emit-mir` | 実行しない | MIRの操作・辺・出自を観測 |
+
+MIRからHIRやbytecodeを再構築して実行することはありません。MIR実行の追加は、新しいbuild／release成果物の追加でもありません。NativeのMIR入力への移行、SSA、最適化、外部MIRのloaderは未実装です。
+
+## 実装と共有範囲
+
+制御フローと原子的な値操作を分けています。
+
+| 実装 | 責務 |
+| --- | --- |
+| [mir_executor.rs](../../src/mir_executor.rs) | 局所値のフレーム、命令実行、branch／jump／return、関数呼出し、MIR上の停止位置 |
+| [runtime/value.rs](../../src/runtime/value.rs) | HIR・MIRで共有する値表現、数値・比較・ビット演算、表示。制御フローは含めない |
+| [runtime/numeric.rs](../../src/runtime/numeric.rs) | 数値変換・丸めの意味 |
+| [runtime/string_heap.rs](../../src/runtime/string_heap.rs)、[array_heap.rs](../../src/runtime/array_heap.rs) | 論理的な所有数、確保予算、領域の回収 |
+| [mir/validate.rs](../../src/mir/validate.rs) | 実行前の構造・型・初期化・添字検査の先行を検証 |
+
+読取り・一時保存のRust上のcloneは、動的領域の論理的なretainや独立コピーではありません。MIRに記録された確保・コピーのループ・retain／release／freeだけが言語上の所有を変えます。ABIや実行中のOSから処理を切り替えません。
+
+入口本体の後に呼ぶ`main`は、loweringが`synthetic=entry-main-call`のcall命令として追加します。MIR実行器は関数名から暗黙の呼出しを補いません。呼出し先で止まった場合は、その関数内の命令とソース位置を保持します。
+
+## APIと停止
+
+ソースには`run_mir(source)`、importを持つ入力には`modules::load(path)?.to_ir()`→`mir::lower(&hir)`→`mir_executor::run(&mir)`を使います。各実行は独立した状態を持ち、入力のHIR／MIRは変更しません。
+
+`MirRunError`は構築失敗と実行失敗を区別します。実行エラーから取得できる情報は次のとおりです。
+
+| API | 内容 |
+| --- | --- |
+| `kind()` | 検証失敗、言語の停止コード、実行中の内部不整合を区別 |
+| `origin()` | 元のHIR NodeIdとSourceIdを含むSpan |
+| `location()` | MIRのFunctionId（入口はNone）・BlockId・InstructionId。呼出し元で上書きしない |
+| `output()` | 停止するまでに出力した内容 |
+| `runtime_failure()` | 言語の停止だけを既存経路と同じ共通記録に変換 |
+
+検証失敗は実行前に返すため出力は空です。CLIの`--diagnostic-format runtime-v1`は他経路と同じ停止コード・元の位置・先行出力を返します。既定診断は元ファイルの位置を示し、MIR命令番号はRust APIから`emit-mir`と照合できます。
+
+## 所有の検証と限界
+
+正常終了時には文字列・配列heapの生存領域が空であることを確認します。残っていれば成功にせず内部不整合を返します。途中の失敗では、未初期化領域を含む実行状態を破棄するときに領域を回収します。
+
+これは全経路の寿命を静的に証明するものではありません。alias・部分初期化・retain／releaseの静的な経路検証は引き続き未実装です。MIRはコンパイラ内で構築した値を対象とし、不正な外部入力のsandboxや実行時間制限を提供しません。言語で未対応の再帰は、MIRを直接改変して作った場合も内部エラーとして拒否します。
+
+## 比較とexample
+
+[control_flow.ceru](../../examples/ir_stages/control_flow.ceru)は短絡とloopの辺、[owned_values.ceru](../../examples/ir_stages/owned_values.ceru)は関数・動的配列・文字列・continueを通る解放を確認します。
+
+```sh
+cargo run --quiet -- run-mir examples/ir_stages/owned_values.ceru
+cargo run --quiet -- emit-mir examples/ir_stages/owned_values.ceru -o target/owned_values.mir.txt
+cargo run --quiet -- run-mir examples/dynamic_arrays/lowering_order.ceru --array-heap-limit 47 --diagnostic-format runtime-v1
+```
+
+最後のコマンドは意図した予算不足です。`begin`だけを出力し、引数コピーの元の位置で`allocation-limit-exceeded`となります。成功したテストでは、異常停止そのものも期待値と照合しています。
+
+[IR比較テスト](../../tests/ir_executor.rs)と[動的配列比較](../../tests/dynamic_arrays.rs)へMIRを加え、既知出力・停止コード・位置・先行出力を確認します。[MIR専用テスト](../../tests/mir_executor.rs)では、MIRだけを変更するとその結果が実行に反映されること、呼出し先の出自、未解放領域の検出も確認します。Windows/Linuxの動的配列比較は、HIR・MIR・VM・C・LLVM・QBE・WAT・ASM・自前Objectの9経路を対象にします。
+
+共有する値演算の誤りはHIR/MIRの比較だけでは検出できないため、VM・生成経路と既知の期待値も使います。実行比較はテストであり、形式証明や性能同等の保証ではありません。

@@ -24,13 +24,14 @@ cerune emit-obj <file> --target <triple> [--annotate-origins] -o <output.o>
 cerune emit-bytecode <file> [-o <output.cebc>]
 cerune run <file> [--diagnostic-format runtime-v1]
 cerune run-ir <file> [--diagnostic-format runtime-v1]
+cerune run-mir <file> [--diagnostic-format runtime-v1]
 cerune run-vm <file> [--diagnostic-format runtime-v1]
 cerune --version
 ```
 
 ## Dynamic string budget
 
-`run`, `run-ir`, `run-vm`, `emit-ir`, `emit-mir`, `emit-bytecode`, `emit-c`, `emit-llvm`, `emit-qbe`, `emit-wat`, `emit-asm`, and `emit-obj` accept `--string-heap-limit <bytes>`. The default is 67108864 (64 MiB). Values are decimal integers from 0 through 9223372036854775807; missing, duplicate, and negative values are rejected. `check` and `emit-sources` do not accept this option.
+`run`, `run-ir`, `run-mir`, `run-vm`, `emit-ir`, `emit-mir`, `emit-bytecode`, `emit-c`, `emit-llvm`, `emit-qbe`, `emit-wat`, `emit-asm`, and `emit-obj` accept `--string-heap-limit <bytes>`. The default is 67108864 (64 MiB). Values are decimal integers from 0 through 9223372036854775807; missing, duplicate, and negative values are rejected. `check` and `emit-sources` do not accept this option.
 
 The budget counts live dynamic string payload, shared allocations once, and static strings never. Old and new values both count while reassignment keeps them alive. Compile-time evaluation has an independent 64 MiB budget unaffected by this setting. This is not a physical-memory cap. Generated artifacts fix the value; no API changes it during execution.
 
@@ -43,7 +44,7 @@ cerune emit-llvm examples/string_concat.ceru --target x86_64-unknown-linux-gnu -
 
 The same commands also accept `--array-heap-limit <bytes>`, with the same default and numeric syntax as the string option. The budgets are independent. Array accounting measures live element storage using logical widths, not total physical memory. `check` and `emit-sources` reject this option.
 
-Dynamic arrays support `run` / `run-ir` / `run-vm` and IR/MIR/bytecode/C/LLVM/QBE/WAT/ASM/native-object output. Each artifact records the array budget in use. LLVM and QBE require `--target`, including unused array types. Select a target for ASM and objects, then link externally. `emit-asm` retains its fixed Windows default.
+Dynamic arrays support `run` / `run-ir` / `run-mir` / `run-vm` and IR/MIR/bytecode/C/LLVM/QBE/WAT/ASM/native-object output. Each artifact records the array budget in use. LLVM and QBE require `--target`, including unused array types. Select a target for ASM and objects, then link externally. `emit-asm` retains its fixed Windows default.
 
 ```sh
 cerune run examples/dynamic_arrays/copy.ceru --array-heap-limit 1024
@@ -97,6 +98,17 @@ cerune emit-ir <file> [-o <output.ceir>]
 
 `cerune emit-ir` emits the backend-independent Cerune IR after semantic and type resolution.
 
+## Independent MIR execution
+
+```sh
+cerune run-mir examples/ir_stages/owned_values.ceru
+cerune run-mir examples/dynamic_arrays/lowering_order.ceru --array-heap-limit 47 --diagnostic-format runtime-v1
+```
+
+`run-mir` builds HIR→MIR from source, validates it, and directly executes MIR instructions/blocks. It supports current language features without internally executing HIR or VM. The default meaning of `run` / `run-ir` is unchanged.
+
+It accepts `--string-heap-limit`, `--array-heap-limit`, and `--diagnostic-format runtime-v1`. Success exits 0; failures exit 1, preserving original locations and prior output for language failures. Validation/internal errors remain distinct from language stops. `-o`, `--target`, and SSA/pass flags are rejected. This is not a MIR text loader or a new build artifact. See [API and validation limits](../design/mir-executor.en.md).
+
 ## Observing MIR
 
 ```sh
@@ -105,7 +117,7 @@ cerune emit-mir examples/ir_stages/control_flow.ceru -o target/control_flow.mir.
 
 Lower completed IR into unoptimized, non-SSA MIR, validate it, then emit observation text. Without `-o`, output goes to stdout. No target is needed; `--target`, `--ssa`, and pass flags are rejected. Both heap budgets are recorded.
 
-`Cerune MIR v0.1` contains typed locals, explicit evaluation order, basic blocks/edges, ownership operations, and HIR NodeId/SourceId/Span. Full source contents and paths are not included automatically. String literals and identifiers are displayed as program contents. There is no dedicated extension or loader; this is not an executable distribution artifact. `run` still executes HIR directly. See [validation limits and the planned interpreter](../design/ir-stages.en.md).
+`Cerune MIR v0.1` contains typed locals, explicit evaluation order, basic blocks/edges, ownership operations, and HIR NodeId/SourceId/Span. Full source contents and paths are not included automatically. String literals and identifiers are displayed as program contents. There is no dedicated extension or loader; this is not an executable distribution artifact. `run` still executes HIR directly. See [lowering and validation limits](../design/ir-stages.en.md).
 
 ## Output artifact emission
 

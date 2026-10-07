@@ -268,7 +268,7 @@ fn run() -> Result<(), String> {
         }
 
         // 同じ完成済みIRから、明示された実行経路を選びます。
-        "run" | "run-ir" | "run-vm" => {
+        "run" | "run-ir" | "run-vm" | "run-mir" => {
             let input = required_path(args.next(), "missing input file")?;
             let rest: Vec<_> = args.collect();
             let runtime_format = match rest.as_slice() {
@@ -284,7 +284,19 @@ fn run() -> Result<(), String> {
             let source = read_source(&input)?;
 
             let ir = ir_for(&source, string_heap_limit, array_heap_limit)?;
-            let output = if command != "run-vm" {
+            let output = if command == "run-mir" {
+                let mir = render_compilation_result(
+                    cerune_lang::mir::lower(&ir).map_err(|e| e.diagnostic()),
+                    &source,
+                )?;
+                cerune_lang::mir_executor::run(&mir).map_err(|error| {
+                    print!("{}", error.output());
+                    if runtime_format && let Some(failure) = error.runtime_failure() {
+                        return failure.record();
+                    }
+                    source.render(&error.diagnostic())
+                })?
+            } else if command != "run-vm" {
                 cerune_lang::ir_executor::run(&ir).map_err(|error| {
                     print!("{}", error.output());
                     if runtime_format && let Some(failure) = error.runtime_failure() {
@@ -360,6 +372,7 @@ fn parse_heap_limits(args: Vec<String>, command: &str) -> Result<(Vec<String>, u
             "run"
                 | "run-ir"
                 | "run-vm"
+                | "run-mir"
                 | "emit-ir"
                 | "emit-mir"
                 | "emit-bytecode"
@@ -485,10 +498,11 @@ fn print_help() {
            cerune emit-bytecode <file> [-o <output.cebc>]\n\
            cerune run <file> [--diagnostic-format runtime-v1]\n\
            cerune run-ir <file> [--diagnostic-format runtime-v1]\n\
+           cerune run-mir <file> [--diagnostic-format runtime-v1]\n\
            cerune run-vm <file> [--diagnostic-format runtime-v1]\n\
            cerune --version\n\n\
-         run / run-ir: direct Cerune IR execution; run-vm: Bytecode -> VM.\n\
-         run / run-ir / run-vm / emit-* (except emit-sources): --string-heap-limit <bytes> / --array-heap-limit <bytes>\n\
+         run / run-ir: direct Cerune IR execution; run-mir: HIR -> MIR execution; run-vm: Bytecode -> VM.\n\
+         run / run-ir / run-mir / run-vm / emit-* (except emit-sources): --string-heap-limit <bytes> / --array-heap-limit <bytes>\n\
          Default: 67108864 bytes per heap; compile-time string budget is independent.\n",
         env!("CARGO_PKG_VERSION")
     );
