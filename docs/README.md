@@ -48,3 +48,11 @@ Cerune documentation is divided into `design`, which records design decisions, a
 | --- | --- | --- |
 | Language / 言語仕様 | [日本語](reference/language.ja.md) | [English](reference/language.en.md) |
 | CLI | [日本語](reference/cli.ja.md) | [English](reference/cli.en.md) |
+
+
+## idea / アイデア
+
+| Document | 日本語 | English |
+| --- | --- | --- |
+| アイデアカタログ / idea-catalog | [日本語](idea/idea-catalog.ja.md) | [English](idea/idea-catalog.en.md) |
+
