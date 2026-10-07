@@ -11,3 +11,5 @@
 
 # 観察テストの期待値は生成物の拡張子でも追跡する
 !tests/fixtures/observation/**/expected/**
+# 動的配列の生成過程を比較するAssembly fixture
+!tests/fixtures/dynamic-arrays/*.s

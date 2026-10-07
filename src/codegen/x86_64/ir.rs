@@ -1,7 +1,9 @@
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum Type {
-    /// 不変な長さ付き静的バイト列への参照です。
+    /// 不変な長さ付き文字列データへの内部参照です。
     String,
+    /// 動的配列の管理領域への内部参照です。
+    DynamicArray,
     Bool,
     I64,
     F32,
@@ -29,6 +31,7 @@ pub enum CompareOp {
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Module {
     pub string_heap_limit: Option<u64>,
+    pub array_heap_limit: Option<u64>,
     pub uses_write: bool,
     pub origins: Vec<Origin>,
     pub target: super::Target,
@@ -86,6 +89,42 @@ pub enum FloatConstant {
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum Instruction {
+    ArrayAllocate {
+        width: u64,
+        stride: usize,
+        label: usize,
+    },
+    ArrayRangeCheck {
+        length_offset: isize,
+        start_offset: isize,
+        label: usize,
+    },
+    DynamicArrayAddress {
+        base_offset: isize,
+        base_is_pointer: bool,
+        destination_offset: isize,
+        label: usize,
+    },
+    ArrayInitAddress {
+        owner_offset: isize,
+        destination_offset: isize,
+    },
+    ArrayInitialized {
+        owner_offset: isize,
+    },
+    ArrayLength,
+    ArrayRetain,
+    ArrayReleaseOwner,
+    ArrayFree,
+    LoadFromPointer {
+        ty: Type,
+        pointer_offset: isize,
+    },
+    CopyFromPointer {
+        pointer_offset: isize,
+        destination_offset: isize,
+        slots: usize,
+    },
     StringConcat {
         left_offset: isize,
         label: usize,

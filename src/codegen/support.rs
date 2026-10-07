@@ -177,16 +177,3 @@ pub(super) fn string_heap_limit(program: &crate::ir::Program) -> Option<u64> {
         })
         .then_some(program.string_heap_limit)
 }
-
-pub(super) fn require_static_arrays(
-    program: &Program,
-    route: &str,
-) -> Result<(), crate::diagnostic::Diagnostic> {
-    if let Some(span) = program.first_dynamic_array_span() {
-        return Err(crate::diagnostic::Diagnostic::new(
-            format!("dynamic arrays are not yet supported by {route}; use run or run-vm"),
-            span,
-        ));
-    }
-    Ok(())
-}

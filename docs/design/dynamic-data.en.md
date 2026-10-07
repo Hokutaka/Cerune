@@ -2,7 +2,7 @@
 
 [日本語](dynamic-data.ja.md)
 
-**String concatenation is implemented across routes. [Dynamic arrays](owned-arrays.en.md) support IR/VM/C/LLVM/QBE/WAT execution; native routes and borrowed slices remain pending.** For string ownership below, the IR Executor, VM, C, LLVM, QBE, WAT, Windows/Linux ASM, and native COFF/ELF routes share value semantics and ownership lowering.
+**String concatenation is implemented across routes. [Dynamic arrays](owned-arrays.en.md) support IR/VM/C/LLVM/QBE/WAT/ASM/native-object execution; borrowed slices remain pending.** For string ownership below, the IR Executor, VM, C, LLVM, QBE, WAT, Windows/Linux ASM, and native COFF/ELF routes share value semantics and ownership lowering.
 
 ## String concatenation
 
@@ -98,7 +98,7 @@ LLVM uses explicit targets rather than the compiler host OS. Native COFF/ELF put
 
 ## Dynamic arrays and future borrowed slices
 
-Implement owned dynamic arrays and range copies before borrowed slices. The [owned-array design](owned-arrays.en.md) specifies copy points, read-only access, common budget accounting, failure order, and cross-route acceptance criteria. Owned arrays work in IR/VM/C/LLVM/QBE/WAT; native support and borrowed slices remain pending.
+Implement owned dynamic arrays and range copies before borrowed slices. The [owned-array design](owned-arrays.en.md) specifies copy points, read-only access, common budget accounting, failure order, and cross-route acceptance criteria. Owned arrays work in IR/VM/C/LLVM/QBE/WAT/ASM/native objects; borrowed slices remain pending.
 
 - `[T]` differs from `[T; N]`, permits zero length, and maintains `0 <= length <= capacity`. Capacity counts elements; initially allocate only the requested amount.
 - Copies own independent nested mutable storage. Immutable string content can be shared. Lower typed copy/release into common IR and check size products/sums.

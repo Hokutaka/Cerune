@@ -2,10 +2,11 @@
 
 [English](README.en.md)
 
-IR Executor・VM・生成C・LLVM・QBE・WATで実行できます。ASM・native objectは未対応です。
+IR Executor・VM・生成C・LLVM・QBE・WATで実行できます。
 
 | 例 | 確認すること |
 | --- | --- |
+| [coordinates.ceru](coordinates.ceru) | 固定長の座標ペアを動的配列に入れ、コピーの平行移動と要素更新を確認 |
 | [labels.ceru](labels.ceru) | 文字列配列を関数で加工し、元の配列・保存したコピー・再代入後を比較 |
 | [batches.ceru](batches.ceru) | 二つの範囲を固定長配列に入れて返し、保存したコピーと更新を比較 |
 | [readings.ceru](readings.ceru) | 構造体配列の範囲を関数から返し、コピーを修正して集計 |
@@ -57,3 +58,16 @@ node tests/support/run_wasm.cjs labels.wasm
 ```
 
 WABTは`npm install --prefix target/wasm-tools --no-audit --no-fund wabt@1.0.39`で用意できます。出力は順に`["月", "火"]`、`["予定:月", "予定:火"]`、`["休み", "予定:火"]`、`false`です。IR・VM・C・LLVM・QBEでも同じ出力をテストします。コピー・解放・検査は生成WATにも残り、配列を置くmemoryは外部へ公開しません。
+
+Nativeの生成・実行例（Linux x86-64）：
+
+```sh
+cargo run --quiet -- emit-asm examples/dynamic_arrays/coordinates.ceru --target x86_64-unknown-linux-gnu --annotate-origins -o coordinates.s
+clang coordinates.s -o coordinates-asm
+./coordinates-asm
+cargo run --quiet -- emit-obj examples/dynamic_arrays/coordinates.ceru --target x86_64-unknown-linux-gnu --annotate-origins -o coordinates.o
+clang coordinates.o -o coordinates-native
+./coordinates-native
+```
+
+Windowsではターゲットを`x86_64-pc-windows-msvc`に変え、`clang --target=x86_64-pc-windows-msvc coordinates.o -o coordinates.exe`、`.\coordinates.exe`で実行します。ASMも同じターゲットでリンクします。元の座標`[[1, 2], [3, 4]]`、平行移動した保存値`[[11, 1], [13, 3]]`、更新後`[[99, 1], [13, 3]]`、`false`を出力します。すべての経路で同じ結果を検証します。

@@ -2,7 +2,7 @@
 
 [English](owned-arrays.en.md)
 
-**`[T]`・`array_copy`・`array_copy_range`・配列用予算は共通IR・IR Executor／VM・生成C・LLVM・QBE・WATで実装済みです。ASM・native objectと`array_repeat`は未対応です。** 実行例は[動的配列のコピー](../../examples/dynamic_arrays/copy.ceru)と[入れ子・関数・enum](../../examples/dynamic_arrays/nested.ceru)です。[実装済みの文字列管理](dynamic-data.ja.md)を土台にしますが、更新できる配列の領域は独立してコピーします。
+**`[T]`・`array_copy`・`array_copy_range`・配列用予算は共通IR・IR Executor／VM・生成C・LLVM・QBE・WAT・Windows/Linux ASM・自前COFF/ELFで実装済みです。`array_repeat`は未対応です。** 実行例は[動的配列のコピー](../../examples/dynamic_arrays/copy.ceru)と[入れ子・関数・enum](../../examples/dynamic_arrays/nested.ceru)です。[実装済みの文字列管理](dynamic-data.ja.md)を土台にしますが、更新できる配列の領域は独立してコピーします。
 
 ## 実装の進捗
 
@@ -10,11 +10,11 @@
 | --- | --- |
 | 引数の所有受け渡し | 実装済み。呼び出し側が準備した所有を一度だけ渡し、calleeが解放。IRで所有と内部の読み取りを区別 |
 | 読み取りと所有値の準備 | 実装済み。共通IRの`read`束縛で読み取りを区別し、一時値の抽出と解放順を維持 |
-| 動的配列の型・領域確保・独立コピー | IR・VM・C・LLVM・QBE・WATで実装済み。範囲コピー、表示・比較・反復、複合値と関数も対応 |
+| 動的配列の型・領域確保・独立コピー | IR・VM・C・LLVM・QBE・WAT・ASM・自前Objectで実装済み。範囲コピー、表示・比較・反復、複合値と関数も対応 |
 | `array_repeat` | 未実装。後続の操作 |
-| 各生成経路の動的配列対応・下記の完了条件 | C・LLVM・QBE・WAT対応済み。nativeは未実装 |
+| 各生成経路の動的配列対応・下記の完了条件 | C・LLVM・QBE・WAT・Windows/Linux ASM・自前COFF/ELF対応済み |
 
-IR・VM・生成C・LLVM・QBE・WATでは動的配列も結果・停止理由・ソース位置・先行出力を照合しています。[呼び出し境界の所有](dynamic-data.ja.md#呼び出し境界の所有)と[読み取りの設計](dynamic-data.ja.md#読み取りと所有値の準備)、[引数](../../examples/owned_arguments.ceru)・[読み取り](../../examples/borrowed_reads.ceru)のexampleを参照してください。他の生成経路の対応完了は意味しません。
+全経路で動的配列も結果・停止理由・ソース位置・先行出力を照合しています。[呼び出し境界の所有](dynamic-data.ja.md#呼び出し境界の所有)と[読み取りの設計](dynamic-data.ja.md#読み取りと所有値の準備)、[引数](../../examples/owned_arguments.ceru)・[読み取り](../../examples/borrowed_reads.ceru)のexampleを参照してください。
 
 ## 型と最初の操作
 
@@ -32,7 +32,7 @@ IR・VM・生成C・LLVM・QBE・WATでは動的配列も結果・停止理由�
 
 固定長配列と動的配列の間に暗黙変換は設けません。配列リテラル`[1, 2]`は従来どおり固定長です。初回は動的配列リテラルを追加せず、空値は空範囲から作れます。後続の`array_repeat::<T>(seed, 0)`案でもseedは要素数0で評価します。`[T; 0]`・空リテラルの現在の制限は別の変更にしません。
 
-以下はIR・VM・生成C・LLVM・QBE・WATで実行できます。
+以下は全経路で実行できます。
 
 ```text
 mut values: [i64] = array_copy([10, 20, 30]);
@@ -99,9 +99,9 @@ matchは対象を一度所有値として保存し、選択したペイロード
 
 ## 予算と寿命
 
-配列用に`--array-heap-limit <bytes>`を追加しました。既定64 MiB、0と`i64::MAX`までの十進非負整数を認め、文字列用`--string-heap-limit`は意味を変えません。どちらも実行前・生成前の設定とし、IR・bytecodeに記録します。生成C・LLVM・QBE・WATも同じ設定を使い、他の生成成果物は後続実装で対応します。コンパイル時定数では初回は動的配列を許さず、固定長定数から実行時に明示コピーします。
+配列用に`--array-heap-limit <bytes>`を追加しました。既定64 MiB、0と`i64::MAX`までの十進非負整数を認め、文字列用`--string-heap-limit`は意味を変えません。どちらも実行前・生成前の設定とし、IR・bytecodeに記録します。生成C・LLVM・QBE・WAT・ASM・自前Objectも同じ設定を使います。コンパイル時定数では初回は動的配列を許さず、固定長定数から実行時に明示コピーします。
 
-経路ごとのポインタ幅・paddingで予算超過の位置が変わらないよう、**配列の生存要素領域を共通の計算単位で数える**案です。物理メモリ上限ではありません。
+経路ごとのポインタ幅・paddingで予算超過の位置が変わらないよう、**配列の生存要素領域を共通の計算単位で数える**規則です。物理メモリ上限ではありません。
 
 | 要素型の計算幅 | バイト数 |
 | --- | --- |
@@ -129,7 +129,7 @@ matchは対象を一度所有値として保存し、選択したペイロード
 
 ASTの型、共通IR、backend IR、bytecode、成果物の対応を残します。配列全体を隠れたホスト関数で処理して終わらせず、要素走査は共通IRの通常のループ・分岐で追える形にします。各backendは配置・確保・load/store・解放の実装を担当し、値コピーの規則を個別に再定義しません。LLVM・ASM・objectでは既存の出自注釈も維持します。
 
-IR ExecutorとVMは実行単位の型付き要素領域を管理し、同じ領域管理プリミティブを使います。命令の実行は独立し、要素コピーはそれぞれ共通IR／bytecodeのループで実行します。Cは下流のCコンパイラが選ぶターゲットの標準allocatorを使います。LLVM・QBEと今後のASM・自前COFF/ELFは明示ターゲットのallocatorとABIを使い、WATは非公開memoryを使います。領域の共有アドレスを利用者や観測APIへ公開しません。再帰的な型、外部値としての動的配列、借用・FFIはこの変更に含めません。
+IR ExecutorとVMは実行単位の型付き要素領域を管理し、同じ領域管理プリミティブを使います。命令の実行は独立し、要素コピーはそれぞれ共通IR／bytecodeのループで実行します。Cは下流のCコンパイラが選ぶターゲットの標準allocatorを使います。LLVM・QBE・ASM・自前COFF/ELFは明示ターゲットのallocatorとABIを使い、WATは非公開memoryを使います。領域の共有アドレスを利用者や観測APIへ公開しません。再帰的な型、外部値としての動的配列、借用・FFIはこの変更に含めません。
 
 ### 一時値からの所有の引き継ぎ
 
@@ -143,7 +143,7 @@ Cは所有領域へのポインタと長さの記述子を使います。管理�
 
 要素コピー・比較・表示・逆順の解放は共通IRのループのままCへ出力します。C helperは領域管理と型付きload/storeだけを担当します。正常終了後の予算残存、確保失敗、部分コピーの予算超過をテストします。実行時停止では既存の診断後にプロセスを終了し、OSが残存領域を回収します。失敗から復帰するAPIは追加しません。
 
-[同一ソース](../../tests/fixtures/dynamic-arrays/source.ceru)の[IR](../../tests/fixtures/dynamic-arrays/ir.ceir)・[bytecode](../../tests/fixtures/dynamic-arrays/bytecode.cebc)・[生成C](../../tests/fixtures/dynamic-arrays/c.c)を比較できます。[範囲を返す例](../../examples/dynamic_arrays/window.ceru)もIR・VM・C・LLVM・QBE・WATで実行比較します。Cは`-O0`と`-O2`で比較し、LinuxではASan/UBSanも適用します。これは外部コンパイラの検証設定で、Ceruneに暗黙の最適化を追加するものではありません。
+[同一ソース](../../tests/fixtures/dynamic-arrays/source.ceru)の[IR](../../tests/fixtures/dynamic-arrays/ir.ceir)・[bytecode](../../tests/fixtures/dynamic-arrays/bytecode.cebc)・[生成C](../../tests/fixtures/dynamic-arrays/c.c)を比較できます。[範囲を返す例](../../examples/dynamic_arrays/window.ceru)もIR・VM・C・LLVM・QBE・WAT・ASM・自前Objectで実行比較します。Cは`-O0`と`-O2`で比較し、LinuxではASan/UBSanも適用します。これは外部コンパイラの検証設定で、Ceruneに暗黙の最適化を追加するものではありません。
 
 ## LLVMへの対応
 
@@ -153,7 +153,7 @@ LLVMは`%cerune.array = { ptr, i64 }`で所有領域と長さを保持します�
 
 `--target x86_64-unknown-linux-gnu`または`--target x86_64-pc-windows-msvc`を必須とし、実行中のOSからは選びません。ターゲットの`malloc/free`と既存の出力・診断ABIを使います。生成後のコンパイル・リンクは外部Clangの責任です。
 
-[LLVM fixture](../../tests/fixtures/dynamic-arrays/llvm.ll)と`--annotate-origins`で共通IRとの対応を確認できます。[構造体配列の例](../../examples/dynamic_arrays/readings.ceru)を含め、IR・VM・C・LLVM・QBE・WATで出力を照合します。LLVMも`-O0`と`-O2`で、範囲・添字・予算・確保失敗の理由、NodeId／Span、先行出力を検査します。所有管理の内部trapだけでは成功扱いにしません。正常終了後は配列予算が0に戻ることも検査します。
+[LLVM fixture](../../tests/fixtures/dynamic-arrays/llvm.ll)と`--annotate-origins`で共通IRとの対応を確認できます。[構造体配列の例](../../examples/dynamic_arrays/readings.ceru)を含め、IR・VM・C・LLVM・QBE・WAT・ASM・自前Objectで出力を照合します。LLVMも`-O0`と`-O2`で、範囲・添字・予算・確保失敗の理由、NodeId／Span、先行出力を検査します。所有管理の内部trapだけでは成功扱いにしません。正常終了後は配列予算が0に戻ることも検査します。
 
 ## QBEへの対応
 
@@ -163,7 +163,7 @@ QBEは動的配列を管理領域へのポインタとして渡します。管�
 
 コピー・比較・表示・逆順解放のループ、要素のstore／blit、初期化完了の記録が[生成SSA](../../tests/fixtures/dynamic-arrays/qbe.ssa)に残ります。検査には元の式のNodeId／Spanを渡し、所有管理だけの内部`hlt`を言語診断として扱いません。正常終了後の予算0、サイズ超過、二つの確保の失敗を検証します。
 
-Linuxは`amd64_sysv`、Windowsは`amd64_win`を明示します。QBE 1.3で[分割して返す例](../../examples/dynamic_arrays/batches.ceru)を含めIR・VM・C・LLVM・QBE・WATを比較し、[Windowsの引数規則](qbe-windows.ja.md)も配列と組み合わせて確認します。native・`array_repeat`は後続です。
+Linuxは`amd64_sysv`、Windowsは`amd64_win`を明示します。QBE 1.3で[分割して返す例](../../examples/dynamic_arrays/batches.ceru)を含めIR・VM・C・LLVM・QBE・WAT・ASM・自前Objectを比較し、[Windowsの引数規則](qbe-windows.ja.md)も配列と組み合わせて確認します。`array_repeat`は後続です。
 
 ## WATへの対応
 
@@ -182,7 +182,23 @@ WATは非公開のWasm32線形メモリを使い、動的配列を管理領域�
 
 所有数0と解放済みは区別します。共通IRの逆順要素解放が終わり、`array.free`を実行した時点で再利用を許可します。コピー・比較・表示・解放のループは共通IRのままloweringし、[生成WAT](../../tests/fixtures/dynamic-arrays/wat.wat)にも残します。検査のヘルパーは元のNodeId／SourceId／Spanを保持し、ホストには出力バイトだけを渡します。memoryや可変の診断状態をexportしません。
 
-[文字列配列のexample](../../examples/dynamic_arrays/labels.ceru)を含む共通テストをIR・VM・C・LLVM・QBE・WATで照合します。内部テストでは、サイズ超過・実際の`memory.grow`失敗・幅0・空配列・上位32ビットを持つ添字を区別し、同一インスタンスの成功実行を繰り返して配列と文字列の予算が0へ戻ることと、1ページ内での領域再利用も確認します。
+[文字列配列のexample](../../examples/dynamic_arrays/labels.ceru)を含む共通テストをIR・VM・C・LLVM・QBE・WAT・ASM・自前Objectで照合します。内部テストでは、サイズ超過・実際の`memory.grow`失敗・幅0・空配列・上位32ビットを持つ添字を区別し、同一インスタンスの成功実行を繰り返して配列と文字列の予算が0へ戻ることと、1ページ内での領域再利用も確認します。
+
+## Windows/Linux ASMと自前Objectへの対応
+
+Nativeは動的配列を管理領域への8バイト参照として渡します。管理領域と要素領域を一度の`malloc`で確保し、空配列はnullにします。共通IRのコピー・比較・表示・逆順解放のループをそのままloweringします。
+
+| offset（バイト） | 内容 |
+| --- | --- |
+| 0 / 8 / 16 | 要素領域の基準ポインタ / 長さ / 所有数 |
+| 24 / 32 / 40 | 論理バイト数 / 初期化済み数 / 要素stride |
+| 48以降 | 要素領域 |
+
+既存のNative ABIに合わせ、要素・構造体のフィールドは基準ポインタから8バイトずつ低いアドレスへ置きます。配列の内部参照は8バイトでも論理予算は16バイトです。論理サイズと、48バイトの管理領域を含む物理サイズを別々に検査してから確保します。予算は確保成功後に加算し、最終所有者が要素を解放した後の`array.free-elements`で返却します。参照を利用者に公開するAPIは追加しません。
+
+Windows/Linuxのターゲットを明示し、各OSの引数配置と`malloc/free`・出力・停止の規則を使います。同じloweringからASMと自前COFF/ELFを生成し、どちらも外部リンカで実行ファイルにします。[Linux ASM](../../tests/fixtures/dynamic-arrays/linux.s)と[Windows ASM](../../tests/fixtures/dynamic-arrays/windows.s)、`--annotate-origins`で確保・要素のload/store・検査・解放を追えます。
+
+[座標ペアのexample](../../examples/dynamic_arrays/coordinates.ceru)を含め、IR・VM・C・LLVM・QBE・WAT・ASM・自前Objectの出力と失敗記録を比較します。単体テストではサイズ超過、固定したmalloc失敗、空配列、幅0、所有数を検査し、繰り返し成功した実行の配列・文字列予算と管理リストが空になることを確認します。Windowsの診断文のCRLFだけはLFと揃えて比較し、文字列出力のNUL・CR・LFはそのまま比較します。所有管理の内部trapを言語上の検査失敗として成功扱いにしません。
 
 ## 実装の完了条件
 
