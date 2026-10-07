@@ -36,98 +36,15 @@
 main:
   pushq %rbp
   movq %rsp, %rbp
-  subq $80, %rsp
+  subq $112, %rsp
+  jmp .Lcerune_block_0
+.Lcerune_block_0: # mir_block
   movsd .Lcerune_f64_0(%rip), %xmm0
+  movsd %xmm0, -8(%rbp)
+  movsd -8(%rbp), %xmm0
   xorpd .Lcerune_sign_f64(%rip), %xmm0
-  movapd %xmm0, %xmm2
-  ucomisd %xmm2, %xmm2
-  jp .Lcerune_main_trunc_0_nonfinite
-  movabsq $9218868437227405312, %r11
-  movq %r11, %xmm1
-  ucomisd %xmm1, %xmm2
-  je .Lcerune_main_trunc_0_nonfinite
-  movabsq $-4503599627370496, %r11
-  movq %r11, %xmm1
-  ucomisd %xmm1, %xmm2
-  je .Lcerune_main_trunc_0_nonfinite
-  movabsq $-4332462841530417152, %r11
-  movq %r11, %xmm1
-  ucomisd %xmm1, %xmm2
-  jb .Lcerune_main_trunc_0_range
-  movabsq $4890909195324358656, %r11
-  movq %r11, %xmm1
-  ucomisd %xmm1, %xmm2
-  jae .Lcerune_main_trunc_0_range
-  cvttsd2siq %xmm2, %rax
-  jmp .Lcerune_main_trunc_0_done
-.Lcerune_main_trunc_0_nonfinite:
-  xorl %ecx, %ecx
-  callq fflush
-  movl $2, %ecx
-  leaq .Lcerune_failure_0(%rip), %rdx
-  movl $65, %r8d
-  callq _write
-  movl $7, %ecx
-  int $0x29
-.Lcerune_main_trunc_0_range:
-  xorl %ecx, %ecx
-  callq fflush
-  movl $2, %ecx
-  leaq .Lcerune_failure_1(%rip), %rdx
-  movl $67, %r8d
-  callq _write
-  movl $7, %ecx
-  int $0x29
-.Lcerune_main_trunc_0_done:
-  movq %rax, %rdx
-  leaq .Lcerune_fmt_i64(%rip), %rcx
-  callq printf
-  movsd .Lcerune_f64_1(%rip), %xmm0
-  movapd %xmm0, %xmm2
-  ucomisd %xmm2, %xmm2
-  jp .Lcerune_main_trunc_1_nonfinite
-  movabsq $9218868437227405312, %r11
-  movq %r11, %xmm1
-  ucomisd %xmm1, %xmm2
-  je .Lcerune_main_trunc_1_nonfinite
-  movabsq $-4503599627370496, %r11
-  movq %r11, %xmm1
-  ucomisd %xmm1, %xmm2
-  je .Lcerune_main_trunc_1_nonfinite
-  movabsq $-4616189618054758400, %r11
-  movq %r11, %xmm1
-  ucomisd %xmm1, %xmm2
-  jbe .Lcerune_main_trunc_1_range
-  movabsq $4643211215818981376, %r11
-  movq %r11, %xmm1
-  ucomisd %xmm1, %xmm2
-  jae .Lcerune_main_trunc_1_range
-  cvttsd2siq %xmm2, %rax
-  jmp .Lcerune_main_trunc_1_done
-.Lcerune_main_trunc_1_nonfinite:
-  xorl %ecx, %ecx
-  callq fflush
-  movl $2, %ecx
-  leaq .Lcerune_failure_2(%rip), %rdx
-  movl $66, %r8d
-  callq _write
-  movl $7, %ecx
-  int $0x29
-.Lcerune_main_trunc_1_range:
-  xorl %ecx, %ecx
-  callq fflush
-  movl $2, %ecx
-  leaq .Lcerune_failure_3(%rip), %rdx
-  movl $68, %r8d
-  callq _write
-  movl $7, %ecx
-  int $0x29
-.Lcerune_main_trunc_1_done:
-  movq %rax, %rdx
-  leaq .Lcerune_fmt_i64(%rip), %rcx
-  callq printf
-  movsd .Lcerune_f64_2(%rip), %xmm0
-  xorpd .Lcerune_sign_f64(%rip), %xmm0
+  movsd %xmm0, -16(%rbp)
+  movsd -16(%rbp), %xmm0
   movapd %xmm0, %xmm2
   ucomisd %xmm2, %xmm2
   jp .Lcerune_main_trunc_2_nonfinite
@@ -139,27 +56,126 @@ main:
   movq %r11, %xmm1
   ucomisd %xmm1, %xmm2
   je .Lcerune_main_trunc_2_nonfinite
-  movabsq $-4616189618054758400, %r11
+  movabsq $-4332462841530417152, %r11
   movq %r11, %xmm1
   ucomisd %xmm1, %xmm2
-  jbe .Lcerune_main_trunc_2_range
-  movabsq $4895412794951729152, %r11
-  movq %r11, %xmm1
-  ucomisd %xmm1, %xmm2
-  jae .Lcerune_main_trunc_2_range
+  jb .Lcerune_main_trunc_2_range
   movabsq $4890909195324358656, %r11
   movq %r11, %xmm1
   ucomisd %xmm1, %xmm2
-  jb .Lcerune_main_trunc_2_small
+  jae .Lcerune_main_trunc_2_range
+  cvttsd2siq %xmm2, %rax
+  jmp .Lcerune_main_trunc_2_done
+.Lcerune_main_trunc_2_nonfinite:
+  xorl %ecx, %ecx
+  callq fflush
+  movl $2, %ecx
+  leaq .Lcerune_failure_0(%rip), %rdx
+  movl $65, %r8d
+  callq _write
+  movl $7, %ecx
+  int $0x29
+.Lcerune_main_trunc_2_range:
+  xorl %ecx, %ecx
+  callq fflush
+  movl $2, %ecx
+  leaq .Lcerune_failure_1(%rip), %rdx
+  movl $67, %r8d
+  callq _write
+  movl $7, %ecx
+  int $0x29
+.Lcerune_main_trunc_2_done:
+  movq %rax, -24(%rbp)
+  movq -24(%rbp), %rax
+  movq %rax, %rdx
+  leaq .Lcerune_fmt_i64(%rip), %rcx
+  callq printf
+  movsd .Lcerune_f64_1(%rip), %xmm0
+  movsd %xmm0, -32(%rbp)
+  movsd -32(%rbp), %xmm0
+  movapd %xmm0, %xmm2
+  ucomisd %xmm2, %xmm2
+  jp .Lcerune_main_trunc_3_nonfinite
+  movabsq $9218868437227405312, %r11
+  movq %r11, %xmm1
+  ucomisd %xmm1, %xmm2
+  je .Lcerune_main_trunc_3_nonfinite
+  movabsq $-4503599627370496, %r11
+  movq %r11, %xmm1
+  ucomisd %xmm1, %xmm2
+  je .Lcerune_main_trunc_3_nonfinite
+  movabsq $-4616189618054758400, %r11
+  movq %r11, %xmm1
+  ucomisd %xmm1, %xmm2
+  jbe .Lcerune_main_trunc_3_range
+  movabsq $4643211215818981376, %r11
+  movq %r11, %xmm1
+  ucomisd %xmm1, %xmm2
+  jae .Lcerune_main_trunc_3_range
+  cvttsd2siq %xmm2, %rax
+  jmp .Lcerune_main_trunc_3_done
+.Lcerune_main_trunc_3_nonfinite:
+  xorl %ecx, %ecx
+  callq fflush
+  movl $2, %ecx
+  leaq .Lcerune_failure_2(%rip), %rdx
+  movl $66, %r8d
+  callq _write
+  movl $7, %ecx
+  int $0x29
+.Lcerune_main_trunc_3_range:
+  xorl %ecx, %ecx
+  callq fflush
+  movl $2, %ecx
+  leaq .Lcerune_failure_3(%rip), %rdx
+  movl $68, %r8d
+  callq _write
+  movl $7, %ecx
+  int $0x29
+.Lcerune_main_trunc_3_done:
+  movq %rax, -40(%rbp)
+  movq -40(%rbp), %rax
+  movq %rax, %rdx
+  leaq .Lcerune_fmt_i64(%rip), %rcx
+  callq printf
+  movsd .Lcerune_f64_2(%rip), %xmm0
+  movsd %xmm0, -48(%rbp)
+  movsd -48(%rbp), %xmm0
+  xorpd .Lcerune_sign_f64(%rip), %xmm0
+  movsd %xmm0, -56(%rbp)
+  movsd -56(%rbp), %xmm0
+  movapd %xmm0, %xmm2
+  ucomisd %xmm2, %xmm2
+  jp .Lcerune_main_trunc_4_nonfinite
+  movabsq $9218868437227405312, %r11
+  movq %r11, %xmm1
+  ucomisd %xmm1, %xmm2
+  je .Lcerune_main_trunc_4_nonfinite
+  movabsq $-4503599627370496, %r11
+  movq %r11, %xmm1
+  ucomisd %xmm1, %xmm2
+  je .Lcerune_main_trunc_4_nonfinite
+  movabsq $-4616189618054758400, %r11
+  movq %r11, %xmm1
+  ucomisd %xmm1, %xmm2
+  jbe .Lcerune_main_trunc_4_range
+  movabsq $4895412794951729152, %r11
+  movq %r11, %xmm1
+  ucomisd %xmm1, %xmm2
+  jae .Lcerune_main_trunc_4_range
+  movabsq $4890909195324358656, %r11
+  movq %r11, %xmm1
+  ucomisd %xmm1, %xmm2
+  jb .Lcerune_main_trunc_4_small
   movapd %xmm2, %xmm3
   subsd %xmm1, %xmm3
   cvttsd2siq %xmm3, %rax
   btcq $63, %rax
-  jmp .Lcerune_main_trunc_2_done
-.Lcerune_main_trunc_2_small:
+  jmp .Lcerune_main_trunc_4_done
+.Lcerune_main_trunc_4_small:
   cvttsd2siq %xmm2, %rax
-  jmp .Lcerune_main_trunc_2_done
-.Lcerune_main_trunc_2_nonfinite:
+  jmp .Lcerune_main_trunc_4_done
+.Lcerune_main_trunc_4_nonfinite:
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
@@ -168,7 +184,7 @@ main:
   callq _write
   movl $7, %ecx
   int $0x29
-.Lcerune_main_trunc_2_range:
+.Lcerune_main_trunc_4_range:
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
@@ -177,26 +193,30 @@ main:
   callq _write
   movl $7, %ecx
   int $0x29
-.Lcerune_main_trunc_2_done:
+.Lcerune_main_trunc_4_done:
+  movq %rax, -64(%rbp)
+  movq -64(%rbp), %rax
   movq %rax, %rdx
   leaq .Lcerune_fmt_u64(%rip), %rcx
   callq printf
   movsd .Lcerune_f64_3(%rip), %xmm0
+  movsd %xmm0, -72(%rbp)
+  movsd -72(%rbp), %xmm0
   movapd %xmm0, %xmm2
   ucomisd %xmm2, %xmm2
-  jp .Lcerune_main_convert_bad_3_nonfinite
+  jp .Lcerune_main_convert_bad_5_nonfinite
   movabsq $9218868437227405312, %r11
   movq %r11, %xmm1
   ucomisd %xmm1, %xmm2
-  je .Lcerune_main_convert_bad_3_nonfinite
+  je .Lcerune_main_convert_bad_5_nonfinite
   movabsq $-4503599627370496, %r11
   movq %r11, %xmm1
   ucomisd %xmm1, %xmm2
-  je .Lcerune_main_convert_bad_3_nonfinite
+  je .Lcerune_main_convert_bad_5_nonfinite
   movq %xmm2, %r11
   movabsq $-9223372036854775808, %r10
   cmpq %r10, %r11
-  jne .Lcerune_main_convert_bad_3_finite
+  jne .Lcerune_main_convert_bad_5_finite
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
@@ -205,7 +225,7 @@ main:
   callq _write
   movl $7, %ecx
   int $0x29
-.Lcerune_main_convert_bad_3_nonfinite:
+.Lcerune_main_convert_bad_5_nonfinite:
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
@@ -214,21 +234,21 @@ main:
   callq _write
   movl $7, %ecx
   int $0x29
-.Lcerune_main_convert_bad_3_finite:
+.Lcerune_main_convert_bad_5_finite:
   movabsq $-4332462841530417152, %r11
   movq %r11, %xmm1
   ucomisd %xmm1, %xmm2
-  jb .Lcerune_main_convert_bad_3_range
+  jb .Lcerune_main_convert_bad_5_range
   movabsq $4890909195324358656, %r11
   movq %r11, %xmm1
   ucomisd %xmm1, %xmm2
-  jae .Lcerune_main_convert_bad_3_range
+  jae .Lcerune_main_convert_bad_5_range
   cvttsd2siq %xmm2, %rax
   cvtsi2sdq %rax, %xmm1
   ucomisd %xmm1, %xmm2
-  jne .Lcerune_main_convert_bad_3
-  jmp .Lcerune_main_convert_done_3
-.Lcerune_main_convert_bad_3:
+  jne .Lcerune_main_convert_bad_5
+  jmp .Lcerune_main_convert_done_5
+.Lcerune_main_convert_bad_5:
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
@@ -237,7 +257,7 @@ main:
   callq _write
   movl $7, %ecx
   int $0x29
-.Lcerune_main_convert_bad_3_range:
+.Lcerune_main_convert_bad_5_range:
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
@@ -246,7 +266,7 @@ main:
   callq _write
   movl $7, %ecx
   int $0x29
-.Lcerune_main_convert_bad_3_nan:
+.Lcerune_main_convert_bad_5_nan:
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
@@ -255,12 +275,16 @@ main:
   callq _write
   movl $7, %ecx
   int $0x29
-.Lcerune_main_convert_done_3:
+.Lcerune_main_convert_done_5:
+  movq %rax, -80(%rbp)
+  movq -80(%rbp), %rax
   movq %rax, %rdx
   leaq .Lcerune_fmt_i64(%rip), %rcx
   callq printf
+  jmp .Lcerune_block_1
+.Lcerune_block_1: # main_exit
   xorl %eax, %eax
-  addq $80, %rsp
+  addq $112, %rsp
   popq %rbp
   retq
 

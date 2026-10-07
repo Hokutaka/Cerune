@@ -12,6 +12,7 @@ pub fn emit(p: &Program) -> String {
         p.string_heap_limit, p.array_heap_limit
     )
     .unwrap();
+    writeln!(out, "source-strings={}\n", p.uses_strings).unwrap();
     for t in &p.types {
         writeln!(out, "type @{} {:?} {{", t.id.0, t.name).unwrap();
         for (id, name, ty) in &t.fields {

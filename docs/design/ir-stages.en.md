@@ -4,7 +4,7 @@
 
 ## Status and direction
 
-The inspected baseline is `f39f55e`, merging Native dynamic arrays. **Common MIR types, validation, HIR lowering, and `emit-mir` are implemented. The [MIR interpreter](mir-executor.en.md) and `run-mir` are also implemented. Native migration, SSA, and optimization passes remain unimplemented.**
+The inspected baseline is `f39f55e`, merging Native dynamic arrays. **Common MIR types, validation, HIR lowering, and `emit-mir` are implemented. The [MIR interpreter](mir-executor.en.md) and `run-mir` are also implemented. [Native lowering from MIR](native-mir.en.md) is also implemented. SSA and optimization passes remain unimplemented.**
 
 | Stage | Current implementation | Direction |
 | --- | --- | --- |
@@ -33,7 +33,7 @@ File-based module resolution happens in [modules](../../src/modules.rs), preserv
 
 ## Baseline and migration
 
-Today HIR feeds direct execution, bytecode, and every backend, alongside MIR generation and independent execution. The following plan **includes the unimplemented MIR→LIR migration**. Each executor receives a representation, not the previous executor's result.
+HIR feeds direct execution, bytecode, and external backends; Native now goes through MIR→LIR. The following diagram describes the current implementation. Each executor receives a representation, not the previous executor's result.
 
 ```text
 Source → frontend → HIR ─────────────→ IR Executor (reference)
@@ -44,7 +44,7 @@ Source → frontend → HIR ─────────────→ IR Execut
                      └→ existing bytecode/C/LLVM/QBE/WAT (migration references)
 ```
 
-First validate MIR alongside existing routes. After MIR execution covers current language features, move Native lowering to MIR, compare it with the HIR→Native implementation, then remove the old conversion. Retain the unoptimized HIR→MIR→LIR baseline without maintaining duplicate Native lowering indefinitely.
+After comparing independent MIR execution with existing routes, Native lowering was migrated to MIR. Known outputs, failures, origins, and ABI behavior were tested before and after migration on Windows/Linux, and the old HIR→Native conversion was removed. Unoptimized HIR→MIR→LIR remains the baseline.
 
 Keep the unoptimized baseline snapshot and separate before/after snapshots for selected transformations. The future selectable path is shown below. Passes are optional, and SSA construction itself is distinct from optimization.
 
@@ -63,7 +63,7 @@ Start without SSA, allowing explicit assignments to typed locals and temporaries
 
 | Element | What it records |
 | --- | --- |
-| Program/function | Correspondence to HIR types/functions, entry point, array/string budgets |
+| Program/function | Correspondence to HIR types/functions, entry point, array/string budgets, and source string usage retained after constant evaluation (`source-strings`) |
 | Block | Deterministic BlockId and instructions, ending in exactly one terminator such as jump/branch/return |
 | Operand/place | Typed constants, temporaries, and locals; no physical addresses or CPU registers |
 | Computation | Integer width/signedness, f32/f64, explicit conversions, existing aggregate types |
@@ -165,8 +165,8 @@ Implement and compare in these units, aiming for current feature parity rather t
 | --- | --- | --- |
 | 1 (implemented) | MIR types/blocks/instructions/validator, HIR→MIR, `emit-mir` | Validate every example's lowering/determinism, order, short-circuit/loop edges, origins, and rejection of malformed MIR. Execution comparisons follow in the next stage; static heap lifetime guarantees remain future work. |
 | 2 (implemented) | [Independent MIR interpreter](mir-executor.en.md), `run-mir` | Executes neither HIR nor VM internally; compares current features, failures, origins, and lifetimes. Dynamic arrays are compared across nine routes on Windows/Linux |
-| 3 | Native lowering from MIR | Match existing ASM/COFF/ELF known outputs, failures, origins, and ABI behavior on Windows/Linux |
+| 3 (implemented) | [Native lowering from MIR](native-mir.en.md) | Match existing ASM/COFF/ELF known outputs, failures, origins, and ABI behavior on Windows/Linux |
 | 4 | Observation bundles, Lean correspondence, other backend migration as needed | Connect the same compilation and actual before/after representations; state proof scope and omissions |
 | 5 | SSA conversion and individual optimization passes | Select/observe SSA independently from optimization; apply validators and semantic-preservation conditions per pass |
 
-The first MIR PR should not combine SSA, optimization, every backend migration, and Image loading. MIR execution covers types, functions, modules, generics, arrays, strings, ownership, and runtime diagnostics. Next migrate Native lowering to MIR and compare with existing Native output.
+The first MIR PR should not combine SSA, optimization, every backend migration, and Image loading. MIR execution covers types, functions, modules, generics, arrays, strings, ownership, and runtime diagnostics. Native lowering from MIR is now implemented. Next, bundle HIR/MIR/Native observations and their correspondence from the same compilation.

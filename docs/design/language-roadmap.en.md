@@ -46,7 +46,7 @@ Language support does not imply equal observation detail. Language check failure
 
 [IR/VM/Native build / release](owned-routes.en.md) and [Lean correspondence and program-property verification](lean-verification.en.md) are separate foundation work. A new classification or proof experiment does not complete the missing language features or route support below.
 
-Dynamic-array native support is complete. The [stage design](ir-stages.en.md) addresses [Issue #94](https://github.com/Hokutaka/Cerune/issues/94). Unoptimized MIR types, validation, lowering, and `emit-mir` are implemented. The [independent MIR interpreter](mir-executor.en.md) and `run-mir` are implemented, with output/failure/origin/lifetime comparisons against existing routes. Next migrate Native lowering to MIR. Native migration, SSA, and optimization passes remain unimplemented. Build/release follows the responsibility model in [Issue #81](https://github.com/Hokutaka/Cerune/issues/81), keeping optimization separate from distribution. Lean verification will address correspondence between representations.
+Dynamic-array native support is complete. The [stage design](ir-stages.en.md) addresses [Issue #94](https://github.com/Hokutaka/Cerune/issues/94). Unoptimized MIR types, validation, lowering, and `emit-mir` are implemented. The [independent MIR interpreter](mir-executor.en.md) and `run-mir` are implemented, with output/failure/origin/lifetime comparisons against existing routes. [Native lowering from MIR](native-mir.en.md) is implemented, with before/after execution comparisons and MIR→LIR→ASM/Object provenance. Next comes an observation bundle, followed separately by Lean correspondence work, SSA, and optimization passes; these remain unimplemented. Build/release follows the responsibility model in [Issue #81](https://github.com/Hokutaka/Cerune/issues/81), keeping optimization separate from distribution. Lean verification will address correspondence between representations.
 
 ## Proposed priorities
 
@@ -54,7 +54,7 @@ Dynamic-array native support is complete. The [stage design](ir-stages.en.md) ad
 
 | Order | Missing feature | First contract and example |
 | --- | --- | --- |
-| 1 | [HIR/MIR/LIR implementation](ir-stages.en.md) | MIR types, validation, HIR lowering, and observation examples implemented. The independent MIR interpreter and comparisons are also implemented. Next: Native migration to MIR, followed by SSA and optimization |
+| 1 | [HIR/MIR/LIR implementation](ir-stages.en.md) | MIR types, validation, HIR lowering, and observation examples implemented. The independent MIR interpreter and comparisons are also implemented. Native migration is implemented. Next: observations from one compilation, then Lean correspondence, SSA, and optimization |
 | 2 | [Additional dynamic-array operations](owned-arrays.en.md) | Existing operations work across routes; consider `array_repeat` later; borrowed slices need separate lifetime and mutation type rules |
 | 3 | Recursion and external I/O | Define call storage, resource limits, I/O failure, and cleanup |
 | 4 | Module distribution | Re-exports, dependencies/versions, reproducible builds; extend explicit imports |

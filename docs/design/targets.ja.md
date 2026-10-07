@@ -14,6 +14,8 @@
 
 現在の出力経路には、C、LLVM IR、QBE IR、WebAssembly Text、ネイティブアセンブリ、ネイティブオブジェクト、Cerune bytecodeがあります。
 
+Nativeは[HIR→MIR→x86-64 LIR](native-mir.ja.md)を通ります。MIRは共有の実行表現であり、新しいOSターゲットではありません。
+
 ### 直接実行
 
 `run`／`run-ir`の[IR Executor](ir-executor.ja.md)は、完成済みCerune IRを直接実行する経路です。新しい成果物を生成せず、ターゲットABIの選択も行いません。出力経路の表とは別に扱います。`run-vm`はBytecode → VMです。`run-mir`は[独立したMIR実行器](mir-executor.ja.md)で、HIR→MIRを経て実行します。`emit-mir`はその表現を観測する操作です。

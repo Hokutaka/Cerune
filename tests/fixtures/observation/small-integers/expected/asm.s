@@ -25,59 +25,14 @@
 cerune_fn_average_0:
   pushq %rbp
   movq %rsp, %rbp
-  subq $96, %rsp
+  subq $112, %rsp
   movq %rcx, -8(%rbp)
   movq %rdx, -16(%rbp)
+  jmp .Lcerune_fn_0_block_0
+.Lcerune_fn_0_block_0: # mir_block
   movq -8(%rbp), %rax
-  # semantic u16, storage i64
-  movabsq $0, %r11
-  cmpq %r11, %rax
-  jl .Lcerune_fn_0_range_bad_0
-  movabsq $65535, %r11
-  cmpq %r11, %rax
-  jle .Lcerune_fn_0_range_ok_0
-.Lcerune_fn_0_range_bad_0:
-  xorl %ecx, %ecx
-  callq fflush
-  movl $2, %ecx
-  leaq .Lcerune_failure_0(%rip), %rdx
-  movl $76, %r8d
-  callq _write
-  movl $7, %ecx
-  int $0x29
-.Lcerune_fn_0_range_ok_0:
-  movq %rax, -32(%rbp)
-  movq -16(%rbp), %rax
-  # semantic u16, storage i64
-  movabsq $0, %r11
-  cmpq %r11, %rax
-  jl .Lcerune_fn_0_range_bad_1
-  movabsq $65535, %r11
-  cmpq %r11, %rax
-  jle .Lcerune_fn_0_range_ok_1
-.Lcerune_fn_0_range_bad_1:
-  xorl %ecx, %ecx
-  callq fflush
-  movl $2, %ecx
-  leaq .Lcerune_failure_1(%rip), %rdx
-  movl $76, %r8d
-  callq _write
-  movl $7, %ecx
-  int $0x29
-.Lcerune_fn_0_range_ok_1:
-  movq %rax, %rcx
-  movq -32(%rbp), %rax
-  addq %rcx, %rax
-  jno .Lcerune_fn_0_integer_ok_2
-  xorl %ecx, %ecx
-  callq fflush
-  movl $2, %ecx
-  leaq .Lcerune_failure_2(%rip), %rdx
-  movl $61, %r8d
-  callq _write
-  movl $7, %ecx
-  int $0x29
-.Lcerune_fn_0_integer_ok_2:
+  movq %rax, -24(%rbp)
+  movq -24(%rbp), %rax
   # semantic u16, storage i64
   movabsq $0, %r11
   cmpq %r11, %rax
@@ -89,23 +44,78 @@ cerune_fn_average_0:
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
+  leaq .Lcerune_failure_0(%rip), %rdx
+  movl $76, %r8d
+  callq _write
+  movl $7, %ecx
+  int $0x29
+.Lcerune_fn_0_range_ok_3:
+  movq %rax, -32(%rbp)
+  movq -16(%rbp), %rax
+  movq %rax, -40(%rbp)
+  movq -40(%rbp), %rax
+  # semantic u16, storage i64
+  movabsq $0, %r11
+  cmpq %r11, %rax
+  jl .Lcerune_fn_0_range_bad_4
+  movabsq $65535, %r11
+  cmpq %r11, %rax
+  jle .Lcerune_fn_0_range_ok_4
+.Lcerune_fn_0_range_bad_4:
+  xorl %ecx, %ecx
+  callq fflush
+  movl $2, %ecx
+  leaq .Lcerune_failure_1(%rip), %rdx
+  movl $76, %r8d
+  callq _write
+  movl $7, %ecx
+  int $0x29
+.Lcerune_fn_0_range_ok_4:
+  movq %rax, -48(%rbp)
+  movq -48(%rbp), %rax
+  movq %rax, %rcx
+  movq -32(%rbp), %rax
+  addq %rcx, %rax
+  jno .Lcerune_fn_0_integer_ok_5
+  xorl %ecx, %ecx
+  callq fflush
+  movl $2, %ecx
+  leaq .Lcerune_failure_2(%rip), %rdx
+  movl $61, %r8d
+  callq _write
+  movl $7, %ecx
+  int $0x29
+.Lcerune_fn_0_integer_ok_5:
+  # semantic u16, storage i64
+  movabsq $0, %r11
+  cmpq %r11, %rax
+  jl .Lcerune_fn_0_range_bad_6
+  movabsq $65535, %r11
+  cmpq %r11, %rax
+  jle .Lcerune_fn_0_range_ok_6
+.Lcerune_fn_0_range_bad_6:
+  xorl %ecx, %ecx
+  callq fflush
+  movl $2, %ecx
   leaq .Lcerune_failure_3(%rip), %rdx
   movl $61, %r8d
   callq _write
   movl $7, %ecx
   int $0x29
-.Lcerune_fn_0_range_ok_3:
-  movq %rax, -24(%rbp)
+.Lcerune_fn_0_range_ok_6:
+  movq %rax, -56(%rbp)
   movabsq $2, %rax
+  movq %rax, -64(%rbp)
+  movq -64(%rbp), %rax
   movq %rax, %rcx
-  movq -24(%rbp), %rax
+  movq -56(%rbp), %rax
   testq %rcx, %rcx
-  je .Lcerune_fn_0_division_trap_4
+  je .Lcerune_fn_0_division_trap_7
   cmpq $-1, %rcx
-  jne .Lcerune_fn_0_division_ok_4
+  jne .Lcerune_fn_0_division_ok_7
   movabsq $-9223372036854775808, %rdx
   cmpq %rdx, %rax
-  jne .Lcerune_fn_0_division_ok_4
+  jne .Lcerune_fn_0_division_ok_7
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
@@ -114,7 +124,7 @@ cerune_fn_average_0:
   callq _write
   movl $7, %ecx
   int $0x29
-.Lcerune_fn_0_division_trap_4:
+.Lcerune_fn_0_division_trap_7:
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
@@ -123,17 +133,17 @@ cerune_fn_average_0:
   callq _write
   movl $7, %ecx
   int $0x29
-.Lcerune_fn_0_division_ok_4:
+.Lcerune_fn_0_division_ok_7:
   cqto
   idivq %rcx
   # semantic u16, storage i64
   movabsq $0, %r11
   cmpq %r11, %rax
-  jl .Lcerune_fn_0_range_bad_5
+  jl .Lcerune_fn_0_range_bad_8
   movabsq $65535, %r11
   cmpq %r11, %rax
-  jle .Lcerune_fn_0_range_ok_5
-.Lcerune_fn_0_range_bad_5:
+  jle .Lcerune_fn_0_range_ok_8
+.Lcerune_fn_0_range_bad_8:
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
@@ -142,15 +152,17 @@ cerune_fn_average_0:
   callq _write
   movl $7, %ecx
   int $0x29
-.Lcerune_fn_0_range_ok_5:
+.Lcerune_fn_0_range_ok_8:
+  movq %rax, -72(%rbp)
+  movq -72(%rbp), %rax
   # semantic u8, storage i64
   movabsq $0, %r11
   cmpq %r11, %rax
-  jl .Lcerune_fn_0_range_bad_6
+  jl .Lcerune_fn_0_range_bad_9
   movabsq $255, %r11
   cmpq %r11, %rax
-  jle .Lcerune_fn_0_range_ok_6
-.Lcerune_fn_0_range_bad_6:
+  jle .Lcerune_fn_0_range_ok_9
+.Lcerune_fn_0_range_bad_9:
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
@@ -159,20 +171,28 @@ cerune_fn_average_0:
   callq _write
   movl $7, %ecx
   int $0x29
-.Lcerune_fn_0_range_ok_6:
-  addq $96, %rsp
+.Lcerune_fn_0_range_ok_9:
+  movq %rax, -80(%rbp)
+  movq -80(%rbp), %rax
+  addq $112, %rsp
   popq %rbp
   retq
+.Lcerune_fn_0_block_1: # mir_block
+  ud2
 
 .globl main
 .p2align 4
 main:
   pushq %rbp
   movq %rsp, %rbp
-  subq $160, %rsp
+  subq $176, %rsp
+  jmp .Lcerune_block_0
+.Lcerune_block_0: # mir_block
   movabsq $3, %rax
+  movq %rax, -8(%rbp)
+  movq -8(%rbp), %rax
   negq %rax
-  jno .Lcerune_main_integer_ok_0
+  jno .Lcerune_main_integer_ok_2
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
@@ -181,15 +201,15 @@ main:
   callq _write
   movl $7, %ecx
   int $0x29
-.Lcerune_main_integer_ok_0:
+.Lcerune_main_integer_ok_2:
   # semantic i8, storage i64
   movabsq $-128, %r11
   cmpq %r11, %rax
-  jl .Lcerune_main_range_bad_1
+  jl .Lcerune_main_range_bad_3
   movabsq $127, %r11
   cmpq %r11, %rax
-  jle .Lcerune_main_range_ok_1
-.Lcerune_main_range_bad_1:
+  jle .Lcerune_main_range_ok_3
+.Lcerune_main_range_bad_3:
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
@@ -198,11 +218,15 @@ main:
   callq _write
   movl $7, %ecx
   int $0x29
-.Lcerune_main_range_ok_1:
-  movq %rax, -8(%rbp)
+.Lcerune_main_range_ok_3:
+  movq %rax, -16(%rbp)
+  movq -16(%rbp), %rax
+  movq %rax, -24(%rbp)
   movabsq $32000, %rax
+  movq %rax, -32(%rbp)
+  movq -32(%rbp), %rax
   negq %rax
-  jno .Lcerune_main_integer_ok_2
+  jno .Lcerune_main_integer_ok_4
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
@@ -211,15 +235,15 @@ main:
   callq _write
   movl $7, %ecx
   int $0x29
-.Lcerune_main_integer_ok_2:
+.Lcerune_main_integer_ok_4:
   # semantic i16, storage i64
   movabsq $-32768, %r11
   cmpq %r11, %rax
-  jl .Lcerune_main_range_bad_3
+  jl .Lcerune_main_range_bad_5
   movabsq $32767, %r11
   cmpq %r11, %rax
-  jle .Lcerune_main_range_ok_3
-.Lcerune_main_range_bad_3:
+  jle .Lcerune_main_range_ok_5
+.Lcerune_main_range_bad_5:
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
@@ -228,41 +252,15 @@ main:
   callq _write
   movl $7, %ecx
   int $0x29
-.Lcerune_main_range_ok_3:
-  movq %rax, -16(%rbp)
-  movq -16(%rbp), %rax
-  movq %rax, -24(%rbp)
-  movq -8(%rbp), %rax
-  # semantic i16, storage i64
-  movabsq $-32768, %r11
-  cmpq %r11, %rax
-  jl .Lcerune_main_range_bad_4
-  movabsq $32767, %r11
-  cmpq %r11, %rax
-  jle .Lcerune_main_range_ok_4
-.Lcerune_main_range_bad_4:
-  xorl %ecx, %ecx
-  callq fflush
-  movl $2, %ecx
-  leaq .Lcerune_failure_12(%rip), %rdx
-  movl $79, %r8d
-  callq _write
-  movl $7, %ecx
-  int $0x29
-.Lcerune_main_range_ok_4:
-  movq %rax, %rcx
+.Lcerune_main_range_ok_5:
+  movq %rax, -40(%rbp)
+  movq -40(%rbp), %rax
+  movq %rax, -48(%rbp)
+  movq -48(%rbp), %rax
+  movq %rax, -56(%rbp)
   movq -24(%rbp), %rax
-  addq %rcx, %rax
-  jno .Lcerune_main_integer_ok_5
-  xorl %ecx, %ecx
-  callq fflush
-  movl $2, %ecx
-  leaq .Lcerune_failure_13(%rip), %rdx
-  movl $64, %r8d
-  callq _write
-  movl $7, %ecx
-  int $0x29
-.Lcerune_main_integer_ok_5:
+  movq %rax, -64(%rbp)
+  movq -64(%rbp), %rax
   # semantic i16, storage i64
   movabsq $-32768, %r11
   cmpq %r11, %rax
@@ -274,47 +272,89 @@ main:
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
+  leaq .Lcerune_failure_12(%rip), %rdx
+  movl $79, %r8d
+  callq _write
+  movl $7, %ecx
+  int $0x29
+.Lcerune_main_range_ok_6:
+  movq %rax, -72(%rbp)
+  movq -72(%rbp), %rax
+  movq %rax, %rcx
+  movq -56(%rbp), %rax
+  addq %rcx, %rax
+  jno .Lcerune_main_integer_ok_7
+  xorl %ecx, %ecx
+  callq fflush
+  movl $2, %ecx
+  leaq .Lcerune_failure_13(%rip), %rdx
+  movl $64, %r8d
+  callq _write
+  movl $7, %ecx
+  int $0x29
+.Lcerune_main_integer_ok_7:
+  # semantic i16, storage i64
+  movabsq $-32768, %r11
+  cmpq %r11, %rax
+  jl .Lcerune_main_range_bad_8
+  movabsq $32767, %r11
+  cmpq %r11, %rax
+  jle .Lcerune_main_range_ok_8
+.Lcerune_main_range_bad_8:
+  xorl %ecx, %ecx
+  callq fflush
+  movl $2, %ecx
   leaq .Lcerune_failure_14(%rip), %rdx
   movl $64, %r8d
   callq _write
   movl $7, %ecx
   int $0x29
-.Lcerune_main_range_ok_6:
+.Lcerune_main_range_ok_8:
+  movq %rax, -80(%rbp)
+  movq -80(%rbp), %rax
   movq %rax, %rdx
   leaq .Lcerune_fmt_i64(%rip), %rcx
   callq printf
   movabsq $240, %rax
-  movq %rax, -24(%rbp)
+  movq %rax, -88(%rbp)
   movabsq $80, %rax
-  movq %rax, -32(%rbp)
-  movq -24(%rbp), %rcx
-  movq -32(%rbp), %rdx
+  movq %rax, -96(%rbp)
+  movq -88(%rbp), %rcx
+  movq -96(%rbp), %rdx
   callq cerune_fn_average_0
+  movq %rax, -104(%rbp)
+  movq -104(%rbp), %rax
   movq %rax, %rdx
   leaq .Lcerune_fmt_i64(%rip), %rcx
   callq printf
   movabsq $127, %rax
-  movq %rax, -24(%rbp)
+  movq %rax, -112(%rbp)
   movabsq $-128, %rax
+  movq %rax, -120(%rbp)
+  movq -120(%rbp), %rax
   movq %rax, %rcx
-  movq -24(%rbp), %rax
+  movq -112(%rbp), %rax
   cmpq %rcx, %rax
   setg %al
   movzbq %al, %rax
+  movq %rax, -128(%rbp)
+  movq -128(%rbp), %rax
   testq %rax, %rax
   leaq .Lcerune_bool_false(%rip), %rcx
   leaq .Lcerune_bool_true(%rip), %rdx
   cmovne %rdx, %rcx
   callq puts
   movabsq $255, %rax
+  movq %rax, -136(%rbp)
+  movq -136(%rbp), %rax
   # semantic u16, storage i64
   movabsq $0, %r11
   cmpq %r11, %rax
-  jl .Lcerune_main_range_bad_7
+  jl .Lcerune_main_range_bad_9
   movabsq $65535, %r11
   cmpq %r11, %rax
-  jle .Lcerune_main_range_ok_7
-.Lcerune_main_range_bad_7:
+  jle .Lcerune_main_range_ok_9
+.Lcerune_main_range_bad_9:
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
@@ -323,12 +363,16 @@ main:
   callq _write
   movl $7, %ecx
   int $0x29
-.Lcerune_main_range_ok_7:
+.Lcerune_main_range_ok_9:
+  movq %rax, -144(%rbp)
+  movq -144(%rbp), %rax
   movq %rax, %rdx
   leaq .Lcerune_fmt_i64(%rip), %rcx
   callq printf
+  jmp .Lcerune_block_1
+.Lcerune_block_1: # main_exit
   xorl %eax, %eax
-  addq $160, %rsp
+  addq $176, %rsp
   popq %rbp
   retq
 

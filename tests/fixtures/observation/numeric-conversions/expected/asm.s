@@ -24,21 +24,25 @@
 cerune_fn_measure_0:
   pushq %rbp
   movq %rsp, %rbp
-  subq $64, %rsp
+  subq $80, %rsp
   movq %rcx, -8(%rbp)
+  jmp .Lcerune_fn_0_block_0
+.Lcerune_fn_0_block_0: # mir_block
   movq -8(%rbp), %rax
+  movq %rax, -16(%rbp)
+  movq -16(%rbp), %rax
   movq %rax, %r10
   cvtsi2sdq %rax, %xmm0
   movapd %xmm0, %xmm2
   movabsq $4890909195324358656, %r11
   movq %r11, %xmm1
   ucomisd %xmm1, %xmm2
-  jae .Lcerune_fn_0_convert_bad_0
+  jae .Lcerune_fn_0_convert_bad_3
   cvttsd2siq %xmm2, %rax
   cmpq %r10, %rax
-  jne .Lcerune_fn_0_convert_bad_0
-  jmp .Lcerune_fn_0_convert_done_0
-.Lcerune_fn_0_convert_bad_0:
+  jne .Lcerune_fn_0_convert_bad_3
+  jmp .Lcerune_fn_0_convert_done_3
+.Lcerune_fn_0_convert_bad_3:
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
@@ -47,21 +51,23 @@ cerune_fn_measure_0:
   callq _write
   movl $7, %ecx
   int $0x29
-.Lcerune_fn_0_convert_done_0:
-  movsd %xmm0, -16(%rbp)
+.Lcerune_fn_0_convert_done_3:
+  movsd %xmm0, -24(%rbp)
   movabsq $2, %rax
+  movq %rax, -32(%rbp)
+  movq -32(%rbp), %rax
   movq %rax, %r10
   cvtsi2sdq %rax, %xmm0
   movapd %xmm0, %xmm2
   movabsq $4890909195324358656, %r11
   movq %r11, %xmm1
   ucomisd %xmm1, %xmm2
-  jae .Lcerune_fn_0_convert_bad_1
+  jae .Lcerune_fn_0_convert_bad_4
   cvttsd2siq %xmm2, %rax
   cmpq %r10, %rax
-  jne .Lcerune_fn_0_convert_bad_1
-  jmp .Lcerune_fn_0_convert_done_1
-.Lcerune_fn_0_convert_bad_1:
+  jne .Lcerune_fn_0_convert_bad_4
+  jmp .Lcerune_fn_0_convert_done_4
+.Lcerune_fn_0_convert_bad_4:
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
@@ -70,35 +76,47 @@ cerune_fn_measure_0:
   callq _write
   movl $7, %ecx
   int $0x29
-.Lcerune_fn_0_convert_done_1:
+.Lcerune_fn_0_convert_done_4:
+  movsd %xmm0, -40(%rbp)
+  movsd -40(%rbp), %xmm0
   movapd %xmm0, %xmm1
-  movsd -16(%rbp), %xmm0
+  movsd -24(%rbp), %xmm0
   divsd %xmm1, %xmm0
-  addq $64, %rsp
+  movsd %xmm0, -48(%rbp)
+  movsd -48(%rbp), %xmm0
+  addq $80, %rsp
   popq %rbp
   retq
+.Lcerune_fn_0_block_1: # mir_block
+  ud2
 
 .globl main
 .p2align 4
 main:
   pushq %rbp
   movq %rsp, %rbp
-  subq $144, %rsp
+  subq $208, %rsp
+  jmp .Lcerune_block_0
+.Lcerune_block_0: # mir_block
   movabsq $42, %rax
   movq %rax, -8(%rbp)
   movq -8(%rbp), %rax
+  movq %rax, -16(%rbp)
+  movq -16(%rbp), %rax
+  movq %rax, -24(%rbp)
+  movq -24(%rbp), %rax
   movq %rax, %r10
   cvtsi2sdq %rax, %xmm0
   movapd %xmm0, %xmm2
   movabsq $4890909195324358656, %r11
   movq %r11, %xmm1
   ucomisd %xmm1, %xmm2
-  jae .Lcerune_main_convert_bad_0
+  jae .Lcerune_main_convert_bad_2
   cvttsd2siq %xmm2, %rax
   cmpq %r10, %rax
-  jne .Lcerune_main_convert_bad_0
-  jmp .Lcerune_main_convert_done_0
-.Lcerune_main_convert_bad_0:
+  jne .Lcerune_main_convert_bad_2
+  jmp .Lcerune_main_convert_done_2
+.Lcerune_main_convert_bad_2:
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
@@ -107,35 +125,39 @@ main:
   callq _write
   movl $7, %ecx
   int $0x29
-.Lcerune_main_convert_done_0:
-  movsd %xmm0, -16(%rbp)
-  movsd -16(%rbp), %xmm0
+.Lcerune_main_convert_done_2:
+  movsd %xmm0, -32(%rbp)
+  movsd -32(%rbp), %xmm0
+  movsd %xmm0, -40(%rbp)
+  movsd -40(%rbp), %xmm0
+  movsd %xmm0, -48(%rbp)
+  movsd -48(%rbp), %xmm0
   ucomisd %xmm0, %xmm0
-  jp .Lcerune_main_convert_bad_1_nan
+  jp .Lcerune_main_convert_bad_3_nan
   movapd %xmm0, %xmm2
   movabsq $9218868437227405312, %r11
   movq %r11, %xmm1
   ucomisd %xmm1, %xmm2
-  je .Lcerune_main_convert_bad_1_convert
+  je .Lcerune_main_convert_bad_3_convert
   movabsq $-4503599627370496, %r11
   movq %r11, %xmm1
   ucomisd %xmm1, %xmm2
-  je .Lcerune_main_convert_bad_1_convert
+  je .Lcerune_main_convert_bad_3_convert
   movabsq $5183643170566569984, %r11
   movq %r11, %xmm1
   ucomisd %xmm1, %xmm2
-  ja .Lcerune_main_convert_bad_1_range
+  ja .Lcerune_main_convert_bad_3_range
   movabsq $-4039728866288205824, %r11
   movq %r11, %xmm1
   ucomisd %xmm1, %xmm2
-  jb .Lcerune_main_convert_bad_1_range
-.Lcerune_main_convert_bad_1_convert:
+  jb .Lcerune_main_convert_bad_3_range
+.Lcerune_main_convert_bad_3_convert:
   cvtsd2ss %xmm0, %xmm0
   cvtss2sd %xmm0, %xmm1
   ucomisd %xmm1, %xmm2
-  jne .Lcerune_main_convert_bad_1
-  jmp .Lcerune_main_convert_done_1
-.Lcerune_main_convert_bad_1:
+  jne .Lcerune_main_convert_bad_3
+  jmp .Lcerune_main_convert_done_3
+.Lcerune_main_convert_bad_3:
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
@@ -144,7 +166,7 @@ main:
   callq _write
   movl $7, %ecx
   int $0x29
-.Lcerune_main_convert_bad_1_range:
+.Lcerune_main_convert_bad_3_range:
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
@@ -153,7 +175,7 @@ main:
   callq _write
   movl $7, %ecx
   int $0x29
-.Lcerune_main_convert_bad_1_nan:
+.Lcerune_main_convert_bad_3_nan:
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
@@ -162,24 +184,28 @@ main:
   callq _write
   movl $7, %ecx
   int $0x29
-.Lcerune_main_convert_done_1:
-  movss %xmm0, -24(%rbp)
-  movss -24(%rbp), %xmm0
+.Lcerune_main_convert_done_3:
+  movss %xmm0, -56(%rbp)
+  movss -56(%rbp), %xmm0
+  movss %xmm0, -64(%rbp)
+  movss -64(%rbp), %xmm0
+  movss %xmm0, -72(%rbp)
+  movss -72(%rbp), %xmm0
   cvtss2sd %xmm0, %xmm2
   ucomisd %xmm2, %xmm2
-  jp .Lcerune_main_convert_bad_2_nonfinite
+  jp .Lcerune_main_convert_bad_4_nonfinite
   movabsq $9218868437227405312, %r11
   movq %r11, %xmm1
   ucomisd %xmm1, %xmm2
-  je .Lcerune_main_convert_bad_2_nonfinite
+  je .Lcerune_main_convert_bad_4_nonfinite
   movabsq $-4503599627370496, %r11
   movq %r11, %xmm1
   ucomisd %xmm1, %xmm2
-  je .Lcerune_main_convert_bad_2_nonfinite
+  je .Lcerune_main_convert_bad_4_nonfinite
   movq %xmm2, %r11
   movabsq $-9223372036854775808, %r10
   cmpq %r10, %r11
-  jne .Lcerune_main_convert_bad_2_finite
+  jne .Lcerune_main_convert_bad_4_finite
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
@@ -188,7 +214,7 @@ main:
   callq _write
   movl $7, %ecx
   int $0x29
-.Lcerune_main_convert_bad_2_nonfinite:
+.Lcerune_main_convert_bad_4_nonfinite:
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
@@ -197,21 +223,21 @@ main:
   callq _write
   movl $7, %ecx
   int $0x29
-.Lcerune_main_convert_bad_2_finite:
+.Lcerune_main_convert_bad_4_finite:
   movabsq $-4548635623644200960, %r11
   movq %r11, %xmm1
   ucomisd %xmm1, %xmm2
-  jb .Lcerune_main_convert_bad_2_range
+  jb .Lcerune_main_convert_bad_4_range
   movabsq $4674736413210574848, %r11
   movq %r11, %xmm1
   ucomisd %xmm1, %xmm2
-  jae .Lcerune_main_convert_bad_2_range
+  jae .Lcerune_main_convert_bad_4_range
   cvttsd2siq %xmm2, %rax
   cvtsi2sdq %rax, %xmm1
   ucomisd %xmm1, %xmm2
-  jne .Lcerune_main_convert_bad_2
-  jmp .Lcerune_main_convert_done_2
-.Lcerune_main_convert_bad_2:
+  jne .Lcerune_main_convert_bad_4
+  jmp .Lcerune_main_convert_done_4
+.Lcerune_main_convert_bad_4:
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
@@ -220,7 +246,7 @@ main:
   callq _write
   movl $7, %ecx
   int $0x29
-.Lcerune_main_convert_bad_2_range:
+.Lcerune_main_convert_bad_4_range:
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
@@ -229,7 +255,7 @@ main:
   callq _write
   movl $7, %ecx
   int $0x29
-.Lcerune_main_convert_bad_2_nan:
+.Lcerune_main_convert_bad_4_nan:
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
@@ -238,26 +264,30 @@ main:
   callq _write
   movl $7, %ecx
   int $0x29
-.Lcerune_main_convert_done_2:
+.Lcerune_main_convert_done_4:
+  movq %rax, -80(%rbp)
+  movq -80(%rbp), %rax
   movq %rax, %rdx
   leaq .Lcerune_fmt_i64(%rip), %rcx
   callq printf
-  movsd -16(%rbp), %xmm0
+  movsd -40(%rbp), %xmm0
+  movsd %xmm0, -88(%rbp)
+  movsd -88(%rbp), %xmm0
   movapd %xmm0, %xmm2
   ucomisd %xmm2, %xmm2
-  jp .Lcerune_main_convert_bad_3_nonfinite
+  jp .Lcerune_main_convert_bad_5_nonfinite
   movabsq $9218868437227405312, %r11
   movq %r11, %xmm1
   ucomisd %xmm1, %xmm2
-  je .Lcerune_main_convert_bad_3_nonfinite
+  je .Lcerune_main_convert_bad_5_nonfinite
   movabsq $-4503599627370496, %r11
   movq %r11, %xmm1
   ucomisd %xmm1, %xmm2
-  je .Lcerune_main_convert_bad_3_nonfinite
+  je .Lcerune_main_convert_bad_5_nonfinite
   movq %xmm2, %r11
   movabsq $-9223372036854775808, %r10
   cmpq %r10, %r11
-  jne .Lcerune_main_convert_bad_3_finite
+  jne .Lcerune_main_convert_bad_5_finite
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
@@ -266,7 +296,7 @@ main:
   callq _write
   movl $7, %ecx
   int $0x29
-.Lcerune_main_convert_bad_3_nonfinite:
+.Lcerune_main_convert_bad_5_nonfinite:
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
@@ -275,21 +305,21 @@ main:
   callq _write
   movl $7, %ecx
   int $0x29
-.Lcerune_main_convert_bad_3_finite:
+.Lcerune_main_convert_bad_5_finite:
   movabsq $-4332462841530417152, %r11
   movq %r11, %xmm1
   ucomisd %xmm1, %xmm2
-  jb .Lcerune_main_convert_bad_3_range
+  jb .Lcerune_main_convert_bad_5_range
   movabsq $4890909195324358656, %r11
   movq %r11, %xmm1
   ucomisd %xmm1, %xmm2
-  jae .Lcerune_main_convert_bad_3_range
+  jae .Lcerune_main_convert_bad_5_range
   cvttsd2siq %xmm2, %rax
   cvtsi2sdq %rax, %xmm1
   ucomisd %xmm1, %xmm2
-  jne .Lcerune_main_convert_bad_3
-  jmp .Lcerune_main_convert_done_3
-.Lcerune_main_convert_bad_3:
+  jne .Lcerune_main_convert_bad_5
+  jmp .Lcerune_main_convert_done_5
+.Lcerune_main_convert_bad_5:
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
@@ -298,7 +328,7 @@ main:
   callq _write
   movl $7, %ecx
   int $0x29
-.Lcerune_main_convert_bad_3_range:
+.Lcerune_main_convert_bad_5_range:
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
@@ -307,7 +337,7 @@ main:
   callq _write
   movl $7, %ecx
   int $0x29
-.Lcerune_main_convert_bad_3_nan:
+.Lcerune_main_convert_bad_5_nan:
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
@@ -316,16 +346,20 @@ main:
   callq _write
   movl $7, %ecx
   int $0x29
-.Lcerune_main_convert_done_3:
+.Lcerune_main_convert_done_5:
+  movq %rax, -96(%rbp)
+  movq -96(%rbp), %rax
   movq %rax, %rdx
   leaq .Lcerune_fmt_i64(%rip), %rcx
   callq printf
-  movss -24(%rbp), %xmm0
+  movss -64(%rbp), %xmm0
+  movss %xmm0, -104(%rbp)
+  movss -104(%rbp), %xmm0
   ucomiss %xmm0, %xmm0
-  jp .Lcerune_main_convert_bad_4_nan
+  jp .Lcerune_main_convert_bad_6_nan
   cvtss2sd %xmm0, %xmm0
-  jmp .Lcerune_main_convert_done_4
-.Lcerune_main_convert_bad_4:
+  jmp .Lcerune_main_convert_done_6
+.Lcerune_main_convert_bad_6:
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
@@ -334,7 +368,7 @@ main:
   callq _write
   movl $7, %ecx
   int $0x29
-.Lcerune_main_convert_bad_4_range:
+.Lcerune_main_convert_bad_6_range:
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
@@ -343,7 +377,7 @@ main:
   callq _write
   movl $7, %ecx
   int $0x29
-.Lcerune_main_convert_bad_4_nan:
+.Lcerune_main_convert_bad_6_nan:
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
@@ -352,24 +386,28 @@ main:
   callq _write
   movl $7, %ecx
   int $0x29
-.Lcerune_main_convert_done_4:
+.Lcerune_main_convert_done_6:
+  movsd %xmm0, -112(%rbp)
+  movsd -112(%rbp), %xmm0
   movsd %xmm0, %xmm1
   movq %xmm1, %rdx
   leaq .Lcerune_fmt_f64(%rip), %rcx
   callq printf
-  movq -8(%rbp), %rax
+  movq -16(%rbp), %rax
+  movq %rax, -120(%rbp)
+  movq -120(%rbp), %rax
   movq %rax, %r10
   cvtsi2ssq %rax, %xmm0
   cvtss2sd %xmm0, %xmm2
   movabsq $4890909195324358656, %r11
   movq %r11, %xmm1
   ucomisd %xmm1, %xmm2
-  jae .Lcerune_main_convert_bad_5
+  jae .Lcerune_main_convert_bad_7
   cvttsd2siq %xmm2, %rax
   cmpq %r10, %rax
-  jne .Lcerune_main_convert_bad_5
-  jmp .Lcerune_main_convert_done_5
-.Lcerune_main_convert_bad_5:
+  jne .Lcerune_main_convert_bad_7
+  jmp .Lcerune_main_convert_done_7
+.Lcerune_main_convert_bad_7:
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
@@ -378,47 +416,55 @@ main:
   callq _write
   movl $7, %ecx
   int $0x29
-.Lcerune_main_convert_done_5:
+.Lcerune_main_convert_done_7:
+  movss %xmm0, -128(%rbp)
+  movss -128(%rbp), %xmm0
   cvtss2sd %xmm0, %xmm1
   movq %xmm1, %rdx
   leaq .Lcerune_fmt_f32(%rip), %rcx
   callq printf
   movabsq $3, %rax
-  movq %rax, -32(%rbp)
-  movq -32(%rbp), %rcx
+  movq %rax, -136(%rbp)
+  movq -136(%rbp), %rcx
   callq cerune_fn_measure_0
+  movsd %xmm0, -144(%rbp)
+  movsd -144(%rbp), %xmm0
   movsd %xmm0, %xmm1
   movq %xmm1, %rdx
   leaq .Lcerune_fmt_f64(%rip), %rcx
   callq printf
   movsd .Lcerune_f64_0(%rip), %xmm0
+  movsd %xmm0, -152(%rbp)
+  movsd -152(%rbp), %xmm0
   xorpd .Lcerune_sign_f64(%rip), %xmm0
+  movsd %xmm0, -160(%rbp)
+  movsd -160(%rbp), %xmm0
   ucomisd %xmm0, %xmm0
-  jp .Lcerune_main_convert_bad_6_nan
+  jp .Lcerune_main_convert_bad_8_nan
   movapd %xmm0, %xmm2
   movabsq $9218868437227405312, %r11
   movq %r11, %xmm1
   ucomisd %xmm1, %xmm2
-  je .Lcerune_main_convert_bad_6_convert
+  je .Lcerune_main_convert_bad_8_convert
   movabsq $-4503599627370496, %r11
   movq %r11, %xmm1
   ucomisd %xmm1, %xmm2
-  je .Lcerune_main_convert_bad_6_convert
+  je .Lcerune_main_convert_bad_8_convert
   movabsq $5183643170566569984, %r11
   movq %r11, %xmm1
   ucomisd %xmm1, %xmm2
-  ja .Lcerune_main_convert_bad_6_range
+  ja .Lcerune_main_convert_bad_8_range
   movabsq $-4039728866288205824, %r11
   movq %r11, %xmm1
   ucomisd %xmm1, %xmm2
-  jb .Lcerune_main_convert_bad_6_range
-.Lcerune_main_convert_bad_6_convert:
+  jb .Lcerune_main_convert_bad_8_range
+.Lcerune_main_convert_bad_8_convert:
   cvtsd2ss %xmm0, %xmm0
   cvtss2sd %xmm0, %xmm1
   ucomisd %xmm1, %xmm2
-  jne .Lcerune_main_convert_bad_6
-  jmp .Lcerune_main_convert_done_6
-.Lcerune_main_convert_bad_6:
+  jne .Lcerune_main_convert_bad_8
+  jmp .Lcerune_main_convert_done_8
+.Lcerune_main_convert_bad_8:
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
@@ -427,7 +473,7 @@ main:
   callq _write
   movl $7, %ecx
   int $0x29
-.Lcerune_main_convert_bad_6_range:
+.Lcerune_main_convert_bad_8_range:
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
@@ -436,7 +482,7 @@ main:
   callq _write
   movl $7, %ecx
   int $0x29
-.Lcerune_main_convert_bad_6_nan:
+.Lcerune_main_convert_bad_8_nan:
   xorl %ecx, %ecx
   callq fflush
   movl $2, %ecx
@@ -445,13 +491,17 @@ main:
   callq _write
   movl $7, %ecx
   int $0x29
-.Lcerune_main_convert_done_6:
+.Lcerune_main_convert_done_8:
+  movss %xmm0, -168(%rbp)
+  movss -168(%rbp), %xmm0
   cvtss2sd %xmm0, %xmm1
   movq %xmm1, %rdx
   leaq .Lcerune_fmt_f32(%rip), %rcx
   callq printf
+  jmp .Lcerune_block_1
+.Lcerune_block_1: # main_exit
   xorl %eax, %eax
-  addq $144, %rsp
+  addq $208, %rsp
   popq %rbp
   retq
 

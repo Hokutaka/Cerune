@@ -205,6 +205,10 @@ clang --target=x86_64-pc-windows-msvc target/function_arguments.s -o target/func
 
 Windows x64の直接アセンブリは`cerune emit-asm examples/string_lookup.ceru -o target/string_lookup.s`で生成し、`clang --target=x86_64-pc-windows-msvc target/string_lookup.s -o target/string_lookup.exe`でビルドできます。文字列の出力前に標準出力をバイナリモードへ切り替えます。
 
+## Nativeの入力と出自
+
+`emit-asm`／`emit-obj`はHIR→MIR→x86-64 LIRを経て生成します。`--annotate-origins`を付けると、元のNodeId・ファイル内のバイト範囲に加え、MIRのblock・命令番号からLIRへの対応を記録します。Objectでは対応シンボルも保持します。[NativeのMIR変換](../design/native-mir.ja.md)を参照してください。既存のターゲット指定と出力形式は維持します。
+
 ## VM実行
 
 ```text

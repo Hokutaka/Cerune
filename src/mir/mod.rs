@@ -22,6 +22,8 @@ pub struct InstructionId(pub usize);
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Program {
+    /// 定数化で式が消えても、文字列を含む入力の出力契約を保持します。
+    pub uses_strings: bool,
     pub string_heap_limit: u64,
     pub array_heap_limit: u64,
     pub types: Vec<TypeDefinition>,
