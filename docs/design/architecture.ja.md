@@ -8,6 +8,8 @@ Ceruneは、コンパイラによる変換を観測可能にするための静�
 
 IR・VM・NativeをCerune-owned、C等をemit-onlyとする[経路図とbuild / releaseの計画](owned-routes.ja.md)を別途定めます。以下の実装図と、計画中の操作は区別します。
 
+[HIR／MIR／LIRの段階設計](ir-stages.ja.md)では、完成済みCerune IRをHIRとして位置づけ、共通MIRとNative LIRへの移行順序を定めます。MIR・SSA・最適化passは未実装で、以下は現在の構成です。
+
 ## 設計原則
 
 Ceruneは、洗練された実装と可観測性の両立を目指します。実装や変換が高度になっても、その境界と結果を観測可能に保ちます。
@@ -114,7 +116,7 @@ f32
 f64
 string
 名前付きproduct type（直和型の展開結果を含む）
-固定長配列
+固定長配列・動的配列
 ```
 
 `infer`はCerune IRが生成される前に解決されるため、実行時の型やバックエンドの型としては現れません。

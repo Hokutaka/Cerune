@@ -8,6 +8,8 @@ The boundaries that Cerune preserves for observability are defined in the [obser
 
 The [route diagram and build / release plan](owned-routes.en.md) define IR, VM, and Native as Cerune-owned and C-like outputs as emit-only. Planned operations are distinct from the implemented pipeline below.
 
+[The HIR/MIR/LIR design](ir-stages.en.md) identifies completed Cerune IR as HIR and plans common MIR and Native LIR migration. MIR, SSA, and optimization passes are unimplemented; the structure below describes the current compiler.
+
 ## Principles
 
 Cerune aims to combine sophisticated implementation with observability. As transformations become more advanced, their boundaries and results must remain observable.
@@ -114,7 +116,7 @@ f32
 f64
 string
 named product types (including expanded sum types)
-fixed arrays
+fixed and dynamic arrays
 ```
 
 `infer` is resolved before Cerune IR is produced and therefore does not appear as a runtime or backend type.
