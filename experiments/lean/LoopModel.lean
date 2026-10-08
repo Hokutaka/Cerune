@@ -37,6 +37,9 @@ def evalLoopLess (left right : LoopExpr) (locals : LoopLocals) : Option (Except 
 inductive LoopStatement where
   | assign : Nat → LoopExpr → LoopStatement
   | whileLess : LoopExpr → LoopExpr → List LoopStatement → LoopStatement
+  | forLess : List LoopStatement → LoopExpr → LoopExpr → List LoopStatement → List LoopStatement → LoopStatement
+  -- 初期化後のforの状態。exporterはforLessだけを書き出します。
+  | forNext : LoopExpr → LoopExpr → List LoopStatement → List LoopStatement → LoopStatement
   | ifLess : LoopExpr → LoopExpr → List LoopStatement → List LoopStatement → LoopStatement
   | breakLoop
   | continueLoop
@@ -46,12 +49,12 @@ structure LoopFunction where
   parameter : Nat
   body : List LoopStatement
 
--- 最も内側のループの継続・終了先を先頭に保持します。中身はHIRの文です。
+-- 最も内側のループの継続・終了先を先頭に保持します。中身はHIRの文とforの反復状態です。
 structure LoopFrame where
   restart : List LoopStatement
   after : List LoopStatement
 
--- 文の訪問ごとに1を消費します。while/ifの条件判定やbreak/continueも1です。
+-- 文の訪問ごとに1を消費します。forの開始、初期化、条件、更新もそれぞれ数えます。
 -- 本文末尾でのframe復帰は文ではなく、fuelを消費しません。
 def runLoopStatements (fuel : Nat) (todo : List LoopStatement)
     (locals : LoopLocals) (loops : List LoopFrame) : ExecutionOutcome :=
@@ -88,6 +91,18 @@ def runLoopStatements (fuel : Nat) (todo : List LoopStatement)
       | some (.error failure) => .completed (.error failure)
       | some (.ok selected) =>
         runLoopStatements remaining ((if selected then yes else no) ++ rest) locals loops
+    | .forLess initializer left right update body :: rest =>
+      runLoopStatements remaining
+        (initializer ++ .forNext left right update body :: rest) locals loops
+    | .forNext left right update body :: rest =>
+      match evalLoopLess left right locals with
+      | none => .invalid
+      | some (.error failure) => .completed (.error failure)
+      | some (.ok selected) =>
+        if selected then
+          runLoopStatements remaining body locals
+            (⟨update ++ .forNext left right update body :: rest, rest⟩ :: loops)
+        else runLoopStatements remaining rest locals loops
     | (.whileLess left right body) :: rest =>
       match evalLoopLess left right locals with
       | none => .invalid

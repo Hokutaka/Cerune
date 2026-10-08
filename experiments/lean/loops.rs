@@ -1,4 +1,4 @@
-//! whileのHIRと循環MIRを、明示した異なる評価上限で検査します。
+//! 構造化されたループのHIRと循環MIRを、明示した評価上限で検査します。
 use cerune_lang::{
     ir::{self, BinaryOp, Expr, ExprKind, ReturnType, Statement, StatementKind, Type},
     types::IntegerType,
@@ -12,6 +12,15 @@ pub const NESTED_SOURCE: &str = include_str!("nested_loop_control.ceru");
 pub const NESTED_PROPERTIES: &str = include_str!("NestedControlProperties.lean");
 pub const NESTED_HIR_FUEL: usize = 28;
 pub const NESTED_MIR_FUEL: usize = 23;
+pub const FOR_SOURCE: &str = include_str!("for_control.ceru");
+pub const FOR_PROPERTIES: &str = include_str!("ForProperties.lean");
+pub const FOR_HIR_FUEL: usize = 23;
+pub const FOR_MIR_FUEL: usize = 25;
+pub const FOR_FAILURE_SOURCE: &str = include_str!("for_update_failure.ceru");
+pub const FOR_FAILURE_PROPERTIES: &str = include_str!("ForFailureProperties.lean");
+pub const FOR_FAILURE_HIR_FUEL: usize = 8;
+pub const FOR_FAILURE_MIR_FUEL: usize = 5;
+pub const CORRESPONDENCE: &str = include_str!("LoopCorrespondence.lean");
 pub const MODEL: &str = include_str!("LoopModel.lean");
 pub const PROPERTIES: &str = include_str!("LoopProperties.lean");
 // この例ではHIRは16文、MIRは11blockの訪問で正常終了します。
@@ -75,6 +84,29 @@ fn statements(body: &[Statement]) -> Result<String, String> {
                     statements(else_body)?
                 ))
             }
+            StatementKind::For {
+                initializer,
+                condition,
+                update,
+                body,
+            } => {
+                if !matches!(
+                    initializer.kind,
+                    StatementKind::Binding { .. } | StatementKind::Assignment { .. }
+                ) || !matches!(update.kind, StatementKind::Assignment { .. })
+                {
+                    return Err("unsupported for initializer or update".into());
+                }
+                let (left, right) = less_operands(condition)?;
+                Ok(format!(
+                    "(.forLess {} {} {} {} {})",
+                    statements(std::slice::from_ref(initializer))?,
+                    expression(left)?,
+                    expression(right)?,
+                    statements(std::slice::from_ref(update))?,
+                    statements(body)?
+                ))
+            }
             StatementKind::While { condition, body } => {
                 let (left, right) = less_operands(condition)?;
                 Ok(format!(
@@ -109,7 +141,7 @@ fn less_operands(condition: &Expr) -> Result<(&Expr, &Expr), String> {
 fn current_update(body: &[Statement]) -> Option<&Expr> {
     body.iter().find_map(|s| match &s.kind {
         StatementKind::Assignment { target, value } if target.name == "current" => Some(value),
-        StatementKind::While { body, .. } => current_update(body),
+        StatementKind::While { body, .. } | StatementKind::For { body, .. } => current_update(body),
         StatementKind::If {
             then_body,
             else_body,
@@ -119,7 +151,7 @@ fn current_update(body: &[Statement]) -> Option<&Expr> {
     })
 }
 
-pub fn emit(
+pub fn definitions(
     hir: &ir::Program,
     mir: &cerune_lang::mir::Program,
     hir_fuel: usize,
@@ -140,6 +172,20 @@ pub fn emit(
         return Err("advance requires an ordinary u8 -> u8 function".into());
     }
     let body = statements(&f.body)?;
+    let update_origin = f
+        .body
+        .iter()
+        .find_map(|s| match &s.kind {
+            StatementKind::For { update, .. } => match &update.kind {
+                StatementKind::Assignment { value, .. } => Some(format!(
+                    "def loopUpdateOrigin : Origin := {}\n",
+                    super::origin(value)
+                )),
+                _ => None,
+            },
+            _ => None,
+        })
+        .unwrap_or_default();
     // 仕様に使う停止出自だけをHIRから取り出します。期待値は生成しません。
     let value = current_update(&f.body).ok_or("advance fixture requires a current update")?;
     let Some(Statement {
@@ -162,25 +208,28 @@ pub fn emit(
     }
     Ok(format!(
         "{}\n{MODEL}\n{}\nnamespace CeruneProof\n\
-        def loopReference : LoopFunction := ⟨{}, {body}⟩\n\
+        {update_origin}def loopReference : LoopFunction := ⟨{}, {body}⟩\n\
         def loopFailureOrigin : Origin := {}\n\
         def loopReturnOrigin : Origin := {}\n\
         def hirFuel : Nat := {hir_fuel}\n\
         def mirFuel : Nat := {mir_fuel}\n\
-        set_option maxRecDepth 16384 in\n\
-        set_option maxHeartbeats 4000000 in\n\
-        theorem loop_translation_correct : ∀ (x : Fin 256),\n\
-          evalMirWithFuel mirReference mirFuel x.val = evalLoop loopReference hirFuel x.val := by decide\n\
-        set_option maxRecDepth 16384 in\n\
-        set_option maxHeartbeats 4000000 in\n\
-        theorem loop_completed : ∀ (x : Fin 256),\n\
-          isCompleted (evalLoop loopReference hirFuel x.val) = true ∧\n\
-          isCompleted (evalMirWithFuel mirReference mirFuel x.val) = true := by decide\n\
         end CeruneProof\n",
         super::MODEL,
         super::mir_experiment::definition_with_cycles(hir, mir, "advance")?,
         parameter.id.0,
         super::origin(value),
         super::origin(returned)
+    ))
+}
+
+pub fn emit(
+    hir: &ir::Program,
+    mir: &cerune_lang::mir::Program,
+    hir_fuel: usize,
+    mir_fuel: usize,
+) -> Result<String, String> {
+    Ok(format!(
+        "{}\n{CORRESPONDENCE}",
+        definitions(hir, mir, hir_fuel, mir_fuel)?
     ))
 }

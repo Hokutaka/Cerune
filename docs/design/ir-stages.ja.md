@@ -131,7 +131,7 @@ HIRのNodeIdは引き続き意味上の元の文・式を指します。MIRのBl
 
 [#81](https://github.com/Hokutaka/Cerune/issues/81)のshow／emit／build／run／via／releaseと、表現段階は別の分類です。最適化はreleaseの別名にせず、passとその順序を明示します。各backendの外部ツールによる最適化も、Ceruneのpassとは区別して記録します。
 
-[Lean検証](lean-verification.ja.md)では、まず非最適化のHIR→MIR対応、次に選択したpassの前後を検証対象にできます。MIR実行での一致はテストであり形式証明ではありません。実際のu8関数increment・choose・advanceについてHIR→MIR対応と性質を証明します。MIRの型付き局所値・命令列・CFGを独立にモデル化し、if・短絡・while・可変局所値・break／continueの最内周への作用・overflow出自を検査します。ループ例はHIR/MIRそれぞれの明示上限内の完了も証明します。一般のloop停止性・heapや変換アルゴリズム一般、全処理系の証明には拡大解釈しません。
+[Lean検証](lean-verification.ja.md)では、まず非最適化のHIR→MIR対応、次に選択したpassの前後を検証対象にできます。MIR実行での一致はテストであり形式証明ではありません。実際のu8関数increment・choose・advanceについてHIR→MIR対応と性質を証明します。MIRの型付き局所値・命令列・CFGを独立にモデル化し、if・短絡・while／for・可変局所値・break／continueの最内周への作用・初期化／更新・overflow出自を検査します。ループ例はHIR/MIRそれぞれの明示上限内の完了も証明します。一般のloop停止性・heapや変換アルゴリズム一般、全処理系の証明には拡大解釈しません。
 
 ## 基準例と次の実装単位
 
@@ -166,7 +166,7 @@ callの結果: true → 加算 / false → update
 | 1（実装済み） | MIRの型・block・命令・検証器、HIR→MIR、`emit-mir` | 全exampleの変換と決定性、評価順・短絡・loopの辺・出自、破損したMIRの拒否を検証。実行比較は次段階、静的なheap寿命の保証は後続 |
 | 2（実装済み） | [独立したMIR Interpreter](mir-executor.ja.md)・`run-mir` | HIR・VMを内部実行せず、現在の言語機能・停止・出自・寿命を比較。動的配列はWindows/Linuxの9経路で照合 |
 | 3（実装済み） | [NativeをMIR入力へ移行](native-mir.ja.md) | 現行ASM・COFF/ELFとの既知出力・失敗・出自・ABI比較をWindows/Linuxで通す |
-| 4（一部実装済み） | 観測bundle・Lean対応、必要な他backendの移行 | sources/HIR/MIR/ASMのbundleは実装済み。u8の直列・if・短絡・while・break／continue・入れ子・overflow出自と明示上限内の完了を証明。一般のloop・heapは後続。その他の成果物と証明範囲は個別に拡張 |
+| 4（一部実装済み） | 観測bundle・Lean対応、必要な他backendの移行 | sources/HIR/MIR/ASMのbundleは実装済み。u8の直列・if・短絡・while／for・break／continue・入れ子・更新停止出自と明示上限内の完了を証明。一般のloop・heapは後続。その他の成果物と証明範囲は個別に拡張 |
 | 5 | SSA変換、個別の最適化pass | SSA化と最適化を別々に選択・観測。検証器と意味保存条件を各passに適用 |
 
-最初のMIR PRでSSA、最適化、全backendの付替え、Image loaderを一括導入しません。MIR実行は型・関数・module・generic・配列・文字列・所有・停止診断に対応しています。NativeのMIR移行も実装しました。観測bundleの初期範囲も実装済みです。HIR→MIRのLean検証はu8関数の直列・分岐・短絡・whileの明示上限内の完了まで進みました。while内の分岐・break／continueと入れ子の行き先も検証しました。次はforのcontinueが更新を通る対応へ拡張します。
+最初のMIR PRでSSA、最適化、全backendの付替え、Image loaderを一括導入しません。MIR実行は型・関数・module・generic・配列・文字列・所有・停止診断に対応しています。NativeのMIR移行も実装しました。観測bundleの初期範囲も実装済みです。HIR→MIRのLean検証はu8関数の直列・分岐・短絡・whileの明示上限内の完了まで進みました。while内の分岐・break／continueと入れ子の行き先も検証しました。forの初期化と、本文末尾・continueが更新を通りbreakが飛ばす対応、更新時overflowの出自も検証しました。次はこの非最適化MIRを基準に、SSAの表現・変換・観測・意味保存条件を設計します。
