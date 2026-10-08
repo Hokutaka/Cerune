@@ -4,6 +4,8 @@ use cerune_lang::{
     types::IntegerType,
 };
 
+#[path = "branch.rs"]
+pub mod branch;
 #[path = "mir.rs"]
 mod mir_experiment;
 

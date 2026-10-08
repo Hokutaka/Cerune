@@ -25,6 +25,26 @@ fn main() {
     )
     .unwrap();
     std::fs::write(directory.join("lean-toolchain"), experiment::TOOLCHAIN).unwrap();
+    let branch = cerune_lang::compile_to_ir(experiment::branch::SOURCE).expect("compile branch");
+    let branch_mir = cerune_lang::mir::lower(&branch).expect("lower branch MIR");
+    let branch_generated = experiment::branch::emit(&branch, &branch_mir).expect("emit branch");
+    std::fs::write(directory.join("BranchGenerated.lean"), &branch_generated).unwrap();
+    std::fs::write(
+        directory.join("BranchVerified.lean"),
+        format!("{branch_generated}\n{}", experiment::branch::PROPERTIES),
+    )
+    .unwrap();
+    std::fs::write(
+        directory.join("branch.ceir"),
+        cerune_lang::ir::text::emit(&branch),
+    )
+    .unwrap();
+    std::fs::write(
+        directory.join("branch.mir.txt"),
+        cerune_lang::mir::text::emit(&branch_mir),
+    )
+    .unwrap();
+    println!("Generated BranchGenerated.lean, BranchVerified.lean, branch.ceir and branch.mir.txt");
     println!(
         "Generated target/lean-verification/{{Generated,Verified}}.lean and increment.{{ceir,mir.txt}}"
     );

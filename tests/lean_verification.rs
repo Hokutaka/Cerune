@@ -134,7 +134,7 @@ fn lean_checks_correspondence_properties_execution_and_mutations() {
     let executable = directory.join("Execute.lean");
     fs::write(
         &executable,
-        format!("{generated}\ndef main : IO Unit := do\n  for input in List.range 256 do\n    IO.println (CeruneProof.render (CeruneProof.generated input))\n    IO.println (match CeruneProof.evalMir CeruneProof.mirReference input with | some result => CeruneProof.render result | none => \"invalid MIR\")\n"),
+        format!("{generated}\ndef main : IO Unit := do\n  for input in List.range 256 do\n    IO.println (CeruneProof.render (CeruneProof.generated input))\n    IO.println (CeruneProof.renderMir (CeruneProof.evalMir CeruneProof.mirReference input))\n"),
     ).unwrap();
     let output = run(&executable, true);
     assert!(output.status.success(), "{output:?}");
@@ -239,6 +239,7 @@ fn lean_checks_correspondence_properties_execution_and_mutations() {
             "expected a proof error, not an infrastructure failure: {output:?}"
         );
     }
+    check_branch_proofs(&directory, &run);
 }
 
 fn changed_mir(original: &cerune_lang::mir::Program, change: &str) -> cerune_lang::mir::Program {
@@ -355,4 +356,279 @@ fn mir_export_uses_the_supplied_snapshot_and_rejects_unsupported_or_invalid_mir(
     for mutation in ["Order", "Unsupported"] {
         assert!(experiment::emit_with_mir(&hir, &changed_mir(&mir, mutation)).is_err());
     }
+}
+
+#[test]
+fn branch_example_executes_and_export_rejects_cycles_and_unsupported_conditions() {
+    let hir = compile_to_ir(experiment::branch::SOURCE).unwrap();
+    let mir = cerune_lang::mir::lower(&hir).unwrap();
+    let before = mir.clone();
+    let generated = experiment::branch::emit(&hir, &mir).unwrap();
+    let expected = "1\n127\n129\n130\n255\n";
+    assert_eq!(ir_executor::run(&hir).unwrap(), expected);
+    assert_eq!(cerune_lang::mir_executor::run(&mir).unwrap(), expected);
+    assert_eq!(
+        run_bytecode(&bytecode::lower(&hir).unwrap()).unwrap(),
+        expected
+    );
+    for mutation in ["Targets", "Eager", "Comparison", "FailureOrigin"] {
+        let changed = changed_branch_mir(&mir, mutation);
+        cerune_lang::mir::validate(&changed).unwrap();
+        assert_ne!(generated, experiment::branch::emit(&hir, &changed).unwrap());
+    }
+    assert_eq!(mir, before);
+    let cyclic = changed_branch_mir(&mir, "Cycle");
+    cerune_lang::mir::validate(&cyclic).unwrap();
+    assert!(
+        experiment::branch::emit(&hir, &cyclic)
+            .unwrap_err()
+            .contains("cyclic MIR")
+    );
+    let unsupported = experiment::branch::SOURCE.replace("value < 128", "value == 128");
+    let hir = compile_to_ir(&unsupported).unwrap();
+    let mir = cerune_lang::mir::lower(&hir).unwrap();
+    assert!(
+        experiment::branch::emit(&hir, &mir)
+            .unwrap_err()
+            .contains("unsupported HIR condition")
+    );
+}
+
+fn changed_branch_mir(
+    original: &cerune_lang::mir::Program,
+    change: &str,
+) -> cerune_lang::mir::Program {
+    use cerune_lang::{
+        ir::BinaryOp,
+        mir::{InstructionKind as I, Operation as O, Origin, TerminatorKind as T},
+    };
+    let mut program = original.clone();
+    let f = program
+        .functions
+        .iter_mut()
+        .find(|f| f.name == "choose")
+        .unwrap();
+    match change {
+        "Targets" => {
+            let t = &mut f
+                .blocks
+                .iter_mut()
+                .filter(|b| matches!(b.terminator.kind, T::Branch { .. }))
+                .nth(1)
+                .unwrap()
+                .terminator
+                .kind;
+            let T::Branch {
+                then_block,
+                else_block,
+                ..
+            } = t
+            else {
+                unreachable!()
+            };
+            std::mem::swap(then_block, else_block);
+        }
+        "Eager" => {
+            let t = &mut f.blocks[f.entry.0].terminator.kind;
+            let T::Branch { then_block, .. } = *t else {
+                unreachable!()
+            };
+            *t = T::Jump(then_block);
+        }
+        "Comparison" => {
+            let i = f.blocks[f.entry.0]
+                .instructions
+                .iter_mut()
+                .find(|i| {
+                    matches!(
+                        i.kind,
+                        I::Assign {
+                            value: O::Binary {
+                                op: BinaryOp::Less,
+                                ..
+                            },
+                            ..
+                        }
+                    )
+                })
+                .unwrap();
+            let I::Assign {
+                value: O::Binary { left, right, .. },
+                ..
+            } = &mut i.kind
+            else {
+                unreachable!()
+            };
+            std::mem::swap(left, right);
+        }
+        "FailureOrigin" => {
+            let i = f
+                .blocks
+                .iter_mut()
+                .flat_map(|b| &mut b.instructions)
+                .filter(|i| {
+                    matches!(
+                        i.kind,
+                        I::Assign {
+                            value: O::Binary {
+                                op: BinaryOp::Add,
+                                ..
+                            },
+                            ..
+                        }
+                    )
+                })
+                .last()
+                .unwrap();
+            let mut origin = i.origin.source().unwrap();
+            origin.node_id.0 += 1000;
+            i.origin = Origin::Source(origin);
+        }
+        "Cycle" => {
+            let last = cerune_lang::mir::BlockId(f.blocks.len() - 1);
+            f.blocks[last.0].terminator.kind = T::Jump(last);
+        }
+        _ => panic!("unknown branch mutation"),
+    }
+    program
+}
+
+fn check_branch_proofs(directory: &Path, run: &impl Fn(&Path, bool) -> std::process::Output) {
+    let hir = compile_to_ir(experiment::branch::SOURCE).unwrap();
+    let mir = cerune_lang::mir::lower(&hir).unwrap();
+    let generated = experiment::branch::emit(&hir, &mir).unwrap();
+    fs::write(
+        directory.join("branch.ceir"),
+        cerune_lang::ir::text::emit(&hir),
+    )
+    .unwrap();
+    fs::write(
+        directory.join("branch.mir.txt"),
+        cerune_lang::mir::text::emit(&mir),
+    )
+    .unwrap();
+    fs::write(directory.join("BranchGenerated.lean"), &generated).unwrap();
+    let verified = format!(
+        "{generated}\n{}\n\
+        example : CeruneProof.evalMirWithFuel CeruneProof.mirReference 0 0 = .exhausted := by rfl\n\
+        example : CeruneProof.evalMir ⟨0, 0, []⟩ 0 = .exhausted := by rfl\n\
+        example : CeruneProof.evalMirWithFuel ⟨0, 0, []⟩ 1 0 = .invalid := by rfl\n",
+        experiment::branch::PROPERTIES
+    );
+    let file = directory.join("BranchVerified.lean");
+    fs::write(&file, &verified).unwrap();
+    let output = run(&file, false);
+    assert!(
+        output.status.success() && output.stderr.is_empty(),
+        "{output:?}"
+    );
+    let log = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        !log.contains("warning:") && !log.contains("error:"),
+        "{log}"
+    );
+    for theorem in ["branch_translation_correct", "mir_branch_expected"] {
+        assert!(
+            log.contains(&format!(
+                "'CeruneProof.{theorem}' depends on axioms: [propext]"
+            )),
+            "{log}"
+        );
+    }
+    assert!(
+        log.contains("'CeruneProof.branch_expected' does not depend on any axioms"),
+        "{log}"
+    );
+
+    let file = directory.join("BranchExecute.lean");
+    fs::write(&file, format!("{generated}\ndef main : IO Unit := do\n  for input in List.range 256 do\n    IO.println (CeruneProof.render (CeruneProof.evalBranch CeruneProof.branchReference input))\n    IO.println (CeruneProof.renderMir (CeruneProof.evalMir CeruneProof.mirReference input))\n")).unwrap();
+    let output = run(&file, true);
+    assert!(
+        output.status.success() && output.stderr.is_empty(),
+        "{output:?}"
+    );
+    let text = String::from_utf8(output.stdout).unwrap();
+    let lines: Vec<_> = text.lines().collect();
+    assert_eq!(lines.len(), 512, "{text}");
+    let function = experiment::branch::SOURCE.split("\nprint(").next().unwrap();
+    for (input, pair) in lines.as_chunks::<2>().0.iter().enumerate() {
+        assert_eq!(pair[0], pair[1], "Lean HIR/MIR at input {input}");
+        let hir = compile_to_ir(&format!("{function}\nprint(choose({input}));")).unwrap();
+        let direct = ir_executor::run(&hir);
+        let mir = cerune_lang::mir_executor::run(&cerune_lang::mir::lower(&hir).unwrap());
+        let vm = run_bytecode(&bytecode::lower(&hir).unwrap());
+        if input < 254 {
+            let value = input + if input < 127 { 1 } else { 2 };
+            let expected = format!("{value}\n");
+            assert_eq!(direct.unwrap(), expected);
+            assert_eq!(mir.unwrap(), expected);
+            assert_eq!(vm.unwrap(), expected);
+            assert_eq!(pair[0], format!("ok {value}"));
+        } else {
+            let direct = direct.unwrap_err();
+            let mir = mir.unwrap_err();
+            let vm = vm.unwrap_err();
+            let failure = direct.runtime_failure().unwrap();
+            assert_eq!(failure.code, FailureCode::IntegerOverflow);
+            assert_eq!(mir.runtime_failure(), Some(failure));
+            assert_eq!(vm.runtime_failure(), Some(failure));
+            assert_eq!(direct.output(), "");
+            assert_eq!(mir.output(), "");
+            assert_eq!(vm.vm_error().output(), "");
+            assert_eq!(
+                pair[0],
+                format!(
+                    "integer-overflow node={} source={} bytes={}..{}",
+                    failure.node_id.0,
+                    failure.span.source_id().index(),
+                    failure.span.start(),
+                    failure.span.end()
+                )
+            );
+        }
+    }
+
+    // HIRは固定し、分岐先・短絡・条件・停止位置だけをMIR側で壊します。
+    for name in ["Targets", "Eager", "Comparison", "FailureOrigin"] {
+        let changed = changed_branch_mir(&mir, name);
+        let bad = experiment::branch::emit(&hir, &changed).unwrap();
+        assert_ne!(generated, bad);
+        let path = directory.join(format!("RejectedBranch{name}.lean"));
+        fs::write(&path, bad).unwrap();
+        fs::write(
+            directory.join(format!("RejectedBranch{name}.mir.txt")),
+            cerune_lang::mir::text::emit(&changed),
+        )
+        .unwrap();
+        assert_false_proof(run(&path, false));
+    }
+    let path = directory.join("RejectedBranchProperty.lean");
+    let bad = verified.replacen("input < 127", "input < 128", 1);
+    assert_ne!(verified, bad);
+    fs::write(&path, bad).unwrap();
+    assert_false_proof(run(&path, false));
+
+    // ||でも、選ばれない右辺を評価しない対応を検査します。
+    let source = experiment::branch::SOURCE.replace(
+        "value < 128 && value + 128 < 255",
+        "127 < value || value + 128 < 255",
+    );
+    let hir = compile_to_ir(&source).unwrap();
+    let mir = cerune_lang::mir::lower(&hir).unwrap();
+    let path = directory.join("BranchOrVerified.lean");
+    fs::write(&path, experiment::branch::emit(&hir, &mir).unwrap()).unwrap();
+    let output = run(&path, false);
+    assert!(
+        output.status.success() && output.stderr.is_empty(),
+        "{output:?}"
+    );
+}
+
+fn assert_false_proof(output: std::process::Output) {
+    assert!(!output.status.success(), "invalid branch proof accepted");
+    let errors = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        errors.contains("error:") && errors.contains("decide") && errors.contains("false"),
+        "expected a false proposition, not an infrastructure failure: {output:?}"
+    );
 }

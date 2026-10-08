@@ -131,7 +131,7 @@ The [#60 observation bundle](observation-bundle.en.md) saves sources, HIR, MIR, 
 
 The [#81](https://github.com/Hokutaka/Cerune/issues/81) show/emit/build/run/via/release responsibilities are distinct from representation stages. Release is not an optimization alias. Select passes and their order explicitly, and record external-tool optimization separately from Cerune passes.
 
-[Lean verification](lean-verification.en.md) can first address unoptimized HIR→MIR correspondence, then individual passes. Matching interpreter runs is testing, not formal proof. The actual `increment: u8 → u8` now has HIR→MIR correspondence and property proofs, using an independent model of MIR locals/instructions/return. This does not prove branches, loops, heap, the general lowering algorithm, or the whole compiler.
+[Lean verification](lean-verification.en.md) can first address unoptimized HIR→MIR correspondence, then individual passes. Matching interpreter runs is testing, not formal proof. The actual u8 functions increment and choose have HIR→MIR correspondence/property proofs using independent typed MIR locals, instructions, and acyclic CFGs. These check if/short-circuiting and overflow origins, not loops, heap, the general lowering algorithm, or the whole compiler.
 
 ## Baseline example and implementation units
 
@@ -166,7 +166,7 @@ Implement and compare in these units, aiming for current feature parity rather t
 | 1 (implemented) | MIR types/blocks/instructions/validator, HIR→MIR, `emit-mir` | Validate every example's lowering/determinism, order, short-circuit/loop edges, origins, and rejection of malformed MIR. Execution comparisons follow in the next stage; static heap lifetime guarantees remain future work. |
 | 2 (implemented) | [Independent MIR interpreter](mir-executor.en.md), `run-mir` | Executes neither HIR nor VM internally; compares current features, failures, origins, and lifetimes. Dynamic arrays are compared across nine routes on Windows/Linux |
 | 3 (implemented) | [Native lowering from MIR](native-mir.en.md) | Match existing ASM/COFF/ELF known outputs, failures, origins, and ABI behavior on Windows/Linux |
-| 4 (partially implemented) | Observation bundles, Lean correspondence, other backend migration as needed | sources/HIR/MIR/ASM bundle implemented; initial u8 HIR→MIR proof also added; control flow/failures follow. Extend artifacts and proof coverage separately |
+| 4 (partially implemented) | Observation bundles, Lean correspondence, other backend migration as needed | sources/HIR/MIR/ASM bundle implemented; u8 straight-line/if/short-circuit/overflow-origin HIR→MIR proofs also added; loops/heap follow. Extend artifacts and proof coverage separately |
 | 5 | SSA conversion and individual optimization passes | Select/observe SSA independently from optimization; apply validators and semantic-preservation conditions per pass |
 
-The first MIR PR should not combine SSA, optimization, every backend migration, and Image loading. MIR execution covers types, functions, modules, generics, arrays, strings, ownership, and runtime diagnostics. Native lowering from MIR is now implemented. The initial observation bundle is also implemented. Lean HIR→MIR verification has started with a u8 function; next extend control-flow and failure correspondence.
+The first MIR PR should not combine SSA, optimization, every backend migration, and Image loading. MIR execution covers types, functions, modules, generics, arrays, strings, ownership, and runtime diagnostics. Native lowering from MIR is now implemented. The initial observation bundle is also implemented. Lean HIR→MIR verification now covers u8 straight-line, branch, and short-circuit fixtures; next extend to loops with explicit evaluation bounds and termination conditions.
