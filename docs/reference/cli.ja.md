@@ -6,12 +6,17 @@
 
 IR・VM・Nativeの[build / release](../design/owned-routes.ja.md)と[Lean出力](../design/lean-verification.ja.md)は設計・検証段階です。現行CLIには追加されていません。
 
+## 観測結果の一括保存
+
+`observe`はsources・HIR・MIR・注釈付きASMとmanifestを[同じコンパイルから保存](../design/observation-bundle.ja.md)します。`--target`と`-o`は必須で、両heap予算を指定できます。既存出力先は拒否します。親ディレクトリは事前に作成してください。入力名・ソース本文も保存しますが、プログラム実行・外部ツール起動・リンクは行いません。Objectや他backendの同梱は未対応です。
+
 ## コマンド
 
 現在のCLIは次のコマンドを提供します。
 
 ```text
 cerune check <file>
+cerune observe <file> --target <triple> -o <new-directory>
 cerune emit-sources <file> [-o <sources.json>]
 cerune emit-ir <file> [-o <output.ceir>]
 cerune emit-mir <file> [-o <output.txt>]
@@ -31,7 +36,7 @@ cerune --version
 
 ## 動的文字列の予算
 
-`run`・`run-ir`・`run-mir`・`run-vm`・`emit-ir`・`emit-mir`・`emit-bytecode`・`emit-c`・`emit-llvm`・`emit-qbe`・`emit-wat`・`emit-asm`・`emit-obj`では`--string-heap-limit <bytes>`を指定できます。既定は67108864（64 MiB）。値は0〜9223372036854775807の十進整数で、省略・重複・負数を拒否します。`check`・`emit-sources`では受け付けません。
+`observe`・`run`・`run-ir`・`run-mir`・`run-vm`・`emit-ir`・`emit-mir`・`emit-bytecode`・`emit-c`・`emit-llvm`・`emit-qbe`・`emit-wat`・`emit-asm`・`emit-obj`では`--string-heap-limit <bytes>`を指定できます。既定は67108864（64 MiB）。値は0〜9223372036854775807の十進整数で、省略・重複・負数を拒否します。`check`・`emit-sources`では受け付けません。
 
 生存する動的文字列の内容を数え、共有領域は一度だけ、静的文字列は数えません。再代入中に共存する旧値・新値は両方数えます。コンパイル時評価には独立した64 MiBがあり、この設定では変更しません。物理メモリ全体の上限ではありません。値は生成物に固定され、実行中に変更するAPIはありません。
 

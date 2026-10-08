@@ -2,7 +2,7 @@
 
 [日本語](language-roadmap.ja.md)
 
-This inventory records capabilities, execution routes, and next steps as of 2026-10-07. Implemented work is distinguished from unimplemented plans; each design stage determines candidate syntax and adoption. See the [language reference](../reference/language.en.md) for the exact specification.
+This inventory records capabilities, execution routes, and next steps as of 2026-10-08. Implemented work is distinguished from unimplemented plans; each design stage determines candidate syntax and adoption. See the [language reference](../reference/language.en.md) for the exact specification.
 
 ## Properties Cerune should preserve
 
@@ -50,7 +50,7 @@ Language features are tracked separately from compiler stages, distribution, and
 | --- | --- | --- |
 | Implemented | [MIR](ir-stages.en.md) and [independent interpreter](mir-executor.en.md) | Non-SSA types, lowering, validation, `emit-mir`, and `run-mir`; output, failures, origins, and ownership lifetimes compared with existing routes |
 | Implemented | [Native lowering from MIR](native-mir.en.md) | Before/after execution comparisons and MIR→LIR→ASM/Object provenance verified |
-| Planned, unimplemented | Observation bundle | Save stages and correspondence from one compilation ([#60](https://github.com/Hokutaka/Cerune/issues/60)) |
+| Initial scope implemented | [Observation bundle](observation-bundle.en.md) | Saves sources, HIR, MIR, annotated ASM, and manifest from one compilation; additional artifacts remain future work ([#60](https://github.com/Hokutaka/Cerune/issues/60)) |
 | Partial experiment | [Lean verification](lean-verification.en.md) | Correspondence and program properties checked for actual HIR `u8` functions; no whole-language, MIR-transformation, or whole-compiler proof, or public `emit-lean` |
 | Planned, unimplemented | SSA and optimization passes | Make selection, transformation, and semantic preservation observable under the [#94 stage design](https://github.com/Hokutaka/Cerune/issues/94) |
 | Planned, unimplemented | [IR/VM/Native build / release](owned-routes.en.md) | Follow [#81](https://github.com/Hokutaka/Cerune/issues/81), keeping completed artifacts and distribution separate from optimization |
@@ -61,7 +61,7 @@ Proceed in the order below, pairing a small design with examples, known expected
 
 | Order | Next work | First contract and example |
 | --- | --- | --- |
-| 1 | Observation bundle and stage comparisons | Collect observations from one compilation; then address Lean correspondence, SSA, and optimization passes separately under the [stage design](ir-stages.en.md) |
+| 1 | Stage comparisons | Initial bundle implemented. Follow the [stage design](ir-stages.en.md) with Lean HIR→MIR correspondence, then SSA and individual passes; apply #103 refactoring where needed |
 | 2 | [Additional dynamic-array operations](owned-arrays.en.md) | Existing operations work across routes; consider `array_repeat` later; borrowed slices need separate lifetime and mutation type rules |
 | 3 | Recursion and external I/O | Define call storage, resource limits, I/O failure, and cleanup |
 | 4 | Module distribution | Re-exports, dependencies/versions, reproducible builds; extend explicit imports |
@@ -82,7 +82,12 @@ The roadmap records priorities, dependencies, and current progress; each issue h
 | [#89 External input and interaction](https://github.com/Hokutaka/Cerune/issues/89) | Derive inputs, resources, and failures from real uses, preserving semantics across routes |
 | [#90 Optional let](https://github.com/Hokutaka/Cerune/issues/90) | Consider together with the formatter, without adding binding semantics or IR distinctions |
 | [#92 Upstream QBE patch](https://github.com/Hokutaka/Cerune/issues/92) | Validate while retaining the workaround; update against the official upstream change |
+| [#103 Code organization](https://github.com/Hokutaka/Cerune/issues/103) | Separate responsibilities in small steps where features touch them; preserve outputs/failures/origins rather than splitting solely by file size |
+| [#104 Comparison and external effects](https://github.com/Hokutaka/Cerune/issues/104) | With #89 I/O design, separate reproducible inputs/operation traces from real effects; the initial bundle does not execute |
+| [#105 Binding/conditional syntax](https://github.com/Hokutaka/Cerune/issues/105) | Consider omitted `infer`, then `else if`; align with #90 `let`. `?:` needs separate semantics; formatter/for coverage remains undecided |
 | [#93 FPGA](https://github.com/Hokutaka/Cerune/issues/93) | Investigate another realization of the same IR semantics, without splitting language meaning |
+
+Experiment topics belong to the [idea catalog](../idea/idea-catalog.en.md), not the adoption/order commitments. Issues hold details/discussion, the roadmap tracks progress/dependencies, and references describe implemented behavior.
 
 ## GPU direction
 

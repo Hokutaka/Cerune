@@ -10,7 +10,8 @@ Current implementation and plans are summarized below.
 | --- | --- |
 | Implemented | Direct execution of completed Cerune IR (HIR), bytecode VM, C/LLVM/QBE/WAT generation |
 | Implemented | Non-SSA MIR types/lowering/validation, `emit-mir`, [independent execution](mir-executor.en.md), and [MIR→Native generation](native-mir.en.md) |
-| Planned, unimplemented | SSA, optimization passes, observation bundles; the [stage design](ir-stages.en.md) defines semantic preservation and observation |
+| Implemented | [Observation bundle](observation-bundle.en.md): sources, HIR, MIR, and annotated ASM from one compilation |
+| Planned, unimplemented | SSA and optimization passes; the [stage design](ir-stages.en.md) defines semantic preservation and observation |
 | Planned, unimplemented | IR/VM/Native [build / release](owned-routes.en.md), with C-like routes classified as emit-only |
 
 ## Principles
@@ -203,7 +204,7 @@ Artifacts show how the selected route and target represent resolved meaning.
 | `emit-obj` | `.o` / `.obj` | Required `--target`/`-o`; optional origins |
 | `emit-bytecode` | `.cebc` | `-o` to save |
 
-Each command accepts `<file>`. The [CLI reference](../reference/cli.en.md) defines features requiring targets and omission behavior. Existing `emit-*` commands are the observation API; a generic `observe` command duplicating them is unnecessary.
+Each command accepts `<file>`. The [CLI reference](../reference/cli.en.md) defines features requiring targets and omission behavior. Individual observations use `emit-*`. [`observe`](observation-bundle.en.md) collects existing observations from one compilation into a bundle; it is not another semantic representation or execution route.
 
 ### Internal backend IR is not an observation contract
 
@@ -297,7 +298,7 @@ External toolchain output is outside this guarantee and should be recorded by th
 The current design intentionally does not require:
 
 - a public serialization format for backend-specific Rust IR;
-- a generic `observe` command duplicating the existing `emit-*` commands;
+- another observation API redefining semantics alongside individual emits and bundles;
 - mandatory SSA for every backend (MIR SSA conversion is a future explicit option);
 - implicit optimization;
 - orchestration of external compilers and runtimes for emit-only routes (distinct from planned Cerune-owned builds);
@@ -307,7 +308,7 @@ Possible future work includes:
 
 - an explicit optimization pipeline with additional observation boundaries;
 - optional backend-IR inspection when a concrete use case requires it;
-- an Observation Bundle that collects source, Cerune IR, emitted artifacts, and metadata together;
+- extending observation bundles with objects, other backends, and before/after comparisons;
 - verified, loadable IR/VM Images as completed artifacts, with formats and verifiers described in the [build / release plan](owned-routes.en.md).
 
 Those features should be added only when they preserve the central rule:

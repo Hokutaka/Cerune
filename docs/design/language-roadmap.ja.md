@@ -2,7 +2,7 @@
 
 [English](language-roadmap.en.md)
 
-2026-10-07時点の機能・実行経路・次の作業をまとめます。「実装済み」と「計画・未実装」を区別し、候補の構文や採用は各段階の設計で決めます。正確な仕様は[言語リファレンス](../reference/language.ja.md)を参照してください。
+2026-10-08時点の機能・実行経路・次の作業をまとめます。「実装済み」と「計画・未実装」を区別し、候補の構文や採用は各段階の設計で決めます。正確な仕様は[言語リファレンス](../reference/language.ja.md)を参照してください。
 
 ## Ceruneが持つべき性質
 
@@ -50,7 +50,7 @@ Ceruneでは、書いた計算の意味と、それが実行される表現へ�
 | --- | --- | --- |
 | 実装済み | [MIR](ir-stages.ja.md)・[独立実行器](mir-executor.ja.md) | 非SSAの型・変換・検証・`emit-mir`・`run-mir`。既存経路と出力・停止理由・出自・所有の寿命を比較 |
 | 実装済み | [NativeのMIR入力](native-mir.ja.md) | 旧経路との実行比較、MIR→LIR→ASM/Objectの出自対応を検証 |
-| 計画・未実装 | 観測bundle | 同一コンパイルの各段階・対応情報を保存（[#60](https://github.com/Hokutaka/Cerune/issues/60)） |
+| 初期範囲を実装 | [観測bundle](observation-bundle.ja.md) | 同一コンパイルのsources・HIR・MIR・注釈付きASM・manifestを保存。その他の成果物は後続（[#60](https://github.com/Hokutaka/Cerune/issues/60)） |
 | 一部実験済み | [Lean検証](lean-verification.ja.md) | 実際のHIRの`u8`関数で意味の対応とプログラムの性質を検証。全言語・MIR変換・処理系全体の証明や公開`emit-lean`は未実装 |
 | 計画・未実装 | SSA・最適化pass | [#94の段階設計](https://github.com/Hokutaka/Cerune/issues/94)に沿い、選択・変換・意味保存を観測可能にする |
 | 計画・未実装 | [IR・VM・Nativeのbuild / release](owned-routes.ja.md) | [#81](https://github.com/Hokutaka/Cerune/issues/81)の責務整理を基準に、完成成果物・配布を最適化と分ける |
@@ -61,7 +61,7 @@ Ceruneでは、書いた計算の意味と、それが実行される表現へ�
 
 | 順序 | 次の作業 | 最初に決める契約・確認例 |
 | --- | --- | --- |
-| 1 | 観測bundleと段階間の検証 | 同一コンパイルの観測をまとめる。その後、[段階設計](ir-stages.ja.md)に沿ってLeanでの対応検証・SSA・最適化passを個別に進める |
+| 1 | 段階間の検証 | bundleの初期範囲は実装済み。[段階設計](ir-stages.ja.md)に沿ってLeanでのHIR→MIR対応検証を進め、その後SSA・個別passへ進む。#103の整理は必要箇所ごとに行う |
 | 2 | [動的配列の追加操作](owned-arrays.ja.md) | 既存操作は全経路対応済み。`array_repeat`を後続として検討。借用スライスは寿命と更新の型規則を別途定義 |
 | 3 | 再帰・外部入出力 | 呼び出し領域・資源上限・入出力失敗・終了処理を定義 |
 | 4 | モジュールの配布 | 再export、依存・版・再現可能なビルド。現行の明示importを基準に拡張 |
@@ -82,7 +82,12 @@ Ceruneでは、書いた計算の意味と、それが実行される表現へ�
 | [#89 外部入力と連携](https://github.com/Hokutaka/Cerune/issues/89) | 実用途から必要な入力・資源・失敗を整理し、各経路で意味を合わせる |
 | [#90 optional let](https://github.com/Hokutaka/Cerune/issues/90) | formatterと同時に検討し、束縛の意味やIRを増やさない |
 | [#92 QBEの上流patch](https://github.com/Hokutaka/Cerune/issues/92) | 既存回避処理を維持して検証し、正式な上流変更を基準に更新 |
+| [#103 コード構成](https://github.com/Hokutaka/Cerune/issues/103) | 機能追加に触れる責務から小さく分離。ファイルサイズだけで分割せず、出力・停止・出自を維持 |
+| [#104 比較と外部副作用](https://github.com/Hokutaka/Cerune/issues/104) | #89の外部I/O設計時に、同じ入力・操作列の比較と実際の副作用を分ける。今回のbundleは実行しない |
+| [#105 束縛・条件構文](https://github.com/Hokutaka/Cerune/issues/105) | `infer`省略→`else if`の順で検討。#90の`let`と整合させる。`?:`は別の意味設計、formatter・forの適用範囲は未決定 |
 | [#93 FPGA](https://github.com/Hokutaka/Cerune/issues/93) | 同じIRの意味を別の実装形態で実現できるかを調査。言語の意味を分けない |
+
+実験題材は[アイデアカタログ](../idea/idea-catalog.ja.md)に分けています。題材の掲載は採用・実装順の決定ではありません。Issueは詳細と議論、ロードマップは到達点と依存順、referenceは実装済み仕様を管理します。
 
 ## GPUをどう扱うか
 

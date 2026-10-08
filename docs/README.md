@@ -11,6 +11,7 @@ Cerune documentation is divided into `design`, which records design decisions, a
 | Naming and migration / 命名と移行 | [日本語](design/naming.ja.md) | [English](design/naming.en.md) |
 | Compiler architecture / コンパイラ構成 | [日本語](design/architecture.ja.md) | [English](design/architecture.en.md) |
 | IR stages and pass observation / IR段階と変換の観測 | [日本語](design/ir-stages.ja.md) | [English](design/ir-stages.en.md) |
+| Observation bundle / 観測結果の一括保存 | [日本語](design/observation-bundle.ja.md) | [English](design/observation-bundle.en.md) |
 | Observability contract / 可観測性の契約 | [日本語](design/observability.ja.md) | [English](design/observability.en.md) |
 | Runtime diagnostics / 実行時停止の共通記録 | [日本語](design/runtime-diagnostics.ja.md) | [English](design/runtime-diagnostics.en.md) |
 | AST execution study / AST直接実行の調査 | [日本語](design/ast-executor-study.ja.md) | [English](design/ast-executor-study.en.md) |

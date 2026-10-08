@@ -10,7 +10,8 @@ Ceruneは静的型付きの実験言語です。型・意味の決定と、実�
 | --- | --- |
 | 実装済み | 完成済みCerune IR（HIR）の直接実行、bytecode VM、C・LLVM・QBE・WAT生成 |
 | 実装済み | 非SSAのMIRの型・変換・検証・`emit-mir`・[独立実行](mir-executor.ja.md)、[MIR→Native生成](native-mir.ja.md) |
-| 計画・未実装 | SSA・最適化pass・観測bundle。[段階設計](ir-stages.ja.md)で意味保存と観測を定める |
+| 実装済み | [観測bundle](observation-bundle.ja.md)：sources・HIR・MIR・注釈付きASMを同じコンパイルから保存 |
+| 計画・未実装 | SSA・最適化pass。[段階設計](ir-stages.ja.md)で意味保存と観測を定める |
 | 計画・未実装 | IR・VM・Nativeの[build / release](owned-routes.ja.md)。C等はemit-onlyとして整理 |
 
 ## 設計原則
@@ -203,7 +204,7 @@ VMは実行エラーをbytecode命令番号で報告します。`run_vm`はそ�
 | `emit-obj` | `.o` / `.obj` | `--target`・`-o`必須。出自注釈も指定可 |
 | `emit-bytecode` | `.cebc` | `-o`で保存 |
 
-各コマンドは`<file>`を入力に取ります。ターゲットが必須になる機能や省略時の扱いは[CLI](../reference/cli.ja.md)で定めます。既存の`emit-*`が観測APIであり、同じ出力を重複させる汎用`observe`コマンドは設けません。
+各コマンドは`<file>`を入力に取ります。ターゲットが必須になる機能や省略時の扱いは[CLI](../reference/cli.ja.md)で定めます。個別の観測には`emit-*`を使います。[`observe`](observation-bundle.ja.md)は既存の観測結果を同一コンパイルのbundleへ保存する操作で、新しい意味表現や実行経路ではありません。
 
 ### 内部バックエンドIRは観測契約ではない
 
@@ -297,7 +298,7 @@ Ceruneの回帰テストは、型・診断・生成物・実行結果が言語�
 現在の設計では、次のものを必要としません。
 
 - バックエンド固有のRust IRを公開するシリアライズ形式
-- 既存の`emit-*`コマンドと重複する汎用的な`observe`コマンド
+- 個別`emit-*`やbundleとは別の、意味表現を重複定義する観測API
 - すべてのバックエンドへのSSAの強制（MIRのSSA化は将来の明示的な選択肢）
 - 暗黙の最適化
 - emit-only経路の外部コンパイラやランタイムの統括（Cerune-ownedのbuild計画とは区別）
@@ -307,7 +308,7 @@ Ceruneの回帰テストは、型・診断・生成物・実行結果が言語�
 
 - 追加の観測境界を持つ明示的な最適化パイプライン
 - 具体的な用途が生じた場合の、任意のバックエンドIR観測
-- ソース、Cerune IR、出力成果物、メタデータをまとめるObservation Bundle
+- 観測bundleにObject・他backend・変換前後の比較を追加
 - IR・VMの完成成果物としての、検証・load可能なImage。形式と検証器は[build / releaseの計画](owned-routes.ja.md)で整理
 
 これらの機能は、次の中心原則を保てる場合にのみ追加します。

@@ -127,7 +127,7 @@ HIRのNodeIdは引き続き意味上の元の文・式を指します。MIRのBl
 
 `emit-mir <file> [-o <output.txt>]`を実装しました。`run-mir`で独立実行できます。`emit-hir`／`emit-lir`とpass指定は**候補であって未実装**です。観測テキストは`Cerune MIR v0.1`で、専用拡張子・load形式・配布用snapshotは未確定です。`emit-ir`の互換性を維持し、MIR実行器の追加だけで新しい配布用routeやbuild形式まで増やしません。
 
-[#60](https://github.com/Hokutaka/Cerune/issues/60)の観測bundleには、一回のfrontend処理から得た各表現と対応表をまとめる方向です。manifestはstage・target・pass列と成果物を結ぶ索引であり、新しい意味IRではありません。MIR導入を待たず既存の観測結果を束ねる実装も可能です。
+[#60の観測bundle](observation-bundle.ja.md)は、一回のfrontend処理からsources・HIR・MIR・注釈付きASMを保存します。manifestはtarget・heap予算・pass列（現状は空）と成果物を結ぶ索引であり、新しい意味IRではありません。Objectや他backendの同梱は後続です。
 
 [#81](https://github.com/Hokutaka/Cerune/issues/81)のshow／emit／build／run／via／releaseと、表現段階は別の分類です。最適化はreleaseの別名にせず、passとその順序を明示します。各backendの外部ツールによる最適化も、Ceruneのpassとは区別して記録します。
 
@@ -166,7 +166,7 @@ callの結果: true → 加算 / false → update
 | 1（実装済み） | MIRの型・block・命令・検証器、HIR→MIR、`emit-mir` | 全exampleの変換と決定性、評価順・短絡・loopの辺・出自、破損したMIRの拒否を検証。実行比較は次段階、静的なheap寿命の保証は後続 |
 | 2（実装済み） | [独立したMIR Interpreter](mir-executor.ja.md)・`run-mir` | HIR・VMを内部実行せず、現在の言語機能・停止・出自・寿命を比較。動的配列はWindows/Linuxの9経路で照合 |
 | 3（実装済み） | [NativeをMIR入力へ移行](native-mir.ja.md) | 現行ASM・COFF/ELFとの既知出力・失敗・出自・ABI比較をWindows/Linuxで通す |
-| 4 | 観測bundle・Lean対応、必要な他backendの移行 | 同じコンパイル・同じ変換前後を結ぶ。証明対象と未対応を明記 |
+| 4（一部実装済み） | 観測bundle・Lean対応、必要な他backendの移行 | sources/HIR/MIR/ASMのbundleは実装済み。次にHIR→MIRの意味対応をLeanで検証。その他の成果物と証明範囲は個別に拡張 |
 | 5 | SSA変換、個別の最適化pass | SSA化と最適化を別々に選択・観測。検証器と意味保存条件を各passに適用 |
 
-最初のMIR PRでSSA、最適化、全backendの付替え、Image loaderを一括導入しません。MIR実行は型・関数・module・generic・配列・文字列・所有・停止診断に対応しています。NativeのMIR移行も実装しました。次は同じコンパイルで得たHIR・MIR・Nativeの対応を観測bundleへまとめる作業を進めます。
+最初のMIR PRでSSA、最適化、全backendの付替え、Image loaderを一括導入しません。MIR実行は型・関数・module・generic・配列・文字列・所有・停止診断に対応しています。NativeのMIR移行も実装しました。観測bundleの初期範囲も実装済みです。次はHIR→MIRの意味対応のLean検証を進めます。
