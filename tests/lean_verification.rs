@@ -10,8 +10,14 @@ use std::{fs, path::Path, process::Command, time::Duration};
 #[test]
 fn experiment_uses_completed_ir_and_rejects_unsupported_expressions() {
     let program = compile_to_ir(experiment::SOURCE).unwrap();
-    let generated = experiment::emit(&program).unwrap();
+    let mir = cerune_lang::mir::lower(&program).unwrap();
+    let generated = experiment::emit_with_mir(&program, &mir).unwrap();
     assert!(generated.contains("theorem translation_correct"));
+    assert!(generated.contains("theorem mir_translation_correct"));
+    assert_eq!(
+        cerune_lang::mir_executor::run(&mir).unwrap(),
+        "1\n42\n255\n"
+    );
     assert_eq!(ir_executor::run(&program).unwrap(), "1\n42\n255\n");
     assert_eq!(
         run_bytecode(&bytecode::lower(&program).unwrap()).unwrap(),
@@ -78,7 +84,13 @@ fn lean_checks_correspondence_properties_execution_and_mutations() {
     )
     .unwrap();
     fs::write(directory.join("lean-toolchain"), experiment::TOOLCHAIN).unwrap();
-    let generated = experiment::emit(&program).unwrap();
+    let mir = cerune_lang::mir::lower(&program).unwrap();
+    fs::write(
+        directory.join("increment.mir.txt"),
+        cerune_lang::mir::text::emit(&mir),
+    )
+    .unwrap();
+    let generated = experiment::emit_with_mir(&program, &mir).unwrap();
     let verified = format!("{generated}\n{}", experiment::PROPERTIES);
     let proof = directory.join("Verified.lean");
     fs::write(&proof, &verified).unwrap();
@@ -104,27 +116,46 @@ fn lean_checks_correspondence_properties_execution_and_mutations() {
         );
     }
 
-    // 生成された定義を実行し、256入力すべてをIR・VM・既知の期待値と照合します。
+    // MIRの有限領域の証明はLean標準のpropextだけに依存します。sorryや独自公理は拒否します。
+    for theorem in [
+        "mir_translation_correct",
+        "mir_increment_exact",
+        "mir_overflow_detected",
+    ] {
+        assert!(
+            log.contains(&format!(
+                "'CeruneProof.{theorem}' depends on axioms: [propext]"
+            )),
+            "{log}"
+        );
+    }
+
+    // 生成された定義を実行し、256入力すべてをIR・MIR・VM・既知の期待値と照合します。
     let executable = directory.join("Execute.lean");
     fs::write(
         &executable,
-        format!("{generated}\ndef main : IO Unit := do\n  for input in List.range 256 do\n    IO.println (CeruneProof.render (CeruneProof.generated input))\n"),
+        format!("{generated}\ndef main : IO Unit := do\n  for input in List.range 256 do\n    IO.println (CeruneProof.render (CeruneProof.generated input))\n    IO.println (match CeruneProof.evalMir CeruneProof.mirReference input with | some result => CeruneProof.render result | none => \"invalid MIR\")\n"),
     ).unwrap();
     let output = run(&executable, true);
     assert!(output.status.success(), "{output:?}");
     assert!(output.stderr.is_empty(), "{output:?}");
     let lean_output = String::from_utf8(output.stdout).unwrap();
     let lines: Vec<_> = lean_output.lines().collect();
-    assert_eq!(lines.len(), 256, "{lean_output}");
+    assert_eq!(lines.len(), 512, "{lean_output}");
     let function = experiment::SOURCE.split("\nprint(").next().unwrap();
-    for (input, actual) in lines.into_iter().enumerate() {
+    for (input, pair) in lines.as_chunks::<2>().0.iter().enumerate() {
+        let actual = pair[0];
+        assert_eq!(actual, pair[1], "Lean HIR/MIR at input {input}");
         let source = format!("{function}\nprint(increment({input}));");
         let program = compile_to_ir(&source).unwrap();
         let direct = ir_executor::run(&program);
+        let mir_result =
+            cerune_lang::mir_executor::run(&cerune_lang::mir::lower(&program).unwrap());
         let vm = run_bytecode(&bytecode::lower(&program).unwrap());
         if input < 255 {
             let expected = format!("{}\n", input + 1);
             assert_eq!(direct.unwrap(), expected);
+            assert_eq!(mir_result.unwrap(), expected);
             assert_eq!(vm.unwrap(), expected);
             assert_eq!(actual, format!("ok {}", input + 1));
         } else {
@@ -133,6 +164,9 @@ fn lean_checks_correspondence_properties_execution_and_mutations() {
             let failure = direct.runtime_failure().unwrap();
             assert_eq!(failure.code, FailureCode::IntegerOverflow);
             assert_eq!(vm.runtime_failure(), Some(failure));
+            let mir_error = mir_result.unwrap_err();
+            assert_eq!(mir_error.runtime_failure(), Some(failure));
+            assert_eq!(mir_error.output(), "");
             assert_eq!(direct.output(), "");
             assert_eq!(vm.vm_error().output(), "");
             assert_eq!(
@@ -146,6 +180,27 @@ fn lean_checks_correspondence_properties_execution_and_mutations() {
                 )
             );
         }
+    }
+
+    // HIRを固定してRustのMIR snapshotだけを改変し、再生成された定理が失敗するか確認します。
+    for name in ["Value", "Origin", "Source", "Span", "Return"] {
+        let changed = changed_mir(&mir, name);
+        let bad = experiment::emit_with_mir(&program, &changed).unwrap();
+        assert_ne!(generated, bad);
+        let path = directory.join(format!("RejectedMir{name}.lean"));
+        fs::write(&path, bad).unwrap();
+        fs::write(
+            directory.join(format!("RejectedMir{name}.mir.txt")),
+            cerune_lang::mir::text::emit(&changed),
+        )
+        .unwrap();
+        let output = run(&path, false);
+        assert!(!output.status.success(), "invalid MIR {name} accepted");
+        let errors = String::from_utf8_lossy(&output.stdout);
+        assert!(
+            errors.contains("error:") && errors.contains("decide") && errors.contains("false"),
+            "expected a false correspondence, not an infrastructure failure: {output:?}"
+        );
     }
 
     // 偽の定理が通っていないか、正しいファイルの一箇所だけを壊して検査します。
@@ -183,5 +238,121 @@ fn lean_checks_correspondence_properties_execution_and_mutations() {
             }),
             "expected a proof error, not an infrastructure failure: {output:?}"
         );
+    }
+}
+
+fn changed_mir(original: &cerune_lang::mir::Program, change: &str) -> cerune_lang::mir::Program {
+    use cerune_lang::{
+        ir::BinaryOp,
+        mir::{InstructionKind as I, Operation as O, Origin, TerminatorKind},
+    };
+    let mut program = original.clone();
+    let f = program
+        .functions
+        .iter_mut()
+        .find(|f| f.name == "increment")
+        .unwrap();
+    let block = &mut f.blocks[f.entry.0];
+    match change {
+        "Value" => {
+            let i = block
+                .instructions
+                .iter_mut()
+                .find(|i| {
+                    matches!(
+                        i.kind,
+                        I::Assign {
+                            value: O::Literal(_),
+                            ..
+                        }
+                    )
+                })
+                .unwrap();
+            let I::Assign {
+                value: O::Literal(cerune_lang::mir::Literal::Integer(n)),
+                ..
+            } = &mut i.kind
+            else {
+                unreachable!()
+            };
+            *n = 2;
+        }
+        "Origin" | "Source" | "Span" => {
+            let i = block
+                .instructions
+                .iter_mut()
+                .find(|i| {
+                    matches!(
+                        i.kind,
+                        I::Assign {
+                            value: O::Binary {
+                                op: BinaryOp::Add,
+                                ..
+                            },
+                            ..
+                        }
+                    )
+                })
+                .unwrap();
+            let mut origin = i.origin.source().unwrap();
+            if change == "Origin" {
+                origin.node_id.0 += 1000;
+            } else if change == "Source" {
+                let mut sources = cerune_lang::source::SourceMap::new();
+                let other = sources.add("different.ceru", "");
+                origin.span = origin.span.with_source(other);
+            } else {
+                origin.span = cerune_lang::source::Span::in_source(
+                    origin.span.source_id(),
+                    origin.span.start() + 1,
+                    origin.span.end(),
+                );
+            }
+            i.origin = Origin::Source(origin);
+        }
+        "Return" => block.terminator.kind = TerminatorKind::Return(Some(f.parameters[0])),
+        "Order" => block.instructions.swap(0, 2),
+        "Unsupported" => {
+            let i = block
+                .instructions
+                .iter_mut()
+                .find(|i| {
+                    matches!(
+                        i.kind,
+                        I::Assign {
+                            value: O::Binary { .. },
+                            ..
+                        }
+                    )
+                })
+                .unwrap();
+            let I::Assign {
+                value: O::Binary { op, .. },
+                ..
+            } = &mut i.kind
+            else {
+                unreachable!()
+            };
+            *op = BinaryOp::Subtract;
+        }
+        _ => panic!("unknown mutation"),
+    }
+    program
+}
+
+#[test]
+fn mir_export_uses_the_supplied_snapshot_and_rejects_unsupported_or_invalid_mir() {
+    let hir = compile_to_ir(experiment::SOURCE).unwrap();
+    let mir = cerune_lang::mir::lower(&hir).unwrap();
+    let before = mir.clone();
+    let valid = experiment::emit_with_mir(&hir, &mir).unwrap();
+    for mutation in ["Value", "Origin", "Source", "Span", "Return"] {
+        let changed = changed_mir(&mir, mutation);
+        cerune_lang::mir::validate(&changed).unwrap();
+        assert_ne!(valid, experiment::emit_with_mir(&hir, &changed).unwrap());
+    }
+    assert_eq!(before, mir);
+    for mutation in ["Order", "Unsupported"] {
+        assert!(experiment::emit_with_mir(&hir, &changed_mir(&mir, mutation)).is_err());
     }
 }

@@ -22,3 +22,21 @@ theorem overflow_detected :
 #print axioms overflow_detected
 
 end CeruneProof
+
+-- HIR→MIR対応から、同じ利用者の性質をMIRへ移します。
+namespace CeruneProof
+
+theorem mir_increment_exact (x : Fin 256) (h : x.val < 255) :
+    evalMir mirReference x.val = some (.ok (x.val + 1)) := by
+  exact (mir_translation_correct x).trans (congrArg some (ir_increment_exact x h))
+
+theorem mir_overflow_detected :
+    evalMir mirReference 255 = some (.error (.integerOverflow rootOrigin)) := by
+  exact (mir_translation_correct ⟨255, by decide⟩).trans
+    (congrArg some ((translation_correct ⟨255, by decide⟩).trans overflow_detected))
+
+#print axioms mir_translation_correct
+#print axioms mir_increment_exact
+#print axioms mir_overflow_detected
+
+end CeruneProof

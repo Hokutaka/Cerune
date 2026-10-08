@@ -14,7 +14,7 @@ Self-hosting is not a correctness proof: compiler specifications, input domains,
 It also does not automatically verify today's Rust compiler or other backends.
 
 **Current status: design and a small verification experiment. The public Lean backend, `emit-lean`, and a formal semantics for the whole language are not implemented.**
-The [experiment](../../experiments/lean/README.md) checks both kinds of theorem for a `u8` function extracted from actual completed IR.
+The [experiment](../../experiments/lean/README.md) checks actual `increment: u8 → u8` HIR against direct Lean and lowered MIR, together with user properties. The MIR model independently evaluates locals/instructions/return and compares values or overflow/origins for all 256 inputs. Branches, loops, and heap are not yet proved.
 
 ## Connecting the contracts
 
@@ -78,15 +78,14 @@ A function-only experiment must name the selected function and explicitly exclud
 
 Lean kernel acceptance is relative to theorem statements and axioms.
 Inspect dependencies with `#print axioms`; do not silently accept `sorryAx`, unreviewed custom axioms, or extra native-evaluation trust.
-The initial experiment uses kernel-checked proofs and requires empty axiom dependencies.
-Any later allowance for standard axioms must be documented explicitly.
+The existing four HIR→Lean/property theorems have empty axiom dependencies. The three new HIR→MIR/property theorems use Lean's standard `propext` through finite quantification/equality decision procedures. The kernel checks proofs produced by `decide`, and tests require the exact axiom list. No `native_decide` or custom axioms are used.
 See Lean's [proof validation](https://lean-lang.org/doc/reference/latest/ValidatingProofs/) and [axiom reference](https://lean-lang.org/doc/reference/latest/Axioms/).
 
 ## Stages and completion criteria
 
 | Stage | Content | Completion criterion |
 | --- | --- | --- |
-| Initial experiment | `u8` function arguments, constants, addition, value or overflow/origin | Actually check correspondence, conditional properties, boundary cases, and mutation rejection |
+| Implemented experiment | HIR→Lean and HIR→MIR for `increment: u8 → u8`, locals, literal/copy/add, return | Prove all-input correspondence/properties and reject value/origin/return mutations. This proves individual snapshots, not the general lowering algorithm |
 | Backend foundation | Common IR input, origins, results/traces, generated definitions separated from user specifications | Settle `emit-lean` and support table; port existing success/failure tests |
 | Control/numbers | All integer types, booleans, order, functions, branches, loops, explicit conversions | Compare failures, prior output, and termination conditions as well as values; add floats with an explicit model |
 | Aggregates/resources | Strings, arrays, products, sums, ownership/budgets | Target existing language semantics and track gaps explicitly |
