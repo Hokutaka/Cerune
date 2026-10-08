@@ -40,13 +40,13 @@ pub fn type_name(ty: &ir::Type) -> String {
         ir::Type::DynamicArray { element } => format!("[{}]", type_name(element)),
     }
 }
-fn value(v: LocalId) -> String {
-    format!("%{}", v.0)
+fn value<R: std::fmt::Display>(v: R) -> String {
+    v.to_string()
 }
-fn values(v: &[LocalId]) -> String {
+fn values<R: Copy + std::fmt::Display>(v: &[R]) -> String {
     v.iter().map(|v| value(*v)).collect::<Vec<_>>().join(", ")
 }
-fn origin(o: Origin) -> String {
+pub(super) fn origin(o: Origin) -> String {
     let source = |s: SourceOrigin| {
         format!(
             "hir=#{} source={} bytes={}..{}",
@@ -127,10 +127,14 @@ fn function(out: &mut String, f: &Function) {
     }
     writeln!(out, "}}\n").unwrap();
 }
-fn call(f: ir::FunctionId, args: &[LocalId], own: ir::ArgumentOwnership) -> String {
+fn call<R: Copy + std::fmt::Display>(
+    f: ir::FunctionId,
+    args: &[R],
+    own: ir::ArgumentOwnership,
+) -> String {
     format!("call @{} ({}) ownership={own:?}", f.0, values(args))
 }
-fn operation(op: &Operation) -> String {
+fn operation<R: Copy + std::fmt::Display>(op: &Operation<R>) -> String {
     match op {
         Operation::Literal(l) => match l {
             Literal::Boolean(v) => v.to_string(),
@@ -202,7 +206,7 @@ fn operation(op: &Operation) -> String {
         Operation::ArrayReleaseOwner(v) => format!("array.release_owner {}", value(*v)),
     }
 }
-fn instruction(i: &InstructionKind) -> String {
+pub(super) fn instruction<R: Copy + std::fmt::Display>(i: &InstructionKind<R>) -> String {
     match i {
         InstructionKind::Assign {
             destination,

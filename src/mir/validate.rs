@@ -8,6 +8,21 @@ const INTERNAL: Origin = Origin::Synthetic {
 };
 
 pub fn validate(p: &Program) -> Result<(), Error> {
+    validate_with_block_parameters(p, None)
+}
+
+/// SSAの型・slot検査用です。値の支配関係はSSA側で別に検査します。
+pub(super) fn validate_with_block_parameters(
+    p: &Program,
+    block_parameters: Option<&[Vec<Vec<LocalId>>]>,
+) -> Result<(), Error> {
+    if let Some(args) = block_parameters {
+        require(
+            args.len() == p.functions.len() + 1,
+            "block parameter function count",
+            INTERNAL,
+        )?;
+    }
     for (index, t) in p.types.iter().enumerate() {
         require(t.id.0 == index, "type id/layout mismatch", INTERNAL)?;
         for (i, (id, _, ty)) in t.fields.iter().enumerate() {
@@ -21,7 +36,7 @@ pub fn validate(p: &Program) -> Result<(), Error> {
             "function id/layout mismatch",
             INTERNAL,
         )?;
-        function(p, f)?;
+        function(p, f, block_parameters.map(|a| a[i].as_slice()))?;
     }
     require(
         p.main.id.is_none()
@@ -30,7 +45,11 @@ pub fn validate(p: &Program) -> Result<(), Error> {
         "invalid main signature",
         INTERNAL,
     )?;
-    function(p, &p.main)
+    function(
+        p,
+        &p.main,
+        block_parameters.map(|a| a[p.functions.len()].as_slice()),
+    )
 }
 fn require(ok: bool, message: &str, origin: Origin) -> Result<(), Error> {
     if ok {
@@ -404,7 +423,7 @@ pub(super) fn operation_reads(op: &Operation) -> Vec<LocalId> {
         Operation::ArrayAllocate { length, .. } => vec![*length],
     }
 }
-fn reads(i: &InstructionKind) -> Vec<LocalId> {
+pub(super) fn reads(i: &InstructionKind) -> Vec<LocalId> {
     match i {
         InstructionKind::Assign { value, .. } => operation_reads(value),
         InstructionKind::Call { arguments, .. } => arguments.clone(),
@@ -430,7 +449,18 @@ fn terminal_reads(t: &TerminatorKind) -> Vec<LocalId> {
         _ => vec![],
     }
 }
-fn function(p: &Program, f: &Function) -> Result<(), Error> {
+fn function(
+    p: &Program,
+    f: &Function,
+    block_parameters: Option<&[Vec<LocalId>]>,
+) -> Result<(), Error> {
+    if let Some(args) = block_parameters {
+        require(
+            args.len() == f.blocks.len(),
+            "block parameter count",
+            INTERNAL,
+        )?;
+    }
     require(f.entry.0 < f.blocks.len(), "unknown entry block", INTERNAL)?;
     let mut bindings = HashSet::new();
     for l in &f.locals {
@@ -448,7 +478,10 @@ fn function(p: &Program, f: &Function) -> Result<(), Error> {
         require(params.insert(id), "duplicate parameter", INTERNAL)?;
         require(
             matches!(f.locals[id.0].kind,LocalKind::Binding{mutable:false,borrowed,..}
-            if borrowed==(f.argument_ownership==ir::ArgumentOwnership::Borrowed)),
+            if borrowed==(f.argument_ownership==ir::ArgumentOwnership::Borrowed))
+                || (block_parameters.is_some()
+                    && matches!(f.locals[id.0].kind, LocalKind::Temporary)
+                    && super::ssa::is_scalar(&f.locals[id.0].ty)),
             "parameter ownership/kind",
             INTERNAL,
         )?;
@@ -502,7 +535,7 @@ fn function(p: &Program, f: &Function) -> Result<(), Error> {
             _ => {}
         }
     }
-    initialized(f, params)
+    initialized(f, params, block_parameters)
 }
 #[derive(Clone, PartialEq, Eq)]
 struct Facts {
@@ -528,7 +561,11 @@ fn transfer(facts: &mut Facts, i: &InstructionKind) {
     }
 }
 /// 到達可能な全前任ブロックの積集合を、不動点まで計算します。
-fn initialized(f: &Function, params: HashSet<LocalId>) -> Result<(), Error> {
+fn initialized(
+    f: &Function,
+    params: HashSet<LocalId>,
+    block_parameters: Option<&[Vec<LocalId>]>,
+) -> Result<(), Error> {
     let mut reachable = vec![false; f.blocks.len()];
     let mut stack = vec![f.entry];
     let mut predecessors = vec![vec![]; f.blocks.len()];
@@ -576,6 +613,13 @@ fn initialized(f: &Function, params: HashSet<LocalId>) -> Result<(), Error> {
                     .initialized
                     .retain(|v| outgoing[pred].initialized.contains(v));
                 facts.checked.retain(|v| outgoing[pred].checked.contains(v));
+            }
+            // 引数は入口で新しい値になります。前周の添字検査を流用しません。
+            if let Some(args) = block_parameters {
+                for arg in &args[id] {
+                    facts.initialized.insert(*arg);
+                    facts.checked.retain(|key| !key.contains(arg));
+                }
             }
             incoming[id] = facts.clone();
             for i in &b.instructions {
