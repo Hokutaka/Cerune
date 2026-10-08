@@ -44,6 +44,32 @@ fn main() {
         cerune_lang::mir::text::emit(&branch_mir),
     )
     .unwrap();
+    let loops = cerune_lang::compile_to_ir(experiment::loops::SOURCE).expect("compile loop");
+    let loop_mir = cerune_lang::mir::lower(&loops).expect("lower loop MIR");
+    let loop_generated = experiment::loops::emit(
+        &loops,
+        &loop_mir,
+        experiment::loops::HIR_FUEL,
+        experiment::loops::MIR_FUEL,
+    )
+    .expect("emit loop");
+    std::fs::write(directory.join("LoopGenerated.lean"), &loop_generated).unwrap();
+    std::fs::write(
+        directory.join("LoopVerified.lean"),
+        format!("{loop_generated}\n{}", experiment::loops::PROPERTIES),
+    )
+    .unwrap();
+    std::fs::write(
+        directory.join("loop.ceir"),
+        cerune_lang::ir::text::emit(&loops),
+    )
+    .unwrap();
+    std::fs::write(
+        directory.join("loop.mir.txt"),
+        cerune_lang::mir::text::emit(&loop_mir),
+    )
+    .unwrap();
+    println!("Generated LoopGenerated.lean, LoopVerified.lean, loop.ceir and loop.mir.txt");
     println!("Generated BranchGenerated.lean, BranchVerified.lean, branch.ceir and branch.mir.txt");
     println!(
         "Generated target/lean-verification/{{Generated,Verified}}.lean and increment.{{ceir,mir.txt}}"

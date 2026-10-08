@@ -6,6 +6,8 @@ use cerune_lang::{
 
 #[path = "branch.rs"]
 pub mod branch;
+#[path = "loops.rs"]
+pub mod loops;
 #[path = "mir.rs"]
 mod mir_experiment;
 
