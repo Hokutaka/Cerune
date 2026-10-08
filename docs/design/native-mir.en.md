@@ -59,4 +59,4 @@ A MIR instruction can produce several LIR instructions. Zero-width operations ex
 
 Before/after Native tests on Windows/Linux cover existing examples, numeric boundaries, failure codes/NodeId/SourceId/Span/prior output, string bytes, and ABI behavior. [Dynamic-array tests](../../tests/dynamic_arrays.rs) compare HIR, MIR, VM, C, LLVM, QBE, WAT, ASM, and self-encoded objects. [Native MIR tests](../../tests/native_mir.rs) also check changed MIR execution, instruction provenance, and invalid-MIR rejection.
 
-ASM fixtures are updated for the new layout. Known-output/failure execution comparisons and generated-text snapshots are separate checks. Formal proof, SSA, optimization, and observation bundles are outside this migration. Next, bundle HIR/MIR/Native representations and their correspondence from one compilation.
+ASM fixtures are updated for the new layout. Known-output/failure execution comparisons and generated-text snapshots are separate checks. Formal proof, SSA, optimization, and observation bundles are outside this migration. The subsequent [observation bundle](observation-bundle.en.md) saves HIR, MIR, and annotated ASM from one compilation.

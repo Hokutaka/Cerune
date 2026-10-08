@@ -30,3 +30,15 @@ In `control_flow`, at `i=0`, `accept` is skipped. At `i=1`, continue enters the 
 In MIR, `bbN` identifies a block, `%N` a typed local/temporary, and `iN` an instruction within a function. Follow jump/branch and `derived=short-circuit-rhs`, `derived=for-update`, `derived=loop-exit` to inspect control flow. Each operation retains `hir=#N source=N bytes=A..B` to locate its input IR and source span. Emitting MIR does not execute the program.
 
 For array copies and allocation failure, see [lowering_order.ceru](../dynamic_arrays/lowering_order.ceru). `run-mir` uses the [independent MIR executor](../../docs/design/mir-executor.en.md). [Native now consumes MIR](../../docs/design/native-mir.en.md). SSA and optimization remain unimplemented. See the [stage design](../../docs/design/ir-stages.en.md) for types and validation limits.
+
+## Save one compilation
+
+Prepare the parent directory and choose a bundle path that does not exist. This command saves five files without executing the program.
+
+```sh
+cargo run --quiet -- observe examples/ir_stages/owned_values.ceru --target x86_64-unknown-linux-gnu --string-heap-limit 512 --array-heap-limit 1024 -o target/owned_values.observation
+```
+
+The files are `sources.json`, `program.ceir`, `program.mir.txt`, `program.origins.s`, and `manifest.json`. For Windows, select `x86_64-pc-windows-msvc`. Choose a different new directory on subsequent runs.
+
+Follow `hir=#N` in MIR and `cerune-mir` ASM annotations to inspect how the same expression becomes instructions. Outputs match individual `emit-ir`, `emit-mir`, and `emit-asm --annotate-origins` commands with identical target/budgets. Compare execution separately with `run`, `run-mir`, and `run-vm`. See [format and scope](../../docs/design/observation-bundle.en.md).

@@ -6,12 +6,17 @@ This document defines the command-line interface of Cerune v0.1.
 
 IR/VM/Native [build / release](../design/owned-routes.en.md) and [Lean output](../design/lean-verification.en.md) are at the design/experiment stage and are not current CLI commands.
 
+## Save observations together
+
+`observe` [saves sources, HIR, MIR, annotated ASM, and a manifest from one compilation](../design/observation-bundle.en.md). Both `--target` and `-o` are required; both heap budgets are supported. Existing output paths are rejected; create the parent directory first. Input names and source text are included. No program execution, external tools, or linking occurs. Objects and other backend artifacts are not yet bundled.
+
 ## Commands
 
 The current CLI provides the following commands:
 
 ```text
 cerune check <file>
+cerune observe <file> --target <triple> -o <new-directory>
 cerune emit-sources <file> [-o <sources.json>]
 cerune emit-ir <file> [-o <output.ceir>]
 cerune emit-mir <file> [-o <output.txt>]
@@ -31,7 +36,7 @@ cerune --version
 
 ## Dynamic string budget
 
-`run`, `run-ir`, `run-mir`, `run-vm`, `emit-ir`, `emit-mir`, `emit-bytecode`, `emit-c`, `emit-llvm`, `emit-qbe`, `emit-wat`, `emit-asm`, and `emit-obj` accept `--string-heap-limit <bytes>`. The default is 67108864 (64 MiB). Values are decimal integers from 0 through 9223372036854775807; missing, duplicate, and negative values are rejected. `check` and `emit-sources` do not accept this option.
+`observe`, `run`, `run-ir`, `run-mir`, `run-vm`, `emit-ir`, `emit-mir`, `emit-bytecode`, `emit-c`, `emit-llvm`, `emit-qbe`, `emit-wat`, `emit-asm`, and `emit-obj` accept `--string-heap-limit <bytes>`. The default is 67108864 (64 MiB). Values are decimal integers from 0 through 9223372036854775807; missing, duplicate, and negative values are rejected. `check` and `emit-sources` do not accept this option.
 
 The budget counts live dynamic string payload, shared allocations once, and static strings never. Old and new values both count while reassignment keeps them alive. Compile-time evaluation has an independent 64 MiB budget unaffected by this setting. This is not a physical-memory cap. Generated artifacts fix the value; no API changes it during execution.
 

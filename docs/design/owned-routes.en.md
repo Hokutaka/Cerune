@@ -8,7 +8,7 @@ IR, VM, and Native are the three routes for which Cerune defines completed artif
 `build` constructs an artifact usable by its route; `release` prepares it for distribution.
 Neither operation selects an execution strategy or enables implicit optimization.
 
-Current commands include `run` / `run-ir`, `run-vm`, and `emit-*`.
+Current commands include `run` / `run-ir`, `run-mir`, `run-vm`, `emit-*`, and [`observe` for observation bundles](observation-bundle.en.md).
 **Build / release, saved Image loading, and the Lean backend are not implemented.**
 Dashed edges below are plans; language-feature coverage is tracked separately.
 Dynamic arrays support IR/MIR/VM/C/LLVM/QBE/WAT, Windows/Linux ASM, and self-encoded objects. MIR generation and independent execution in the [stage design](ir-stages.en.md) are implemented; this does not establish another build/release distribution route.
@@ -30,13 +30,16 @@ flowchart LR
         BC -.-> VB["build vm → Bytecode Image"]
         VB -.-> VL["verify / load → VM"]
         VB -.-> VP["release vm → distribution"]
-        IR --> X["x86-64 lowering<br/>selection, layout, calling convention"]
+        IR --> MIR["Non-SSA MIR"]
+        MIR --> RMIR["MIR Executor<br/>run-mir"]
+        MIR --> X["x86-64 LIR<br/>selection, layout, calling convention"]
         X --> A["Internal Assembly"]
         A --> E["Cerune encoder"]
         E --> OBJ["COFF / ELF Object"]
         OBJ -.-> NB["build native<br/>link → completed artifact (kind pending)"]
         NB -.-> NP["release native → distribution"]
     end
+    MIR --> OMIR["emit-mir"]
     BC --> OBC["emit-bytecode"]
     A --> OA["emit-asm"]
     OBJ --> OO["emit-obj"]

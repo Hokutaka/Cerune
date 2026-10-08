@@ -8,7 +8,7 @@ Ceruneが完成成果物と実行契約を定義する経路はIR・VM・Native�
 `build`はその経路で利用できる完成成果物を作り、`release`は配布向けに構成します。
 実行方式や暗黙の最適化を選ぶ操作ではありません。
 
-現行実装には`run`／`run-ir`、`run-vm`、各`emit-*`があります。
+現行実装には`run`／`run-ir`、`run-mir`、`run-vm`、各`emit-*`と、[観測bundleを保存する`observe`](observation-bundle.ja.md)があります。
 **build / release、Imageの保存・読み込み、Lean backendは未実装です。**
 以下の図の破線は計画を示します。言語機能の対応状況は経路ごとに別途管理します。
 動的配列はIR・MIR・VM・C・LLVM・QBE・WAT・Windows/Linux ASM・自前Objectで対応済みです。[IR段階設計](ir-stages.ja.md)のMIR生成・独立実行は実装済みです。これは新しいbuild／releaseの配布routeを確定するものではありません。
@@ -30,13 +30,16 @@ flowchart LR
         BC -.-> VB["build vm → Bytecode Image"]
         VB -.-> VL["検証・load → VM"]
         VB -.-> VP["release vm → 配布構成"]
-        IR --> X["x86-64 lowering<br/>命令選択・配置・呼出規約"]
+        IR --> MIR["非SSA MIR"]
+        MIR --> RMIR["MIR Executor<br/>run-mir"]
+        MIR --> X["x86-64 LIR<br/>命令選択・配置・呼出規約"]
         X --> A["内部Assembly"]
         A --> E["自前エンコーダ"]
         E --> OBJ["COFF / ELF Object"]
         OBJ -.-> NB["build native<br/>リンク → 完成成果物（形式は要確定）"]
         NB -.-> NP["release native → 配布構成"]
     end
+    MIR --> OMIR["emit-mir"]
     BC --> OBC["emit-bytecode"]
     A --> OA["emit-asm"]
     OBJ --> OO["emit-obj"]

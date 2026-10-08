@@ -59,4 +59,4 @@ MIRの`uses_strings`は、定数式から実行時の文字列操作が消えた
 
 移行前後のNative実行をWindows/Linuxで比較し、既存example、数値境界、異常停止コード・NodeId/SourceId/Span・先行出力、文字列のバイト列、ABIを検証します。[動的配列](../../tests/dynamic_arrays.rs)はHIR・MIR・VM・C・LLVM・QBE・WAT・ASM・自前Objectの9経路で比較します。[Native MIRテスト](../../tests/native_mir.rs)はMIRだけの変更の反映、全命令の出自対応、不正なMIRの拒否も確認します。
 
-生成ASMの期待ファイルは新しい配置に更新しています。既知出力・失敗記録との実行比較と、生成テキストの固定は別の検証です。形式証明・SSA・最適化・観測bundleはこの移行の完成範囲に含めません。次は一回のコンパイルのHIR・MIR・Nativeと対応情報をbundleへまとめます。
+生成ASMの期待ファイルは新しい配置に更新しています。既知出力・失敗記録との実行比較と、生成テキストの固定は別の検証です。形式証明・SSA・最適化・観測bundleはこの移行の完成範囲に含めません。後続の[観測bundle](observation-bundle.ja.md)では、一回のコンパイルのHIR・MIR・注釈付きASMを保存できます。

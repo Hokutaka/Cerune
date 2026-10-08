@@ -30,3 +30,15 @@ cargo run --quiet -- emit-mir examples/ir_stages/control_flow.ceru -o target/con
 MIRでは`bbN`がブロック、`%N`が型付き局所値／一時値、`iN`が関数内の命令番号です。`derived=short-circuit-rhs`、`derived=for-update`、`derived=loop-exit`とjump／branchを読むと制御の行き先が分かります。各操作の`hir=#N source=N bytes=A..B`で元のIRとファイル内の範囲へ戻れます。MIRを生成するだけではプログラムは実行されません。
 
 配列コピーと確保失敗も確認する場合は[lowering_order.ceru](../dynamic_arrays/lowering_order.ceru)を使います。`run-mir`は[独立したMIR実行器](../../docs/design/mir-executor.ja.md)です。[NativeもMIR入力へ移行済み](../../docs/design/native-mir.ja.md)です。SSA・最適化は未実装です。型・検証範囲は[段階設計](../../docs/design/ir-stages.ja.md)に記載しています。
+
+## 同じコンパイルを保存する
+
+出力先の親ディレクトリを用意し、まだ存在しないbundle名を指定します。次の例は実行せずに5ファイルを保存します。
+
+```sh
+cargo run --quiet -- observe examples/ir_stages/owned_values.ceru --target x86_64-unknown-linux-gnu --string-heap-limit 512 --array-heap-limit 1024 -o target/owned_values.observation
+```
+
+`sources.json`、`program.ceir`、`program.mir.txt`、`program.origins.s`、`manifest.json`が生成されます。Windows向けはtargetを`x86_64-pc-windows-msvc`に変更します。再実行には別の新規保存先を指定してください。
+
+`program.mir.txt`の`hir=#N`とASMの`cerune-mir`注釈を辿ると、同じ式がどの命令へ変換されたか確認できます。同じheap予算・targetで個別の`emit-ir`・`emit-mir`・`emit-asm --annotate-origins`を使った出力と一致します。実行結果は別途`run`・`run-mir`・`run-vm`で比較します。[保存形式と範囲](../../docs/design/observation-bundle.ja.md)を参照してください。

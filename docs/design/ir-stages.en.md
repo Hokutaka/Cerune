@@ -127,7 +127,7 @@ Observations are detached, read-only information. They do not expose mutable com
 
 `emit-mir <file> [-o <output.txt>]` is implemented. `run-mir` independently executes MIR. `emit-hir` / `emit-lir` and pass selection remain **unimplemented candidates**. Observation text is versioned as `Cerune MIR v0.1`; a dedicated extension, loading format, and distribution snapshot remain undecided. Preserve `emit-ir` compatibility; an interpreter does not automatically create another distribution route or build format.
 
-The [#60 observation bundle](https://github.com/Hokutaka/Cerune/issues/60) can collect representations and correspondence from one frontend invocation. Its manifest indexes stages, targets, pass sequences, and artifacts; it is not another semantic IR. Bundling existing observations need not wait for MIR.
+The [#60 observation bundle](observation-bundle.en.md) saves sources, HIR, MIR, and annotated ASM from one frontend invocation. Its manifest indexes target, heap budgets, passes (currently empty), and artifacts; it is not another semantic IR. Objects and other backends remain future extensions.
 
 The [#81](https://github.com/Hokutaka/Cerune/issues/81) show/emit/build/run/via/release responsibilities are distinct from representation stages. Release is not an optimization alias. Select passes and their order explicitly, and record external-tool optimization separately from Cerune passes.
 
@@ -166,7 +166,7 @@ Implement and compare in these units, aiming for current feature parity rather t
 | 1 (implemented) | MIR types/blocks/instructions/validator, HIR→MIR, `emit-mir` | Validate every example's lowering/determinism, order, short-circuit/loop edges, origins, and rejection of malformed MIR. Execution comparisons follow in the next stage; static heap lifetime guarantees remain future work. |
 | 2 (implemented) | [Independent MIR interpreter](mir-executor.en.md), `run-mir` | Executes neither HIR nor VM internally; compares current features, failures, origins, and lifetimes. Dynamic arrays are compared across nine routes on Windows/Linux |
 | 3 (implemented) | [Native lowering from MIR](native-mir.en.md) | Match existing ASM/COFF/ELF known outputs, failures, origins, and ABI behavior on Windows/Linux |
-| 4 | Observation bundles, Lean correspondence, other backend migration as needed | Connect the same compilation and actual before/after representations; state proof scope and omissions |
+| 4 (partially implemented) | Observation bundles, Lean correspondence, other backend migration as needed | sources/HIR/MIR/ASM bundle implemented; next verify HIR→MIR semantics with Lean. Extend artifacts and proof coverage separately |
 | 5 | SSA conversion and individual optimization passes | Select/observe SSA independently from optimization; apply validators and semantic-preservation conditions per pass |
 
-The first MIR PR should not combine SSA, optimization, every backend migration, and Image loading. MIR execution covers types, functions, modules, generics, arrays, strings, ownership, and runtime diagnostics. Native lowering from MIR is now implemented. Next, bundle HIR/MIR/Native observations and their correspondence from the same compilation.
+The first MIR PR should not combine SSA, optimization, every backend migration, and Image loading. MIR execution covers types, functions, modules, generics, arrays, strings, ownership, and runtime diagnostics. Native lowering from MIR is now implemented. The initial observation bundle is also implemented. Next comes Lean verification of HIR→MIR semantic correspondence.
