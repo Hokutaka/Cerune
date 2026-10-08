@@ -18,24 +18,27 @@
 
 ## SSAを選んだ場合
 
-`--ssa`を付けると同じ非最適化MIRからSSAを構築し、次の二つを追加します。元の4成果物は指定なしとバイト単位で同じです。
+`--ssa`を付けると同じ非最適化MIRからSSAを構築し、次の5ファイルを追加します。元の4成果物は指定なしとバイト単位で同じです。
 
 | 追加ファイル | 内容 |
 | --- | --- |
 | `program.ssa.txt` | `emit-mir --ssa`と同じ観測テキスト。元MIRの全文とSSAを別区分で保持 |
 | `program.ssa-map.txt` | `Cerune SSA mapping v0.1`。関数・引数・値／slot・block・命令・terminator・辺の受渡し・未到達保持の対応 |
+| `program.ssa-lowered.mir.txt` | SSAから専用Temporary・並列copyへ戻したMIR |
+| `program.ssa-lowered-map.txt` | SSA→MIRの値・block・辺上のcopy・関数引数・未到達保持の対応 |
+| `program.ssa.origins.s` | 変換後MIRを入力とする、注釈付きNative ASM |
 
 対応の値番号は関数内、命令indexはblock内で解釈します。then／elseが同じ行き先でも辺を別に記録し、合流先の値と元局所値を示します。元命令IDと出自は元MIRのsnapshotへ戻る参照です。対応表は意味保存の証明やload形式ではありません。
 
-SSA付きmanifestは`cerune-observation-v2`です。指定なしは既存のv1を維持します。
+SSA付きmanifestは`cerune-observation-v3`です。v2のSSA観測にSSA→MIR／Nativeを追加しました。指定なしは既存のv1を維持します。
 
-| v2の追加項目 | 内容 |
+| v3の追加項目 | 内容 |
 | --- | --- |
-| `transformations` | 0からの順序、`kind=representation`、版を含む`pass=scalar-ssa-v1`、`options={}`、入力`mir`・出力`ssa`・対応`ssa_mapping`のartifact key |
-| `artifact_inputs` | 各生成物の入力。現在の`assembly`は`mir`から生成し、SSAからは生成しない |
-| `artifacts`の追加key | `ssa`・`ssa_mapping`と上記ファイルの相対パス |
+| `transformations` | 0からの順序、`kind=representation`、版付きpass名、`options={}`。`scalar-ssa-v1`: `mir`→`ssa`／`ssa_mapping`、`ssa-lower-v1`: `ssa`→`ssa_lowered_mir`／`ssa_lowering_mapping`のartifact key |
+| `artifact_inputs` | 各生成物の入力。基準の`assembly`は`mir`、追加の`ssa_assembly`は`ssa_lowered_mir`から生成 |
+| `artifacts`の追加key | `ssa`・`ssa_mapping`・`ssa_lowered_mir`・`ssa_lowering_mapping`・`ssa_assembly`と上記ファイルの相対パス |
 
-`optimization_passes`は空、`executed`はfalseのままです。SSA→MIR／Native連携は後続です。今は非最適化NativeとSSA表現を並べて観測します。
+`optimization_passes`は空、`executed`はfalseのままです。基準の非最適化NativeとSSA経由Nativeを別々に観測できます。Objectはbundleに同梱せず、`emit-obj --ssa`で個別に出力します。
 
 ## 同じコンパイルであること
 

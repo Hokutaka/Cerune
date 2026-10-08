@@ -19,6 +19,13 @@ fn compare(hir: &ir::Program) {
     let a = cerune_lang::ir_executor::run(hir);
     let b = cerune_lang::mir_executor::run(&mir);
     let c = executor::run(&p);
+    let lowered = ssa::lower(&p).unwrap();
+    assert_eq!(lowered, ssa::lower(&p).unwrap(), "deterministic lowering");
+    assert_eq!(
+        cerune_lang::mir_executor::run(&lowered.program),
+        b,
+        "lowered SSA agrees with original MIR"
+    );
     let d = cerune_lang::run_bytecode(&cerune_lang::bytecode::lower(hir).unwrap());
     match (&a, &b, &c, &d) {
         (Ok(a), Ok(b), Ok(c), Ok(d)) => {
@@ -93,6 +100,10 @@ fn ssa_bodies_drive_execution_without_running_original_mir() {
             }
         }
         assert_eq!(executor::run(&p).unwrap(), "42\n");
+        assert_eq!(
+            cerune_lang::mir_executor::run(&ssa::lower(&p).unwrap().program).unwrap(),
+            "42\n"
+        );
         assert_eq!(cerune_lang::mir_executor::run(&p.original).unwrap(), "1\n");
         assert_eq!(p.original, original);
     }
@@ -200,6 +211,10 @@ fn branch_to_same_block_uses_only_selected_edge_arguments() {
         };
         *v = condition;
         assert_eq!(executor::run(&p).unwrap(), expected);
+        assert_eq!(
+            cerune_lang::mir_executor::run(&ssa::lower(&p).unwrap().program).unwrap(),
+            expected
+        );
     }
     assert_eq!(
         executor::run(&fixtures::residual_slots()).unwrap(),

@@ -4,7 +4,7 @@
 
 ## Status and decisions
 
-**The SSA representation, structural validator, observation text, and automatic MIR→SSA construction are implemented. Direct SSA execution, public CLI selection with `--ssa`, and observation bundle integration are also implemented.** This document distinguishes the implemented scope from subsequent plans. Non-SSA MIR and its independent interpreter remain the baseline. Runnable examples, including [ssa_values.ceru](../../examples/ir_stages/ssa_values.ceru), compare IR, non-optimized MIR, SSA, and VM results.
+**The SSA representation, structural validator, observation text, and automatic MIR→SSA construction are implemented. Direct SSA execution, public CLI selection with `--ssa`, SSA→MIR/Native, and observation bundle integration are also implemented.** This document distinguishes the implemented scope from subsequent plans. Non-SSA MIR and its independent interpreter remain the baseline. Runnable examples, including [ssa_values.ceru](../../examples/ir_stages/ssa_values.ceru), compare IR, non-optimized MIR, SSA, and VM results.
 
 SSA gives each value a single definition. Source `mut` remains valid: each reassignment gets a different value ID. At a merge, the selected edge supplies values to block arguments. Select construction explicitly and preserve the input MIR.
 
@@ -52,7 +52,7 @@ Entry points and status follow. Unimplemented Rust API names will be finalized d
 | `mir::ssa::mapping::emit(&ssa)` (implemented) | Return observation text containing only correspondence with original MIR; saved separately in bundles |
 | `mir::ssa::text::emit(&ssa)` (implemented) | Validate, then return `Result<String, mir::Error>` with `Cerune scalar SSA v0.1` observation text, not a loading format |
 | `ssa_executor::run(&ssa)` (implemented) | Directly evaluate SSA blocks, values, and slots; return `Result<String, ExecutionError>` under existing output/failure contracts |
-| `mir::ssa::lower(&ssa)` | Return non-SSA MIR with edge arguments expanded to parallel copies, plus mappings |
+| `mir::ssa::lower(&ssa)` (implemented) | Return `Lowered { program, mapping }`: non-SSA MIR with parallel edge copies and observation mapping text |
 
 The implemented `ssa::Program` holds an independent original-MIR snapshot and SSA functions, values, and blocks. It distinguishes `Operand::Value` from `Operand::Slot` while sharing `mir::Operation<R>` / `InstructionKind<R>`. Existing MIR uses the default `R = LocalId`; operation semantics and existing observation text stay unchanged.
 
@@ -85,7 +85,7 @@ The diagnostic API exposes the following information.
 | `location()` | SSA FunctionId/BlockId and original MIR BlockId/InstructionId |
 | `output()` | Output preceding failure |
 
-Validate the entire SSA program before producing output. Each run uses fresh frames and heaps, and successful completion checks for unreleased owned storage. SSA→MIR lowering, Native integration, and SSA Lean proofs follow later. Execution comparisons are not a general proof of the transformation.
+Validate the entire SSA program before producing output. Each run uses fresh frames and heaps, and successful completion checks for unreleased owned storage. SSA Lean proofs and individual optimization passes follow later. Execution comparisons are not a general proof of the transformation.
 
 ### Unreachable blocks
 
@@ -100,6 +100,23 @@ SSA evaluation executes only the reachable SSA section. An executable edge into 
 For `jump join(a, b)`, read **both** outgoing values before simultaneously binding the destination arguments. Edge arguments are existing value IDs, never embedded expressions, calls, or slot reads. A branch transfers along the selected edge only. Keep edge identities and arguments distinct even when then/else target the same block.
 
 Sequential assignments for a loop's `jump head(right, left)` can destroy the old values needed for a swap. When returning to non-SSA MIR, implement parallel copies using temporaries. Allocate MIR Temporary destinations for SSA definitions and block arguments. Do not misrepresent repeatedly written block arguments as Binding initializers; preserve source binding names in the mapping. If the source branches to multiple destinations, place copies in a helper block specific to the selected edge. Do not add output, allocation, retain, or release there.
+
+### SSA→MIR and Native
+
+[lower.rs](../../src/mir/ssa/lower.rs) validates SSA, converts it into per-value temporaries and parallel edge copies, and validates the resulting MIR with the ordinary validator. It does not select the original MIR body for execution. Input snapshots remain unchanged.
+
+| Input | Lowering and observation |
+| --- | --- |
+| SSA values/block arguments | Allocate a dedicated Temporary per value, recording its original LocalId |
+| Function parameters | Keep signature Bindings; copy into SSA temporaries in an added entry block, without extra ownership operations |
+| Edges with arguments | Use a helper block per edge: capture every input, write every destination, then jump to the original target |
+| Original instructions/failures | Retain original InstructionId and SourceOrigin; identify added copies as `ssa-edge-copy` / `ssa-parameter-copy` |
+| Unreachable blocks | Restore original block numbers, instructions, and references; reachable SSA blocks occupy their original MIR block positions |
+| Native | Pass `Lowered.program` to existing MIR→LIR→ASM/Object generation |
+
+Argument-free edges need no helper. Every argument-carrying jump or branch uses parallel copies; then/else remain distinct even with the same target. No storage reuse or copy removal occurs, so stack usage and instruction counts can increase. Logical string/array budgets and ownership operations stay unchanged.
+
+The mapping text is `Cerune SSA lowering mapping v0.1`, recording `ssa-lower-v1`. Follow SSA values to MIR locals, SSA blocks to original-numbered MIR blocks, edges to helper/read/write instructions, and parameters to entry copies. Existing MIR→LIR annotations and Object symbols continue the correspondence.
 
 ## Example representation
 
@@ -169,9 +186,9 @@ The initial conversion does not speed up programs by adding, moving, or deleting
 
 Mappings record input/output snapshots, pass name/version/options/order, and original FunctionId/BlockId/InstructionId/LocalId to SSA values/blocks/edges. Auxiliary arguments identify the merged local; incoming values identify their edges. Keep a failing operation's single source origin separate from many-to-one provenance.
 
-`emit-mir --ssa` displays original MIR and SSA; `run-mir --ssa` executes SSA directly. Heap budgets, default diagnostics, and `runtime-v1` diagnostics match the non-SSA route. Preserve defaults and reject the flag on other execution/emit routes, duplicate flags, and values such as `--ssa false`. Do not enable SSA or optimization implicitly.
+`emit-mir --ssa` displays original MIR and SSA; `run-mir --ssa` executes SSA directly. Heap budgets, default diagnostics, and `runtime-v1` diagnostics match the non-SSA route. Preserve defaults and reject the flag on unsupported execution/emit routes, duplicate flags, and values such as `--ssa false`. Do not enable SSA or optimization implicitly.
 
-`observe --ssa` saves original MIR, SSA, and mappings in separate files. Only SSA bundles use manifest v2, recording `scalar-ssa-v1` input/output/mapping and order; the optimization list stays empty. Assembly explicitly consumes non-SSA MIR and is not presented as output generated through SSA. Default v1 output is unchanged. See [observation bundles](observation-bundle.en.md) for the format. Native integration will add MIR reconstructed from SSA; general pass selection follows later.
+`emit-asm --ssa` / `emit-obj --ssa` explicitly pass through SSA→MIR. `observe --ssa` separately saves original MIR, SSA, reconstructed MIR, both mappings, and baseline/SSA-derived assembly. Manifest v3 records `scalar-ssa-v1`→`ssa-lower-v1` with inputs, outputs, and mappings; the optimization list stays empty. Default v1 output is unchanged. See [observation bundles](observation-bundle.en.md) for the format. General pass selection follows later.
 
 Implement in these units.
 
@@ -180,7 +197,7 @@ Implement in these units.
 | 1 (implemented) | Representation, structural validator, deterministic text | Validate hand-built branches, loops, parallel arguments, and residual slots; reject broken definitions/edges/initialization |
 | 2 (implemented) | MIR→SSA and mappings | Straight-line, branch/short-circuit, loop, and residual-slot conversion. Check baseline preservation, operations/edges/origins/latest definitions, unreachable records, and determinism for all runnable examples |
 | 3 (implemented) | Direct SSA evaluation, CLI, and bundle integration | Compare HIR/MIR/SSA/VM using baseline examples and existing MIR/runtime tests, including heap budgets, prior output, and failure origins |
-| 4 | SSA→MIR and Native | Observe parallel copies/helper edge blocks; compare ASM/Object execution on Windows/Linux |
+| 4 (implemented) | SSA→MIR and Native | Observe parallel copies/helper edge blocks; compare ASM/Object execution on Windows/Linux |
 | 5 | Lean correspondence and individual optimization passes | Check concrete MIR→SSA fixtures with an independent model; specify each optimization pass's preservation conditions before implementing it |
 
 While intermediate implementations lack operations, diagnose them explicitly rather than silently falling back to input MIR execution. Public SSA execution should target current language features, including comparisons involving residual slots.

@@ -102,7 +102,7 @@ fn ssa_bundle_keeps_baseline_and_records_the_separate_transformation() {
                 mapping
             );
             let manifest = fs::read_to_string(output.join("manifest.json")).unwrap();
-            assert!(manifest.contains("\"schema\": \"cerune-observation-v2\""));
+            assert!(manifest.contains("\"schema\": \"cerune-observation-v3\""));
             assert!(manifest.contains("\"optimization_passes\": []"));
             assert!(manifest.contains("\"executed\": false"));
             assert!(manifest.contains("\"kind\": \"representation\""));
@@ -113,7 +113,41 @@ fn ssa_bundle_keeps_baseline_and_records_the_separate_transformation() {
                 )
             );
             assert!(manifest.contains("\"assembly\": \"mir\""));
-            assert_eq!(fs::read_dir(&output).unwrap().count(), 7);
+            assert!(manifest.contains("\"ssa_assembly\": \"ssa_lowered_mir\""));
+            assert!(manifest.contains("\"pass\": \"ssa-lower-v1\""));
+            let lowered = cerune_lang::mir::ssa::lower(&ssa).unwrap();
+            assert_eq!(
+                fs::read_to_string(output.join("program.ssa-lowered.mir.txt")).unwrap(),
+                cerune_lang::mir::text::emit(&lowered.program)
+            );
+            assert_eq!(
+                fs::read_to_string(output.join("program.ssa-lowered-map.txt")).unwrap(),
+                lowered.mapping
+            );
+            let mut native_options = vec!["--ssa", "--target", target, "--annotate-origins"];
+            native_options.extend(BUDGETS);
+            let asm = cli("emit-asm", &input, &native_options);
+            success(&asm);
+            assert_eq!(
+                fs::read(output.join("program.ssa.origins.s")).unwrap(),
+                asm.stdout
+            );
+            let object = output.join("temporary.o");
+            native_options.extend(["-o", object.to_str().unwrap()]);
+            let obj = cli("emit-obj", &input, &native_options);
+            success(&obj);
+            assert!(obj.stdout.is_empty());
+            assert_eq!(
+                fs::read(&object).unwrap(),
+                cerune_lang::codegen::x86_64::emit_object_from_mir(
+                    &lowered.program,
+                    cerune_lang::codegen::x86_64::Target::parse(target).unwrap(),
+                    true
+                )
+                .unwrap()
+            );
+            fs::remove_file(object).unwrap();
+            assert_eq!(fs::read_dir(&output).unwrap().count(), 10);
             for entry in fs::read_dir(&output).unwrap() {
                 let file = entry.unwrap().file_name();
                 assert_eq!(

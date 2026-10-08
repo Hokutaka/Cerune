@@ -33,13 +33,26 @@ cargo run --quiet -- emit-mir examples/ir_stages/control_flow.ceru -o target/con
 
 `native_calls` prints the header `MIR → Native`, then `0, 18446744073709551615, 7, 9, 4`, followed by `2, 18446744073709551615, 7, 9, 4`, one value per line. ASM `cerune-mir` annotations point back to MIR block/instruction IDs. For Windows output, select `x86_64-pc-windows-msvc` instead. Emitting an object does not link or execute it.
 
-In `ssa_values`, `choose_and_count` adds either 2 or 4 to 10, then adds 0 and 2 in the loop. `swap_rounds` swaps 10 and 20 three times. This compares non-SSA routes with direct SSA execution. `emit-mir --ssa` prints original MIR alongside automatically constructed SSA. The [SSA design](../../docs/design/mir-ssa.en.md) uses it to explain merge values and parallel transfer.
+In `ssa_values`, `choose_and_count` adds either 2 or 4 to 10, then adds 0 and 2 in the loop. `swap_rounds` swaps 10 and 20 three times. This compares non-SSA routes, direct SSA execution, and SSA-derived Native execution. `emit-mir --ssa` prints original MIR alongside automatically constructed SSA. The [SSA design](../../docs/design/mir-ssa.en.md) uses it to explain merge values and parallel transfer.
 
 In `control_flow`, at `i=0`, `accept` is skipped. At `i=1`, continue enters the update. Only `i=2` calls `accept` and prints `2`. At `i=3`, break skips the update. The final total is `4`.
 
 In MIR, `bbN` identifies a block, `%N` a typed local/temporary, and `iN` an instruction within a function. Follow jump/branch and `derived=short-circuit-rhs`, `derived=for-update`, `derived=loop-exit` to inspect control flow. Each operation retains `hir=#N source=N bytes=A..B` to locate its input IR and source span. Emitting MIR does not execute the program.
 
-For array copies and allocation failure, see [lowering_order.ceru](../dynamic_arrays/lowering_order.ceru). `run-mir` uses the [independent MIR executor](../../docs/design/mir-executor.en.md). [Native now consumes MIR](../../docs/design/native-mir.en.md). Use `--ssa` to select SSA construction, execution, and observation. SSA bundles preserve original MIR and record that assembly comes from non-SSA MIR. SSA→MIR/Native and optimization follow later. See the [stage design](../../docs/design/ir-stages.en.md) for types and validation limits.
+For array copies and allocation failure, see [lowering_order.ceru](../dynamic_arrays/lowering_order.ceru). `run-mir` uses the [independent MIR executor](../../docs/design/mir-executor.en.md). [Native now consumes MIR](../../docs/design/native-mir.en.md). Use `--ssa` to select SSA construction, execution, and observation. SSA bundles separately retain original MIR, SSA, reconstructed MIR, and baseline/SSA-derived ASM. No optimization occurs. See the [stage design](../../docs/design/ir-stages.en.md) for types and validation limits.
+
+## Generate Native through SSA
+
+This example emits a Linux Object, links it with Clang, and executes it. On Windows, select `x86_64-pc-windows-msvc` and name the executable `target/ssa_values.exe` and omit `-lm` when linking. The output is the same four lines.
+
+```sh
+cargo run --quiet -- emit-asm examples/ir_stages/ssa_values.ceru --ssa --target x86_64-unknown-linux-gnu --annotate-origins -o target/ssa_values.ssa.s
+cargo run --quiet -- emit-obj examples/ir_stages/ssa_values.ceru --ssa --target x86_64-unknown-linux-gnu --annotate-origins -o target/ssa_values.ssa.o
+clang target/ssa_values.ssa.o -o target/ssa_values -lm
+./target/ssa_values
+```
+
+In an `observe --ssa` bundle, `program.ssa-lowered.mir.txt` shows input copies followed by destination copies in edge helper blocks. `program.ssa-lowered-map.txt` connects SSA values/edges to MIR instructions. `program.origins.s` comes from baseline MIR; `program.ssa.origins.s` comes from reconstructed MIR. Neither overwrites the other.
 
 ## Save one compilation
 

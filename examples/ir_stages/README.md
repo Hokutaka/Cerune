@@ -33,13 +33,26 @@ cargo run --quiet -- emit-mir examples/ir_stages/control_flow.ceru -o target/con
 
 `native_calls`は見出し`MIR → Native`の後に、`0, 18446744073709551615, 7, 9, 4`、続いて`2, 18446744073709551615, 7, 9, 4`を1値1行で表示します。ASMの`cerune-mir`注釈からMIRのblock・命令番号へ戻れます。Windows向けに生成する場合はtargetを`x86_64-pc-windows-msvc`へ変更します。Objectの生成だけではリンク・実行しません。
 
-`ssa_values`の`choose_and_count`は、10に分岐で2または4を加え、loopで0と2を加えます。`swap_rounds`は10と20を3回入れ替えます。非SSA経路とSSA直接実行の比較例です。`emit-mir --ssa`で元MIRと自動変換後のSSAを並べて表示できます。[SSA設計](../../docs/design/mir-ssa.ja.md)で合流値と並列受渡しの説明に使います。
+`ssa_values`の`choose_and_count`は、10に分岐で2または4を加え、loopで0と2を加えます。`swap_rounds`は10と20を3回入れ替えます。非SSA経路・SSA直接実行・SSA経由Nativeの比較例です。`emit-mir --ssa`で元MIRと自動変換後のSSAを並べて表示できます。[SSA設計](../../docs/design/mir-ssa.ja.md)で合流値と並列受渡しの説明に使います。
 
 `control_flow`の`i=0`では`accept`を呼ばず、`i=1`はcontinueで更新へ進み、`i=2`だけが`accept`を呼んで`2`を表示します。`i=3`は更新前に終了し、合計`4`を表示します。
 
 MIRでは`bbN`がブロック、`%N`が型付き局所値／一時値、`iN`が関数内の命令番号です。`derived=short-circuit-rhs`、`derived=for-update`、`derived=loop-exit`とjump／branchを読むと制御の行き先が分かります。各操作の`hir=#N source=N bytes=A..B`で元のIRとファイル内の範囲へ戻れます。MIRを生成するだけではプログラムは実行されません。
 
-配列コピーと確保失敗も確認する場合は[lowering_order.ceru](../dynamic_arrays/lowering_order.ceru)を使います。`run-mir`は[独立したMIR実行器](../../docs/design/mir-executor.ja.md)です。[NativeもMIR入力へ移行済み](../../docs/design/native-mir.ja.md)です。`--ssa`でSSA変換・実行・観測を選べます。SSA付きbundleも元MIRを保持し、ASMは非SSA MIRから生成したことを記録します。SSA→MIR／Nativeと最適化は後続です。型・検証範囲は[段階設計](../../docs/design/ir-stages.ja.md)に記載しています。
+配列コピーと確保失敗も確認する場合は[lowering_order.ceru](../dynamic_arrays/lowering_order.ceru)を使います。`run-mir`は[独立したMIR実行器](../../docs/design/mir-executor.ja.md)です。[NativeもMIR入力へ移行済み](../../docs/design/native-mir.ja.md)です。`--ssa`でSSA変換・実行・観測を選べます。SSA付きbundleは元MIR・SSA・変換後MIR・基準とSSA経由の両ASMを別々に保持します。最適化は行いません。型・検証範囲は[段階設計](../../docs/design/ir-stages.ja.md)に記載しています。
+
+## SSA経由でNativeを生成する
+
+次はLinux向けObjectを生成し、Clangでリンクして実行する例です。Windowsではtargetを`x86_64-pc-windows-msvc`に変え、実行ファイルを`target/ssa_values.exe`にし、リンク時の`-lm`は外します。出力は同じ4行です。
+
+```sh
+cargo run --quiet -- emit-asm examples/ir_stages/ssa_values.ceru --ssa --target x86_64-unknown-linux-gnu --annotate-origins -o target/ssa_values.ssa.s
+cargo run --quiet -- emit-obj examples/ir_stages/ssa_values.ceru --ssa --target x86_64-unknown-linux-gnu --annotate-origins -o target/ssa_values.ssa.o
+clang target/ssa_values.ssa.o -o target/ssa_values -lm
+./target/ssa_values
+```
+
+`observe --ssa`の`program.ssa-lowered.mir.txt`では、辺の補助block内に入力のcopyが並び、その後に行き先へのcopyが並びます。`program.ssa-lowered-map.txt`からSSA値・辺とMIR命令の対応を辿れます。`program.origins.s`は基準MIR、`program.ssa.origins.s`は変換後MIRからの生成です。両者を上書きせず比較できます。
 
 ## 同じコンパイルを保存する
 

@@ -18,24 +18,27 @@ Use `cerune observe <file> [--ssa] --target <triple> -o <new-directory>`. An exp
 
 ## Selecting SSA
 
-`--ssa` constructs SSA from the same non-optimized MIR and adds two files. The original four artifacts remain byte-identical to the default bundle.
+`--ssa` constructs SSA from the same non-optimized MIR and adds five files. The original four artifacts remain byte-identical to the default bundle.
 
 | Added file | Contents |
 | --- | --- |
 | `program.ssa.txt` | Same observation text as `emit-mir --ssa`, with separate complete original-MIR and SSA sections |
 | `program.ssa-map.txt` | `Cerune SSA mapping v0.1`: functions, parameters, values/slots, blocks, instructions, terminators, edge transfers, and retained unreachable records |
+| `program.ssa-lowered.mir.txt` | MIR reconstructed from SSA with dedicated temporaries and parallel copies |
+| `program.ssa-lowered-map.txt` | SSA→MIR value/block/edge-copy/parameter/unreachable mappings |
+| `program.ssa.origins.s` | Annotated Native ASM generated from reconstructed MIR |
 
 Value IDs are scoped by function; instruction indexes by block. Record then/else separately even with the same target, identifying incoming values, destination arguments, and original locals. Original instruction IDs and origins refer back to the original MIR snapshot. The mapping is neither a semantic-preservation proof nor a loading format.
 
-SSA manifests use `cerune-observation-v2`; the default retains existing v1 output.
+SSA manifests use `cerune-observation-v3`, extending v2's SSA observation with SSA→MIR/Native. The default retains existing v1 output.
 
-| v2 additions | Contents |
+| v3 additions | Contents |
 | --- | --- |
-| `transformations` | Zero-based order, `kind=representation`, versioned `pass=scalar-ssa-v1`, `options={}`, artifact keys for input `mir`, output `ssa`, and mapping `ssa_mapping` |
-| `artifact_inputs` | Each generated artifact's input. Currently `assembly` comes from `mir`, not SSA |
-| Additional `artifacts` keys | `ssa` and `ssa_mapping`, referencing the files above |
+| `transformations` | Zero-based order, `kind=representation`, versioned pass names, `options={}`. `scalar-ssa-v1`: `mir`→`ssa` / `ssa_mapping`; `ssa-lower-v1`: `ssa`→`ssa_lowered_mir` / `ssa_lowering_mapping` artifact keys |
+| `artifact_inputs` | Each artifact's input: baseline `assembly` comes from `mir`; added `ssa_assembly` comes from `ssa_lowered_mir` |
+| Additional `artifacts` keys | `ssa`, `ssa_mapping`, `ssa_lowered_mir`, `ssa_lowering_mapping`, and `ssa_assembly`, referencing the files above |
 
-`optimization_passes` stays empty and `executed` stays false. SSA→MIR/Native integration follows later; currently the bundle presents baseline Native output alongside SSA.
+`optimization_passes` stays empty and `executed` stays false. Observe baseline Native and SSA-derived Native separately. Objects are not bundled; use `emit-obj --ssa` to emit them individually.
 
 ## One compilation
 
