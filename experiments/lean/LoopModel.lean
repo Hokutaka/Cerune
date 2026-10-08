@@ -24,19 +24,40 @@ def evalLoopExpr (expr : LoopExpr) (locals : LoopLocals) : Option Result :=
         if a + b ≤ 255 then some (.ok (a + b))
         else some (.error (.integerOverflow origin))
 
+def evalLoopLess (left right : LoopExpr) (locals : LoopLocals) : Option (Except Failure Bool) :=
+  match evalLoopExpr left locals with
+  | none => none
+  | some (.error failure) => some (.error failure)
+  | some (.ok a) =>
+    match evalLoopExpr right locals with
+    | none => none
+    | some (.error failure) => some (.error failure)
+    | some (.ok b) => some (.ok (decide (a < b)))
+
 inductive LoopStatement where
   | assign : Nat → LoopExpr → LoopStatement
   | whileLess : LoopExpr → LoopExpr → List LoopStatement → LoopStatement
+  | ifLess : LoopExpr → LoopExpr → List LoopStatement → List LoopStatement → LoopStatement
+  | breakLoop
+  | continueLoop
   | ret : LoopExpr → LoopStatement
 
 structure LoopFunction where
   parameter : Nat
   body : List LoopStatement
 
--- 文の訪問ごとに1を消費します。whileの条件判定も毎回1として数えます。
--- 継続列はHIRの文のままで、分岐先やMIRの一時値を構築しません。
+-- 最も内側のループの継続・終了先を先頭に保持します。中身はHIRの文です。
+structure LoopFrame where
+  restart : List LoopStatement
+  after : List LoopStatement
+
+-- 文の訪問ごとに1を消費します。while/ifの条件判定やbreak/continueも1です。
+-- 本文末尾でのframe復帰は文ではなく、fuelを消費しません。
 def runLoopStatements (fuel : Nat) (todo : List LoopStatement)
-    (locals : LoopLocals) : ExecutionOutcome :=
+    (locals : LoopLocals) (loops : List LoopFrame) : ExecutionOutcome :=
+  let (todo, loops) := match todo, loops with
+    | [], frame :: outer => (frame.restart, outer)
+    | _, _ => (todo, loops)
   match fuel with
   | 0 => .exhausted
   | remaining + 1 =>
@@ -48,27 +69,38 @@ def runLoopStatements (fuel : Nat) (todo : List LoopStatement)
       | some (.error failure) => .completed (.error failure)
       | some (.ok value) =>
         runLoopStatements remaining rest
-          (fun index => if index = id then some value else locals index)
+          (fun index => if index = id then some value else locals index) loops
     | .ret expr :: _ =>
       match evalLoopExpr expr locals with
       | none => .invalid
       | some result => .completed result
-    | (.whileLess left right body) :: rest =>
-      match evalLoopExpr left locals with
+    | .breakLoop :: _ =>
+      match loops with
+      | [] => .invalid
+      | frame :: outer => runLoopStatements remaining frame.after locals outer
+    | .continueLoop :: _ =>
+      match loops with
+      | [] => .invalid
+      | frame :: outer => runLoopStatements remaining frame.restart locals outer
+    | .ifLess left right yes no :: rest =>
+      match evalLoopLess left right locals with
       | none => .invalid
       | some (.error failure) => .completed (.error failure)
-      | some (.ok a) =>
-        match evalLoopExpr right locals with
-        | none => .invalid
-        | some (.error failure) => .completed (.error failure)
-        | some (.ok b) =>
-          if a < b then
-            runLoopStatements remaining (body ++ .whileLess left right body :: rest) locals
-          else runLoopStatements remaining rest locals
+      | some (.ok selected) =>
+        runLoopStatements remaining ((if selected then yes else no) ++ rest) locals loops
+    | (.whileLess left right body) :: rest =>
+      match evalLoopLess left right locals with
+      | none => .invalid
+      | some (.error failure) => .completed (.error failure)
+      | some (.ok selected) =>
+        if selected then
+          runLoopStatements remaining body locals
+            (⟨.whileLess left right body :: rest, rest⟩ :: loops)
+        else runLoopStatements remaining rest locals loops
 
 def evalLoop (f : LoopFunction) (fuel input : Nat) : ExecutionOutcome :=
   runLoopStatements fuel f.body
-    (fun index => if index = f.parameter then some input else none)
+    (fun index => if index = f.parameter then some input else none) []
 
 def isCompleted : ExecutionOutcome → Bool
   | .completed _ => true

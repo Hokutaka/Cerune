@@ -1,0 +1,20 @@
+// 最初はcontinue、4回目はbreak。加算結果と実際の反復回数を返す。
+fn advance(value: u8) -> u8 {
+    mut current: u8 = value;
+    mut index: u8 = 0;
+    while index < 5 {
+        index = index + 1;
+        if index < 2 {
+            continue;
+        }
+        if 3 < index {
+            break;
+        }
+        current = current + 1;
+    }
+    return current + index;
+}
+print(advance(0));
+print(advance(1));
+print(advance(248));
+print(advance(249));

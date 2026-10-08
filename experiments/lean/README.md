@@ -20,7 +20,9 @@ Proofs, inputs, and generation tools live here; `examples/` remains the Cerune p
 | [mir.rs](mir.rs) | 渡されたMIR snapshotを写す。HIRから再構成しない / Exports the supplied MIR snapshot, without rebuilding it from HIR |
 | [Properties.lean](Properties.lean) | 生成器と独立した仕様とHIR/MIRへの移送 / Independent properties and transfer to HIR/MIR |
 | [loop.ceru](loop.ceru)・[LoopModel.lean](LoopModel.lean) | 4回の加算と、構造化while・可変局所値のHIR評価 / Four increments and structured HIR while/local semantics |
-| [loops.rs](loops.rs)・[LoopProperties.lean](LoopProperties.lean) | 評価上限を明示する生成器と独立仕様 / Exporter with explicit bounds and independent specification |
+| [loops.rs](loops.rs)・[LoopProperties.lean](LoopProperties.lean) | 評価上限を明示する生成器と単純whileの独立仕様 / Exporter with explicit bounds and plain-while specification |
+| [loop_control.ceru](loop_control.ceru)・[LoopControlProperties.lean](LoopControlProperties.lean) | if内のbreak／continue、本文とreturnの停止位置 / Break/continue inside if; body/return failure origins |
+| [nested_loop_control.ceru](nested_loop_control.ceru)・[NestedControlProperties.lean](NestedControlProperties.lean) | 最も内側のループへの作用 / Innermost-loop behavior |
 | [main.rs](main.rs)・[lean-toolchain](lean-toolchain) | 開発ツールと固定Lean版 / Development tool and pinned checker |
 
 ## 実行 / Commands
@@ -42,6 +44,14 @@ Run from the repository root; the example prints `1 → 42 → 255`.
 
 `loop.ceru` prints `4 → 5 → 254 → 255`. `advance` increments four times: inputs 0–251 return `input + 4`; inputs 252–255 overflow during `current + 1`.
 
+追加した制御例の全入力仕様と、正常サンプルの出力は次のとおりです。
+The added control fixtures have the following complete input specifications and sample outputs.
+
+| 入力例 / Fixture | 全入力の仕様 / Full specification | サンプル出力 / Output |
+| --- | --- | --- |
+| `loop_control.ceru` | 0–249: +6、250–253: returnの加算でoverflow、254–255: 本文の加算でoverflow / +6 through 249; return overflow at 250–253; body overflow at 254–255 | `6 → 7 → 254 → 255` |
+| `nested_loop_control.ceru` | 0–253: +2、254–255: 内側の本文の加算でoverflow / +2 through 253; inner-body overflow at 254–255 | `2 → 3 → 254 → 255` |
+
 `Cargo --example lean_verification`は開発用Rustツールの名前です。通常のCerune実行にはLean不要です。`+toolchain`はelan用で、直接Leanを使う場合は固定版を事前に用意し`CERUNE_TEST_LEAN`へパスを渡せます。テストは自動インストールしません。
 
 `Cargo --example lean_verification` names a Rust development tool, not a language backend. Normal Cerune execution needs no Lean. The `+toolchain` form uses elan; a preinstalled matching binary can be selected with `CERUNE_TEST_LEAN`. Tests never auto-install Lean.
@@ -56,10 +66,18 @@ cargo run --quiet -- run-vm experiments/lean/branch.ceru
 cargo run --quiet -- run experiments/lean/loop.ceru
 cargo run --quiet -- run-mir experiments/lean/loop.ceru
 cargo run --quiet -- run-vm experiments/lean/loop.ceru
+cargo run --quiet -- run experiments/lean/loop_control.ceru
+cargo run --quiet -- run-mir experiments/lean/loop_control.ceru
+cargo run --quiet -- run-vm experiments/lean/loop_control.ceru
+cargo run --quiet -- run experiments/lean/nested_loop_control.ceru
+cargo run --quiet -- run-mir experiments/lean/nested_loop_control.ceru
+cargo run --quiet -- run-vm experiments/lean/nested_loop_control.ceru
 cargo run --quiet --example lean_verification
 lean +leanprover/lean4:v4.34.1 target/lean-verification/Verified.lean
 lean +leanprover/lean4:v4.34.1 target/lean-verification/BranchVerified.lean
 lean +leanprover/lean4:v4.34.1 target/lean-verification/LoopVerified.lean
+lean +leanprover/lean4:v4.34.1 target/lean-verification/LoopControlVerified.lean
+lean +leanprover/lean4:v4.34.1 target/lean-verification/NestedControlVerified.lean
 cargo test --test lean_verification
 cargo test --test lean_verification -- --include-ignored
 ```
@@ -76,6 +94,16 @@ The same directory also contains `BranchGenerated.lean`, `BranchVerified.lean`, 
 
 The loop fixture adds `LoopGenerated.lean`, `LoopVerified.lean`, `loop.ceir`, and `loop.mir.txt`; generated definitions retain `hirFuel = 16` and `mirFuel = 11`.
 
+制御例も`LoopControl{Generated,Verified}.lean`・`loop_control.{ceir,mir.txt}`、`NestedControl{Generated,Verified}.lean`・`nested_loop_control.{ceir,mir.txt}`として保存します。各定義の上限は次のとおりです。
+
+Control fixtures also save `LoopControl{Generated,Verified}.lean` / `loop_control.{ceir,mir.txt}` and `NestedControl{Generated,Verified}.lean` / `nested_loop_control.{ceir,mir.txt}`. Their definitions record the following bounds.
+
+| 例 / Fixture | HIRの文評価 / Statement visits | MIRのblock評価 / Block visits |
+| --- | --- | --- |
+| 単純while / Plain while | 16 | 11 |
+| break／continue | 22 | 22 |
+| 入れ子 / Nested loops | 28 | 23 |
+
 ## 証明とテスト / Proofs and tests
 
 対象と依存は次のとおりです。Proof subjects and dependencies are explicit.
@@ -89,7 +117,10 @@ The loop fixture adds `LoopGenerated.lean`, `LoopVerified.lean`, `loop.ceir`, an
 | 分岐の仕様 / Branch specification | 上の入力表をHIRで証明 / Prove the input table above for HIR | 空 / None |
 | 分岐MIRの性質 / Branch MIR property | 対応定理から入力表の仕様を移す / Transfer the input-table specification through correspondence | `propext` |
 | ループ対応・完了・MIRの性質 / Loop correspondence, completion, MIR property | 全入力で同じ結果になり、両経路とも明示上限内で完了 / Same result and completion within each explicit bound for every input | `propext` |
-| ループの仕様 / Loop specification | 251以下は+4、252以上は指定位置のoverflow / +4 through 251, overflow at the specified origin from 252 | 空 / None |
+| ループの仕様 / Loop specifications | 単純while・break／continue・入れ子の入力別仕様 / Input-specific specifications for plain while, break/continue, and nesting | `propext` |
+
+frameを加えたHIRモデルでは、以前は依存が空だった単純whileの仕様定理も`propext`を使います。検査を緩めず、現在の出力と公理一覧を一致させます。
+With frames in the HIR model, the plain-while specification theorem also uses `propext`, whereas it previously had no dependencies. Checks still require the exact current axiom list.
 
 MIRの定理は有限入力について`decide`で証明し、Lean kernelで検査します。`propext`は有限量化・等値性の決定手続きで使うLean標準の命題外延性公理です。依存を完全一致で検査し、`sorryAx`・独自公理・native評価への追加信頼は許容しません。実行結果の比較だけを証明として出力するものではありません。
 
@@ -107,6 +138,10 @@ The branch fixture also compares all 256 inputs across HIR, MIR, VM, Lean HIR/MI
 
 The loop fixture also compares all 256 inputs. Checks reject changed iteration counts, update stores, backedges, failure NodeIds, a self-looping condition block, and the independent specification's 252 boundary. Reducing either bound by one or setting both to zero is rejected; matching exhaustion is not success. Mutations run only in bounded models, never as potentially nonterminating executables.
 
+制御例・入れ子例でも全256入力を比較します。continueを出口へ、breakを条件へ、内側の制御を外側へ飛ばすMIR、ifの分岐先逆転、独立仕様の入力境界の変更を拒否します。各上限の1つ手前では未完了であること、ループ外のbreak／continueが不正状態になることも検査します。
+
+Both control fixtures compare all 256 inputs. Checks reject continue-to-exit, break-to-condition, inner-to-outer transfers, swapped if targets, and changed specification boundaries. They also check exhaustion immediately below each bound and invalid break/continue outside a loop.
+
 Lean起動テストは通常実行ではignored、専用CIでは必須です。証明・改変・MIRの観測結果は`target/lean-verification-test`に残します。
 Lean execution is explicitly ignored in ordinary runs and mandatory in the dedicated CI job. Proofs, rejected mutations, and MIR observations remain in `target/lean-verification-test`.
 
@@ -118,15 +153,19 @@ Lean execution is explicitly ignored in ordinary runs and mandatory in the dedic
 
 非循環例のMIRモデルはblock数をfuelとします。循環がなければ経路上のblock数の上界になり、対応定理は全入力で`.completed`へ到達することも検査します。`.completed (.error …)`はCeruneの停止、`.invalid`は不正状態、`.exhausted`はfuel不足です。後二者を言語上の停止や証明成功として扱いません。
 
-ループ例ではHIRは文（whileの条件判定を含む）の訪問数、MIRはblockの訪問数を数えます。式・block内の有限命令列はそれぞれ構造的に評価します。16と11は単位が異なり、同じfuel値や実行時間の比較ではありません。全256入力で両モデルの完了を証明しますが、任意のloopの停止性・上限を求めるアルゴリズムの証明ではありません。
+HIRのframeは最も内側のループを先頭に、条件への再開先とループ後の文を保持します。ifはframeを増やしません。本文末尾とcontinueは条件へ、breakはそのループ後へ進みます。frameの復帰は管理処理なので文のfuelを消費しません。MIRの飛び先からHIRのframeを作ることはありません。
 
-for・break／continue・一般のloop停止性・call・出力trace・heap・所有・他整数・float等は未対応です。次はloop内の分岐とbreak／continueの行き先へ拡張します。小さな実験を最終的な言語サブセットには固定しません。
+HIR frames store the innermost loop first, with its condition restart and statements after the loop. An if adds no frame. Body completion and continue resume the condition; break resumes after that loop. Frame restoration is administrative and consumes no statement fuel. HIR frames are not derived from MIR targets.
+
+ループ例ではHIRは文（while／ifの条件判定、break／continueを含む）の訪問数、MIRはblockの訪問数を数えます。式・block内の有限命令列はそれぞれ構造的に評価します。16と11は単位が異なり、同じfuel値や実行時間の比較ではありません。全256入力で両モデルの完了を証明しますが、任意のloopの停止性・上限を求めるアルゴリズムの証明ではありません。
+
+for・一般のloop停止性・call・出力trace・heap・所有・他整数・float等は未対応です。次はforのcontinueが更新を通る対応へ拡張します。小さな実験を最終的な言語サブセットには固定しません。
 
 For acyclic fixtures, the MIR model uses block count as fuel, which bounds every path. Correspondence checks that every input reaches `.completed`. `.completed (.error …)` is a Cerune failure, `.invalid` an invalid state, and `.exhausted` insufficient fuel. The last two are neither language failures nor proof success.
 
-The loop fixture counts HIR statement visits (including each while test) and MIR block visits. Expressions and finite block instruction lists are evaluated structurally. Bounds 16 and 11 have different units, not a shared fuel scale or time measurement. Completion is proved for all 256 inputs, not for arbitrary loops or an algorithm that discovers bounds.
+The loop fixtures count HIR statement visits (including while/if tests and break/continue) and MIR block visits. Expressions and finite block instruction lists are evaluated structurally. Bounds 16 and 11 have different units, not a shared fuel scale or time measurement. Completion is proved for all 256 inputs, not for arbitrary loops or an algorithm that discovers bounds.
 
-For-loops, break/continue, general loop termination, calls, output traces, heap/ownership, other integers, floats, and other features are not covered. Next, extend to branches and break/continue destinations within loops, without fixing a permanent language subset.
+For-loops, general loop termination, calls, output traces, heap/ownership, other integers, floats, and other features are not covered. Next, extend to for-loop continue passing through the update, without fixing a permanent language subset.
 
 RustのHIR/MIRとモデルの対応、exporter、Lean kernelと明記した公理は信頼する部分に残ります。個々の実際の変換結果に対するtranslation validationであり、全loweringアルゴリズム・全処理系・Nativeの証明ではありません。
 

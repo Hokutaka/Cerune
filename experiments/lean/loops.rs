@@ -4,6 +4,14 @@ use cerune_lang::{
     types::IntegerType,
 };
 pub const SOURCE: &str = include_str!("loop.ceru");
+pub const CONTROL_SOURCE: &str = include_str!("loop_control.ceru");
+pub const CONTROL_PROPERTIES: &str = include_str!("LoopControlProperties.lean");
+pub const CONTROL_HIR_FUEL: usize = 22;
+pub const CONTROL_MIR_FUEL: usize = 22;
+pub const NESTED_SOURCE: &str = include_str!("nested_loop_control.ceru");
+pub const NESTED_PROPERTIES: &str = include_str!("NestedControlProperties.lean");
+pub const NESTED_HIR_FUEL: usize = 28;
+pub const NESTED_MIR_FUEL: usize = 23;
 pub const MODEL: &str = include_str!("LoopModel.lean");
 pub const PROPERTIES: &str = include_str!("LoopProperties.lean");
 // この例ではHIRは16文、MIRは11blockの訪問で正常終了します。
@@ -51,18 +59,24 @@ fn statements(body: &[Statement]) -> Result<String, String> {
             StatementKind::Return { value: Some(value) } => {
                 Ok(format!("(.ret {})", expression(value)?))
             }
+            StatementKind::Break => Ok(".breakLoop".into()),
+            StatementKind::Continue => Ok(".continueLoop".into()),
+            StatementKind::If {
+                condition,
+                then_body,
+                else_body,
+            } => {
+                let (left, right) = less_operands(condition)?;
+                Ok(format!(
+                    "(.ifLess {} {} {} {})",
+                    expression(left)?,
+                    expression(right)?,
+                    statements(then_body)?,
+                    statements(else_body)?
+                ))
+            }
             StatementKind::While { condition, body } => {
-                let ExprKind::Binary {
-                    op: BinaryOp::Less,
-                    left,
-                    right,
-                } = &condition.kind
-                else {
-                    return Err("loop condition must be u8 less-than".into());
-                };
-                if condition.ty != Type::Bool {
-                    return Err("loop condition must be bool".into());
-                }
+                let (left, right) = less_operands(condition)?;
                 Ok(format!(
                     "(.whileLess {} {} {})",
                     expression(left)?,
@@ -74,6 +88,35 @@ fn statements(body: &[Statement]) -> Result<String, String> {
         })
         .collect::<Result<Vec<_>, String>>()?;
     Ok(format!("[{}]", result.join(", ")))
+}
+
+fn less_operands(condition: &Expr) -> Result<(&Expr, &Expr), String> {
+    let ExprKind::Binary {
+        op: BinaryOp::Less,
+        left,
+        right,
+    } = &condition.kind
+    else {
+        return Err("loop condition must be u8 less-than".into());
+    };
+    if condition.ty != Type::Bool {
+        return Err("loop condition must be bool".into());
+    }
+    Ok((left, right))
+}
+
+// 性質の仕様用に、明示したcurrentの更新位置を探します。入れ子の制御も辿ります。
+fn current_update(body: &[Statement]) -> Option<&Expr> {
+    body.iter().find_map(|s| match &s.kind {
+        StatementKind::Assignment { target, value } if target.name == "current" => Some(value),
+        StatementKind::While { body, .. } => current_update(body),
+        StatementKind::If {
+            then_body,
+            else_body,
+            ..
+        } => current_update(then_body).or_else(|| current_update(else_body)),
+        _ => None,
+    })
 }
 
 pub fn emit(
@@ -98,20 +141,15 @@ pub fn emit(
     }
     let body = statements(&f.body)?;
     // 仕様に使う停止出自だけをHIRから取り出します。期待値は生成しません。
-    let loop_body = f
-        .body
-        .iter()
-        .find_map(|s| match &s.kind {
-            StatementKind::While { body, .. } => Some(body),
-            _ => None,
-        })
-        .ok_or("advance fixture requires a while loop")?;
+    let value = current_update(&f.body).ok_or("advance fixture requires a current update")?;
     let Some(Statement {
-        kind: StatementKind::Assignment { value, .. },
+        kind: StatementKind::Return {
+            value: Some(returned),
+        },
         ..
-    }) = loop_body.first()
+    }) = f.body.last()
     else {
-        return Err("advance fixture requires an initial loop assignment".into());
+        return Err("advance fixture requires a final return".into());
     };
     if !matches!(
         value.kind,
@@ -126,6 +164,7 @@ pub fn emit(
         "{}\n{MODEL}\n{}\nnamespace CeruneProof\n\
         def loopReference : LoopFunction := ⟨{}, {body}⟩\n\
         def loopFailureOrigin : Origin := {}\n\
+        def loopReturnOrigin : Origin := {}\n\
         def hirFuel : Nat := {hir_fuel}\n\
         def mirFuel : Nat := {mir_fuel}\n\
         set_option maxRecDepth 16384 in\n\
@@ -141,6 +180,7 @@ pub fn emit(
         super::MODEL,
         super::mir_experiment::definition_with_cycles(hir, mir, "advance")?,
         parameter.id.0,
-        super::origin(value)
+        super::origin(value),
+        super::origin(returned)
     ))
 }

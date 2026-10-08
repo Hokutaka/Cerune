@@ -44,32 +44,57 @@ fn main() {
         cerune_lang::mir::text::emit(&branch_mir),
     )
     .unwrap();
-    let loops = cerune_lang::compile_to_ir(experiment::loops::SOURCE).expect("compile loop");
-    let loop_mir = cerune_lang::mir::lower(&loops).expect("lower loop MIR");
-    let loop_generated = experiment::loops::emit(
-        &loops,
-        &loop_mir,
-        experiment::loops::HIR_FUEL,
-        experiment::loops::MIR_FUEL,
-    )
-    .expect("emit loop");
-    std::fs::write(directory.join("LoopGenerated.lean"), &loop_generated).unwrap();
-    std::fs::write(
-        directory.join("LoopVerified.lean"),
-        format!("{loop_generated}\n{}", experiment::loops::PROPERTIES),
-    )
-    .unwrap();
-    std::fs::write(
-        directory.join("loop.ceir"),
-        cerune_lang::ir::text::emit(&loops),
-    )
-    .unwrap();
-    std::fs::write(
-        directory.join("loop.mir.txt"),
-        cerune_lang::mir::text::emit(&loop_mir),
-    )
-    .unwrap();
-    println!("Generated LoopGenerated.lean, LoopVerified.lean, loop.ceir and loop.mir.txt");
+    // 各例の上限・独立仕様と観測ファイルを同じ組で保存します。
+    for (stem, source_name, source, properties, hir_fuel, mir_fuel) in [
+        (
+            "Loop",
+            "loop",
+            experiment::loops::SOURCE,
+            experiment::loops::PROPERTIES,
+            experiment::loops::HIR_FUEL,
+            experiment::loops::MIR_FUEL,
+        ),
+        (
+            "LoopControl",
+            "loop_control",
+            experiment::loops::CONTROL_SOURCE,
+            experiment::loops::CONTROL_PROPERTIES,
+            experiment::loops::CONTROL_HIR_FUEL,
+            experiment::loops::CONTROL_MIR_FUEL,
+        ),
+        (
+            "NestedControl",
+            "nested_loop_control",
+            experiment::loops::NESTED_SOURCE,
+            experiment::loops::NESTED_PROPERTIES,
+            experiment::loops::NESTED_HIR_FUEL,
+            experiment::loops::NESTED_MIR_FUEL,
+        ),
+    ] {
+        let hir = cerune_lang::compile_to_ir(source).expect("compile loop fixture");
+        let mir = cerune_lang::mir::lower(&hir).expect("lower loop fixture");
+        let generated =
+            experiment::loops::emit(&hir, &mir, hir_fuel, mir_fuel).expect("emit loop fixture");
+        std::fs::write(directory.join(format!("{stem}Generated.lean")), &generated).unwrap();
+        std::fs::write(
+            directory.join(format!("{stem}Verified.lean")),
+            format!("{generated}\n{properties}"),
+        )
+        .unwrap();
+        std::fs::write(
+            directory.join(format!("{source_name}.ceir")),
+            cerune_lang::ir::text::emit(&hir),
+        )
+        .unwrap();
+        std::fs::write(
+            directory.join(format!("{source_name}.mir.txt")),
+            cerune_lang::mir::text::emit(&mir),
+        )
+        .unwrap();
+        println!(
+            "Generated {stem}Generated.lean, {stem}Verified.lean, {source_name}.ceir and {source_name}.mir.txt"
+        );
+    }
     println!("Generated BranchGenerated.lean, BranchVerified.lean, branch.ceir and branch.mir.txt");
     println!(
         "Generated target/lean-verification/{{Generated,Verified}}.lean and increment.{{ceir,mir.txt}}"

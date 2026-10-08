@@ -241,6 +241,7 @@ fn lean_checks_correspondence_properties_execution_and_mutations() {
     }
     check_branch_proofs(&directory, &run);
     check_loop_proofs(&directory, &run);
+    check_loop_control_proofs(&directory, &run);
 }
 
 fn changed_mir(original: &cerune_lang::mir::Program, change: &str) -> cerune_lang::mir::Program {
@@ -813,56 +814,18 @@ fn check_loop_proofs(directory: &Path, run: &impl Fn(&Path, bool) -> std::proces
         );
     }
     assert!(
-        log.contains("'CeruneProof.loop_expected' does not depend on any axioms"),
+        log.contains("'CeruneProof.loop_expected' depends on axioms: [propext]"),
         "{log}"
     );
 
-    let file = directory.join("LoopExecute.lean");
-    fs::write(&file, format!("{generated}\ndef main : IO Unit := do\n  for input in List.range 256 do\n    IO.println (CeruneProof.renderMir (CeruneProof.evalLoop CeruneProof.loopReference CeruneProof.hirFuel input))\n    IO.println (CeruneProof.renderMir (CeruneProof.evalMirWithFuel CeruneProof.mirReference CeruneProof.mirFuel input))\n")).unwrap();
-    let output = run(&file, true);
-    assert!(
-        output.status.success() && output.stderr.is_empty(),
-        "{output:?}"
+    check_loop_execution(
+        directory,
+        run,
+        &generated,
+        experiment::loops::SOURCE,
+        "Loop",
+        |input| (input < 252).then_some(input + 4),
     );
-    let text = String::from_utf8(output.stdout).unwrap();
-    let lines: Vec<_> = text.lines().collect();
-    assert_eq!(lines.len(), 512, "{text}");
-    let function = experiment::loops::SOURCE.split("\nprint(").next().unwrap();
-    for (input, pair) in lines.as_chunks::<2>().0.iter().enumerate() {
-        assert_eq!(pair[0], pair[1], "Lean HIR/MIR at loop input {input}");
-        let hir = compile_to_ir(&format!("{function}\nprint(advance({input}));")).unwrap();
-        let direct = ir_executor::run(&hir);
-        let mir = cerune_lang::mir_executor::run(&cerune_lang::mir::lower(&hir).unwrap());
-        let vm = run_bytecode(&bytecode::lower(&hir).unwrap());
-        if input < 252 {
-            let expected = format!("{}\n", input + 4);
-            assert_eq!(direct.unwrap(), expected);
-            assert_eq!(mir.unwrap(), expected);
-            assert_eq!(vm.unwrap(), expected);
-            assert_eq!(pair[0], format!("ok {}", input + 4));
-        } else {
-            let direct = direct.unwrap_err();
-            let mir = mir.unwrap_err();
-            let vm = vm.unwrap_err();
-            let failure = direct.runtime_failure().unwrap();
-            assert_eq!(failure.code, FailureCode::IntegerOverflow);
-            assert_eq!(mir.runtime_failure(), Some(failure));
-            assert_eq!(vm.runtime_failure(), Some(failure));
-            assert_eq!(direct.output(), "");
-            assert_eq!(mir.output(), "");
-            assert_eq!(vm.vm_error().output(), "");
-            assert_eq!(
-                pair[0],
-                format!(
-                    "integer-overflow node={} source={} bytes={}..{}",
-                    failure.node_id.0,
-                    failure.span.source_id().index(),
-                    failure.span.start(),
-                    failure.span.end()
-                )
-            );
-        }
-    }
 
     // HIRは固定します。停止しない誤変換もLeanの有限fuelで検査し、実行ファイルは起動しません。
     for name in [
@@ -918,4 +881,294 @@ fn check_loop_proofs(directory: &Path, run: &impl Fn(&Path, bool) -> std::proces
         output.status.success() && output.stderr.is_empty(),
         "{output:?}"
     );
+}
+
+fn check_loop_execution(
+    directory: &Path,
+    run: &impl Fn(&Path, bool) -> std::process::Output,
+    generated: &str,
+    source: &str,
+    stem: &str,
+    expected_value: impl Fn(usize) -> Option<usize>,
+) {
+    let file = directory.join(format!("{stem}Execute.lean"));
+    fs::write(&file, format!("{generated}\ndef main : IO Unit := do\n  for input in List.range 256 do\n    IO.println (CeruneProof.renderMir (CeruneProof.evalLoop CeruneProof.loopReference CeruneProof.hirFuel input))\n    IO.println (CeruneProof.renderMir (CeruneProof.evalMirWithFuel CeruneProof.mirReference CeruneProof.mirFuel input))\n")).unwrap();
+    let output = run(&file, true);
+    assert!(
+        output.status.success() && output.stderr.is_empty(),
+        "{output:?}"
+    );
+    let text = String::from_utf8(output.stdout).unwrap();
+    let lines: Vec<_> = text.lines().collect();
+    assert_eq!(lines.len(), 512, "{text}");
+    let function = source.split("\nprint(").next().unwrap();
+    for (input, pair) in lines.as_chunks::<2>().0.iter().enumerate() {
+        assert_eq!(pair[0], pair[1], "Lean HIR/MIR at loop input {input}");
+        let hir = compile_to_ir(&format!("{function}\nprint(advance({input}));")).unwrap();
+        let direct = ir_executor::run(&hir);
+        let mir = cerune_lang::mir_executor::run(&cerune_lang::mir::lower(&hir).unwrap());
+        let vm = run_bytecode(&bytecode::lower(&hir).unwrap());
+        if let Some(value) = expected_value(input) {
+            let expected = format!("{value}\n");
+            assert_eq!(direct.unwrap(), expected);
+            assert_eq!(mir.unwrap(), expected);
+            assert_eq!(vm.unwrap(), expected);
+            assert_eq!(pair[0], format!("ok {value}"));
+        } else {
+            let direct = direct.unwrap_err();
+            let mir = mir.unwrap_err();
+            let vm = vm.unwrap_err();
+            let failure = direct.runtime_failure().unwrap();
+            assert_eq!(failure.code, FailureCode::IntegerOverflow);
+            assert_eq!(mir.runtime_failure(), Some(failure));
+            assert_eq!(vm.runtime_failure(), Some(failure));
+            assert_eq!(direct.output(), "");
+            assert_eq!(mir.output(), "");
+            assert_eq!(vm.vm_error().output(), "");
+            assert_eq!(
+                pair[0],
+                format!(
+                    "integer-overflow node={} source={} bytes={}..{}",
+                    failure.node_id.0,
+                    failure.span.source_id().index(),
+                    failure.span.start(),
+                    failure.span.end()
+                )
+            );
+        }
+    }
+}
+
+#[test]
+fn loop_control_examples_execute_and_mir_mutations_remain_valid() {
+    for (source, expected, changes) in [
+        (
+            experiment::loops::CONTROL_SOURCE,
+            "6\n7\n254\n255\n",
+            ["ContinueExit", "BreakCondition", "BranchTargets"].as_slice(),
+        ),
+        (
+            experiment::loops::NESTED_SOURCE,
+            "2\n3\n254\n255\n",
+            ["ContinueOuter", "BreakOuter"].as_slice(),
+        ),
+    ] {
+        let hir = compile_to_ir(source).unwrap();
+        let mir = cerune_lang::mir::lower(&hir).unwrap();
+        let before = mir.clone();
+        assert_eq!(ir_executor::run(&hir).unwrap(), expected);
+        assert_eq!(cerune_lang::mir_executor::run(&mir).unwrap(), expected);
+        assert_eq!(
+            run_bytecode(&bytecode::lower(&hir).unwrap()).unwrap(),
+            expected
+        );
+        let generated = experiment::loops::emit(&hir, &mir, 32, 32).unwrap();
+        for change in changes {
+            let changed = changed_control_mir(&hir, &mir, change);
+            cerune_lang::mir::validate(&changed).unwrap();
+            assert_ne!(
+                generated,
+                experiment::loops::emit(&hir, &changed, 32, 32).unwrap()
+            );
+        }
+        assert_eq!(before, mir);
+    }
+}
+
+fn control_node(
+    body: &[cerune_lang::ir::Statement],
+    is_break: bool,
+) -> Option<cerune_lang::ir::NodeId> {
+    use cerune_lang::ir::StatementKind as S;
+    body.iter().find_map(|s| match &s.kind {
+        S::Break if is_break => Some(s.id),
+        S::Continue if !is_break => Some(s.id),
+        S::While { body, .. } => control_node(body, is_break),
+        S::If {
+            then_body,
+            else_body,
+            ..
+        } => control_node(then_body, is_break).or_else(|| control_node(else_body, is_break)),
+        _ => None,
+    })
+}
+
+fn changed_control_mir(
+    hir: &cerune_lang::ir::Program,
+    original: &cerune_lang::mir::Program,
+    change: &str,
+) -> cerune_lang::mir::Program {
+    use cerune_lang::mir::{BlockId, Origin, TerminatorKind as T};
+    let mut program = original.clone();
+    let f = program
+        .functions
+        .iter_mut()
+        .find(|f| f.name == "advance")
+        .unwrap();
+    let head = f
+        .blocks
+        .iter()
+        .position(|b| matches!(b.terminator.kind, T::Branch { .. }))
+        .unwrap();
+    let T::Branch {
+        else_block: exit, ..
+    } = f.blocks[head].terminator.kind
+    else {
+        unreachable!()
+    };
+    if change == "BranchTargets" {
+        let t = &mut f
+            .blocks
+            .iter_mut()
+            .filter(|b| matches!(b.terminator.kind, T::Branch { .. }))
+            .nth(2)
+            .unwrap()
+            .terminator
+            .kind;
+        let T::Branch {
+            then_block,
+            else_block,
+            ..
+        } = t
+        else {
+            unreachable!()
+        };
+        std::mem::swap(then_block, else_block);
+    } else {
+        let body = &hir
+            .function_definitions
+            .iter()
+            .find(|f| f.name == "advance")
+            .unwrap()
+            .body;
+        let node = control_node(body, change.starts_with("Break")).unwrap();
+        let block = f
+            .blocks
+            .iter_mut()
+            .find(|b| matches!(b.terminator.origin, Origin::Source(s) if s.node_id == node))
+            .unwrap();
+        block.terminator.kind = T::Jump(match change {
+            "ContinueExit" | "BreakOuter" => exit,
+            "BreakCondition" | "ContinueOuter" => BlockId(head),
+            _ => panic!("unknown control mutation"),
+        });
+    }
+    program
+}
+
+fn check_loop_control_proofs(directory: &Path, run: &impl Fn(&Path, bool) -> std::process::Output) {
+    for (
+        source,
+        source_name,
+        stem,
+        properties,
+        hir_fuel,
+        mir_fuel,
+        increment,
+        normal_limit,
+        specification,
+        changes,
+    ) in [
+        (
+            experiment::loops::CONTROL_SOURCE,
+            "loop_control",
+            "LoopControl",
+            experiment::loops::CONTROL_PROPERTIES,
+            experiment::loops::CONTROL_HIR_FUEL,
+            experiment::loops::CONTROL_MIR_FUEL,
+            6,
+            250,
+            "control",
+            ["ContinueExit", "BreakCondition", "BranchTargets"].as_slice(),
+        ),
+        (
+            experiment::loops::NESTED_SOURCE,
+            "nested_loop_control",
+            "NestedControl",
+            experiment::loops::NESTED_PROPERTIES,
+            experiment::loops::NESTED_HIR_FUEL,
+            experiment::loops::NESTED_MIR_FUEL,
+            2,
+            254,
+            "nested",
+            ["ContinueOuter", "BreakOuter"].as_slice(),
+        ),
+    ] {
+        let hir = compile_to_ir(source).unwrap();
+        let mir = cerune_lang::mir::lower(&hir).unwrap();
+        let generated = experiment::loops::emit(&hir, &mir, hir_fuel, mir_fuel).unwrap();
+        fs::write(
+            directory.join(format!("{source_name}.ceir")),
+            cerune_lang::ir::text::emit(&hir),
+        )
+        .unwrap();
+        fs::write(
+            directory.join(format!("{source_name}.mir.txt")),
+            cerune_lang::mir::text::emit(&mir),
+        )
+        .unwrap();
+        fs::write(directory.join(format!("{stem}Generated.lean")), &generated).unwrap();
+        let verified = format!("{generated}\n{properties}");
+        let file = directory.join(format!("{stem}Verified.lean"));
+        fs::write(&file, &verified).unwrap();
+        let output = run(&file, false);
+        assert!(
+            output.status.success() && output.stderr.is_empty(),
+            "{output:?}"
+        );
+        let log = String::from_utf8_lossy(&output.stdout);
+        assert!(
+            !log.contains("warning:") && !log.contains("error:"),
+            "{log}"
+        );
+        for name in [
+            "loop_translation_correct".to_owned(),
+            "loop_completed".to_owned(),
+            format!("{specification}_expected"),
+            format!("mir_{specification}_expected"),
+        ] {
+            assert!(
+                log.contains(&format!(
+                    "'CeruneProof.{name}' depends on axioms: [propext]"
+                )),
+                "{log}"
+            );
+        }
+        check_loop_execution(directory, run, &generated, source, stem, |input| {
+            (input < normal_limit).then_some(input + increment)
+        });
+
+        for change in changes {
+            let changed = changed_control_mir(&hir, &mir, change);
+            let bad = experiment::loops::emit(&hir, &changed, hir_fuel, mir_fuel).unwrap();
+            let path = directory.join(format!("Rejected{stem}{change}.lean"));
+            fs::write(&path, bad).unwrap();
+            fs::write(
+                directory.join(format!("Rejected{stem}{change}.mir.txt")),
+                cerune_lang::mir::text::emit(&changed),
+            )
+            .unwrap();
+            assert_false_proof(run(&path, false));
+        }
+
+        // 正常に完了する最小の上限と、その直前の未完了を観測します。
+        let path = directory.join(format!("{stem}Bounds.lean"));
+        fs::write(&path, format!("{generated}\n\
+            example : CeruneProof.evalLoop CeruneProof.loopReference {} 0 = .exhausted := by decide\n\
+            example : CeruneProof.evalMirWithFuel CeruneProof.mirReference {} 0 = .exhausted := by decide\n\
+            example : CeruneProof.evalLoop ⟨0, [.breakLoop]⟩ 1 0 = .invalid := by decide\n\
+            example : CeruneProof.evalLoop ⟨0, [.continueLoop]⟩ 1 0 = .invalid := by decide\n", hir_fuel - 1, mir_fuel - 1)).unwrap();
+        let output = run(&path, false);
+        assert!(
+            output.status.success() && output.stderr.is_empty(),
+            "{output:?}"
+        );
+
+        let path = directory.join(format!("Rejected{stem}Property.lean"));
+        let old = format!("input < {normal_limit}");
+        let bad = verified.replacen(&old, &format!("input < {}", normal_limit + 1), 1);
+        assert_ne!(bad, verified);
+        fs::write(&path, bad).unwrap();
+        assert_false_proof(run(&path, false));
+    }
 }
