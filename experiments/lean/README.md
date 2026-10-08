@@ -1,51 +1,78 @@
 # Lean verification experiment / Lean検証実験
 
-公開backendの前段階です。完成済みCerune IRから選択した`increment`関数だけを検証します。
-呼出側のprintや他の関数まで証明済みとはしません。[設計](../../docs/design/lean-verification.ja.md)。
+公開backendの前段階です。実際の完成済みHIRと、そこからloweringしたMIRの`increment: u8 → u8`だけを検証します。呼出側のprintや他の関数は証明対象に含めません。[設計](../../docs/design/lean-verification.ja.md)。
 
-This precedes a public backend. It verifies only the selected `increment` function from completed Cerune IR, not its printing callers or other functions. [Design](../../docs/design/lean-verification.en.md).
+This precedes a public backend. It verifies only `increment: u8 → u8` from actual completed HIR and its lowered MIR, not printing callers or other functions. [Design](../../docs/design/lean-verification.en.md).
+
+## ファイル / Files
+
+証明・入力・生成ツールはここにまとめます。`examples/`はCeruneの実行サンプル一覧として保ちます。
+Proofs, inputs, and generation tools live here; `examples/` remains the Cerune program list.
 
 | File | 内容 / Purpose |
 | --- | --- |
-| [increment.ceru](increment.ceru) | `u8`を1増やす。通常の実行例 / Increment a checked `u8` |
-| [Model.lean](Model.lean) | 引数・定数・加算・overflowと出自の参照モデル / Reference model |
-| [main.rs](main.rs) | Rust側の生成ツールの入口 / Rust verification-tool entry point |
-| [emit.rs](emit.rs) | 実際のIRからモデルの項と直接Lean定義を別々に生成 / Experimental translation |
-| [Properties.lean](Properties.lean) | 生成器と分離した性質と、IR側への移送 / Independent properties and transfer |
-| [lean-toolchain](lean-toolchain) | 検証するLeanの固定版 / Pinned checker |
+| [increment.ceru](increment.ceru) | checked u8の加算 / Checked u8 increment |
+| [Model.lean](Model.lean) | HIRの引数・定数・加算・overflowと出自 / HIR expression semantics |
+| [MirModel.lean](MirModel.lean) | 独立した局所値・命令列・returnの評価 / Independent locals, instructions, and return semantics |
+| [emit.rs](emit.rs) | HIRから参照項と直接Lean定義を別々に生成 / HIR reference terms and direct Lean code |
+| [mir.rs](mir.rs) | 渡されたMIR snapshotを写す。HIRから再構成しない / Exports the supplied MIR snapshot, without rebuilding it from HIR |
+| [Properties.lean](Properties.lean) | 生成器と独立した仕様とHIR/MIRへの移送 / Independent properties and transfer to HIR/MIR |
+| [main.rs](main.rs)・[lean-toolchain](lean-toolchain) | 開発ツールと固定Lean版 / Development tool and pinned checker |
 
-このフォルダに証明・入力・生成ツールをまとめ、Ceruneの実行サンプル一覧である`examples/`とは分離します。Cargoの`--example lean_verification`はこのフォルダのRustツールを起動するための開発用ターゲット名です。通常のCerune build/runにLeanは不要です。
-
-Proofs, input, and the generator live here, separately from the Cerune program list in `examples/`. Cargo's `--example lean_verification` names the Rust development tool in this folder. Ordinary Cerune build/run does not require Lean.
+## 実行 / Commands
 
 リポジトリのルートから実行します。実行例の出力は`1 → 42 → 255`です。
 Run from the repository root; the example prints `1 → 42 → 255`.
 
+`Cargo --example lean_verification`は開発用Rustツールの名前です。通常のCerune実行にはLean不要です。`+toolchain`はelan用で、直接Leanを使う場合は固定版を事前に用意し`CERUNE_TEST_LEAN`へパスを渡せます。テストは自動インストールしません。
+
+`Cargo --example lean_verification` names a Rust development tool, not a language backend. Normal Cerune execution needs no Lean. The `+toolchain` form uses elan; a preinstalled matching binary can be selected with `CERUNE_TEST_LEAN`. Tests never auto-install Lean.
+
 ```sh
 cargo run --quiet -- run experiments/lean/increment.ceru
+cargo run --quiet -- run-mir experiments/lean/increment.ceru
 cargo run --quiet -- run-vm experiments/lean/increment.ceru
 cargo run --quiet --example lean_verification
 lean +leanprover/lean4:v4.34.1 target/lean-verification/Verified.lean
 cargo test --test lean_verification
-cargo test --test lean_verification -- --ignored
+cargo test --test lean_verification -- --include-ignored
 ```
 
-上記の`+toolchain`表記はelan経由です。直接Lean実行ファイルを使う場合は同じ版を選び、テストへは`CERUNE_TEST_LEAN`で渡せます。テスト中の自動インストールを避けるため、固定版は事前に準備してください。
+生成先`target/lean-verification`に`Generated.lean`（モデル・参照項・生成関数・対応定理）、`Verified.lean`（独立した性質を追加）、`increment.ceir`、`increment.mir.txt`、`lean-toolchain`を保存します。元の表現、命令順・局所値、定理の前提を照合できます。生成関数とMIRモデルはHIRの`eval`を呼びません。
 
-The `+toolchain` syntax uses elan. A direct Lean binary must have the same version; tests accept its path via `CERUNE_TEST_LEAN`. Install the pinned toolchain before testing.
+Outputs under `target/lean-verification` are `Generated.lean` (models, reference terms, generated function, correspondence), `Verified.lean` (independent properties appended), `increment.ceir`, `increment.mir.txt`, and `lean-toolchain`. Inspect source representations, instruction order/locals, and theorem assumptions together. Neither the generated function nor the MIR evaluator calls HIR `eval`.
 
-生成先は`target/lean-verification`です。`Generated.lean`に参照項・生成関数・対応定理、`Verified.lean`にそれらと独立した性質、`increment.ceir`に元のIRを残します。定理名・文面・入力条件を確認できます。生成関数は参照モデルの`eval`を呼び出しません。
+## 証明とテスト / Proofs and tests
 
-Outputs under `target/lean-verification` include the reference term, generated function and correspondence theorem in `Generated.lean`, independent properties appended in `Verified.lean`, and the input IR in `increment.ceir`. The generated function does not call the model's `eval`.
+対象と依存は次のとおりです。Proof subjects and dependencies are explicit.
 
-検査対象は、全有効入力での変換対応、255未満での正確な加算、IR側へ移した同じ性質、255でのoverflowです。4つの定理は追加の公理に依存しません。テストは256入力をIR・VM・生成Leanと期待値で比較し、値・出自・仕様の改変を拒否します。Leanを起動するテストは通常実行ではignoredと表示され、専用CI jobで実行します。
+| 対象 / Subject | 保証 / Claim | 公理 / Axioms |
+| --- | --- | --- |
+| HIR→直接Lean / direct Lean | 全有効入力での対応、255未満の正確な加算とHIRへの移送、255のoverflow / Correspondence, exact addition below 255 and transfer to HIR, overflow at 255 | 既存4定理は空 / Existing four: none |
+| HIR→MIR | `∀ x : Fin 256, evalMir mirReference x.val = some (eval reference x.val)` | `propext` |
+| MIRの性質 / properties | 同じ正確な加算とoverflowを対応証明から移す / Transfer the same exact addition and overflow | `propext` |
 
-Checks cover correspondence for all valid inputs, exact addition below 255, transfer of that property to IR, and overflow at 255. All four theorems have empty axiom dependencies. Tests compare all 256 inputs with IR, VM, generated Lean, and known expectations, and reject value/origin/specification mutations. The Lean-invoking test is explicitly ignored in ordinary runs and executed in a dedicated CI job.
+MIRの定理は有限入力について`decide`で証明し、Lean kernelで検査します。`propext`は有限量化・等値性の決定手続きで使うLean標準の命題外延性公理です。依存を完全一致で検査し、`sorryAx`・独自公理・native評価への追加信頼は許容しません。実行結果の比較だけを証明として出力するものではありません。
 
-`Nat`は数学的な計算領域であり、Ceruneの`u8`を無制限整数へ変更するものではありません。入力は`Fin 256`、定数は生成前に範囲検査し、加算結果は各演算で検査します。この有限・純粋な関数にはfuelもheapも出力traceもありません。他の整数・制御・文字列・配列・float等はこの実験の対象外であり、全言語の証明とは扱いません。
+The MIR theorem uses `decide` over the finite domain and is checked by Lean's kernel. `propext` is Lean's standard propositional-extensionality axiom used by finite quantification/equality decision procedures. Tests require the exact declared dependencies; `sorryAx`, custom axioms, and additional native-evaluation trust are not accepted. Runtime output comparison alone does not produce the proof.
 
-`Nat` is a mathematical calculation domain: inputs are restricted to `Fin 256`, literals are validated before generation, and each addition checks its result. This finite, pure function has no fuel, heap, or output trace. Other integers, control flow, strings, arrays, floats, and other features are outside this experiment, not proven language features.
+テストは全256入力をHIR・MIR・VM・生成Lean・Lean MIRモデルと既知値で照合し、overflowのFailureCode／NodeId／SourceId／Span・空の先行出力を確認します。HIRを固定し、MIRの定数・NodeId・SourceId・Span・戻り先を改変すると対応証明が失敗します。命令順の破損や未対応操作は生成前に拒否します。既存の生成値・出自・利用者仕様の改変検査も残します。
 
-モデルとRust IRの対応、Rust生成器、Lean kernelは信頼境界に残ります。256入力の一致は接続部分のテストであり、処理系全体の証明ではありません。
+Tests compare all 256 inputs across HIR, MIR, VM, direct Lean, the Lean MIR model, and known expectations, including overflow FailureCode/NodeId/SourceId/Span and empty prior output. With HIR fixed, changing MIR literals, NodeIds, SourceIds, spans, or returns breaks the proof. Invalid instruction order and unsupported operations are rejected before export. Existing generated-value/origin/user-specification mutation tests remain.
 
-The model's correspondence to Rust IR, the Rust generator, and the Lean kernel remain trust boundaries. Exhaustive testing of these 256 inputs checks the connection; it is not a whole-compiler proof.
+Lean起動テストは通常実行ではignored、専用CIでは必須です。証明・改変・MIRの観測結果は`target/lean-verification-test`に残します。
+Lean execution is explicitly ignored in ordinary runs and mandatory in the dedicated CI job. Proofs, rejected mutations, and MIR observations remain in `target/lean-verification-test`.
+
+## 未対応と信頼する部分 / Limits and trust
+
+`Nat`は数学的な計算領域で、入力は`Fin 256`、定数は0〜255、各加算は範囲検査します。`u8`を無制限整数には変えません。MIRは一つのreturn block内のliteral/copy/addと、空のunreachable blockだけを受け付けます。モデルの`none`は不正状態、`some (.error …)`はCeruneの停止です。この区別を落とさず対応を証明します。
+
+`Nat` is a mathematical domain: inputs are `Fin 256`, constants are 0–255, and each addition checks its range. MIR accepts literal/copy/add in one returning block plus empty unreachable blocks. Model `none` means invalid state; `some (.error …)` means a Cerune failure. The correspondence preserves this distinction.
+
+分岐・loop・call・出力trace・heap・所有・他整数・float等は未対応です。fuelも不要な有限・純粋関数を対象にしています。次は制御フローと停止の対応を段階的に拡張します。小さな実験を最終的な言語サブセットには固定しません。
+
+Branches, loops, calls, output traces, heap/ownership, other integers, floats, and other features are not covered. This finite pure function needs no fuel. Next, extend control-flow and failure correspondence in stages, without fixing a permanent language subset.
+
+RustのHIR/MIRとモデルの対応、exporter、Lean kernelと明記した公理は信頼する部分に残ります。一つの実際の変換結果に対するtranslation validationであり、全loweringアルゴリズム・全処理系・Nativeの証明ではありません。
+
+The Rust HIR/MIR-to-model correspondence, exporters, Lean kernel, and declared axioms remain trusted. This is translation validation of one actual lowering result, not proof of the general lowering algorithm, whole compiler, or Native output.

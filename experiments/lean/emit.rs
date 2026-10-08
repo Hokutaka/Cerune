@@ -4,6 +4,21 @@ use cerune_lang::{
     types::IntegerType,
 };
 
+#[path = "mir.rs"]
+mod mir_experiment;
+
+/// HIRの証明と独立したMIRモデルの対応証明を同じファイルへ出力します。
+pub fn emit_with_mir(
+    program: &ir::Program,
+    mir: &cerune_lang::mir::Program,
+) -> Result<String, String> {
+    Ok(format!(
+        "{}\n{}",
+        emit(program)?,
+        mir_experiment::emit(program, mir)?
+    ))
+}
+
 pub const MODEL: &str = include_str!("Model.lean");
 pub const PROPERTIES: &str = include_str!("Properties.lean");
 pub const SOURCE: &str = include_str!("increment.ceru");

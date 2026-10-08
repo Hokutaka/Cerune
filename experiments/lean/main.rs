@@ -6,7 +6,13 @@ fn main() {
     let program = cerune_lang::compile_to_ir(experiment::SOURCE).expect("compile example");
     let directory = std::path::Path::new("target/lean-verification");
     std::fs::create_dir_all(directory).unwrap();
-    let generated = experiment::emit(&program).expect("emit experimental function");
+    let mir = cerune_lang::mir::lower(&program).expect("lower MIR");
+    let generated = experiment::emit_with_mir(&program, &mir).expect("emit experimental function");
+    std::fs::write(
+        directory.join("increment.mir.txt"),
+        cerune_lang::mir::text::emit(&mir),
+    )
+    .unwrap();
     std::fs::write(directory.join("Generated.lean"), &generated).unwrap();
     std::fs::write(
         directory.join("Verified.lean"),
@@ -19,5 +25,7 @@ fn main() {
     )
     .unwrap();
     std::fs::write(directory.join("lean-toolchain"), experiment::TOOLCHAIN).unwrap();
-    println!("Generated target/lean-verification/{{Generated,Verified}}.lean and increment.ceir");
+    println!(
+        "Generated target/lean-verification/{{Generated,Verified}}.lean and increment.{{ceir,mir.txt}}"
+    );
 }

@@ -14,7 +14,7 @@ self-hostそのものは正しさの証明ではありません。処理系の�
 現在のRust処理系や、Lean以外のbackendまで自動的に証明済みになることもありません。
 
 **現状は設計と小さな検証実験です。公開Lean backend、`emit-lean`、全言語の形式意味論は未実装です。**
-[検証実験](../../experiments/lean/README.md)では、実際の完成済みIRから取り出した`u8`関数について、両方の定理をLeanで検査します。
+[検証実験](../../experiments/lean/README.md)では、実際の`increment: u8 → u8`のHIRと生成Lean、HIRとlowering済みMIRの対応、および利用者の性質を検査します。MIRは局所値・命令列・returnを独立に評価し、全256入力の値またはoverflowと出自を比較します。分岐・loop・heapはまだ証明対象に含めません。
 
 ## 接続する契約
 
@@ -78,15 +78,14 @@ Leanは[emit-only](owned-routes.ja.md)です。将来の`emit-lean`はLeanソー
 
 Lean kernelの受理も、定理の文面と利用した公理を前提にした保証です。
 `#print axioms`で依存を確認し、`sorryAx`、独自の未検証公理、native評価による追加の信頼を通常の証明成功へ混ぜません。
-今回の実験はkernelで検査できる証明だけを使い、公理依存が空であることを確認します。
-一般化の際に標準公理を許容するなら、その一覧と理由を明示します。
+既存のHIR→Leanと性質の4定理は公理依存が空です。追加したHIR→MIRと性質の3定理は、有限量化・等値性の決定手続きでLean標準の`propext`を使います。`decide`で得た証明をkernelで検査し、公理一覧を完全一致で検査します。`native_decide`や独自公理には依存しません。
 [Leanの証明検証](https://lean-lang.org/doc/reference/latest/ValidatingProofs/)と[公理の説明](https://lean-lang.org/doc/reference/latest/Axioms/)を参照してください。
 
 ## 段階と完了条件
 
 | 段階 | 内容 | 完了条件 |
 | --- | --- | --- |
-| 今回の実験 | `u8`関数の引数・定数・加算、値またはoverflowと出自 | 対応定理、入力条件付きの性質、境界値、改変拒否を実際に検査 |
+| 実装済みの実験 | `increment: u8 → u8`のHIR→LeanとHIR→MIR、局所値・literal/copy/add・return | 全入力の対応と性質、値・出自・戻り先の改変拒否を検査。個別snapshotの証明で、変換アルゴリズム一般の証明ではない |
 | backendの基盤 | 共通IRの取り込み、出自、結果・trace、生成定義と利用者の仕様の分離 | `emit-lean`の契約と対応表を確定し、既存テストから正常・異常例を移植 |
 | 制御と数値 | 全整数・真偽値・評価順・関数・分岐・ループ、明示変換 | 値だけでなく失敗・先行出力・停止条件を照合。floatは別の明示モデルで追加 |
 | 複合値と資源 | 文字列、配列、構造体、直和、所有・予算 | 既存の意味論と同じ機能範囲を目標にし、差を対応表で追う |
