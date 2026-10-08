@@ -100,14 +100,12 @@ fn unsupported_routes_duplicates_and_extra_values_are_rejected() {
         "emit-llvm",
         "emit-qbe",
         "emit-wat",
-        "emit-asm",
-        "emit-obj",
     ] {
         let out = cli(route, file, &["--ssa"]);
         assert!(!out.status.success(), "{route}");
         assert!(out.stdout.is_empty());
     }
-    for route in ["run-mir", "emit-mir"] {
+    for route in ["run-mir", "emit-mir", "emit-asm", "emit-obj"] {
         for opts in [
             vec!["--ssa", "--ssa"],
             vec!["--ssa", "false"],

@@ -4,7 +4,7 @@
 
 ## 状態と判断
 
-**SSAの表現・構造検証器・観測テキストと、MIR→SSAの自動変換を実装しました。SSA直接実行、公開CLIの`--ssa`、観測bundle連携も実装済みです。** この文書は実装済みの範囲と後続の方針を区別します。基準は非SSAのMIRと、その独立実行器です。[ssa_values.ceru](../../examples/ir_stages/ssa_values.ceru)を含む実行用exampleで、IR・非最適化MIR・SSA・VMの結果を比較します。
+**SSAの表現・構造検証器・観測テキストと、MIR→SSAの自動変換を実装しました。SSA直接実行、公開CLIの`--ssa`、SSA→MIR／Native、観測bundle連携も実装済みです。** この文書は実装済みの範囲と後続の方針を区別します。基準は非SSAのMIRと、その独立実行器です。[ssa_values.ceru](../../examples/ir_stages/ssa_values.ceru)を含む実行用exampleで、IR・非最適化MIR・SSA・VMの結果を比較します。
 
 SSAは「各値の定義を一つにする」表現です。ソースの`mut`を禁止せず、再代入ごとに別の値番号を付けます。合流点では、通った辺からブロック引数へ値を渡します。変換を明示的に選び、元MIRを上書きしません。
 
@@ -52,7 +52,7 @@ SSA値番号は静的な定義の識別子です。loopで同じ命令を再訪�
 | `mir::ssa::mapping::emit(&ssa)`（実装済み） | 元MIRへの対応だけを観測テキストとして返す。bundleの別ファイルに保存 |
 | `mir::ssa::text::emit(&ssa)`（実装済み） | 検証後に`Result<String, mir::Error>`を返す。`Cerune scalar SSA v0.1`の観測テキストでありload形式ではない |
 | `ssa_executor::run(&ssa)`（実装済み） | SSAのblock・値・slotを直接評価し、`Result<String, ExecutionError>`を返す。既存の停止・出力契約を使う |
-| `mir::ssa::lower(&ssa)` | 辺の引数を並列copyへ展開した非SSA MIRと対応を返す |
+| `mir::ssa::lower(&ssa)`（実装済み） | `Lowered { program, mapping }`。辺の引数を並列copyへ展開した非SSA MIRと観測用の対応テキストを返す |
 
 実装済みの`ssa::Program`は、独立した元MIR snapshotと、SSAの関数・値・blockを保持します。`Operand::Value`と`Operand::Slot`を区別し、演算定義は`mir::Operation<R>`／`InstructionKind<R>`を共有します。既存MIRでは既定の`R = LocalId`を使うため、演算の意味や既存の観測テキストは変えません。
 
@@ -85,7 +85,7 @@ SSA値番号は静的な定義の識別子です。loopで同じ命令を再訪�
 | `location()` | SSA側のFunctionId・BlockIdと、元MIRのBlockId・InstructionId |
 | `output()` | 停止する前までの出力 |
 
-実行前にSSA全体を検証し、検証失敗では出力しません。実行ごとに新しいframeとheapを作り、正常終了時は未解放の所有領域も検査します。SSA→MIR lowering、Native連携、SSAのLean証明は後続です。実行比較は変換一般の形式証明ではありません。
+実行前にSSA全体を検証し、検証失敗では出力しません。実行ごとに新しいframeとheapを作り、正常終了時は未解放の所有領域も検査します。SSAのLean証明・個別の最適化passは後続です。実行比較は変換一般の形式証明ではありません。
 
 ### 未到達block
 
@@ -100,6 +100,23 @@ SSA評価は到達可能なSSA区分だけを実行します。そこから未�
 `jump join(a, b)`は、その辺を出る時点のaとbを**両方読んでから**、次のblockの引数へ同時に束縛します。辺の引数は既存の値番号だけで、式・call・slot読取りを埋め込みません。branchは選んだ辺だけを渡ります。then/elseが同じblockを指しても、辺の識別と実引数を区別します。
 
 loopの`jump head(right, left)`を逐次代入すると、入替え前の値を失うことがあります。SSAを非SSAへ戻す場合は一時値を使って並列copyを実現します。SSAの定義とblock引数の保存先にはMIRのTemporaryを割り当てます。複数回書くblock引数をBindingの初期化と偽らず、元の束縛名は対応情報に残します。分岐元に複数の行き先があるときのcopyは、選んだ辺専用の補助blockへ置きます。そこで出力・確保・retain／releaseを追加しません。
+
+### SSA→MIRとNative
+
+[lower.rs](../../src/mir/ssa/lower.rs)はSSAを検証後、値ごとのTemporaryと辺の並列copyへ変換し、生成MIRも通常の検証器で検査します。元MIRの本体を実行用に選び直す処理ではありません。変換前のsnapshotは変更しません。
+
+| 対象 | 変換と観測 |
+| --- | --- |
+| SSA値・block引数 | 値ごとに専用Temporaryを割り当て、元LocalIdとの対応を記録 |
+| 関数引数 | signatureのBindingを保持し、追加の入口blockでSSA Temporaryへcopy。所有操作は増やさない |
+| 実引数のある辺 | 辺ごとの補助blockで全入力を一時保存してから全出力を書き、元の行き先へjump |
+| 元命令・停止位置 | 元InstructionIdとSourceOriginを維持。追加copyは`ssa-edge-copy`／`ssa-parameter-copy`として区別 |
+| 未到達block | 元のblock番号・命令・参照をそのまま復元。実行可能なSSA blockも元block番号の位置へ配置 |
+| Native | `Lowered.program`を既存MIR→LIR→ASM／Objectへ渡す |
+
+引数なしの辺には補助blockを作りません。引数付きの辺はjumpでもbranchでも同じ並列copy規則を使い、同じ行き先のthen／elseも別blockです。局所領域の再利用やcopy削除はせず、stack使用量・命令数が基準経路より増える場合があります。文字列・配列の論理heap予算と所有操作は変わりません。
+
+対応テキストは`Cerune SSA lowering mapping v0.1`、変換名は`ssa-lower-v1`です。SSA値からMIR局所値、SSA blockから元番号を保持したMIR block、辺から補助block・read/write命令、引数から入口copyを辿れます。その先は既存のMIR→LIR注釈とObjectシンボルに接続します。
 
 ## 比較用の表現
 
@@ -169,9 +186,9 @@ SSAの構造検証では、次を必須にします。
 
 変換対応には入力snapshot、出力snapshot、pass名・版・オプション・順序、元FunctionId／BlockId／InstructionId／LocalIdとSSAの値・block・辺を記録します。補助引数は「どの局所値の合流か」、各流入値は「どの辺から来たか」を持ちます。元命令の単一の停止出自と、多対一の由来情報は別に保持します。
 
-`emit-mir --ssa`は元MIRとSSAを表示し、`run-mir --ssa`はSSAを直接実行します。heap予算・既定診断・`runtime-v1`診断は非SSA経路と同じです。指定なしの動作を維持し、他の実行・emit経路、重複指定、値付きの`--ssa false`は拒否します。SSAや最適化を暗黙に有効化しません。
+`emit-mir --ssa`は元MIRとSSAを表示し、`run-mir --ssa`はSSAを直接実行します。heap予算・既定診断・`runtime-v1`診断は非SSA経路と同じです。指定なしの動作を維持し、対応しない実行・emit経路、重複指定、値付きの`--ssa false`は拒否します。SSAや最適化を暗黙に有効化しません。
 
-`observe --ssa`は元MIR・SSA・変換対応を別ファイルに保存します。SSA付きだけmanifestをv2にし、`scalar-ssa-v1`の入力・出力・対応と順序を記録します。最適化pass列は空のままです。現在のASMの入力は非SSA MIRと明記し、SSAを経由した生成物とは扱いません。指定なしのv1は変更しません。形式は[観測bundle](observation-bundle.ja.md)を参照してください。Native連携後はSSAから戻したMIRも追加します。共通pass指定との統合は後続です。
+`emit-asm --ssa`／`emit-obj --ssa`はSSA→MIRを明示的に通ります。`observe --ssa`は元MIR・SSA・変換後MIR・両段階の対応と、基準／SSA経由のASMを別ファイルに保存します。manifest v3の変換列に`scalar-ssa-v1`→`ssa-lower-v1`と入力・出力・対応を記録します。最適化pass列は空のままです。指定なしのv1は変更しません。形式は[観測bundle](observation-bundle.ja.md)を参照してください。共通pass指定との統合は後続です。
 
 実装を次の単位に分けます。
 
@@ -180,7 +197,7 @@ SSAの構造検証では、次を必須にします。
 | 1（実装済み） | 表現・構造検証・決定的なテキスト | 手作りの分岐・loop・並列引数・残存slotを検証。壊れた定義・辺・初期化を拒否 |
 | 2（実装済み） | MIR→SSA・変換対応 | 直列・分岐／短絡・loop、残存slotを扱う。実行用example全件で元snapshot不変、操作・辺・出自・最新定義、未到達記録、決定性を検査 |
 | 3（実装済み） | SSA直接評価・CLI・bundle | 基準例と既存MIR/runtime testsでHIR・MIR・SSA・VMを比較。heap予算・先行出力・停止出自も比較 |
-| 4 | SSA→MIR・Native | 並列copy・辺の補助blockを観測し、Windows/LinuxでASM・Objectの結果を照合 |
+| 4（実装済み） | SSA→MIR・Native | 並列copy・辺の補助blockを観測し、Windows/LinuxでASM・Objectの結果を照合 |
 | 5 | Lean対応と個別の最適化pass | 具体例のMIR→SSA対応を独立モデルで検査。各passの保存条件を別に定義してから実装 |
 
 途中の実装で未対応操作が残る間は明示診断し、元MIRの実行へ黙ってfallbackしません。一般公開するSSA実行では現在の言語機能を扱えることを目標にし、残存slotも比較対象にします。

@@ -80,15 +80,15 @@ During development, replace `cerune` with `cargo run --quiet --`.
 | `run-vm` | VM execution | Run Cerune source (`.ceru`) |
 | `emit-sources` | Source manifest (JSON) | Export loaded file names and contents |
 | `emit-ir` | Cerune IR (`.ceir`) | Inspect types and operations |
-| `observe` | Sources, HIR, MIR, annotated ASM, manifest | Save one compilation (explicit target required); `--ssa` adds SSA and mappings |
+| `observe` | Sources, HIR, MIR, annotated ASM, manifest | Save one compilation (explicit target required); `--ssa` saves SSA, reconstructed MIR, both ASMs, and mappings |
 | `emit-mir` | MIR observation text | Inspect temporaries, control, ownership, and origins; `--ssa` shows original MIR and SSA |
 | `emit-bytecode` | Bytecode text (`.cebc`) | Inspect instructions |
 | `emit-c` | C (`.c`) | GCC, Clang, or another C compiler |
 | `emit-llvm` | LLVM IR (`.ll`) | LLVM / Clang; Windows / Linux x86-64 |
 | `emit-qbe` | QBE IR (`.ssa`) | QBE 1.3; Windows x64 / Linux x86-64 (explicit target) |
 | `emit-wat` | WebAssembly Text (`.wat`) | WebAssembly tools and a host |
-| `emit-asm` | Assembly (`.s`) | Windows / Linux x86-64 |
-| `emit-obj` | ELF / COFF object (`.o` / `.obj`) | External linker; requires `--target` and `-o` |
+| `emit-asm` | Assembly (`.s`) | Windows / Linux x86-64; `--ssa` selects the SSA route |
+| `emit-obj` | ELF / COFF object (`.o` / `.obj`) | External linker; requires `--target` and `-o`, supports `--ssa` |
 
 Text goes to stdout; use `-o` to save it. LLVM / QBE strings and dynamic arrays, and LLVM checked numeric operations require `--target`. WAT uses host functions for output and diagnostics.
 

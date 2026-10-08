@@ -219,6 +219,7 @@ fn run() -> Result<(), String> {
 
             let rest: Vec<String> = args.collect();
 
+            let (rest, ssa) = parse_ssa_option(rest)?;
             let (output, target, annotate_origins) = parse_native_options(&rest, "emit-asm", "s")?;
             let target = match target.as_deref() {
                 None => cerune_lang::codegen::x86_64::Target::X86_64PcWindowsMsvc,
@@ -227,18 +228,10 @@ fn run() -> Result<(), String> {
 
             let source = read_source(&input)?;
 
+            let hir = ir_for(&source, string_heap_limit, array_heap_limit)?;
+            let mir = native_mir_for(&source, &hir, ssa)?;
             let asm = render_compilation_result(
-                if annotate_origins {
-                    cerune_lang::codegen::x86_64::emit_asm_with_origins(
-                        &ir_for(&source, string_heap_limit, array_heap_limit)?,
-                        target,
-                    )
-                } else {
-                    cerune_lang::codegen::x86_64::emit_asm(
-                        &ir_for(&source, string_heap_limit, array_heap_limit)?,
-                        target,
-                    )
-                },
+                cerune_lang::codegen::x86_64::emit_asm_from_mir(&mir, target, annotate_origins),
                 &source,
             )?;
 
@@ -249,18 +242,17 @@ fn run() -> Result<(), String> {
         "emit-obj" => {
             let input = required_path(args.next(), "missing input file")?;
             let rest: Vec<String> = args.collect();
+            let (rest, ssa) = parse_ssa_option(rest)?;
             let (output, target, origins) = parse_native_options(&rest, "emit-obj", "o")?;
             let output = output.ok_or("emit-obj requires -o <output.o>")?;
             let target = target.ok_or("emit-obj requires an explicit --target")?;
             let target = cerune_lang::codegen::x86_64::Target::parse(&target)
                 .ok_or("unsupported native object target")?;
             let source = read_source(&input)?;
+            let hir = ir_for(&source, string_heap_limit, array_heap_limit)?;
+            let mir = native_mir_for(&source, &hir, ssa)?;
             let bytes = render_compilation_result(
-                cerune_lang::codegen::x86_64::emit_object(
-                    &ir_for(&source, string_heap_limit, array_heap_limit)?,
-                    target,
-                    origins,
-                ),
+                cerune_lang::codegen::x86_64::emit_object_from_mir(&mir, target, origins),
                 &source,
             )?;
             fs::write(&output, bytes)
@@ -381,6 +373,27 @@ fn render_compilation_result<T>(
     source: &Compilation,
 ) -> Result<T, String> {
     result.map_err(|diagnostic| source.render(&diagnostic))
+}
+
+fn native_mir_for(
+    source: &Compilation,
+    hir: &cerune_lang::ir::Program,
+    ssa: bool,
+) -> Result<cerune_lang::mir::Program, String> {
+    let mir = render_compilation_result(
+        cerune_lang::mir::lower(hir).map_err(|e| e.diagnostic()),
+        source,
+    )?;
+    if ssa {
+        let ssa = ssa_for(&mir, source)?;
+        Ok(render_compilation_result(
+            cerune_lang::mir::ssa::lower(&ssa).map_err(|e| e.diagnostic()),
+            source,
+        )?
+        .program)
+    } else {
+        Ok(mir)
+    }
 }
 
 fn ssa_for(
@@ -573,8 +586,8 @@ fn print_help() {
            cerune emit-llvm <file> [--target <triple>] [--annotate-origins] [-o <output.ll>]\n\
            cerune emit-wat <file> [-o <output.wat>]\n\
            cerune emit-qbe <file> [--target <triple>] [-o <output.ssa>]\n\
-           cerune emit-asm <file> [--target <triple>] [--annotate-origins] [-o <output.s>]\n\
-           cerune emit-obj <file> --target <triple> [--annotate-origins] -o <output.o>\n\
+           cerune emit-asm <file> [--ssa] [--target <triple>] [--annotate-origins] [-o <output.s>]\n\
+           cerune emit-obj <file> [--ssa] --target <triple> [--annotate-origins] -o <output.o>\n\
            cerune observe <file> [--ssa] --target <triple> -o <new-directory>\n\
            cerune emit-mir <file> [--ssa] [-o <output.txt>]\n\
            cerune emit-bytecode <file> [-o <output.cebc>]\n\
@@ -585,7 +598,7 @@ fn print_help() {
            cerune --version\n\n\
          run / run-ir: direct Cerune IR execution; run-mir: HIR -> MIR execution; run-vm: Bytecode -> VM.\n\
          run / run-ir / run-mir / run-vm / observe / emit-* (except emit-sources): --string-heap-limit <bytes> / --array-heap-limit <bytes>\n\
-         --ssa: explicit scalar SSA construction for emit-mir / run-mir / observe; no optimization.\n\
+         --ssa: explicit scalar SSA construction for emit-mir / run-mir / emit-asm / emit-obj / observe; no optimization.\n\
          Default: 67108864 bytes per heap; compile-time string budget is independent.\n",
         env!("CARGO_PKG_VERSION")
     );

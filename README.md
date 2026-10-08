@@ -80,15 +80,15 @@ cerune emit-c examples/floating_point.ceru -o floating_point.c
 | `run-vm` | VM実行 | Ceruneソース（`.ceru`）を実行 |
 | `emit-sources` | ソース一覧（JSON） | 読み込んだファイル名・本文を出力 |
 | `emit-ir` | Cerune IR（`.ceir`） | 型・演算を確認 |
-| `observe` | sources・HIR・MIR・注釈付きASMとmanifest | 同一コンパイルを保存（target必須）。`--ssa`でSSAと対応を追加 |
+| `observe` | sources・HIR・MIR・注釈付きASMとmanifest | 同一コンパイルを保存（target必須）。`--ssa`でSSA・変換後MIR・両ASM・対応を保存 |
 | `emit-mir` | MIRの観測テキスト | 一時値・分岐・所有操作・出自。`--ssa`で元MIRとSSAを表示 |
 | `emit-bytecode` | bytecodeテキスト（`.cebc`） | 命令列を確認 |
 | `emit-c` | C（`.c`） | GCC / Clangなど |
 | `emit-llvm` | LLVM IR（`.ll`） | LLVM / Clang、Windows / Linux x86-64 |
 | `emit-qbe` | QBE IR（`.ssa`） | QBE 1.3、Windows x64 / Linux x86-64（明示ターゲット） |
 | `emit-wat` | WebAssembly Text（`.wat`） | WebAssembly用ツールとホスト |
-| `emit-asm` | アセンブリ（`.s`） | Windows / Linux x86-64 |
-| `emit-obj` | ELF / COFFオブジェクト（`.o` / `.obj`） | 外部リンカ。`--target`・`-o`必須 |
+| `emit-asm` | アセンブリ（`.s`） | Windows / Linux x86-64。`--ssa`でSSA経由を選択 |
+| `emit-obj` | ELF / COFFオブジェクト（`.o` / `.obj`） | 外部リンカ。`--target`・`-o`必須、`--ssa`対応 |
 
 テキストは標準出力へ、`-o`でファイルへ保存します。LLVM・QBEの文字列・動的配列とLLVMの検査付き数値演算には`--target`が必要です。WATは出力・診断用のホスト関数を使います。
 

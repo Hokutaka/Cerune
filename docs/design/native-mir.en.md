@@ -15,6 +15,12 @@ Windows/Linux ASM and self-encoded COFF/ELF now use completed HIR→non-SSA MIR�
 
 Checks in LIR still expand into multiple machine instructions in the emitter. A LIR instruction index is not a final machine-instruction index. Existing target rules are retained; the host OS does not choose a target.
 
+## Explicit SSA route
+
+`emit-asm --ssa` / `emit-obj --ssa` use HIR→original MIR→SSA→MIR with copies→LIR. Defaults retain the non-optimized baseline. Pass the `program` returned by [SSA lowering](mir-ssa.en.md), `mir::ssa::lower(&ssa)`, to existing MIR-input APIs.
+
+`observe --ssa` saves original MIR, SSA, reconstructed MIR, both mappings, and baseline/SSA-derived ASM separately. Follow added temporaries, edge copies, and parameter preparation through LIR/Object. No optimization or implicit ownership copies are introduced.
+
 ## Semantics and storage
 
 All MIR blocks are laid out deterministically, preserving jump/branch destinations and unreachable blocks. The explicit main call is taken from MIR; Native does not add a call based on a function name.
@@ -59,4 +65,4 @@ A MIR instruction can produce several LIR instructions. Zero-width operations ex
 
 Before/after Native tests on Windows/Linux cover existing examples, numeric boundaries, failure codes/NodeId/SourceId/Span/prior output, string bytes, and ABI behavior. [Dynamic-array tests](../../tests/dynamic_arrays.rs) compare HIR, MIR, VM, C, LLVM, QBE, WAT, ASM, and self-encoded objects. [Native MIR tests](../../tests/native_mir.rs) also check changed MIR execution, instruction provenance, and invalid-MIR rejection.
 
-ASM fixtures are updated for the new layout. Known-output/failure execution comparisons and generated-text snapshots are separate checks. Formal proof, SSA, optimization, and observation bundles are outside this migration. The subsequent [observation bundle](observation-bundle.en.md) saves HIR, MIR, and annotated ASM from one compilation.
+ASM fixtures are updated for the new layout. Known-output/failure execution comparisons and generated-text snapshots are separate checks. Formal proof, SSA, optimization, and observation bundles are outside this migration. Subsequent [observation bundles](observation-bundle.en.md) and SSA integration are implemented, saving baseline/SSA-derived representations separately from one compilation. [SSA Native tests](../../tests/ssa_native.rs) compare parallel transfers, arguments, ownership, and failure origins against ASM/self-encoded Object execution.

@@ -35,18 +35,28 @@ pub(super) fn save(
             "program.ssa-map.txt",
             mir::ssa::mapping::emit(ssa).map_err(|e| source.render(&e.diagnostic()))?,
         ));
+        let lowered = mir::ssa::lower(ssa).map_err(|e| source.render(&e.diagnostic()))?;
+        let assembly = x86_64::emit_asm_from_mir(&lowered.program, target, true)
+            .map_err(|e| source.render(&e))?;
+        files.push((
+            "program.ssa-lowered.mir.txt",
+            mir::text::emit(&lowered.program),
+        ));
+        files.push(("program.ssa-lowered-map.txt", lowered.mapping));
+        files.push(("program.ssa.origins.s", assembly));
     }
-    // 指定なしのv1は変更せず、SSA付きだけをv2とします。
+    // 指定なしのv1は変更せず、SSA→MIRとNativeを含む索引はv3とします。
     let (schema, transformations, artifacts) = if use_ssa {
         (
-            "cerune-observation-v2",
+            "cerune-observation-v3",
             concat!(
                 "  \"transformations\": [\n",
-                "    {\"order\": 0, \"kind\": \"representation\", \"pass\": \"scalar-ssa-v1\", \"options\": {}, \"input\": \"mir\", \"output\": \"ssa\", \"mapping\": \"ssa_mapping\"}\n",
+                "    {\"order\": 0, \"kind\": \"representation\", \"pass\": \"scalar-ssa-v1\", \"options\": {}, \"input\": \"mir\", \"output\": \"ssa\", \"mapping\": \"ssa_mapping\"},\n",
+                "    {\"order\": 1, \"kind\": \"representation\", \"pass\": \"ssa-lower-v1\", \"options\": {}, \"input\": \"ssa\", \"output\": \"ssa_lowered_mir\", \"mapping\": \"ssa_lowering_mapping\"}\n",
                 "  ],\n",
-                "  \"artifact_inputs\": {\"hir\": \"sources\", \"mir\": \"hir\", \"ssa\": \"mir\", \"assembly\": \"mir\"},\n"
+                "  \"artifact_inputs\": {\"hir\": \"sources\", \"mir\": \"hir\", \"ssa\": \"mir\", \"assembly\": \"mir\", \"ssa_lowered_mir\": \"ssa\", \"ssa_assembly\": \"ssa_lowered_mir\"},\n"
             ),
-            "    \"ssa\": \"program.ssa.txt\",\n    \"ssa_mapping\": \"program.ssa-map.txt\",\n",
+            "    \"ssa\": \"program.ssa.txt\",\n    \"ssa_mapping\": \"program.ssa-map.txt\",\n    \"ssa_lowered_mir\": \"program.ssa-lowered.mir.txt\",\n    \"ssa_lowering_mapping\": \"program.ssa-lowered-map.txt\",\n    \"ssa_assembly\": \"program.ssa.origins.s\",\n",
         )
     } else {
         ("cerune-observation-v1", "", "")
