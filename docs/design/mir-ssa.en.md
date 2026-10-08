@@ -4,7 +4,7 @@
 
 ## Status and decisions
 
-**The SSA representation, structural validator, and observation text are implemented. MIR→SSA construction, SSA execution, and CLI support remain unimplemented.** This document distinguishes the implemented scope from subsequent plans. Non-SSA MIR and its independent interpreter remain the baseline. The new [ssa_values.ceru](../../examples/ir_stages/ssa_values.ceru) runs on existing routes; it is not evidence of implemented SSA execution.
+**The SSA representation, structural validator, observation text, and automatic MIR→SSA construction are implemented. SSA execution and public CLI support remain unimplemented.** This document distinguishes the implemented scope from subsequent plans. Non-SSA MIR and its independent interpreter remain the baseline. The new [ssa_values.ceru](../../examples/ir_stages/ssa_values.ceru) runs on existing routes; it is not evidence of implemented SSA execution.
 
 SSA gives each value a single definition. Source `mut` remains valid: each reassignment gets a different value ID. At a merge, the selected edge supplies values to block arguments. Select construction explicitly and preserve the input MIR.
 
@@ -47,7 +47,7 @@ Entry points and status follow. Unimplemented Rust API names will be finalized d
 
 | Proposed entry point | Responsibility |
 | --- | --- |
-| `mir::ssa::construct(&mir)` | Return an independent SSA snapshot and mapping from validated MIR |
+| `mir::ssa::construct(&mir)` (implemented) | Validate input MIR; return an independent original-MIR snapshot, SSA, and mappings. Record `scalar-ssa-v1` with no options |
 | `mir::ssa::validate(&ssa)` (implemented) | Check definitions, uses, types, edges, residual slots, and origins |
 | `mir::ssa::text::emit(&ssa)` (implemented) | Validate, then return `Result<String, mir::Error>` with `Cerune scalar SSA v0.1` observation text, not a loading format |
 | SSA evaluation | Directly evaluate SSA blocks, values, and slots under existing output/failure contracts |
@@ -59,13 +59,13 @@ Structural validation also validates original MIR and checks reachable-block cov
 
 These checks establish structural and mapping consistency. They do not guarantee that operation contents or edge selection preserve the original semantics; execution comparisons and proofs follow automatic construction. Initial mappings preserve one original block and its instruction order. Recording deleted or combined instructions for optimization is unimplemented.
 
-Subsequent automatic construction will proceed in the following order.
+Implemented automatic construction proceeds in the following order.
 
 1. Validate MIR and compute CFG reachability from each function entry. Follow both edges even for constant conditions; do not fold constants.
 2. Classify promoted locals and residual slots. Collect definitions, reads, and values required along edges.
 3. Compute dominance (every entry-to-use path passes through the definition) and dominance frontiers. Place arguments in the iterated dominance frontier of each local's definitions where that local is live on entry. Include backedges and iterate to a fixed point.
 4. Rename definitions along the dominator tree and supply arguments on each edge. Process instructions in their original order. Fix argument/local/block traversal order; numbering must not depend on hash iteration.
-5. Validate the result and mapping completeness, then compare execution with baseline MIR.
+5. Structurally validate the result. Tests independently compare original MIR, operations, edges, origins, and the latest definition at each read. Direct SSA execution comparisons are the next stage.
 
 Avoiding arguments for locals not live on entry prevents invented undefined values; it does not delete source computations or copies. Initially, do not simplify created arguments even when all incoming values are identical.
 
@@ -106,7 +106,14 @@ Loop backedge:
     jump head(v_right, v_left, v_next_index)
 ```
 
-The [hand-authored SSA Rust API example](../../experiments/ssa/README.en.md) validates and prints with `cargo run --quiet --example ssa_model`. It covers branches, a loop with parallel arguments, and array/string slots. It does not demonstrate automatic construction from `.ceru` or SSA execution.
+The [Rust API example](../../experiments/ssa/README.en.md) prints hand-authored SSA without arguments, or automatically constructs SSA from actual MIR when given a source file. Both modes display separate `original-mir` and `ssa` sections without executing the program.
+
+```sh
+cargo run --quiet --example ssa_model -- examples/ir_stages/ssa_values.ceru
+cargo run --quiet --example ssa_model -- examples/ir_stages/owned_values.ceru
+```
+
+For the current `ssa_values`, both if edges supply `bb3(v13)`; the loop condition `bb4(v16, v17)` receives total and index, and update block `bb7(v25)` receives the iteration's total. Follow `mir-iN` and `original-local` back to original MIR. These IDs describe this source and construction version, not a promise of stable IDs across future versions.
 
 These commands are available for Cerune source today.
 
@@ -149,7 +156,7 @@ Implement in these units.
 | Order | Work | Completion criteria |
 | --- | --- | --- |
 | 1 (implemented) | Representation, structural validator, deterministic text | Validate hand-built branches, loops, parallel arguments, and residual slots; reject broken definitions/edges/initialization |
-| 2 | MIR→SSA and mappings | Add straight-line, branch/short-circuit, then loop conversion; preserve input snapshots, cover every operation, retain unreachable records, convert every example |
+| 2 (implemented) | MIR→SSA and mappings | Straight-line, branch/short-circuit, loop, and residual-slot conversion. Check baseline preservation, operations/edges/origins/latest definitions, unreachable records, and determinism for all runnable examples |
 | 3 | Direct SSA evaluation, CLI, bundle | Compare HIR/MIR/SSA/VM using baseline examples and existing MIR/runtime tests, including heap budgets, prior output, and failure origins |
 | 4 | SSA→MIR and Native | Observe parallel copies/helper edge blocks; compare ASM/Object execution on Windows/Linux |
 | 5 | Lean correspondence and individual optimization passes | Check concrete MIR→SSA fixtures with an independent model; specify each optimization pass's preservation conditions before implementing it |

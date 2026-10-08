@@ -4,7 +4,7 @@
 
 ## Status and direction
 
-The inspected baseline is `f39f55e`, merging Native dynamic arrays. **Common MIR types, validation, HIR lowering, and `emit-mir` are implemented. The [MIR interpreter](mir-executor.en.md) and `run-mir` are also implemented. [Native lowering from MIR](native-mir.en.md) is also implemented. SSA representation, structural validation, and observation text are implemented; automatic SSA construction, SSA execution, and optimization passes remain unimplemented.**
+The inspected baseline is `f39f55e`, merging Native dynamic arrays. **Common MIR types, validation, HIR lowering, and `emit-mir` are implemented. The [MIR interpreter](mir-executor.en.md) and `run-mir` are also implemented. [Native lowering from MIR](native-mir.en.md) is also implemented. SSA representation, structural validation, observation text, and automatic construction are implemented; SSA execution and optimization passes remain unimplemented.**
 
 | Stage | Current implementation | Direction |
 | --- | --- | --- |
@@ -16,7 +16,7 @@ The inspected baseline is `f39f55e`, merging Native dynamic arrays. **Common MIR
 
 `run` / `run-ir` continue to execute completed Cerune IR directly; `run-vm` executes bytecode. This classification does not rename the `ir` module, `emit-ir`, or `.ceir`. “HIR” names the existing IR's role.
 
-The unimplemented SSA work here means SSA construction for common MIR, distinct from SSA representations in external LLVM/QBE output.
+SSA here means scalar SSA construction for common MIR, distinct from SSA representations in external LLVM/QBE output.
 
 ## Findings from the code
 
@@ -167,6 +167,6 @@ Implement and compare in these units, aiming for current feature parity rather t
 | 2 (implemented) | [Independent MIR interpreter](mir-executor.en.md), `run-mir` | Executes neither HIR nor VM internally; compares current features, failures, origins, and lifetimes. Dynamic arrays are compared across nine routes on Windows/Linux |
 | 3 (implemented) | [Native lowering from MIR](native-mir.en.md) | Match existing ASM/COFF/ELF known outputs, failures, origins, and ABI behavior on Windows/Linux |
 | 4 (partially implemented) | Observation bundles, Lean correspondence, other backend migration as needed | sources/HIR/MIR/ASM bundle implemented; u8 straight-line/if/short-circuit/while/for/break/continue/nesting/update-origin proofs and completion within explicit bounds also added; general loops/heap follow. Extend artifacts and proof coverage separately |
-| 5 (partly implemented) | [SSA construction](mir-ssa.en.md) and individual optimization passes | Scalar SSA with residual slots, structural validation, and observation text implemented. MIR→SSA construction is next; execution and optimization follow |
+| 5 (partly implemented) | [SSA construction](mir-ssa.en.md) and individual optimization passes | Scalar SSA with residual slots, structural validation, observation text, and MIR→SSA construction implemented. Direct SSA execution is next; optimization follows |
 
-The first MIR PR should not combine SSA, optimization, every backend migration, and Image loading. MIR execution covers types, functions, modules, generics, arrays, strings, ownership, and runtime diagnostics. Native lowering from MIR is now implemented. The initial observation bundle is also implemented. Lean HIR→MIR verification now covers u8 straight-line, branch, short-circuit, and while fixtures with completion within explicit bounds; branches, break/continue, and nesting are also checked. For initialization, body completion/continue passing through updates, break skipping updates, and update-overflow origins are now checked. The [SSA design](mir-ssa.en.md) now uses this unoptimized MIR baseline. The dedicated SSA representation, structural validator, and deterministic observation text are implemented. MIR→SSA construction and SSA execution are unimplemented. Next add automatic construction preserving original-MIR mappings.
+The first MIR PR should not combine SSA, optimization, every backend migration, and Image loading. MIR execution covers types, functions, modules, generics, arrays, strings, ownership, and runtime diagnostics. Native lowering from MIR is now implemented. The initial observation bundle is also implemented. Lean HIR→MIR verification now covers u8 straight-line, branch, short-circuit, and while fixtures with completion within explicit bounds; branches, break/continue, and nesting are also checked. For initialization, body completion/continue passing through updates, break skipping updates, and update-overflow origins are now checked. The [SSA design](mir-ssa.en.md) now uses this unoptimized MIR baseline. The dedicated SSA representation, structural validator, and deterministic observation text are implemented. Automatic construction preserving original MIR is implemented too. Direct SSA execution is unimplemented. Next evaluate SSA directly and compare output, failure, and ownership semantics with baseline routes.

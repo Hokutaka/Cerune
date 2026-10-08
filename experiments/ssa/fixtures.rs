@@ -124,6 +124,7 @@ fn fixture(locals: Vec<mir::Local>, mappings: &[usize], bodies: Vec<Body>) -> Pr
         });
     }
     Program {
+        construction: None,
         original,
         functions: vec![],
         main: Function {

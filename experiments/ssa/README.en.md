@@ -1,15 +1,16 @@
-# SSA representation API example
+# SSA construction and representation API example
 
 [日本語](README.md) · [Design](../../docs/design/mir-ssa.en.md)
 
-This Rust API example validates hand-authored SSA and displays it alongside original MIR. Automatic SSA construction from Cerune source and SSA execution are not implemented.
+This Rust API example builds non-optimized MIR from Cerune source, retains that snapshot, and constructs SSA. It does not execute the program. Direct SSA execution and public CLI support follow later.
 
 ```sh
-cargo run --quiet --example ssa_model
-cargo test --test mir_ssa
+cargo run --quiet --example ssa_model -- examples/ir_stages/ssa_values.ceru
+cargo run --quiet --example ssa_model -- examples/ir_stages/owned_values.ceru
+cargo test --test ssa_construction --test mir_ssa
 ```
 
-It prints the following fixtures.
+Without arguments, `cargo run --quiet --example ssa_model` validates and prints these hand-authored fixtures.
 
 | Fixture | What to inspect |
 | --- | --- |
@@ -17,8 +18,8 @@ It prints the following fixtures.
 | parallel-loop | Swapped values on the backedge; retained unreachable MIR |
 | residual-slots | Index checks before array stores; string slots; Japanese, NUL, CR/LF, and non-normalized text |
 
-`parallel-loop` is an infinite loop used for structural validation and is not executed. Printing it does not establish correct execution of parallel transfers. The runnable Cerune baseline remains [ssa_values.ceru](../../examples/ir_stages/ssa_values.ceru).
+`parallel-loop` is an infinite loop used for structural validation and is not executed. The runnable Cerune baseline is [ssa_values.ceru](../../examples/ir_stages/ssa_values.ceru); IR/MIR/VM print `14 / 16 / 20 / 10`.
 
-`vN` identifies an SSA value; `slotN` identifies residual original-MIR storage. Follow `original-local`, `original-block`, and `mir-iN` to inspect the original definitions. Observation text separates `original-mir` and `ssa`; unreachable records refer to original MIR. Validation does not mutate snapshots, and printing rejects invalid inputs too.
+Output separates `original-mir` and `ssa`. The former contains unchanged original MIR; in the latter, `vN` identifies an SSA value and `slotN` identifies residual original storage. Follow `original-local`, `original-block`, and `mir-iN` back to original definitions. Unreachable blocks remain as references to original MIR records. `construction=scalar-ssa-v1` marks automatic construction; `manual` marks hand-authored input. Neither performs optimization.
 
-Checks cover definitions, dominance, edge types, slot initialization, preceding index checks, and origin mappings. They do not prove equivalence of operation contents/edge selection or heap lifetime safety.
+Structural validation checks definitions, dominance, edge types, slot initialization, preceding index checks, and origins. Construction tests check original snapshots, operations, edges, origins, and determinism across all runnable examples. A separate data-flow check verifies that reads and edge arguments use the latest definitions, rejecting well-typed stale substitutions too. These checks are not formal proofs of SSA execution or heap lifetimes.

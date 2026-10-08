@@ -1,4 +1,6 @@
-//! scalar SSAの表現と構造検証です。自動変換・実行・load形式はまだありません。
+//! 非最適化MIRからのscalar SSA変換・構造検証です。実行・load形式はまだありません。
+mod construct;
+pub use construct::construct;
 pub mod text;
 mod validate;
 use super::{self as mir, BlockId, InstructionId, LocalId, Origin};
@@ -21,10 +23,16 @@ pub struct Value {
 }
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Program {
+    /// 自動変換の種類・版。手作りのAPI入力ではNoneです。
+    pub construction: Option<Construction>,
     /// 型・signature・出自と未到達記録の独立したsnapshotです。実行へのfallbackではありません。
     pub original: mir::Program,
     pub functions: Vec<Function>,
     pub main: Function,
+}
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum Construction {
+    ScalarSsaV1,
 }
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Function {
