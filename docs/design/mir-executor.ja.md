@@ -13,7 +13,7 @@
 | `run-vm` | bytecode | VMの命令実行 |
 | `emit-mir` | 実行しない | MIRの操作・辺・出自を観測 |
 
-MIRからHIRやbytecodeを再構築して実行することはありません。MIR実行の追加は、新しいbuild／release成果物の追加でもありません。[Nativeも同じMIRを入力に使います](native-mir.ja.md)。SSA、最適化、外部MIRのloaderは未実装です。
+MIRからHIRやbytecodeを再構築して実行することはありません。MIR実行の追加は、新しいbuild／release成果物の追加でもありません。[Nativeも同じMIRを入力に使います](native-mir.ja.md)。[SSA変換と直接実行](mir-ssa.ja.md)は別のRust APIで利用できます。最適化と外部MIRのloaderは未実装です。
 
 ## 実装と共有範囲
 
@@ -22,7 +22,8 @@ MIRからHIRやbytecodeを再構築して実行することはありません。
 | 実装 | 責務 |
 | --- | --- |
 | [mir_executor.rs](../../src/mir_executor.rs) | 局所値のフレーム、命令実行、branch／jump／return、関数呼出し、MIR上の停止位置 |
-| [runtime/value.rs](../../src/runtime/value.rs) | HIR・MIRで共有する値表現、数値・比較・ビット演算、表示。制御フローは含めない |
+| [mir_executor/semantics.rs](../../src/mir_executor/semantics.rs) | MIR・SSAで共有する個々の命令・演算・所有操作。CFGと値参照は各実行器が担当 |
+| [runtime/value.rs](../../src/runtime/value.rs) | HIR・MIR・SSAで共有する値表現、数値・比較・ビット演算、表示。制御フローは含めない |
 | [runtime/numeric.rs](../../src/runtime/numeric.rs) | 数値変換・丸めの意味 |
 | [runtime/string_heap.rs](../../src/runtime/string_heap.rs)、[array_heap.rs](../../src/runtime/array_heap.rs) | 論理的な所有数、確保予算、領域の回収 |
 | [mir/validate.rs](../../src/mir/validate.rs) | 実行前の構造・型・初期化・添字検査の先行を検証 |

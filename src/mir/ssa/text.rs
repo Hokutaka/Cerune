@@ -21,7 +21,7 @@ fn edge(e: &Edge) -> String {
 pub fn emit(p: &Program) -> Result<String, mir::Error> {
     validate(p)?;
     let mut out = String::from(
-        "; Cerune scalar SSA v0.1\n; residual slots; parallel edge arguments; no optimization\n; observation only: no SSA execution or loader\n",
+        "; Cerune scalar SSA v0.1\n; residual slots; parallel edge arguments; no optimization\n; observation only: printing does not execute; no loader\n",
     );
     writeln!(
         out,
