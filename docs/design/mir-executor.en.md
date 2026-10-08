@@ -10,10 +10,11 @@
 | --- | --- | --- |
 | `run` / `run-ir` | Completed Cerune IR (HIR) | Default direct execution |
 | `run-mir` | Non-SSA MIR | Independent route for comparing HIR→MIR semantics |
+| `run-mir --ssa` | Scalar SSA with residual slots | Direct execution after explicit SSA construction |
 | `run-vm` | Bytecode | VM instruction execution |
 | `emit-mir` | None | Observe MIR operations, edges, and origins |
 
-MIR execution does not reconstruct HIR or bytecode for execution. It does not introduce another build/release artifact. [Native consumes the same MIR](native-mir.en.md). [SSA construction and direct execution](mir-ssa.en.md) are available through separate Rust APIs. Optimization and external MIR loading remain unimplemented.
+MIR execution does not reconstruct HIR or bytecode for execution. It does not introduce another build/release artifact. [Native consumes the same MIR](native-mir.en.md). [SSA construction and direct execution](mir-ssa.en.md) are available through Rust APIs and explicit `--ssa` selection. Optimization and external MIR loading remain unimplemented.
 
 ## Implementation and sharing
 

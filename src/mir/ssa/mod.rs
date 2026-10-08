@@ -1,6 +1,7 @@
 //! 非最適化MIRからのscalar SSA変換・構造検証です。直接実行はssa_executor、load形式は未実装です。
 mod construct;
 pub use construct::construct;
+pub mod mapping;
 pub mod text;
 mod validate;
 use super::{self as mir, BlockId, InstructionId, LocalId, Origin};

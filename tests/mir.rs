@@ -442,7 +442,7 @@ fn cli_emits_mir_with_budgets_and_rejects_unknown_pass_flags() {
     let out = std::process::Command::new(bin)
         .arg("emit-mir")
         .arg(&file)
-        .arg("--ssa")
+        .arg("--mir-passes")
         .output()
         .unwrap();
     assert!(!out.status.success());

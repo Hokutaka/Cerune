@@ -50,15 +50,15 @@ fn run() -> Result<(), String> {
         // 一回の共通frontendから生成した各段階をまとめて保存します。
         "observe" => {
             let input = required_path(args.next(), "missing input file")?;
-            let (output, target, _) =
-                parse_native_options(&args.collect::<Vec<_>>(), "observe", "observation/")?;
+            let (rest, ssa) = parse_ssa_option(args.collect())?;
+            let (output, target, _) = parse_native_options(&rest, "observe", "observation/")?;
             let output = output.ok_or("observe requires -o <new-directory>")?;
             let target = target.ok_or("observe requires an explicit --target")?;
             let target = cerune_lang::codegen::x86_64::Target::parse(&target)
                 .ok_or("unsupported observation target; expected x86_64-unknown-linux-gnu or x86_64-pc-windows-msvc")?;
             let source = read_source(&input)?;
             let hir = ir_for(&source, string_heap_limit, array_heap_limit)?;
-            observation_bundle::save(&source, &hir, target, &output)
+            observation_bundle::save(&source, &hir, target, &output, ssa)
         }
 
         // Cerune IR 生成
@@ -83,20 +83,28 @@ fn run() -> Result<(), String> {
             write_or_print(output, ir)
         }
 
-        // 型・制御フローを検証した、最適化なしのMIRを観測します。
+        // 基準の非SSA MIR、または明示的に変換したSSAと元MIRを観測します。
         "emit-mir" => {
             let input = required_path(args.next(), "missing input file")?;
-            let output = parse_output_option(
-                &args.collect::<Vec<_>>(),
-                "cerune emit-mir <file> [-o <output.txt>]",
-            )?;
+            let (rest, ssa) = parse_ssa_option(args.collect())?;
+            let output =
+                parse_output_option(&rest, "cerune emit-mir <file> [--ssa] [-o <output.txt>]")?;
             let source = read_source(&input)?;
             let hir = ir_for(&source, string_heap_limit, array_heap_limit)?;
             let mir = render_compilation_result(
                 cerune_lang::mir::lower(&hir).map_err(|e| e.diagnostic()),
                 &source,
             )?;
-            write_or_print(output, cerune_lang::mir::text::emit(&mir))
+            let text = if ssa {
+                let ssa = ssa_for(&mir, &source)?;
+                render_compilation_result(
+                    cerune_lang::mir::ssa::text::emit(&ssa).map_err(|e| e.diagnostic()),
+                    &source,
+                )?
+            } else {
+                cerune_lang::mir::text::emit(&mir)
+            };
+            write_or_print(output, text)
         }
 
         // C コード生成
@@ -287,6 +295,11 @@ fn run() -> Result<(), String> {
         "run" | "run-ir" | "run-vm" | "run-mir" => {
             let input = required_path(args.next(), "missing input file")?;
             let rest: Vec<_> = args.collect();
+            let (rest, ssa) = if command == "run-mir" {
+                parse_ssa_option(rest)?
+            } else {
+                (rest, false)
+            };
             let runtime_format = match rest.as_slice() {
                 [] => false,
                 [flag, format] if flag == "--diagnostic-format" && format == "runtime-v1" => true,
@@ -305,13 +318,24 @@ fn run() -> Result<(), String> {
                     cerune_lang::mir::lower(&ir).map_err(|e| e.diagnostic()),
                     &source,
                 )?;
-                cerune_lang::mir_executor::run(&mir).map_err(|error| {
-                    print!("{}", error.output());
-                    if runtime_format && let Some(failure) = error.runtime_failure() {
-                        return failure.record();
-                    }
-                    source.render(&error.diagnostic())
-                })?
+                if ssa {
+                    let ssa = ssa_for(&mir, &source)?;
+                    cerune_lang::ssa_executor::run(&ssa).map_err(|error| {
+                        print!("{}", error.output());
+                        if runtime_format && let Some(failure) = error.runtime_failure() {
+                            return failure.record();
+                        }
+                        source.render(&error.diagnostic())
+                    })?
+                } else {
+                    cerune_lang::mir_executor::run(&mir).map_err(|error| {
+                        print!("{}", error.output());
+                        if runtime_format && let Some(failure) = error.runtime_failure() {
+                            return failure.record();
+                        }
+                        source.render(&error.diagnostic())
+                    })?
+                }
             } else if command != "run-vm" {
                 cerune_lang::ir_executor::run(&ir).map_err(|error| {
                     print!("{}", error.output());
@@ -357,6 +381,41 @@ fn render_compilation_result<T>(
     source: &Compilation,
 ) -> Result<T, String> {
     result.map_err(|diagnostic| source.render(&diagnostic))
+}
+
+fn ssa_for(
+    mir: &cerune_lang::mir::Program,
+    source: &Compilation,
+) -> Result<cerune_lang::mir::ssa::Program, String> {
+    render_compilation_result(
+        cerune_lang::mir::ssa::construct(mir).map_err(|e| e.diagnostic()),
+        source,
+    )
+}
+
+// --ssaを受け付ける経路だけが使います。ほかのオプションの値は解釈しません。
+fn parse_ssa_option(args: Vec<String>) -> Result<(Vec<String>, bool), String> {
+    let mut rest = Vec::new();
+    let mut ssa = false;
+    let mut args = args.into_iter();
+    while let Some(arg) = args.next() {
+        if arg == "--ssa" {
+            if ssa {
+                return Err("duplicate --ssa".into());
+            }
+            ssa = true;
+        } else {
+            let takes_value = matches!(
+                arg.as_str(),
+                "-o" | "--output" | "--target" | "--diagnostic-format"
+            );
+            rest.push(arg);
+            if takes_value && let Some(value) = args.next() {
+                rest.push(value);
+            }
+        }
+    }
+    Ok((rest, ssa))
 }
 
 fn ir_for(
@@ -477,7 +536,8 @@ fn parse_native_options(
             }
             _ => {
                 return Err(if route == "observe" {
-                    "usage: cerune observe <file> --target <triple> -o <new-directory>".to_owned()
+                    "usage: cerune observe <file> [--ssa] --target <triple> -o <new-directory>"
+                        .to_owned()
                 } else {
                     format!(
                         "usage: cerune {route} <file> [--target <triple>] [-o <output.{extension}>]"
@@ -515,16 +575,17 @@ fn print_help() {
            cerune emit-qbe <file> [--target <triple>] [-o <output.ssa>]\n\
            cerune emit-asm <file> [--target <triple>] [--annotate-origins] [-o <output.s>]\n\
            cerune emit-obj <file> --target <triple> [--annotate-origins] -o <output.o>\n\
-           cerune observe <file> --target <triple> -o <new-directory>\n\
-           cerune emit-mir <file> [-o <output.txt>]\n\
+           cerune observe <file> [--ssa] --target <triple> -o <new-directory>\n\
+           cerune emit-mir <file> [--ssa] [-o <output.txt>]\n\
            cerune emit-bytecode <file> [-o <output.cebc>]\n\
            cerune run <file> [--diagnostic-format runtime-v1]\n\
            cerune run-ir <file> [--diagnostic-format runtime-v1]\n\
-           cerune run-mir <file> [--diagnostic-format runtime-v1]\n\
+           cerune run-mir <file> [--ssa] [--diagnostic-format runtime-v1]\n\
            cerune run-vm <file> [--diagnostic-format runtime-v1]\n\
            cerune --version\n\n\
          run / run-ir: direct Cerune IR execution; run-mir: HIR -> MIR execution; run-vm: Bytecode -> VM.\n\
          run / run-ir / run-mir / run-vm / observe / emit-* (except emit-sources): --string-heap-limit <bytes> / --array-heap-limit <bytes>\n\
+         --ssa: explicit scalar SSA construction for emit-mir / run-mir / observe; no optimization.\n\
          Default: 67108864 bytes per heap; compile-time string budget is independent.\n",
         env!("CARGO_PKG_VERSION")
     );

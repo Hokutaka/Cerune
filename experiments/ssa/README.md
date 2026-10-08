@@ -2,7 +2,7 @@
 
 [English](README.en.md) · [設計](../../docs/design/mir-ssa.ja.md)
 
-Ceruneソースから非最適化MIRを作り、そのsnapshotを残してSSAへ変換するRust API例です。通常は観測テキストを表示し、`--run source.ceru`を明示するとSSAを直接実行します。公開CLI・bundle連携は後続です。
+Ceruneソースから非最適化MIRを作り、そのsnapshotを残してSSAへ変換するRust API例です。通常は観測テキストを表示し、`--run source.ceru`を明示するとSSAを直接実行します。公開CLIの`run-mir --ssa`・`emit-mir --ssa`・`observe --ssa`でも利用できます。
 
 ```sh
 cargo run --quiet --example ssa_model -- examples/ir_stages/ssa_values.ceru

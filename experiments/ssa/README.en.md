@@ -2,7 +2,7 @@
 
 [日本語](README.md) · [Design](../../docs/design/mir-ssa.en.md)
 
-This Rust API example builds non-optimized MIR from Cerune source, retains that snapshot, and constructs SSA. By default it prints observation text; explicit `--run source.ceru` directly executes SSA. Public CLI and bundle integration follow later.
+This Rust API example builds non-optimized MIR from Cerune source, retains that snapshot, and constructs SSA. By default it prints observation text; explicit `--run source.ceru` directly executes SSA. Public `run-mir --ssa`, `emit-mir --ssa`, and `observe --ssa` commands are also available.
 
 ```sh
 cargo run --quiet --example ssa_model -- examples/ir_stages/ssa_values.ceru

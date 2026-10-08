@@ -10,10 +10,11 @@
 | --- | --- | --- |
 | `run`／`run-ir` | 完成済みCerune IR（HIR） | 既定の直接実行 |
 | `run-mir` | 非SSAのMIR | HIR→MIRの意味保存を比較する独立経路 |
+| `run-mir --ssa` | scalar SSAと残存slot | 明示的なSSA変換後の直接実行 |
 | `run-vm` | bytecode | VMの命令実行 |
 | `emit-mir` | 実行しない | MIRの操作・辺・出自を観測 |
 
-MIRからHIRやbytecodeを再構築して実行することはありません。MIR実行の追加は、新しいbuild／release成果物の追加でもありません。[Nativeも同じMIRを入力に使います](native-mir.ja.md)。[SSA変換と直接実行](mir-ssa.ja.md)は別のRust APIで利用できます。最適化と外部MIRのloaderは未実装です。
+MIRからHIRやbytecodeを再構築して実行することはありません。MIR実行の追加は、新しいbuild／release成果物の追加でもありません。[Nativeも同じMIRを入力に使います](native-mir.ja.md)。[SSA変換と直接実行](mir-ssa.ja.md)はRust APIと明示的な`--ssa`で利用できます。最適化と外部MIRのloaderは未実装です。
 
 ## 実装と共有範囲
 

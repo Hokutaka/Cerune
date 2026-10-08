@@ -48,6 +48,101 @@ fn observe(input: &Path, target: &str, output: &Path) -> Output {
 }
 
 #[test]
+fn ssa_bundle_keeps_baseline_and_records_the_separate_transformation() {
+    let scratch = Scratch::new();
+    for (index, example) in [
+        "examples/ir_stages/ssa_values.ceru",
+        "examples/ir_stages/owned_values.ceru",
+        "examples/modules/failure.ceru",
+    ]
+    .iter()
+    .enumerate()
+    {
+        let input = Path::new(env!("CARGO_MANIFEST_DIR")).join(example);
+        let mut hir = cerune_lang::modules::load(&input).unwrap().to_ir().unwrap();
+        hir.string_heap_limit = 512;
+        hir.array_heap_limit = 1024;
+        let mir = cerune_lang::mir::lower(&hir).unwrap();
+        let ssa = cerune_lang::mir::ssa::construct(&mir).unwrap();
+        let mapping = cerune_lang::mir::ssa::mapping::emit(&ssa).unwrap();
+        for (ti, target) in TARGETS.iter().enumerate() {
+            let baseline = scratch.0.join(format!("{index}-{ti}-baseline"));
+            success(&observe(&input, target, &baseline));
+            let output = scratch.0.join(format!("{index}-{ti}-ssa"));
+            let second = scratch.0.join(format!("{index}-{ti}-again"));
+            for dir in [&output, &second] {
+                let mut options = vec!["--ssa", "--target", target, "-o", dir.to_str().unwrap()];
+                options.extend(BUDGETS);
+                let out = cli("observe", &input, &options);
+                success(&out);
+                assert!(out.stdout.is_empty());
+            }
+            for file in [
+                "sources.json",
+                "program.ceir",
+                "program.mir.txt",
+                "program.origins.s",
+            ] {
+                assert_eq!(
+                    fs::read(output.join(file)).unwrap(),
+                    fs::read(baseline.join(file)).unwrap(),
+                    "{file}"
+                );
+            }
+            let mut options = vec!["--ssa"];
+            options.extend(BUDGETS);
+            let emitted = cli("emit-mir", &input, &options);
+            success(&emitted);
+            assert_eq!(
+                fs::read(output.join("program.ssa.txt")).unwrap(),
+                emitted.stdout
+            );
+            assert_eq!(
+                fs::read_to_string(output.join("program.ssa-map.txt")).unwrap(),
+                mapping
+            );
+            let manifest = fs::read_to_string(output.join("manifest.json")).unwrap();
+            assert!(manifest.contains("\"schema\": \"cerune-observation-v2\""));
+            assert!(manifest.contains("\"optimization_passes\": []"));
+            assert!(manifest.contains("\"executed\": false"));
+            assert!(manifest.contains("\"kind\": \"representation\""));
+            assert!(manifest.contains("\"pass\": \"scalar-ssa-v1\""));
+            assert!(
+                manifest.contains(
+                    "\"input\": \"mir\", \"output\": \"ssa\", \"mapping\": \"ssa_mapping\""
+                )
+            );
+            assert!(manifest.contains("\"assembly\": \"mir\""));
+            assert_eq!(fs::read_dir(&output).unwrap().count(), 7);
+            for entry in fs::read_dir(&output).unwrap() {
+                let file = entry.unwrap().file_name();
+                assert_eq!(
+                    fs::read(output.join(&file)).unwrap(),
+                    fs::read(second.join(&file)).unwrap()
+                );
+            }
+            let emit_file = scratch.0.join(format!("{index}-{ti}.ssa.txt"));
+            let out = cli(
+                "emit-mir",
+                &input,
+                &[
+                    "-o",
+                    emit_file.to_str().unwrap(),
+                    "--ssa",
+                    "--string-heap-limit",
+                    "512",
+                    "--array-heap-limit",
+                    "1024",
+                ],
+            );
+            success(&out);
+            assert!(out.stdout.is_empty());
+            assert_eq!(fs::read(emit_file).unwrap(), emitted.stdout);
+        }
+    }
+}
+
+#[test]
 fn bundle_matches_individual_emits_and_is_deterministic_for_both_targets() {
     let scratch = Scratch::new();
     for (index, example) in [
@@ -152,7 +247,7 @@ fn rejects_missing_or_duplicate_options_without_creating_output() {
             "--array-heap-limit",
             "2",
         ],
-        vec!["--target", TARGETS[0], "-o", path, "--ssa"],
+        vec!["--target", TARGETS[0], "-o", path, "--ssa", "--ssa"],
     ] {
         let result = cli("observe", &input, &options);
         assert!(!result.status.success(), "{options:?}");
@@ -189,6 +284,38 @@ fn refuses_existing_paths_and_leaves_no_bundle_on_input_errors() {
         .success()
     );
     assert!(!scratch.0.join("missing").exists());
+}
+
+#[test]
+fn ssa_errors_do_not_overwrite_files_or_leave_a_bundle() {
+    let scratch = Scratch::new();
+    let input = scratch.0.join("source.ceru");
+    let output = scratch.0.join("bundle");
+    let emitted = scratch.0.join("ssa.txt");
+    fs::write(&input, "value:i64=true;").unwrap();
+    fs::write(&emitted, "keep").unwrap();
+    let failed = cli(
+        "emit-mir",
+        &input,
+        &["--ssa", "-o", emitted.to_str().unwrap()],
+    );
+    assert!(!failed.status.success());
+    assert!(failed.stdout.is_empty());
+    assert_eq!(fs::read_to_string(&emitted).unwrap(), "keep");
+    let options = [
+        "--ssa",
+        "--target",
+        TARGETS[0],
+        "-o",
+        output.to_str().unwrap(),
+    ];
+    assert!(!cli("observe", &input, &options).status.success());
+    assert!(!output.exists());
+    fs::write(&input, "print(1/0);").unwrap();
+    success(&cli("observe", &input, &options));
+    let before = fs::read(output.join("manifest.json")).unwrap();
+    assert!(!cli("observe", &input, &options).status.success());
+    assert_eq!(fs::read(output.join("manifest.json")).unwrap(), before);
 }
 
 #[cfg(unix)]
