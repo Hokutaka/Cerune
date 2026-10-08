@@ -6,11 +6,16 @@
 | --- | --- | --- |
 | [native_calls.ceru](native_calls.ceru) | MIR→Native, seven mixed arguments, continue/break, main call | Header, arguments for i=0 and 2, result `4` |
 | [owned_values.ceru](owned_values.ceru) | Independent dynamic-array arguments, immutable strings, cleanup through continue | Original array, decorated array, `["反復"]` |
+| [ssa_values.ceru](ssa_values.ceru) | Branch-selected values, updates after continue, and swaps across iterations; baseline for future SSA comparisons | Four lines: `14`, `16`, `20`, `10` |
 | [control_flow.ceru](control_flow.ceru) | Short circuit skips a call; for-continue enters the update and break enters the exit | Two lines: `2`, `4` |
 
 Run the same source and inspect both representations with these commands.
 
 ```sh
+cargo run --quiet -- run examples/ir_stages/ssa_values.ceru
+cargo run --quiet -- run-mir examples/ir_stages/ssa_values.ceru
+cargo run --quiet -- run-vm examples/ir_stages/ssa_values.ceru
+cargo run --quiet -- emit-mir examples/ir_stages/ssa_values.ceru -o target/ssa_values.mir.txt
 cargo run --quiet -- run examples/ir_stages/control_flow.ceru
 cargo run --quiet -- run-mir examples/ir_stages/control_flow.ceru
 cargo run --quiet -- run-mir examples/ir_stages/owned_values.ceru
@@ -24,6 +29,8 @@ cargo run --quiet -- emit-mir examples/ir_stages/control_flow.ceru -o target/con
 ```
 
 `native_calls` prints the header `MIR → Native`, then `0, 18446744073709551615, 7, 9, 4`, followed by `2, 18446744073709551615, 7, 9, 4`, one value per line. ASM `cerune-mir` annotations point back to MIR block/instruction IDs. For Windows output, select `x86_64-pc-windows-msvc` instead. Emitting an object does not link or execute it.
+
+In `ssa_values`, `choose_and_count` adds either 2 or 4 to 10, then adds 0 and 2 in the loop. `swap_rounds` swaps 10 and 20 three times. This is a baseline for current non-SSA routes; SSA execution is unimplemented. The [SSA design](../../docs/design/mir-ssa.en.md) uses it to explain merge values and parallel transfer.
 
 In `control_flow`, at `i=0`, `accept` is skipped. At `i=1`, continue enters the update. Only `i=2` calls `accept` and prints `2`. At `i=3`, break skips the update. The final total is `4`.
 

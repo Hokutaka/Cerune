@@ -6,11 +6,16 @@
 | --- | --- | --- |
 | [native_calls.ceru](native_calls.ceru) | MIRからNativeへ変換。型の異なる7引数、continue／break、main呼出し | 見出しとi=0・2の引数、計算結果`4` |
 | [owned_values.ceru](owned_values.ceru) | 関数へ渡す動的配列の独立性、不変文字列、continueを通る解放 | 元配列・装飾後の配列・`["反復"]` |
+| [ssa_values.ceru](ssa_values.ceru) | 分岐で値を選ぶ・continue後の更新・反復ごとの値の入替え。将来のSSA比較用 | `14`、`16`、`20`、`10`の4行 |
 | [control_flow.ceru](control_flow.ceru) | 短絡で呼出しを省く。forのcontinueは更新、breakは出口へ進む | `2`、`4`の2行 |
 
 次のコマンドで、同じソースの実行結果と変換前後を確認できます。
 
 ```sh
+cargo run --quiet -- run examples/ir_stages/ssa_values.ceru
+cargo run --quiet -- run-mir examples/ir_stages/ssa_values.ceru
+cargo run --quiet -- run-vm examples/ir_stages/ssa_values.ceru
+cargo run --quiet -- emit-mir examples/ir_stages/ssa_values.ceru -o target/ssa_values.mir.txt
 cargo run --quiet -- run examples/ir_stages/control_flow.ceru
 cargo run --quiet -- run-mir examples/ir_stages/control_flow.ceru
 cargo run --quiet -- run-mir examples/ir_stages/owned_values.ceru
@@ -24,6 +29,8 @@ cargo run --quiet -- emit-mir examples/ir_stages/control_flow.ceru -o target/con
 ```
 
 `native_calls`は見出し`MIR → Native`の後に、`0, 18446744073709551615, 7, 9, 4`、続いて`2, 18446744073709551615, 7, 9, 4`を1値1行で表示します。ASMの`cerune-mir`注釈からMIRのblock・命令番号へ戻れます。Windows向けに生成する場合はtargetを`x86_64-pc-windows-msvc`へ変更します。Objectの生成だけではリンク・実行しません。
+
+`ssa_values`の`choose_and_count`は、10に分岐で2または4を加え、loopで0と2を加えます。`swap_rounds`は10と20を3回入れ替えます。現行の非SSA経路の基準例であり、SSA実行は未実装です。[SSA設計](../../docs/design/mir-ssa.ja.md)で合流値と並列受渡しの説明に使います。
 
 `control_flow`の`i=0`では`accept`を呼ばず、`i=1`はcontinueで更新へ進み、`i=2`だけが`accept`を呼んで`2`を表示します。`i=3`は更新前に終了し、合計`4`を表示します。
 

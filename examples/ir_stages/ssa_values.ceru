@@ -1,0 +1,31 @@
+// 分岐で選んだ値を合流点へ渡し、反復ごとの再代入を追います。
+fn choose_and_count(flag: bool, seed: u8) -> u8 {
+    mut total: u8 = seed;
+    if flag {
+        total = total + 2;
+    } else {
+        total = total + 4;
+    }
+    for (mut index: u8 = 0; index < 3; index = index + 1) {
+        if index == 1 { continue; }
+        total = total + index;
+    }
+    return total;
+}
+
+// ループの次回へ渡す二つの値は、入替え前の組から決まります。
+fn swap_rounds() -> void {
+    mut left: u8 = 10;
+    mut right: u8 = 20;
+    for (mut index: u8 = 0; index < 3; index = index + 1) {
+        previous: u8 = left;
+        left = right;
+        right = previous;
+    }
+    print(left);
+    print(right);
+}
+
+print(choose_and_count(true, 10));
+print(choose_and_count(false, 10));
+swap_rounds();
