@@ -14,4 +14,8 @@ path = "src/main.rs"
 name = "lean_verification"
 path = "experiments/lean/main.rs"
 
+[[example]]
+name = "ssa_model"
+path = "experiments/ssa/main.rs"
+
 [dependencies]

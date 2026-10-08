@@ -1,6 +1,8 @@
 //! 完成済みCerune IRから作る、最適化なし・非SSAの実行表現です。
 //! 読取りや一時保存は論理的なretain/copyではありません。所有操作は独立命令です。
 pub mod lower;
+mod operands;
+pub mod ssa;
 pub mod text;
 pub mod validate;
 
@@ -16,6 +18,11 @@ pub use validate::validate;
 pub struct BlockId(pub usize);
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct LocalId(pub usize);
+impl std::fmt::Display for LocalId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "%{}", self.0)
+    }
+}
 /// 関数内で一意。HIR NodeIdとは別の名前空間です。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub struct InstructionId(pub usize);
@@ -102,49 +109,49 @@ pub struct Instruction {
     pub kind: InstructionKind,
 }
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum InstructionKind {
+pub enum InstructionKind<R = LocalId> {
     Assign {
-        destination: LocalId,
-        value: Operation,
+        destination: R,
+        value: Operation<R>,
     },
     /// 呼出し先の返り値を捨てる場合も、本文の副作用を実行します。
     Call {
         function: ir::FunctionId,
-        arguments: Vec<LocalId>,
+        arguments: Vec<R>,
         ownership: ir::ArgumentOwnership,
     },
     /// 次の添字や右辺より前に、ここまでの添字列を検査します。
     CheckIndex {
-        root: LocalId,
-        path: Vec<LocalId>,
+        root: R,
+        path: Vec<R>,
     },
     Store {
-        root: LocalId,
-        path: Vec<LocalId>,
-        value: LocalId,
+        root: R,
+        path: Vec<R>,
+        value: R,
     },
     Output {
-        value: LocalId,
+        value: R,
         newline: bool,
         quoted: bool,
     },
     ArrayInitialize {
-        array: LocalId,
-        value: LocalId,
+        array: R,
+        value: R,
     },
     ArrayRetain {
-        value: LocalId,
+        value: R,
     },
     ArrayFree {
-        value: LocalId,
+        value: R,
     },
     ArrayRangeCheck {
-        length: LocalId,
-        start: LocalId,
-        end: LocalId,
+        length: R,
+        start: R,
+        end: R,
     },
     StringManage {
-        value: LocalId,
+        value: R,
         retain: bool,
     },
 }
@@ -156,62 +163,62 @@ pub enum Literal {
     Float(String),
 }
 #[derive(Debug, Clone, PartialEq, Eq)]
-pub enum Operation {
+pub enum Operation<R = LocalId> {
     Literal(Literal),
-    Copy(LocalId),
+    Copy(R),
     Unary {
         op: ir::UnaryOp,
-        value: LocalId,
+        value: R,
     },
     Binary {
         op: ir::BinaryOp,
-        left: LocalId,
-        right: LocalId,
+        left: R,
+        right: R,
     },
     ConvertInteger {
-        value: LocalId,
+        value: R,
         from: IntegerType,
         to: IntegerType,
         syntax: ConversionSyntax,
     },
     ConvertNumeric {
-        value: LocalId,
+        value: R,
         from: NumericType,
         to: NumericType,
         mode: ConversionMode,
         syntax: ConversionSyntax,
     },
-    Array(Vec<LocalId>),
+    Array(Vec<R>),
     Construct {
         ty: ir::TypeId,
-        base: Option<LocalId>,
-        fields: Vec<(ir::FieldId, LocalId)>,
+        base: Option<R>,
+        fields: Vec<(ir::FieldId, R)>,
     },
     Field {
-        base: LocalId,
+        base: R,
         ty: ir::TypeId,
         field: ir::FieldId,
     },
     Index {
-        base: LocalId,
-        index: LocalId,
+        base: R,
+        index: R,
     },
     Call {
         function: ir::FunctionId,
-        arguments: Vec<LocalId>,
+        arguments: Vec<R>,
         ownership: ir::ArgumentOwnership,
     },
-    ArrayLength(LocalId),
-    StringByteLength(LocalId),
+    ArrayLength(R),
+    StringByteLength(R),
     StringConcat {
-        left: LocalId,
-        right: LocalId,
+        left: R,
+        right: R,
     },
     ArrayAllocate {
-        length: LocalId,
+        length: R,
         element_width: u64,
     },
-    ArrayReleaseOwner(LocalId),
+    ArrayReleaseOwner(R),
 }
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct Terminator {

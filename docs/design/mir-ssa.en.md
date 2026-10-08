@@ -4,7 +4,7 @@
 
 ## Status and decisions
 
-**SSA construction, validation, execution, and CLI support are unimplemented.** This document establishes their implementation direction. Non-SSA MIR and its independent interpreter remain the baseline. The new [ssa_values.ceru](../../examples/ir_stages/ssa_values.ceru) runs on existing routes; it is not evidence of implemented SSA execution.
+**The SSA representation, structural validator, and observation text are implemented. MIR→SSA construction, SSA execution, and CLI support remain unimplemented.** This document distinguishes the implemented scope from subsequent plans. Non-SSA MIR and its independent interpreter remain the baseline. The new [ssa_values.ceru](../../examples/ir_stages/ssa_values.ceru) runs on existing routes; it is not evidence of implemented SSA execution.
 
 SSA gives each value a single definition. Source `mut` remains valid: each reassignment gets a different value ID. At a merge, the selected edge supplies values to block arguments. Select construction explicitly and preserve the input MIR.
 
@@ -43,17 +43,23 @@ An SSA value ID identifies a static definition. Revisiting an instruction in a l
 
 Place the new responsibilities under `mir::ssa`. Reuse types, FunctionId, SourceOrigin, and operation semantics. Use a dedicated representation distinguishing ValueId, slot references, block arguments, and edge arguments, rather than marking an unchanged `mir::Program` as SSA. Refactor shared operand types only where implementation would otherwise require duplication.
 
-Proposed entry points follow. Rust API names will be finalized during implementation.
+Entry points and status follow. Unimplemented Rust API names will be finalized during implementation.
 
 | Proposed entry point | Responsibility |
 | --- | --- |
 | `mir::ssa::construct(&mir)` | Return an independent SSA snapshot and mapping from validated MIR |
-| `mir::ssa::validate(&ssa)` | Check definitions, uses, types, edges, residual slots, and origins |
-| `mir::ssa::text::emit(&ssa)` | Versioned observation text, not a loading format |
+| `mir::ssa::validate(&ssa)` (implemented) | Check definitions, uses, types, edges, residual slots, and origins |
+| `mir::ssa::text::emit(&ssa)` (implemented) | Validate, then return `Result<String, mir::Error>` with `Cerune scalar SSA v0.1` observation text, not a loading format |
 | SSA evaluation | Directly evaluate SSA blocks, values, and slots under existing output/failure contracts |
 | `mir::ssa::lower(&ssa)` | Return non-SSA MIR with edge arguments expanded to parallel copies, plus mappings |
 
-Construct in the following order.
+The implemented `ssa::Program` holds an independent original-MIR snapshot and SSA functions, values, and blocks. It distinguishes `Operand::Value` from `Operand::Slot` while sharing `mir::Operation<R>` / `InstructionKind<R>`. Existing MIR uses the default `R = LocalId`; operation semantics and existing observation text stay unchanged.
+
+Structural validation also validates original MIR and checks reachable-block coverage, instruction order, original IDs/origins, and retained unreachable blocks. After SSA dominance checks, it shares existing MIR type, slot-initialization, and index-check validation. The internal reference projection exists only for validation: it is neither SSA→MIR lowering with parallel copies nor an execution route. Block arguments become initialized on entry and invalidate prior-iteration index-check facts involving those values.
+
+These checks establish structural and mapping consistency. They do not guarantee that operation contents or edge selection preserve the original semantics; execution comparisons and proofs follow automatic construction. Initial mappings preserve one original block and its instruction order. Recording deleted or combined instructions for optimization is unimplemented.
+
+Subsequent automatic construction will proceed in the following order.
 
 1. Validate MIR and compute CFG reachability from each function entry. Follow both edges even for constant conditions; do not fold constants.
 2. Classify promoted locals and residual slots. Collect definitions, reads, and values required along edges.
@@ -100,7 +106,9 @@ Loop backedge:
     jump head(v_right, v_left, v_next_index)
 ```
 
-These commands are available today.
+The [hand-authored SSA Rust API example](../../experiments/ssa/README.en.md) validates and prints with `cargo run --quiet --example ssa_model`. It covers branches, a loop with parallel arguments, and array/string slots. It does not demonstrate automatic construction from `.ceru` or SSA execution.
+
+These commands are available for Cerune source today.
 
 ```sh
 cargo run --quiet -- run examples/ir_stages/ssa_values.ceru
@@ -140,7 +148,7 @@ Implement in these units.
 
 | Order | Work | Completion criteria |
 | --- | --- | --- |
-| 1 | Representation, structural validator, deterministic text | Validate hand-built branches, loops, parallel arguments, and residual slots; reject broken definitions/edges/initialization |
+| 1 (implemented) | Representation, structural validator, deterministic text | Validate hand-built branches, loops, parallel arguments, and residual slots; reject broken definitions/edges/initialization |
 | 2 | MIR→SSA and mappings | Add straight-line, branch/short-circuit, then loop conversion; preserve input snapshots, cover every operation, retain unreachable records, convert every example |
 | 3 | Direct SSA evaluation, CLI, bundle | Compare HIR/MIR/SSA/VM using baseline examples and existing MIR/runtime tests, including heap budgets, prior output, and failure origins |
 | 4 | SSA→MIR and Native | Observe parallel copies/helper edge blocks; compare ASM/Object execution on Windows/Linux |
