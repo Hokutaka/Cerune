@@ -14,9 +14,9 @@ self-hostそのものは正しさの証明ではありません。処理系の�
 現在のRust処理系や、Lean以外のbackendまで自動的に証明済みになることもありません。
 
 **現状は設計と小さな検証実験です。公開Lean backend、`emit-lean`、全言語の形式意味論は未実装です。**
-[検証実験](../../experiments/lean/README.md)では、実際の`increment: u8 → u8`のHIRと生成Lean、HIRとlowering済みMIRの対応、および利用者の性質を検査します。`choose: u8 → u8`ではifと短絡を追加し、MIRの型付き局所値・命令列・jump／branch／returnを独立に評価します。さらに`advance: u8 → u8`でwhile・可変局所値・循環CFGを扱います。それぞれ全256入力の値またはoverflowと出自を検証します。heap・一般のloop停止性は証明対象外です。
+[検証実験](../../experiments/lean/README.md)では、実際の`increment: u8 → u8`のHIRと生成Lean、HIRとlowering済みMIRの対応、および利用者の性質を検査します。`choose: u8 → u8`ではifと短絡を追加し、MIRの型付き局所値・命令列・jump／branch／returnを独立に評価します。`advance: u8 → u8`の3例ではwhile・可変局所値・循環CFGに加え、if内のbreak／continueと入れ子の最内周への作用を扱います。それぞれ全256入力の値またはoverflowと出自を検証します。heap・一般のloop停止性は証明対象外です。
 
-分岐例のMIR評価ではblock数をfuelにし、exporterが未到達blockも含めた循環を拒否します。各経路がこの上限内で完了することを全256入力の対応定理でも検査します。`completed (.error …)`（言語上の停止）、`invalid`（モデルの不正状態）、`exhausted`（fuel不足）を区別し、fuel不足同士の一致で成功にはしません。ループ例では別の明示上限を使い、HIRは16回の文評価、MIRは11回のblock評価で全入力が完了することを追加証明します。反復回数・更新・戻り辺・停止出自の誤変換や、両方のfuelを0にする変更を拒否します。上限は例ごとの値であり、一般のloop停止性や上限探索アルゴリズムを証明したものではありません。
+分岐例のMIR評価ではblock数をfuelにし、exporterが未到達blockも含めた循環を拒否します。各経路がこの上限内で完了することを全256入力の対応定理でも検査します。`completed (.error …)`（言語上の停止）、`invalid`（モデルの不正状態）、`exhausted`（fuel不足）を区別し、fuel不足同士の一致で成功にはしません。ループ例では別の明示上限を使い、単純なwhileはHIR 16文／MIR 11block、break／continue付きは22文／22block、入れ子は28文／23blockで全入力が完了することを追加証明します。反復回数・更新・戻り辺・停止出自、break／continueの飛び先や内側から外側への誤ジャンプ、両方のfuelを0にする変更を拒否します。上限は例ごとの値であり、一般のloop停止性や上限探索アルゴリズムを証明したものではありません。
 
 ## 接続する契約
 
@@ -80,14 +80,14 @@ Leanは[emit-only](owned-routes.ja.md)です。将来の`emit-lean`はLeanソー
 
 Lean kernelの受理も、定理の文面と利用した公理を前提にした保証です。
 `#print axioms`で依存を確認し、`sorryAx`、独自の未検証公理、native評価による追加の信頼を通常の証明成功へ混ぜません。
-incrementのHIR→Leanと性質の4定理、および分岐・ループ例の独立した仕様の定理は公理依存が空です。HIR→MIRと性質の移送は、incrementの3定理・分岐例の2定理・ループ例の3定理（完了を含む）でLean標準の`propext`を使います。`decide`で得た証明をkernelで検査し、公理一覧を完全一致で検査します。`native_decide`や独自公理には依存しません。
+incrementのHIR→Leanと性質の4定理、および分岐例の独立した仕様の定理は公理依存が空です。incrementのMIR関連3定理・分岐例の対応と移送2定理・各ループ例の対応／完了／独立仕様／移送4定理はLean標準の`propext`に依存します。ループモデルにframeを加えた今回の定義では、既存のループ仕様定理にもこの依存が現れます。`decide`で得た証明をkernelで検査し、公理一覧を完全一致で検査します。`native_decide`や独自公理には依存しません。
 [Leanの証明検証](https://lean-lang.org/doc/reference/latest/ValidatingProofs/)と[公理の説明](https://lean-lang.org/doc/reference/latest/Axioms/)を参照してください。
 
 ## 段階と完了条件
 
 | 段階 | 内容 | 完了条件 |
 | --- | --- | --- |
-| 実装済みの実験 | incrementのHIR→LeanとHIR→MIR、chooseのif・短絡・非循環CFG、advanceのwhile・可変局所値・循環CFGと明示上限内の完了 | u8全入力の対応・性質と、値・出自・戻り先・分岐先・短絡・条件・更新・戻り辺・評価上限・仕様の改変拒否を検査。個別snapshotの証明で、変換アルゴリズム一般の証明ではない |
+| 実装済みの実験 | incrementのHIR→LeanとHIR→MIR、chooseのif・短絡・非循環CFG、advanceのwhile・可変局所値・if内のbreak／continue・入れ子・循環CFGと明示上限内の完了 | u8全入力の対応・性質と、値・出自・戻り先・分岐先・短絡・条件・更新・戻り辺・評価上限・仕様の改変拒否を検査。個別snapshotの証明で、変換アルゴリズム一般の証明ではない |
 | backendの基盤 | 共通IRの取り込み、出自、結果・trace、生成定義と利用者の仕様の分離 | `emit-lean`の契約と対応表を確定し、既存テストから正常・異常例を移植 |
 | 制御と数値 | 全整数・真偽値・評価順・関数・分岐・ループ、明示変換 | 値だけでなく失敗・先行出力・停止条件を照合。floatは別の明示モデルで追加 |
 | 複合値と資源 | 文字列、配列、構造体、直和、所有・予算 | 既存の意味論と同じ機能範囲を目標にし、差を対応表で追う |

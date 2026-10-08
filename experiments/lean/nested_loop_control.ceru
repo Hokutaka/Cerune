@@ -1,0 +1,22 @@
+// 内側のcontinue/breakが、外側のループを飛ばさないことを確認する。
+fn advance(value: u8) -> u8 {
+    mut current: u8 = value;
+    mut outer: u8 = 0;
+    while outer < 2 {
+        outer = outer + 1;
+        mut inner: u8 = 0;
+        while inner < 3 {
+            inner = inner + 1;
+            if inner < 2 {
+                continue;
+            }
+            current = current + 1;
+            break;
+        }
+    }
+    return current;
+}
+print(advance(0));
+print(advance(1));
+print(advance(252));
+print(advance(253));
