@@ -6,7 +6,7 @@
 
 [#60](https://github.com/Hokutaka/Cerune/issues/60)の最初の実装として、一回のfrontend処理からHIR、非SSAのMIR、注釈付きNative ASMを保存します。manifestは索引であり、新しいIRではありません。
 
-`cerune observe <file> --target <triple> -o <new-directory>`で保存します。Windows/Linuxのx86-64 targetは必須です。既存のheap予算オプションも使えます。
+`cerune observe <file> [--ssa] --target <triple> -o <new-directory>`で保存します。Windows/Linuxのx86-64 targetは必須です。既存のheap予算オプションも使えます。
 
 | ファイル | 内容 |
 | --- | --- |
@@ -15,6 +15,27 @@
 | `program.ceir` | 完成済みHIR |
 | `program.mir.txt` | 同じHIRから一度だけ変換・検証したMIR |
 | `program.origins.s` | 同じMIRから生成したASM。HIR出自とMIR→LIR対応を注釈として保持 |
+
+## SSAを選んだ場合
+
+`--ssa`を付けると同じ非最適化MIRからSSAを構築し、次の二つを追加します。元の4成果物は指定なしとバイト単位で同じです。
+
+| 追加ファイル | 内容 |
+| --- | --- |
+| `program.ssa.txt` | `emit-mir --ssa`と同じ観測テキスト。元MIRの全文とSSAを別区分で保持 |
+| `program.ssa-map.txt` | `Cerune SSA mapping v0.1`。関数・引数・値／slot・block・命令・terminator・辺の受渡し・未到達保持の対応 |
+
+対応の値番号は関数内、命令indexはblock内で解釈します。then／elseが同じ行き先でも辺を別に記録し、合流先の値と元局所値を示します。元命令IDと出自は元MIRのsnapshotへ戻る参照です。対応表は意味保存の証明やload形式ではありません。
+
+SSA付きmanifestは`cerune-observation-v2`です。指定なしは既存のv1を維持します。
+
+| v2の追加項目 | 内容 |
+| --- | --- |
+| `transformations` | 0からの順序、`kind=representation`、版を含む`pass=scalar-ssa-v1`、`options={}`、入力`mir`・出力`ssa`・対応`ssa_mapping`のartifact key |
+| `artifact_inputs` | 各生成物の入力。現在の`assembly`は`mir`から生成し、SSAからは生成しない |
+| `artifacts`の追加key | `ssa`・`ssa_mapping`と上記ファイルの相対パス |
+
+`optimization_passes`は空、`executed`はfalseのままです。SSA→MIR／Native連携は後続です。今は非最適化NativeとSSA表現を並べて観測します。
 
 ## 同じコンパイルであること
 
@@ -32,7 +53,7 @@
 
 プログラムの実行、外部ツールの起動、リンクは行いません。[#104](https://github.com/Hokutaka/Cerune/issues/104)の副作用再実行やrecord/replayは追加しません。`build`／`release`の完成成果物ではなく、IR/MIRのloaderも追加しません。
 
-Object・逆アセンブル・bytecode・C/LLVM/QBE/WAT・Leanの同梱、実行結果、SSA・最適化比較は後続です。未収録を生成失敗や対応済みと混同しません。個別`emit-*`は引き続き使えます。
+Object・逆アセンブル・bytecode・C/LLVM/QBE/WAT・Leanの同梱、実行結果、最適化比較は後続です。未収録を生成失敗や対応済みと混同しません。個別`emit-*`は引き続き使えます。
 
 ## 確認
 

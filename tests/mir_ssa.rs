@@ -127,6 +127,12 @@ fn rejects_malformed_edges_and_preserves_same_target_edge_identity() {
     validate(&b).unwrap();
     let out = text::emit(&b).unwrap();
     assert!(out.contains("then=bb2(v3, v4) else=bb2(v4, v3)"));
+    let mapping = mapping::emit(&b).unwrap();
+    assert!(mapping.contains("edge then -> bb2 original-target=bb2"));
+    assert!(mapping.contains("edge else -> bb2 original-target=bb2"));
+    assert!(mapping.contains("v3 -> v5 merge-of=%1"));
+    assert!(mapping.contains("v4 -> v5 merge-of=%1"));
+    assert!(mapping.contains("retained original-block=bb3 reason=unreachable"));
 }
 #[test]
 fn rejects_bad_block_origin_and_retained_mappings() {

@@ -4,7 +4,7 @@
 
 ## 状態と判断
 
-**SSAの表現・構造検証器・観測テキストと、MIR→SSAの自動変換を実装しました。SSAの直接実行もRust APIで利用でき、公開CLI・bundle連携は未実装です。** この文書は実装済みの範囲と後続の方針を区別します。基準は非SSAのMIRと、その独立実行器です。[ssa_values.ceru](../../examples/ir_stages/ssa_values.ceru)を含む実行用exampleで、IR・非最適化MIR・SSA・VMの結果を比較します。
+**SSAの表現・構造検証器・観測テキストと、MIR→SSAの自動変換を実装しました。SSA直接実行、公開CLIの`--ssa`、観測bundle連携も実装済みです。** この文書は実装済みの範囲と後続の方針を区別します。基準は非SSAのMIRと、その独立実行器です。[ssa_values.ceru](../../examples/ir_stages/ssa_values.ceru)を含む実行用exampleで、IR・非最適化MIR・SSA・VMの結果を比較します。
 
 SSAは「各値の定義を一つにする」表現です。ソースの`mut`を禁止せず、再代入ごとに別の値番号を付けます。合流点では、通った辺からブロック引数へ値を渡します。変換を明示的に選び、元MIRを上書きしません。
 
@@ -49,6 +49,7 @@ SSA値番号は静的な定義の識別子です。loopで同じ命令を再訪�
 | --- | --- |
 | `mir::ssa::construct(&mir)`（実装済み） | 入力MIRを検証し、独立した元MIR snapshot・SSA・対応を返す。`scalar-ssa-v1`、オプションなしの変換として記録 |
 | `mir::ssa::validate(&ssa)`（実装済み） | 定義・使用・型・辺・残存slot・出自を検査 |
+| `mir::ssa::mapping::emit(&ssa)`（実装済み） | 元MIRへの対応だけを観測テキストとして返す。bundleの別ファイルに保存 |
 | `mir::ssa::text::emit(&ssa)`（実装済み） | 検証後に`Result<String, mir::Error>`を返す。`Cerune scalar SSA v0.1`の観測テキストでありload形式ではない |
 | `ssa_executor::run(&ssa)`（実装済み） | SSAのblock・値・slotを直接評価し、`Result<String, ExecutionError>`を返す。既存の停止・出力契約を使う |
 | `mir::ssa::lower(&ssa)` | 辺の引数を並列copyへ展開した非SSA MIRと対応を返す |
@@ -84,7 +85,7 @@ SSA値番号は静的な定義の識別子です。loopで同じ命令を再訪�
 | `location()` | SSA側のFunctionId・BlockIdと、元MIRのBlockId・InstructionId |
 | `output()` | 停止する前までの出力 |
 
-実行前にSSA全体を検証し、検証失敗では出力しません。実行ごとに新しいframeとheapを作り、正常終了時は未解放の所有領域も検査します。CLI・bundle連携、SSA→MIR lowering、Native連携、SSAのLean証明は後続です。実行比較は変換一般の形式証明ではありません。
+実行前にSSA全体を検証し、検証失敗では出力しません。実行ごとに新しいframeとheapを作り、正常終了時は未解放の所有領域も検査します。SSA→MIR lowering、Native連携、SSAのLean証明は後続です。実行比較は変換一般の形式証明ではありません。
 
 ### 未到達block
 
@@ -138,8 +139,11 @@ Ceruneソースに現在利用できるコマンドは次のとおりです。
 ```sh
 cargo run --quiet -- run examples/ir_stages/ssa_values.ceru
 cargo run --quiet -- run-mir examples/ir_stages/ssa_values.ceru
+cargo run --quiet -- run-mir examples/ir_stages/ssa_values.ceru --ssa
 cargo run --quiet -- run-vm examples/ir_stages/ssa_values.ceru
 cargo run --quiet -- emit-mir examples/ir_stages/ssa_values.ceru -o target/ssa_values.mir.txt
+cargo run --quiet -- emit-mir examples/ir_stages/ssa_values.ceru --ssa -o target/ssa_values.ssa.txt
+cargo run --quiet -- observe examples/ir_stages/ssa_values.ceru --ssa --target x86_64-unknown-linux-gnu -o target/ssa-observation
 ```
 
 ## 検証器と意味保存
@@ -165,9 +169,9 @@ SSAの構造検証では、次を必須にします。
 
 変換対応には入力snapshot、出力snapshot、pass名・版・オプション・順序、元FunctionId／BlockId／InstructionId／LocalIdとSSAの値・block・辺を記録します。補助引数は「どの局所値の合流か」、各流入値は「どの辺から来たか」を持ちます。元命令の単一の停止出自と、多対一の由来情報は別に保持します。
 
-`emit-mir --ssa`／`run-mir --ssa`をCLI候補としますが、**まだ使えません**。採用時も指定なしの既存動作を維持し、SSAを消費しない経路への指定を拒否します。Nativeの選択経路はSSAから戻す変換を含めて記録します。`release`から暗黙にSSAや最適化を有効化しません。
+`emit-mir --ssa`は元MIRとSSAを表示し、`run-mir --ssa`はSSAを直接実行します。heap予算・既定診断・`runtime-v1`診断は非SSA経路と同じです。指定なしの動作を維持し、他の実行・emit経路、重複指定、値付きの`--ssa false`は拒否します。SSAや最適化を暗黙に有効化しません。
 
-bundleは元MIR・SSA・変換対応を別ファイルにし、Native連携後はSSAから戻したMIRも含めます。manifestの版を更新し、SSA変換と最適化を区別できる変換列を記録します。ファイル名・版の具体値、共通pass指定との統合はCLI実装時に確定します。現行v1のpass列は空のままです。
+`observe --ssa`は元MIR・SSA・変換対応を別ファイルに保存します。SSA付きだけmanifestをv2にし、`scalar-ssa-v1`の入力・出力・対応と順序を記録します。最適化pass列は空のままです。現在のASMの入力は非SSA MIRと明記し、SSAを経由した生成物とは扱いません。指定なしのv1は変更しません。形式は[観測bundle](observation-bundle.ja.md)を参照してください。Native連携後はSSAから戻したMIRも追加します。共通pass指定との統合は後続です。
 
 実装を次の単位に分けます。
 
@@ -175,7 +179,7 @@ bundleは元MIR・SSA・変換対応を別ファイルにし、Native連携後�
 | --- | --- | --- |
 | 1（実装済み） | 表現・構造検証・決定的なテキスト | 手作りの分岐・loop・並列引数・残存slotを検証。壊れた定義・辺・初期化を拒否 |
 | 2（実装済み） | MIR→SSA・変換対応 | 直列・分岐／短絡・loop、残存slotを扱う。実行用example全件で元snapshot不変、操作・辺・出自・最新定義、未到達記録、決定性を検査 |
-| 3（直接評価は実装済み） | SSA直接評価・後続のCLI・bundle | 基準例と既存MIR/runtime testsでHIR・MIR・SSA・VMを比較。heap予算・先行出力・停止出自も比較 |
+| 3（実装済み） | SSA直接評価・CLI・bundle | 基準例と既存MIR/runtime testsでHIR・MIR・SSA・VMを比較。heap予算・先行出力・停止出自も比較 |
 | 4 | SSA→MIR・Native | 並列copy・辺の補助blockを観測し、Windows/LinuxでASM・Objectの結果を照合 |
 | 5 | Lean対応と個別の最適化pass | 具体例のMIR→SSA対応を独立モデルで検査。各passの保存条件を別に定義してから実装 |
 

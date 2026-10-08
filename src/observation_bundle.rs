@@ -11,40 +11,73 @@ pub(super) fn save(
     hir: &ir::Program,
     target: x86_64::Target,
     output: &Path,
+    use_ssa: bool,
 ) -> Result<(), String> {
     // frontendもMIR変換も繰り返さず、観測するsnapshotをNativeへ渡します。
     let mir = mir::lower(hir).map_err(|e| source.render(&e.diagnostic()))?;
     let assembly = x86_64::emit_asm_from_mir(&mir, target, true).map_err(|e| source.render(&e))?;
+    let ssa = use_ssa
+        .then(|| mir::ssa::construct(&mir))
+        .transpose()
+        .map_err(|e| source.render(&e.diagnostic()))?;
+    let mut files = vec![
+        ("sources.json", source.source_manifest()),
+        ("program.ceir", ir::text::emit(hir)),
+        ("program.mir.txt", mir::text::emit(&mir)),
+        ("program.origins.s", assembly),
+    ];
+    if let Some(ssa) = &ssa {
+        files.push((
+            "program.ssa.txt",
+            mir::ssa::text::emit(ssa).map_err(|e| source.render(&e.diagnostic()))?,
+        ));
+        files.push((
+            "program.ssa-map.txt",
+            mir::ssa::mapping::emit(ssa).map_err(|e| source.render(&e.diagnostic()))?,
+        ));
+    }
+    // 指定なしのv1は変更せず、SSA付きだけをv2とします。
+    let (schema, transformations, artifacts) = if use_ssa {
+        (
+            "cerune-observation-v2",
+            concat!(
+                "  \"transformations\": [\n",
+                "    {\"order\": 0, \"kind\": \"representation\", \"pass\": \"scalar-ssa-v1\", \"options\": {}, \"input\": \"mir\", \"output\": \"ssa\", \"mapping\": \"ssa_mapping\"}\n",
+                "  ],\n",
+                "  \"artifact_inputs\": {\"hir\": \"sources\", \"mir\": \"hir\", \"ssa\": \"mir\", \"assembly\": \"mir\"},\n"
+            ),
+            "    \"ssa\": \"program.ssa.txt\",\n    \"ssa_mapping\": \"program.ssa-map.txt\",\n",
+        )
+    } else {
+        ("cerune-observation-v1", "", "")
+    };
     let manifest = format!(
         concat!(
             "{{\n",
-            "  \"schema\": \"cerune-observation-v1\",\n",
+            "  \"schema\": \"{}\",\n",
             "  \"cerune_version\": \"{}\",\n",
             "  \"target\": \"{}\",\n",
             "  \"string_heap_limit\": {},\n",
             "  \"array_heap_limit\": {},\n",
             "  \"optimization_passes\": [],\n",
-            "  \"executed\": false,\n",
+            "{}  \"executed\": false,\n",
             "  \"artifacts\": {{\n",
             "    \"sources\": \"sources.json\",\n",
             "    \"hir\": \"program.ceir\",\n",
             "    \"mir\": \"program.mir.txt\",\n",
-            "    \"assembly\": \"program.origins.s\"\n",
+            "{}    \"assembly\": \"program.origins.s\"\n",
             "  }}\n",
             "}}\n"
         ),
+        schema,
         env!("CARGO_PKG_VERSION"),
         target.triple(),
         hir.string_heap_limit,
         hir.array_heap_limit,
+        transformations,
+        artifacts,
     );
-    let files = [
-        ("sources.json", source.source_manifest()),
-        ("program.ceir", ir::text::emit(hir)),
-        ("program.mir.txt", mir::text::emit(&mir)),
-        ("program.origins.s", assembly),
-        ("manifest.json", manifest),
-    ];
+    files.push(("manifest.json", manifest));
     write_new_directory(output, &files)
 }
 

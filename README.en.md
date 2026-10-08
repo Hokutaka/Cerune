@@ -76,12 +76,12 @@ During development, replace `cerune` with `cargo run --quiet --`.
 | --- | --- | --- |
 | `check` | Syntax and type checking | Validate Cerune source (`.ceru`) |
 | `run` / `run-ir` | Direct IR execution | Execute Cerune source (`.ceru`) from common IR |
-| `run-mir` | MIR execution | Execute and compare explicitly lowered control flow |
+| `run-mir` | MIR execution | Compare lowered control flow; `--ssa` executes SSA directly |
 | `run-vm` | VM execution | Run Cerune source (`.ceru`) |
 | `emit-sources` | Source manifest (JSON) | Export loaded file names and contents |
 | `emit-ir` | Cerune IR (`.ceir`) | Inspect types and operations |
-| `observe` | Sources, HIR, MIR, annotated ASM, manifest | Save one compilation to a new directory (explicit target required) |
-| `emit-mir` | Non-SSA MIR (observation text) | Inspect temporaries, branches, ownership operations, and origins |
+| `observe` | Sources, HIR, MIR, annotated ASM, manifest | Save one compilation (explicit target required); `--ssa` adds SSA and mappings |
+| `emit-mir` | MIR observation text | Inspect temporaries, control, ownership, and origins; `--ssa` shows original MIR and SSA |
 | `emit-bytecode` | Bytecode text (`.cebc`) | Inspect instructions |
 | `emit-c` | C (`.c`) | GCC, Clang, or another C compiler |
 | `emit-llvm` | LLVM IR (`.ll`) | LLVM / Clang; Windows / Linux x86-64 |
