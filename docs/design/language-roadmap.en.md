@@ -51,7 +51,7 @@ Language features are tracked separately from compiler stages, distribution, and
 | Implemented | [MIR](ir-stages.en.md) and [independent interpreter](mir-executor.en.md) | Non-SSA types, lowering, validation, `emit-mir`, and `run-mir`; output, failures, origins, and ownership lifetimes compared with existing routes |
 | Implemented | [Native lowering from MIR](native-mir.en.md) | Before/after execution comparisons and MIR→LIR→ASM/Object provenance verified |
 | Initial scope implemented | [Observation bundle](observation-bundle.en.md) | Saves sources, HIR, MIR, annotated ASM, and manifest from one compilation; additional artifacts remain future work ([#60](https://github.com/Hokutaka/Cerune/issues/60)) |
-| Partial experiment | [Lean verification](lean-verification.en.md) | HIR→Lean/HIR→MIR correspondence and properties checked for u8 increment/choose/advance, including if/short-circuiting/while/break/continue/nesting, overflow origins, and completion within explicit bounds; no whole-language, general-lowering, or whole-compiler proof, or public `emit-lean` |
+| Partial experiment | [Lean verification](lean-verification.en.md) | HIR→Lean/HIR→MIR correspondence and properties checked for u8 increment/choose/advance, including if/short-circuiting/while/for/break/continue/nesting, update-failure origins, and completion within explicit bounds; no whole-language, general-lowering, or whole-compiler proof, or public `emit-lean` |
 | Planned, unimplemented | SSA and optimization passes | Make selection, transformation, and semantic preservation observable under the [#94 stage design](https://github.com/Hokutaka/Cerune/issues/94) |
 | Planned, unimplemented | [IR/VM/Native build / release](owned-routes.en.md) | Follow [#81](https://github.com/Hokutaka/Cerune/issues/81), keeping completed artifacts and distribution separate from optimization |
 
@@ -61,7 +61,7 @@ Proceed in the order below, pairing a small design with examples, known expected
 
 | Order | Next work | First contract and example |
 | --- | --- | --- |
-| 1 | Stage comparisons | Initial bundle implemented. Follow the [stage design](ir-stages.en.md) by extending Lean HIR→MIR correspondence from while branches/break/continue/nesting to for updates and continue, then SSA and individual passes; apply #103 refactoring where needed |
+| 1 | Stage comparisons | Initial bundle implemented. Follow the [stage design](ir-stages.en.md) by explicitly scoping finite HIR→MIR proofs, then designing SSA representation, conversion, observation, and semantic-preservation conditions before individual passes. Track heap and other proof extensions separately; apply #103 refactoring where needed |
 | 2 | [Additional dynamic-array operations](owned-arrays.en.md) | Existing operations work across routes; consider `array_repeat` later; borrowed slices need separate lifetime and mutation type rules |
 | 3 | Recursion and external I/O | Define call storage, resource limits, I/O failure, and cleanup |
 | 4 | Module distribution | Re-exports, dependencies/versions, reproducible builds; extend explicit imports |

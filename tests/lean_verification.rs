@@ -242,6 +242,7 @@ fn lean_checks_correspondence_properties_execution_and_mutations() {
     check_branch_proofs(&directory, &run);
     check_loop_proofs(&directory, &run);
     check_loop_control_proofs(&directory, &run);
+    check_for_proofs(&directory, &run);
 }
 
 fn changed_mir(original: &cerune_lang::mir::Program, change: &str) -> cerune_lang::mir::Program {
@@ -872,6 +873,7 @@ fn check_loop_proofs(directory: &Path, run: &impl Fn(&Path, bool) -> std::proces
     assert_false_proof(run(&path, false));
 
     // 指定より1少ない上限では正常入力が未完了であることを独立に検査します。
+    let generated = loop_definitions(&generated);
     let path = directory.join("LoopBounds.lean");
     fs::write(&path, format!("{generated}\n\
         example : CeruneProof.evalLoop CeruneProof.loopReference 15 0 = .exhausted := by decide\n\
@@ -891,6 +893,7 @@ fn check_loop_execution(
     stem: &str,
     expected_value: impl Fn(usize) -> Option<usize>,
 ) {
+    let generated = loop_definitions(generated);
     let file = directory.join(format!("{stem}Execute.lean"));
     fs::write(&file, format!("{generated}\ndef main : IO Unit := do\n  for input in List.range 256 do\n    IO.println (CeruneProof.renderMir (CeruneProof.evalLoop CeruneProof.loopReference CeruneProof.hirFuel input))\n    IO.println (CeruneProof.renderMir (CeruneProof.evalMirWithFuel CeruneProof.mirReference CeruneProof.mirFuel input))\n")).unwrap();
     let output = run(&file, true);
@@ -983,7 +986,7 @@ fn control_node(
     body.iter().find_map(|s| match &s.kind {
         S::Break if is_break => Some(s.id),
         S::Continue if !is_break => Some(s.id),
-        S::While { body, .. } => control_node(body, is_break),
+        S::While { body, .. } | S::For { body, .. } => control_node(body, is_break),
         S::If {
             then_body,
             else_body,
@@ -1153,7 +1156,8 @@ fn check_loop_control_proofs(directory: &Path, run: &impl Fn(&Path, bool) -> std
 
         // 正常に完了する最小の上限と、その直前の未完了を観測します。
         let path = directory.join(format!("{stem}Bounds.lean"));
-        fs::write(&path, format!("{generated}\n\
+        let definitions = loop_definitions(&generated);
+        fs::write(&path, format!("{definitions}\n\
             example : CeruneProof.evalLoop CeruneProof.loopReference {} 0 = .exhausted := by decide\n\
             example : CeruneProof.evalMirWithFuel CeruneProof.mirReference {} 0 = .exhausted := by decide\n\
             example : CeruneProof.evalLoop ⟨0, [.breakLoop]⟩ 1 0 = .invalid := by decide\n\
@@ -1168,6 +1172,293 @@ fn check_loop_control_proofs(directory: &Path, run: &impl Fn(&Path, bool) -> std
         let old = format!("input < {normal_limit}");
         let bad = verified.replacen(&old, &format!("input < {}", normal_limit + 1), 1);
         assert_ne!(bad, verified);
+        fs::write(&path, bad).unwrap();
+        assert_false_proof(run(&path, false));
+    }
+}
+
+fn loop_definitions(generated: &str) -> &str {
+    // 証明で使った定義をそのまま実行します。別のモデルを生成し直しません。
+    generated
+        .strip_suffix(experiment::loops::CORRESPONDENCE)
+        .expect("generated loop proof suffix")
+}
+
+#[test]
+fn for_examples_preserve_updates_and_expected_failures() {
+    let hir = compile_to_ir(experiment::loops::FOR_SOURCE).unwrap();
+    let mir = cerune_lang::mir::lower(&hir).unwrap();
+    assert_eq!(ir_executor::run(&hir).unwrap(), "5\n6\n254\n255\n");
+    assert_eq!(
+        cerune_lang::mir_executor::run(&mir).unwrap(),
+        "5\n6\n254\n255\n"
+    );
+    assert_eq!(
+        run_bytecode(&bytecode::lower(&hir).unwrap()).unwrap(),
+        "5\n6\n254\n255\n"
+    );
+    for (source, changes) in [
+        (
+            experiment::loops::FOR_SOURCE,
+            [
+                "ContinueCondition",
+                "BreakUpdate",
+                "BodyCondition",
+                "Initializer",
+            ]
+            .as_slice(),
+        ),
+        (
+            experiment::loops::FOR_FAILURE_SOURCE,
+            ["ContinueCondition", "UpdateOrigin"].as_slice(),
+        ),
+    ] {
+        let hir = compile_to_ir(source).unwrap();
+        let mir = cerune_lang::mir::lower(&hir).unwrap();
+        let before = mir.clone();
+        let generated = experiment::loops::emit(&hir, &mir, 32, 48).unwrap();
+        for change in changes {
+            let changed = changed_for_mir(&hir, &mir, change);
+            cerune_lang::mir::validate(&changed).unwrap();
+            assert_ne!(
+                generated,
+                experiment::loops::emit(&hir, &changed, 32, 48).unwrap()
+            );
+        }
+        assert_eq!(before, mir);
+    }
+    let hir = compile_to_ir(experiment::loops::FOR_FAILURE_SOURCE).unwrap();
+    let direct = ir_executor::run(&hir).unwrap_err();
+    let mir = cerune_lang::mir_executor::run(&cerune_lang::mir::lower(&hir).unwrap()).unwrap_err();
+    let vm = run_bytecode(&bytecode::lower(&hir).unwrap()).unwrap_err();
+    assert_eq!(
+        direct.runtime_failure().unwrap().code,
+        FailureCode::IntegerOverflow
+    );
+    assert_eq!(mir.runtime_failure(), direct.runtime_failure());
+    assert_eq!(vm.runtime_failure(), direct.runtime_failure());
+    assert_eq!(direct.output(), "");
+    assert_eq!(mir.output(), "");
+    assert_eq!(vm.vm_error().output(), "");
+}
+
+fn changed_for_mir(
+    hir: &cerune_lang::ir::Program,
+    original: &cerune_lang::mir::Program,
+    change: &str,
+) -> cerune_lang::mir::Program {
+    use cerune_lang::{
+        ir::BinaryOp,
+        mir::{BlockId, InstructionKind as I, Operation as O, Origin, TerminatorKind as T},
+    };
+    let mut program = original.clone();
+    let f = program
+        .functions
+        .iter_mut()
+        .find(|f| f.name == "advance")
+        .unwrap();
+    let update = f
+        .blocks
+        .iter()
+        .position(|b| {
+            matches!(
+                b.origin,
+                Origin::Derived {
+                    reason: "for-update",
+                    ..
+                }
+            )
+        })
+        .unwrap();
+    let head = f
+        .blocks
+        .iter()
+        .position(|b| matches!(b.terminator.kind, T::Branch { .. }))
+        .unwrap();
+    match change {
+        "ContinueCondition" | "BreakUpdate" => {
+            let body = &hir
+                .function_definitions
+                .iter()
+                .find(|f| f.name == "advance")
+                .unwrap()
+                .body;
+            let node = control_node(body, change == "BreakUpdate").unwrap();
+            let block = f
+                .blocks
+                .iter_mut()
+                .find(|b| matches!(b.terminator.origin, Origin::Source(s) if s.node_id == node))
+                .unwrap();
+            block.terminator.kind = T::Jump(BlockId(if change == "BreakUpdate" {
+                update
+            } else {
+                head
+            }));
+        }
+        "BodyCondition" => {
+            let block = f
+                .blocks
+                .iter_mut()
+                .find(|b| {
+                    matches!(b.terminator.kind, T::Jump(id) if id.0 == update)
+                        && matches!(
+                            b.terminator.origin,
+                            Origin::Derived {
+                                reason: "loop-back",
+                                ..
+                            }
+                        )
+                })
+                .unwrap();
+            block.terminator.kind = T::Jump(BlockId(head));
+        }
+        "Initializer" => {
+            let i = f.blocks[f.entry.0]
+                .instructions
+                .iter_mut()
+                .find(|i| matches!(i.kind, I::Store { .. }))
+                .unwrap();
+            let I::Store { root, value, .. } = &mut i.kind else {
+                unreachable!()
+            };
+            *value = *root;
+        }
+        "UpdateOrigin" => {
+            let i = f.blocks[update]
+                .instructions
+                .iter_mut()
+                .find(|i| {
+                    matches!(
+                        i.kind,
+                        I::Assign {
+                            value: O::Binary {
+                                op: BinaryOp::Add,
+                                ..
+                            },
+                            ..
+                        }
+                    )
+                })
+                .unwrap();
+            let mut origin = i.origin.source().unwrap();
+            origin.node_id.0 += 1000;
+            i.origin = Origin::Source(origin);
+        }
+        _ => panic!("unknown for mutation"),
+    }
+    program
+}
+
+fn check_for_proofs(directory: &Path, run: &impl Fn(&Path, bool) -> std::process::Output) {
+    for (source, source_name, stem, properties, hir_fuel, mir_fuel, specification, changes) in [
+        (
+            experiment::loops::FOR_SOURCE,
+            "for_control",
+            "For",
+            experiment::loops::FOR_PROPERTIES,
+            experiment::loops::FOR_HIR_FUEL,
+            experiment::loops::FOR_MIR_FUEL,
+            "for",
+            [
+                "ContinueCondition",
+                "BreakUpdate",
+                "BodyCondition",
+                "Initializer",
+            ]
+            .as_slice(),
+        ),
+        (
+            experiment::loops::FOR_FAILURE_SOURCE,
+            "for_update_failure",
+            "ForFailure",
+            experiment::loops::FOR_FAILURE_PROPERTIES,
+            experiment::loops::FOR_FAILURE_HIR_FUEL,
+            experiment::loops::FOR_FAILURE_MIR_FUEL,
+            "for_failure",
+            ["ContinueCondition", "UpdateOrigin"].as_slice(),
+        ),
+    ] {
+        let hir = compile_to_ir(source).unwrap();
+        let mir = cerune_lang::mir::lower(&hir).unwrap();
+        let generated = experiment::loops::emit(&hir, &mir, hir_fuel, mir_fuel).unwrap();
+        assert_eq!(
+            loop_definitions(&generated).trim_end(),
+            experiment::loops::definitions(&hir, &mir, hir_fuel, mir_fuel)
+                .unwrap()
+                .trim_end()
+        );
+        fs::write(
+            directory.join(format!("{source_name}.ceir")),
+            cerune_lang::ir::text::emit(&hir),
+        )
+        .unwrap();
+        fs::write(
+            directory.join(format!("{source_name}.mir.txt")),
+            cerune_lang::mir::text::emit(&mir),
+        )
+        .unwrap();
+        fs::write(directory.join(format!("{stem}Generated.lean")), &generated).unwrap();
+        let verified = format!("{generated}\n{properties}");
+        let file = directory.join(format!("{stem}Verified.lean"));
+        fs::write(&file, &verified).unwrap();
+        let output = run(&file, false);
+        assert!(
+            output.status.success() && output.stderr.is_empty(),
+            "{output:?}"
+        );
+        let log = String::from_utf8_lossy(&output.stdout);
+        assert!(
+            !log.contains("warning:") && !log.contains("error:"),
+            "{log}"
+        );
+        for name in [
+            "loop_translation_correct".to_owned(),
+            "loop_completed".to_owned(),
+            format!("{specification}_expected"),
+            format!("mir_{specification}_expected"),
+        ] {
+            assert!(
+                log.contains(&format!(
+                    "'CeruneProof.{name}' depends on axioms: [propext]"
+                )),
+                "{log}"
+            );
+        }
+        check_loop_execution(directory, run, &generated, source, stem, |input| {
+            (stem == "For" && input < 251).then_some(input + 5)
+        });
+        for change in changes {
+            let changed = changed_for_mir(&hir, &mir, change);
+            // 有限に完了する誤変換は増やした上限でも意味が違うことを検査します。
+            let bad = experiment::loops::emit(&hir, &changed, hir_fuel, mir_fuel + 16).unwrap();
+            let path = directory.join(format!("Rejected{stem}{change}.lean"));
+            fs::write(&path, bad).unwrap();
+            fs::write(
+                directory.join(format!("Rejected{stem}{change}.mir.txt")),
+                cerune_lang::mir::text::emit(&changed),
+            )
+            .unwrap();
+            assert_false_proof(run(&path, false));
+        }
+        let definitions = loop_definitions(&generated);
+        let path = directory.join(format!("{stem}Bounds.lean"));
+        fs::write(&path, format!("{definitions}\n\
+            example : CeruneProof.evalLoop CeruneProof.loopReference {} 0 = .exhausted := by decide\n\
+            example : CeruneProof.evalMirWithFuel CeruneProof.mirReference {} 0 = .exhausted := by decide\n", hir_fuel - 1, mir_fuel - 1)).unwrap();
+        let output = run(&path, false);
+        assert!(
+            output.status.success() && output.stderr.is_empty(),
+            "{output:?}"
+        );
+
+        let (old, replacement) = if stem == "For" {
+            ("input < 251", "input < 252")
+        } else {
+            ("input < 255", "input < 254")
+        };
+        let bad = verified.replacen(old, replacement, 1);
+        assert_ne!(verified, bad);
+        let path = directory.join(format!("Rejected{stem}Property.lean"));
         fs::write(&path, bad).unwrap();
         assert_false_proof(run(&path, false));
     }

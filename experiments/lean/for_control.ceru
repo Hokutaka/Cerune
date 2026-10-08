@@ -1,0 +1,19 @@
+// continueは更新を通り、breakは更新を飛ばす。最後にindexも結果へ加える。
+fn advance(value: u8) -> u8 {
+    mut current: u8 = value;
+    mut index: u8 = 3;
+    for (index = 0; index < 4; index = index + 1) {
+        if index < 1 {
+            continue;
+        }
+        if 2 < index {
+            break;
+        }
+        current = current + 1;
+    }
+    return current + index;
+}
+print(advance(0));
+print(advance(1));
+print(advance(249));
+print(advance(250));

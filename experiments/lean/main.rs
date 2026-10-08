@@ -63,6 +63,22 @@ fn main() {
             experiment::loops::CONTROL_MIR_FUEL,
         ),
         (
+            "For",
+            "for_control",
+            experiment::loops::FOR_SOURCE,
+            experiment::loops::FOR_PROPERTIES,
+            experiment::loops::FOR_HIR_FUEL,
+            experiment::loops::FOR_MIR_FUEL,
+        ),
+        (
+            "ForFailure",
+            "for_update_failure",
+            experiment::loops::FOR_FAILURE_SOURCE,
+            experiment::loops::FOR_FAILURE_PROPERTIES,
+            experiment::loops::FOR_FAILURE_HIR_FUEL,
+            experiment::loops::FOR_FAILURE_MIR_FUEL,
+        ),
+        (
             "NestedControl",
             "nested_loop_control",
             experiment::loops::NESTED_SOURCE,

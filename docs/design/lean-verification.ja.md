@@ -14,9 +14,11 @@ self-hostそのものは正しさの証明ではありません。処理系の�
 現在のRust処理系や、Lean以外のbackendまで自動的に証明済みになることもありません。
 
 **現状は設計と小さな検証実験です。公開Lean backend、`emit-lean`、全言語の形式意味論は未実装です。**
-[検証実験](../../experiments/lean/README.md)では、実際の`increment: u8 → u8`のHIRと生成Lean、HIRとlowering済みMIRの対応、および利用者の性質を検査します。`choose: u8 → u8`ではifと短絡を追加し、MIRの型付き局所値・命令列・jump／branch／returnを独立に評価します。`advance: u8 → u8`の3例ではwhile・可変局所値・循環CFGに加え、if内のbreak／continueと入れ子の最内周への作用を扱います。それぞれ全256入力の値またはoverflowと出自を検証します。heap・一般のloop停止性は証明対象外です。
+[検証実験](../../experiments/lean/README.md)では、実際の`increment: u8 → u8`のHIRと生成Lean、HIRとlowering済みMIRの対応、および利用者の性質を検査します。`choose: u8 → u8`ではifと短絡を追加し、MIRの型付き局所値・命令列・jump／branch／returnを独立に評価します。`advance: u8 → u8`の5例ではwhile／for・可変局所値・循環CFG、if内のbreak／continue、入れ子の最内周への作用、forの初期化・更新・更新時のoverflowを扱います。それぞれ全256入力の値またはoverflowと出自を検証します。heap・一般のloop停止性は証明対象外です。
 
-分岐例のMIR評価ではblock数をfuelにし、exporterが未到達blockも含めた循環を拒否します。各経路がこの上限内で完了することを全256入力の対応定理でも検査します。`completed (.error …)`（言語上の停止）、`invalid`（モデルの不正状態）、`exhausted`（fuel不足）を区別し、fuel不足同士の一致で成功にはしません。ループ例では別の明示上限を使い、単純なwhileはHIR 16文／MIR 11block、break／continue付きは22文／22block、入れ子は28文／23blockで全入力が完了することを追加証明します。反復回数・更新・戻り辺・停止出自、break／continueの飛び先や内側から外側への誤ジャンプ、両方のfuelを0にする変更を拒否します。上限は例ごとの値であり、一般のloop停止性や上限探索アルゴリズムを証明したものではありません。
+分岐例のMIR評価ではblock数をfuelにし、exporterが未到達blockも含めた循環を拒否します。各経路がこの上限内で完了することを全256入力の対応定理でも検査します。`completed (.error …)`（言語上の停止）、`invalid`（モデルの不正状態）、`exhausted`（fuel不足）を区別し、fuel不足同士の一致で成功にはしません。ループ例では別の明示上限を使い、単純なwhileはHIR 16文／MIR 11block、break／continue付きは22文／22block、入れ子は28文／23block、forは23文／25block、更新停止例は8文／5blockで全入力が完了することを追加証明します。完了には言語上の異常停止も含み、更新停止例は全入力でoverflowします。反復回数・更新・戻り辺・停止出自、break／continueの飛び先や内側から外側への誤ジャンプ、forの初期化・更新の飛ばし・更新出自の改変、両方のfuelを0にする変更を拒否します。上限は例ごとの値であり、一般のloop停止性や上限探索アルゴリズムを証明したものではありません。
+
+forのHIRは`forLess`として初期化・条件・更新・本文を保持します。モデル内部の`forNext`が初期化後の反復を表し、本文末尾とcontinueは更新を一度通って条件へ戻り、breakは更新を飛ばします。MIRのjump先からHIRを再構成しません。共通の対応・完了定理は`LoopCorrespondence.lean`に置き、実行比較はそこで証明した同じ定義を使います。
 
 ## 接続する契約
 
@@ -87,7 +89,7 @@ incrementのHIR→Leanと性質の4定理、および分岐例の独立した仕
 
 | 段階 | 内容 | 完了条件 |
 | --- | --- | --- |
-| 実装済みの実験 | incrementのHIR→LeanとHIR→MIR、chooseのif・短絡・非循環CFG、advanceのwhile・可変局所値・if内のbreak／continue・入れ子・循環CFGと明示上限内の完了 | u8全入力の対応・性質と、値・出自・戻り先・分岐先・短絡・条件・更新・戻り辺・評価上限・仕様の改変拒否を検査。個別snapshotの証明で、変換アルゴリズム一般の証明ではない |
+| 実装済みの実験 | incrementのHIR→LeanとHIR→MIR、chooseのif・短絡・非循環CFG、advanceのwhile／for・可変局所値・if内のbreak／continue・入れ子・初期化／更新・循環CFGと明示上限内の完了 | u8全入力の対応・性質と、値・出自・戻り先・分岐先・短絡・条件・更新・戻り辺・評価上限・仕様の改変拒否を検査。個別snapshotの証明で、変換アルゴリズム一般の証明ではない |
 | backendの基盤 | 共通IRの取り込み、出自、結果・trace、生成定義と利用者の仕様の分離 | `emit-lean`の契約と対応表を確定し、既存テストから正常・異常例を移植 |
 | 制御と数値 | 全整数・真偽値・評価順・関数・分岐・ループ、明示変換 | 値だけでなく失敗・先行出力・停止条件を照合。floatは別の明示モデルで追加 |
 | 複合値と資源 | 文字列、配列、構造体、直和、所有・予算 | 既存の意味論と同じ機能範囲を目標にし、差を対応表で追う |

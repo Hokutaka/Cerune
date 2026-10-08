@@ -1,0 +1,13 @@
+// 0〜254はcontinue後の更新で、255は本文でoverflowする異常停止の例。
+fn advance(value: u8) -> u8 {
+    mut current: u8 = value;
+    mut index: u8 = 0;
+    for (index = 254; index < 255; index = index + 2) {
+        if current < 255 {
+            continue;
+        }
+        current = current + 1;
+    }
+    return current;
+}
+print(advance(1));
