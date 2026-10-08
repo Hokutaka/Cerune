@@ -14,7 +14,9 @@ Self-hosting is not a correctness proof: compiler specifications, input domains,
 It also does not automatically verify today's Rust compiler or other backends.
 
 **Current status: design and a small verification experiment. The public Lean backend, `emit-lean`, and a formal semantics for the whole language are not implemented.**
-The [experiment](../../experiments/lean/README.md) checks actual `increment: u8 → u8` HIR against direct Lean and lowered MIR, together with user properties. The MIR model independently evaluates locals/instructions/return and compares values or overflow/origins for all 256 inputs. Branches, loops, and heap are not yet proved.
+The [experiment](../../experiments/lean/README.md) checks actual `increment: u8 → u8` HIR against direct Lean and lowered MIR, together with user properties. A second function, `choose: u8 → u8`, adds if/short-circuiting and an independent MIR model of typed locals, instructions, jumps, branches, and returns. Each fixture checks values or overflow/origins for all 256 inputs. Cyclic CFGs, loops, and heap remain outside the proof scope.
+
+The MIR branch evaluator uses block count as fuel; the exporter rejects cycles including unreachable blocks. The all-256-input correspondence also checks completion within that bound. `completed (.error …)` (language failure), `invalid` (invalid model state), and `exhausted` (insufficient fuel) are distinct; matching fuel exhaustion is not proof success. General loop termination is not proved.
 
 ## Connecting the contracts
 
@@ -78,14 +80,14 @@ A function-only experiment must name the selected function and explicitly exclud
 
 Lean kernel acceptance is relative to theorem statements and axioms.
 Inspect dependencies with `#print axioms`; do not silently accept `sorryAx`, unreviewed custom axioms, or extra native-evaluation trust.
-The existing four HIR→Lean/property theorems have empty axiom dependencies. The three new HIR→MIR/property theorems use Lean's standard `propext` through finite quantification/equality decision procedures. The kernel checks proofs produced by `decide`, and tests require the exact axiom list. No `native_decide` or custom axioms are used.
+The four increment HIR→Lean/property theorems and the independent branch-specification theorem have empty axiom dependencies. HIR→MIR correspondence and property transfer use Lean's standard `propext`: three increment theorems and two branch theorems. The kernel checks proofs produced by `decide`, and tests require the exact axiom list. No `native_decide` or custom axioms are used.
 See Lean's [proof validation](https://lean-lang.org/doc/reference/latest/ValidatingProofs/) and [axiom reference](https://lean-lang.org/doc/reference/latest/Axioms/).
 
 ## Stages and completion criteria
 
 | Stage | Content | Completion criterion |
 | --- | --- | --- |
-| Implemented experiment | HIR→Lean and HIR→MIR for `increment: u8 → u8`, locals, literal/copy/add, return | Prove all-input correspondence/properties and reject value/origin/return mutations. This proves individual snapshots, not the general lowering algorithm |
+| Implemented experiment | Increment HIR→Lean/HIR→MIR, plus choose if/short-circuiting and acyclic CFGs | Prove all-u8 correspondence/properties and reject value/origin/return/branch/short-circuit/condition/specification mutations. This proves individual snapshots, not the general lowering algorithm |
 | Backend foundation | Common IR input, origins, results/traces, generated definitions separated from user specifications | Settle `emit-lean` and support table; port existing success/failure tests |
 | Control/numbers | All integer types, booleans, order, functions, branches, loops, explicit conversions | Compare failures, prior output, and termination conditions as well as values; add floats with an explicit model |
 | Aggregates/resources | Strings, arrays, products, sums, ownership/budgets | Target existing language semantics and track gaps explicitly |
