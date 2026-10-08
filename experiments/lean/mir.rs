@@ -7,6 +7,24 @@ use cerune_lang::{
 pub const MODEL: &str = include_str!("MirModel.lean");
 
 pub fn definition(hir: &ir::Program, program: &mir::Program, name: &str) -> Result<String, String> {
+    export(hir, program, name, false)
+}
+
+// 循環を許す実験は、block数由来の上限を使わず明示fuelと完了証明を要求します。
+pub fn definition_with_cycles(
+    hir: &ir::Program,
+    program: &mir::Program,
+    name: &str,
+) -> Result<String, String> {
+    export(hir, program, name, true)
+}
+
+fn export(
+    hir: &ir::Program,
+    program: &mir::Program,
+    name: &str,
+    allow_cycles: bool,
+) -> Result<String, String> {
     let hir_function = hir
         .function_definitions
         .iter()
@@ -31,7 +49,9 @@ pub fn definition(hir: &ir::Program, program: &mir::Program, name: &str) -> Resu
     let [parameter] = function.parameters.as_slice() else {
         return Err("MIR experiment requires one parameter".into());
     };
-    reject_cycles(function)?;
+    if !allow_cycles {
+        reject_cycles(function)?;
+    }
     if function.locals[parameter.0].ty != Type::Integer(IntegerType::U8) {
         return Err("MIR parameter must be u8".into());
     }
@@ -50,6 +70,16 @@ pub fn definition(hir: &ir::Program, program: &mir::Program, name: &str) -> Resu
         };
         let mut instructions = Vec::new();
         for instruction in &block.instructions {
+            if let InstructionKind::Store { root, path, value } = &instruction.kind {
+                if !path.is_empty() {
+                    return Err("MIR proof supports only scalar stores".into());
+                }
+                instructions.push(format!(
+                    "⟨{}, {}, (.store {})⟩",
+                    instruction.id.0, root.0, value.0
+                ));
+                continue;
+            }
             let InstructionKind::Assign { destination, value } = &instruction.kind else {
                 return Err("unsupported MIR instruction in selected function".into());
             };

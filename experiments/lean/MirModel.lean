@@ -1,8 +1,6 @@
 -- HIRの式評価から独立して、実際のMIRの局所値・命令・CFGを評価します。
 namespace CeruneProof
 
-deriving instance DecidableEq for Except
-
 inductive MirValue where
   | byte : Nat → MirValue
   | boolean : Bool → MirValue
@@ -11,6 +9,8 @@ inductive MirOp where
   | literal : Nat → MirOp
   | boolean : Bool → MirOp
   | copy : Nat → MirOp
+  -- 添字なしのscalar storeをcopyと区別して記録します。
+  | store : Nat → MirOp
   | add : Origin → Nat → Nat → MirOp
   | less : Nat → Nat → MirOp
 
@@ -34,20 +34,13 @@ structure MirFunction where
   entry : Nat
   blocks : List MirBlock
 
--- 検証用の上限到達を、Ceruneの停止や不正な状態と混同しません。
-inductive MirOutcome where
-  | completed : Result → MirOutcome
-  | invalid
-  | exhausted
-  deriving DecidableEq
-
 abbrev MirLocals := Nat → Option MirValue
 
 def mirReadOp (op : MirOp) (locals : MirLocals) : Option (Except Failure MirValue) :=
   match op with
   | .literal n => some (.ok (.byte n))
   | .boolean b => some (.ok (.boolean b))
-  | .copy index => (locals index).map Except.ok
+  | .copy index | .store index => (locals index).map Except.ok
   | .add origin left right =>
     match locals left, locals right with
     | some (.byte a), some (.byte b) =>
@@ -71,7 +64,7 @@ def mirExecute (instructions : List MirInstruction)
       mirExecute rest
         (fun index => if index = instruction.destination then some value else locals index)
 
-def mirRunBlocks (f : MirFunction) (fuel blockId : Nat) (locals : MirLocals) : MirOutcome :=
+def mirRunBlocks (f : MirFunction) (fuel blockId : Nat) (locals : MirLocals) : ExecutionOutcome :=
   match fuel with
   | 0 => .exhausted
   | remaining + 1 =>
@@ -94,15 +87,16 @@ def mirRunBlocks (f : MirFunction) (fuel blockId : Nat) (locals : MirLocals) : M
           | _ => .invalid
         | .unreachable => .invalid
 
-def evalMirWithFuel (f : MirFunction) (fuel input : Nat) : MirOutcome :=
+def evalMirWithFuel (f : MirFunction) (fuel input : Nat) : ExecutionOutcome :=
   mirRunBlocks f fuel f.entry
     (fun index => if index = f.parameter then some (.byte input) else none)
 
--- exporterは全blockの循環を拒否します。これは各経路のblock数の上界です。
-def evalMir (f : MirFunction) (input : Nat) : MirOutcome :=
+-- 非循環の実験ではexporterが循環を拒否するので、block数を上界にできます。
+-- 循環する実験はevalMirWithFuelを使い、上限と完了の定理を別に明示します。
+def evalMir (f : MirFunction) (input : Nat) : ExecutionOutcome :=
   evalMirWithFuel f f.blocks.length input
 
-def renderMir (result : MirOutcome) : String :=
+def renderMir (result : ExecutionOutcome) : String :=
   match result with
   | .completed result => render result
   | .invalid => "invalid MIR"

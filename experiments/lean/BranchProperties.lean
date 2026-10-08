@@ -12,7 +12,7 @@ theorem branch_expected : ∀ (x : Fin 256),
 
 theorem mir_branch_expected (x : Fin 256) :
     evalMir mirReference x.val = .completed (branchExpected x.val) := by
-  exact (branch_translation_correct x).trans (congrArg MirOutcome.completed (branch_expected x))
+  exact (branch_translation_correct x).trans (congrArg ExecutionOutcome.completed (branch_expected x))
 
 #print axioms branch_translation_correct
 #print axioms branch_expected

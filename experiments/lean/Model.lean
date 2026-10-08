@@ -16,6 +16,15 @@ inductive Failure where
 
 abbrev Result := Except Failure Nat
 
+deriving instance DecidableEq for Except
+
+-- 言語上の完了（正常・異常）と、モデルの不正状態・評価上限を区別します。
+inductive ExecutionOutcome where
+  | completed : Result → ExecutionOutcome
+  | invalid
+  | exhausted
+  deriving DecidableEq
+
 -- 実際の完成済みIRから写した、引数・u8定数・加算の参照表現です。
 inductive Expr where
   | arg

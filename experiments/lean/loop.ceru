@@ -1,0 +1,14 @@
+// 4回の加算を順に行う。252以上は途中でoverflowし、それ以降は実行しない。
+fn advance(value: u8) -> u8 {
+    mut current: u8 = value;
+    mut index: u8 = 0;
+    while index < 4 {
+        current = current + 1;
+        index = index + 1;
+    }
+    return current;
+}
+print(advance(0));
+print(advance(1));
+print(advance(250));
+print(advance(251));

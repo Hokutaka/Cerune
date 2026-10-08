@@ -240,6 +240,7 @@ fn lean_checks_correspondence_properties_execution_and_mutations() {
         );
     }
     check_branch_proofs(&directory, &run);
+    check_loop_proofs(&directory, &run);
 }
 
 fn changed_mir(original: &cerune_lang::mir::Program, change: &str) -> cerune_lang::mir::Program {
@@ -625,10 +626,296 @@ fn check_branch_proofs(directory: &Path, run: &impl Fn(&Path, bool) -> std::proc
 }
 
 fn assert_false_proof(output: std::process::Output) {
-    assert!(!output.status.success(), "invalid branch proof accepted");
+    assert!(!output.status.success(), "invalid proof accepted");
     let errors = String::from_utf8_lossy(&output.stdout);
     assert!(
         errors.contains("error:") && errors.contains("decide") && errors.contains("false"),
         "expected a false proposition, not an infrastructure failure: {output:?}"
+    );
+}
+
+#[test]
+fn loop_example_executes_and_exports_the_actual_cycle() {
+    let hir = compile_to_ir(experiment::loops::SOURCE).unwrap();
+    let mir = cerune_lang::mir::lower(&hir).unwrap();
+    let before = mir.clone();
+    let generated = emit_loop(&hir, &mir);
+    assert!(generated.contains("theorem loop_completed"));
+    assert!(generated.contains(".store "));
+    let expected = "4\n5\n254\n255\n";
+    assert_eq!(ir_executor::run(&hir).unwrap(), expected);
+    assert_eq!(cerune_lang::mir_executor::run(&mir).unwrap(), expected);
+    assert_eq!(
+        run_bytecode(&bytecode::lower(&hir).unwrap()).unwrap(),
+        expected
+    );
+    for name in [
+        "Iterations",
+        "Update",
+        "Backedge",
+        "Divergent",
+        "FailureOrigin",
+    ] {
+        let changed = changed_loop_mir(&mir, name);
+        cerune_lang::mir::validate(&changed).unwrap();
+        assert_ne!(generated, emit_loop(&hir, &changed));
+    }
+    assert_eq!(before, mir);
+    let unsupported = experiment::loops::SOURCE.replace("index < 4", "index != 4");
+    let hir = compile_to_ir(&unsupported).unwrap();
+    let mir = cerune_lang::mir::lower(&hir).unwrap();
+    assert!(
+        experiment::loops::emit(&hir, &mir, 16, 11)
+            .unwrap_err()
+            .contains("less-than")
+    );
+}
+
+fn emit_loop(hir: &cerune_lang::ir::Program, mir: &cerune_lang::mir::Program) -> String {
+    experiment::loops::emit(
+        hir,
+        mir,
+        experiment::loops::HIR_FUEL,
+        experiment::loops::MIR_FUEL,
+    )
+    .unwrap()
+}
+
+fn changed_loop_mir(original: &cerune_lang::mir::Program, name: &str) -> cerune_lang::mir::Program {
+    use cerune_lang::{
+        ir::BinaryOp,
+        mir::{
+            BlockId, InstructionKind as I, Literal, Operation as O, Origin, TerminatorKind as T,
+        },
+    };
+    let mut program = original.clone();
+    let f = program
+        .functions
+        .iter_mut()
+        .find(|f| f.name == "advance")
+        .unwrap();
+    let condition = f
+        .blocks
+        .iter()
+        .position(|b| matches!(b.terminator.kind, T::Branch { .. }))
+        .unwrap();
+    let T::Branch {
+        then_block: body,
+        else_block: exit,
+        ..
+    } = f.blocks[condition].terminator.kind
+    else {
+        unreachable!()
+    };
+    match name {
+        "Iterations" => {
+            let i = f.blocks[condition]
+                .instructions
+                .iter_mut()
+                .find(|i| {
+                    matches!(
+                        i.kind,
+                        I::Assign {
+                            value: O::Literal(Literal::Integer(4)),
+                            ..
+                        }
+                    )
+                })
+                .unwrap();
+            let I::Assign {
+                value: O::Literal(Literal::Integer(value)),
+                ..
+            } = &mut i.kind
+            else {
+                unreachable!()
+            };
+            *value = 3;
+        }
+        "Update" => {
+            // indexへのstoreを古いindexのままにします。MIRの型は正しいままです。
+            let i = f.blocks[body.0]
+                .instructions
+                .iter_mut()
+                .filter(|i| matches!(i.kind, I::Store { .. }))
+                .last()
+                .unwrap();
+            let I::Store { root, value, .. } = &mut i.kind else {
+                unreachable!()
+            };
+            *value = *root;
+        }
+        "Backedge" => f.blocks[body.0].terminator.kind = T::Jump(exit),
+        "Divergent" => f.blocks[condition].terminator.kind = T::Jump(BlockId(condition)),
+        "FailureOrigin" => {
+            let i = f.blocks[body.0]
+                .instructions
+                .iter_mut()
+                .find(|i| {
+                    matches!(
+                        i.kind,
+                        I::Assign {
+                            value: O::Binary {
+                                op: BinaryOp::Add,
+                                ..
+                            },
+                            ..
+                        }
+                    )
+                })
+                .unwrap();
+            let mut origin = i.origin.source().unwrap();
+            origin.node_id.0 += 1000;
+            i.origin = Origin::Source(origin);
+        }
+        _ => panic!("unknown loop mutation"),
+    }
+    program
+}
+
+fn check_loop_proofs(directory: &Path, run: &impl Fn(&Path, bool) -> std::process::Output) {
+    let hir = compile_to_ir(experiment::loops::SOURCE).unwrap();
+    let mir = cerune_lang::mir::lower(&hir).unwrap();
+    let generated = emit_loop(&hir, &mir);
+    fs::write(
+        directory.join("loop.ceir"),
+        cerune_lang::ir::text::emit(&hir),
+    )
+    .unwrap();
+    fs::write(
+        directory.join("loop.mir.txt"),
+        cerune_lang::mir::text::emit(&mir),
+    )
+    .unwrap();
+    fs::write(directory.join("LoopGenerated.lean"), &generated).unwrap();
+    let verified = format!("{generated}\n{}", experiment::loops::PROPERTIES);
+    let file = directory.join("LoopVerified.lean");
+    fs::write(&file, &verified).unwrap();
+    let output = run(&file, false);
+    assert!(
+        output.status.success() && output.stderr.is_empty(),
+        "{output:?}"
+    );
+    let log = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        !log.contains("warning:") && !log.contains("error:"),
+        "{log}"
+    );
+    for name in [
+        "loop_translation_correct",
+        "loop_completed",
+        "mir_loop_expected",
+    ] {
+        assert!(
+            log.contains(&format!(
+                "'CeruneProof.{name}' depends on axioms: [propext]"
+            )),
+            "{log}"
+        );
+    }
+    assert!(
+        log.contains("'CeruneProof.loop_expected' does not depend on any axioms"),
+        "{log}"
+    );
+
+    let file = directory.join("LoopExecute.lean");
+    fs::write(&file, format!("{generated}\ndef main : IO Unit := do\n  for input in List.range 256 do\n    IO.println (CeruneProof.renderMir (CeruneProof.evalLoop CeruneProof.loopReference CeruneProof.hirFuel input))\n    IO.println (CeruneProof.renderMir (CeruneProof.evalMirWithFuel CeruneProof.mirReference CeruneProof.mirFuel input))\n")).unwrap();
+    let output = run(&file, true);
+    assert!(
+        output.status.success() && output.stderr.is_empty(),
+        "{output:?}"
+    );
+    let text = String::from_utf8(output.stdout).unwrap();
+    let lines: Vec<_> = text.lines().collect();
+    assert_eq!(lines.len(), 512, "{text}");
+    let function = experiment::loops::SOURCE.split("\nprint(").next().unwrap();
+    for (input, pair) in lines.as_chunks::<2>().0.iter().enumerate() {
+        assert_eq!(pair[0], pair[1], "Lean HIR/MIR at loop input {input}");
+        let hir = compile_to_ir(&format!("{function}\nprint(advance({input}));")).unwrap();
+        let direct = ir_executor::run(&hir);
+        let mir = cerune_lang::mir_executor::run(&cerune_lang::mir::lower(&hir).unwrap());
+        let vm = run_bytecode(&bytecode::lower(&hir).unwrap());
+        if input < 252 {
+            let expected = format!("{}\n", input + 4);
+            assert_eq!(direct.unwrap(), expected);
+            assert_eq!(mir.unwrap(), expected);
+            assert_eq!(vm.unwrap(), expected);
+            assert_eq!(pair[0], format!("ok {}", input + 4));
+        } else {
+            let direct = direct.unwrap_err();
+            let mir = mir.unwrap_err();
+            let vm = vm.unwrap_err();
+            let failure = direct.runtime_failure().unwrap();
+            assert_eq!(failure.code, FailureCode::IntegerOverflow);
+            assert_eq!(mir.runtime_failure(), Some(failure));
+            assert_eq!(vm.runtime_failure(), Some(failure));
+            assert_eq!(direct.output(), "");
+            assert_eq!(mir.output(), "");
+            assert_eq!(vm.vm_error().output(), "");
+            assert_eq!(
+                pair[0],
+                format!(
+                    "integer-overflow node={} source={} bytes={}..{}",
+                    failure.node_id.0,
+                    failure.span.source_id().index(),
+                    failure.span.start(),
+                    failure.span.end()
+                )
+            );
+        }
+    }
+
+    // HIRは固定します。停止しない誤変換もLeanの有限fuelで検査し、実行ファイルは起動しません。
+    for name in [
+        "Iterations",
+        "Update",
+        "Backedge",
+        "Divergent",
+        "FailureOrigin",
+    ] {
+        let changed = changed_loop_mir(&mir, name);
+        let bad = emit_loop(&hir, &changed);
+        assert_ne!(generated, bad);
+        let path = directory.join(format!("RejectedLoop{name}.lean"));
+        fs::write(&path, bad).unwrap();
+        fs::write(
+            directory.join(format!("RejectedLoop{name}.mir.txt")),
+            cerune_lang::mir::text::emit(&changed),
+        )
+        .unwrap();
+        assert_false_proof(run(&path, false));
+    }
+    // 両辺ともfuel不足なら対応だけは一致します。独立した完了定理で必ず拒否します。
+    for (name, hir_fuel, mir_fuel) in [("HirFuel", 15, 11), ("MirFuel", 16, 10), ("BothZero", 0, 0)]
+    {
+        let bad = experiment::loops::emit(&hir, &mir, hir_fuel, mir_fuel).unwrap();
+        let path = directory.join(format!("RejectedLoop{name}.lean"));
+        fs::write(&path, bad).unwrap();
+        let output = run(&path, false);
+        if name == "BothZero" {
+            assert_eq!(
+                String::from_utf8_lossy(&output.stdout)
+                    .matches("error:")
+                    .count(),
+                1,
+                "{output:?}"
+            );
+        }
+        assert_false_proof(output);
+    }
+    let bad = verified.replacen("input < 252", "input < 253", 1);
+    assert_ne!(bad, verified);
+    let path = directory.join("RejectedLoopProperty.lean");
+    fs::write(&path, bad).unwrap();
+    assert_false_proof(run(&path, false));
+
+    // 指定より1少ない上限では正常入力が未完了であることを独立に検査します。
+    let path = directory.join("LoopBounds.lean");
+    fs::write(&path, format!("{generated}\n\
+        example : CeruneProof.evalLoop CeruneProof.loopReference 15 0 = .exhausted := by decide\n\
+        example : CeruneProof.evalMirWithFuel CeruneProof.mirReference 10 0 = .exhausted := by decide\n")).unwrap();
+    let output = run(&path, false);
+    assert!(
+        output.status.success() && output.stderr.is_empty(),
+        "{output:?}"
     );
 }

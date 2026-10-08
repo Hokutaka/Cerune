@@ -28,12 +28,12 @@ namespace CeruneProof
 
 theorem mir_increment_exact (x : Fin 256) (h : x.val < 255) :
     evalMir mirReference x.val = .completed (.ok (x.val + 1)) := by
-  exact (mir_translation_correct x).trans (congrArg MirOutcome.completed (ir_increment_exact x h))
+  exact (mir_translation_correct x).trans (congrArg ExecutionOutcome.completed (ir_increment_exact x h))
 
 theorem mir_overflow_detected :
     evalMir mirReference 255 = .completed (.error (.integerOverflow rootOrigin)) := by
   exact (mir_translation_correct ⟨255, by decide⟩).trans
-    (congrArg MirOutcome.completed ((translation_correct ⟨255, by decide⟩).trans overflow_detected))
+    (congrArg ExecutionOutcome.completed ((translation_correct ⟨255, by decide⟩).trans overflow_detected))
 
 #print axioms mir_translation_correct
 #print axioms mir_increment_exact
