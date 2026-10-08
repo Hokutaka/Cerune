@@ -2,16 +2,17 @@
 //! HIR実行器やbytecode/VMの実行には委譲しません。
 use crate::{
     ir,
-    mir::{self, InstructionKind as I, Operation as O, TerminatorKind as T},
+    mir::{self, TerminatorKind as T},
     runtime::{
         FailureCode, RuntimeFailure,
-        array_heap::{ArrayError, ArrayHeap, ArrayValue},
-        numeric::{self, Number},
-        string_heap::{HeapError, StringHeap},
+        array_heap::ArrayError,
+        string_heap::HeapError,
         value::{self, Value},
     },
-    types::IntegerType,
 };
+
+pub(crate) mod semantics;
+use semantics::{Calls, Frame as _, State};
 
 /// emit-mir内の関数・ブロック・命令を識別します。Noneは入口の本体です。
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -79,14 +80,14 @@ impl std::fmt::Display for ExecutionError {
 impl std::error::Error for ExecutionError {}
 
 #[derive(Debug)]
-struct Fault {
+pub(crate) struct Fault {
     kind: ErrorKind,
     origin: Option<mir::SourceOrigin>,
     location: Option<Location>,
 }
-type Result<T> = std::result::Result<T, Fault>;
+pub(crate) type Result<T> = std::result::Result<T, Fault>;
 impl Fault {
-    fn invalid(reason: &'static str) -> Self {
+    pub(crate) fn invalid(reason: &'static str) -> Self {
         Self {
             kind: ErrorKind::InvalidMir(reason),
             origin: None,
@@ -100,7 +101,7 @@ impl Fault {
             location: None,
         }
     }
-    fn at(mut self, location: Location, origin: mir::Origin) -> Self {
+    pub(crate) fn at(mut self, location: Location, origin: mir::Origin) -> Self {
         // 呼出し先で決まった命令と出自を、呼出し元の位置で上書きしません。
         if self.location.is_none() {
             self.location = Some(location);
@@ -144,10 +145,11 @@ impl From<HeapError> for Fault {
         }
     }
 }
-struct Frame {
+struct Frame<'a> {
+    locals: &'a [mir::Local],
     values: Vec<Option<Value>>,
 }
-impl Frame {
+impl semantics::Frame<mir::LocalId> for Frame<'_> {
     fn get(&self, id: mir::LocalId) -> Result<Value> {
         self.values
             .get(id.0)
@@ -161,36 +163,46 @@ impl Frame {
             .ok_or_else(|| Fault::invalid("unknown MIR local"))? = Some(v);
         Ok(())
     }
-    fn arguments(&self, args: &[mir::LocalId]) -> Result<Vec<Value>> {
-        args.iter().map(|v| self.get(*v)).collect()
+    fn ty(&self, id: mir::LocalId) -> Result<&ir::Type> {
+        self.locals
+            .get(id.0)
+            .map(|l| &l.ty)
+            .ok_or_else(|| Fault::invalid("unknown MIR local"))
     }
 }
 struct Executor<'a> {
     program: &'a mir::Program,
-    output: String,
-    strings: StringHeap,
-    arrays: ArrayHeap<Value>,
+    state: State,
     active: Vec<Option<ir::FunctionId>>,
 }
 /// コンパイラ内で構築したMIRを検証後、新しい実行状態で実行します。
 /// 成功時にも論理的な領域が残っていたら内部不整合として返します。
 /// 外部の不正入力に対するsandboxや、実行時間の制限を提供するAPIではありません。
 pub fn run(program: &mir::Program) -> std::result::Result<String, ExecutionError> {
-    mir::validate(program).map_err(|e| ExecutionError {
+    mir::validate(program).map_err(validation_error)?;
+    let mut executor = Executor::new(program);
+    let result = executor.entry();
+    finish(result, executor.state)
+}
+pub(crate) fn validation_error(e: mir::Error) -> ExecutionError {
+    ExecutionError {
         origin: e.origin,
         kind: ErrorKind::Validation(Box::new(e)),
         location: None,
         output: String::new(),
-    })?;
-    let mut executor = Executor::new(program);
-    let result = executor.entry();
+    }
+}
+pub(crate) fn finish(
+    result: Result<()>,
+    state: State,
+) -> std::result::Result<String, ExecutionError> {
     match result {
-        Ok(()) => Ok(executor.output),
+        Ok(()) => Ok(state.output),
         Err(e) => Err(ExecutionError {
             kind: e.kind,
             origin: e.origin,
             location: e.location,
-            output: executor.output,
+            output: state.output,
         }),
     }
 }
@@ -198,21 +210,14 @@ impl<'a> Executor<'a> {
     fn new(program: &'a mir::Program) -> Self {
         Self {
             program,
-            output: String::new(),
-            strings: StringHeap::new(program.string_heap_limit),
-            arrays: ArrayHeap::new(program.array_heap_limit),
+            state: State::new(program.string_heap_limit, program.array_heap_limit),
             active: vec![],
         }
     }
     fn entry(&mut self) -> Result<()> {
         let program = self.program;
         self.function(&program.main, vec![])?;
-        if !self.strings.is_empty() || !self.arrays.is_empty() {
-            return Err(Fault::invalid(
-                "live owned storage after successful MIR execution",
-            ));
-        }
-        Ok(())
+        self.state.check_released()
     }
     fn call(&mut self, id: ir::FunctionId, args: Vec<Value>) -> Result<Option<Value>> {
         let program = self.program;
@@ -231,6 +236,7 @@ impl<'a> Executor<'a> {
             return Err(Fault::invalid("MIR argument count"));
         }
         let mut frame = Frame {
+            locals: &f.locals,
             values: vec![None; f.locals.len()],
         };
         for (id, v) in f.parameters.iter().zip(args) {
@@ -242,7 +248,7 @@ impl<'a> Executor<'a> {
         self.active.pop();
         result
     }
-    fn blocks(&mut self, f: &mir::Function, frame: &mut Frame) -> Result<Option<Value>> {
+    fn blocks(&mut self, f: &mir::Function, frame: &mut Frame<'_>) -> Result<Option<Value>> {
         let mut current = f.entry;
         loop {
             let b = f
@@ -250,7 +256,7 @@ impl<'a> Executor<'a> {
                 .get(current.0)
                 .ok_or_else(|| Fault::invalid("unknown MIR block"))?;
             for i in &b.instructions {
-                self.instruction(f, &i.kind, frame).map_err(|e| {
+                semantics::instruction(self, &i.kind, frame).map_err(|e| {
                     e.at(
                         Location {
                             function: f.id,
@@ -297,273 +303,18 @@ impl<'a> Executor<'a> {
             }
         }
     }
-    fn instruction(&mut self, f: &mir::Function, i: &I, frame: &mut Frame) -> Result<()> {
-        match i {
-            I::Assign { destination, value } => {
-                let ty = &f.locals[destination.0].ty;
-                let v = self.operation(value, ty, frame)?;
-                v.check(ty)?;
-                frame.set(*destination, v)?;
-            }
-            I::Call {
-                function,
-                arguments,
-                ..
-            } => {
-                self.call(*function, frame.arguments(arguments)?)?;
-            }
-            I::CheckIndex { root, path } => {
-                // 最後の要素を読まず、長さで検査します。未初期化要素の読取りとは区別します。
-                let mut v = frame.get(*root)?;
-                for (n, id) in path.iter().enumerate() {
-                    let index = checked_index(
-                        frame.get(*id)?.integer(IntegerType::I64)?,
-                        array_length(&v)?,
-                    )?;
-                    if n + 1 < path.len() {
-                        v = array_get(v, index)?;
-                    }
-                }
-            }
-            I::Store { root, path, value } => {
-                let indices = path
-                    .iter()
-                    .map(|id| {
-                        usize::try_from(frame.get(*id)?.integer(IntegerType::I64)?)
-                            .map_err(|_| Fault::invalid("invalid checked index"))
-                    })
-                    .collect::<Result<Vec<_>>>()?;
-                let mut destination = frame.get(*root)?;
-                set_path(&mut destination, &indices, frame.get(*value)?)?;
-                frame.set(*root, destination)?;
-            }
-            I::Output {
-                value: v,
-                newline,
-                quoted,
-            } => {
-                let text = frame.get(*v)?.text()?;
-                if *quoted {
-                    value::write_quoted(&mut self.output, &text);
-                } else {
-                    self.output.push_str(&text);
-                }
-                if *newline {
-                    self.output.push('\n');
-                }
-            }
-            I::ArrayInitialize { array, value } => {
-                let array = dynamic(frame.get(*array)?)?;
-                self.arrays.initialize(&array, frame.get(*value)?)?;
-            }
-            I::ArrayRetain { value } => self.arrays.retain(&dynamic(frame.get(*value)?)?)?,
-            I::ArrayFree { value } => self.arrays.free(&dynamic(frame.get(*value)?)?)?,
-            I::ArrayRangeCheck { length, start, end } => {
-                let length = frame.get(*length)?.integer(IntegerType::I64)?;
-                let start = frame.get(*start)?.integer(IntegerType::I64)?;
-                let end = frame.get(*end)?.integer(IntegerType::I64)?;
-                if start < 0 || start > end || end > length {
-                    return Err(Fault::failure(FailureCode::ArrayRangeOutOfBounds));
-                }
-            }
-            I::StringManage { value, retain } => self
-                .strings
-                .manage(&frame.get(*value)?.string()?, *retain)?,
-        }
-        Ok(())
+}
+impl Calls for Executor<'_> {
+    fn state(&mut self) -> &mut State {
+        &mut self.state
     }
-    fn operation(&mut self, op: &O, ty: &ir::Type, frame: &Frame) -> Result<Value> {
-        Ok(match op {
-            O::Literal(v) => match v {
-                mir::Literal::Boolean(v) => Value::Bool(*v),
-                mir::Literal::String(v) => Value::String(v.clone().into()),
-                mir::Literal::Integer(v) => {
-                    let ir::Type::Integer(t) = ty else {
-                        return Err(Fault::invalid("integer literal type"));
-                    };
-                    Value::Number(Number::Integer(*v, *t))
-                }
-                mir::Literal::Float(v) => Value::Number(match ty {
-                    ir::Type::F32 => {
-                        Number::F32(v.parse().map_err(|_| Fault::invalid("f32 literal"))?)
-                    }
-                    ir::Type::F64 => {
-                        Number::F64(v.parse().map_err(|_| Fault::invalid("f64 literal"))?)
-                    }
-                    _ => return Err(Fault::invalid("float literal type")),
-                }),
-            },
-            O::Copy(v) => frame.get(*v)?,
-            O::Unary { op, value: v } => value::unary(*op, frame.get(*v)?)?,
-            O::Binary { op, left, right } => {
-                value::binary(*op, frame.get(*left)?, frame.get(*right)?)?
-            }
-            O::ConvertInteger {
-                value, from, to, ..
-            } => {
-                let n = frame.get(*value)?.integer(*from)?;
-                if !to.contains(n) {
-                    return Err(Fault::failure(FailureCode::IntegerConversionOutOfRange));
-                }
-                Value::Number(Number::Integer(n, *to))
-            }
-            O::ConvertNumeric {
-                value: v,
-                from,
-                to,
-                mode,
-                ..
-            } => Value::Number(
-                numeric::convert_with_mode(frame.get(*v)?.number()?, *from, *to, *mode)
-                    .map_err(value::numeric_error)?,
-            ),
-            O::Array(values) => {
-                let ir::Type::Array { element, .. } = ty else {
-                    return Err(Fault::invalid("array result type"));
-                };
-                Value::Array {
-                    element: *element.clone(),
-                    values: frame.arguments(values)?,
-                }
-            }
-            O::Construct { ty, base, fields } => {
-                let count = self
-                    .program
-                    .types
-                    .get(ty.0)
-                    .ok_or_else(|| Fault::invalid("unknown product"))?
-                    .fields
-                    .len();
-                let mut result = if let Some(base) = base {
-                    let Value::Aggregate { fields, .. } = frame.get(*base)? else {
-                        return Err(Fault::invalid("product base"));
-                    };
-                    fields.into_iter().map(Some).collect::<Vec<_>>()
-                } else {
-                    vec![None; count]
-                };
-                for (id, v) in fields {
-                    *result
-                        .get_mut(id.0)
-                        .ok_or_else(|| Fault::invalid("unknown field"))? = Some(frame.get(*v)?);
-                }
-                Value::Aggregate {
-                    type_id: *ty,
-                    fields: result
-                        .into_iter()
-                        .map(|v| v.ok_or_else(|| Fault::invalid("missing field")))
-                        .collect::<Result<_>>()?,
-                }
-            }
-            O::Field { base, field, .. } => {
-                let Value::Aggregate { fields, .. } = frame.get(*base)? else {
-                    return Err(Fault::invalid("field of non-product"));
-                };
-                fields
-                    .get(field.0)
-                    .cloned()
-                    .ok_or_else(|| Fault::invalid("unknown field"))?
-            }
-            O::Index { base, index } => {
-                let base = frame.get(*base)?;
-                let index = checked_index(
-                    frame.get(*index)?.integer(IntegerType::I64)?,
-                    array_length(&base)?,
-                )?;
-                array_get(base, index)?
-            }
-            O::Call {
-                function,
-                arguments,
-                ..
-            } => self
-                .call(*function, frame.arguments(arguments)?)?
-                .ok_or_else(|| Fault::invalid("void call used as value"))?,
-            O::ArrayLength(v) => Value::Number(Number::Integer(
-                array_length(&frame.get(*v)?)? as i128,
-                IntegerType::I64,
-            )),
-            O::StringByteLength(v) => Value::Number(Number::Integer(
-                frame.get(*v)?.string()?.len() as i128,
-                IntegerType::I64,
-            )),
-            O::StringConcat { left, right } => Value::String(
-                self.strings
-                    .concat(&frame.get(*left)?.string()?, &frame.get(*right)?.string()?)?,
-            ),
-            O::ArrayAllocate {
-                length,
-                element_width,
-            } => {
-                let ir::Type::DynamicArray { element } = ty else {
-                    return Err(Fault::invalid("array allocate type"));
-                };
-                let length = u64::try_from(frame.get(*length)?.integer(IntegerType::I64)?)
-                    .map_err(|_| Fault::failure(FailureCode::AllocationSizeOverflow))?;
-                Value::DynamicArray {
-                    element: *element.clone(),
-                    storage: self.arrays.allocate(length, *element_width)?,
-                }
-            }
-            O::ArrayReleaseOwner(v) => {
-                Value::Bool(self.arrays.release_owner(&dynamic(frame.get(*v)?)?)?)
-            }
-        })
+    fn types(&self) -> &[mir::TypeDefinition] {
+        &self.program.types
+    }
+    fn call(&mut self, id: ir::FunctionId, args: Vec<Value>) -> Result<Option<Value>> {
+        Executor::call(self, id, args)
     }
 }
-fn dynamic(v: Value) -> Result<ArrayValue<Value>> {
-    if let Value::DynamicArray { storage, .. } = v {
-        Ok(storage)
-    } else {
-        Err(Fault::invalid("expected dynamic array"))
-    }
-}
-fn array_length(v: &Value) -> Result<usize> {
-    match v {
-        Value::Array { values, .. } => Ok(values.len()),
-        Value::DynamicArray { storage, .. } => Ok(storage.len()),
-        _ => Err(Fault::invalid("expected array")),
-    }
-}
-fn checked_index(index: i128, length: usize) -> Result<usize> {
-    usize::try_from(index)
-        .ok()
-        .filter(|i| *i < length)
-        .ok_or_else(|| Fault::failure(FailureCode::ArrayIndexOutOfBounds))
-}
-fn array_get(v: Value, index: usize) -> Result<Value> {
-    match v {
-        Value::Array { values, .. } => values
-            .get(index)
-            .cloned()
-            .ok_or_else(|| Fault::invalid("invalid checked index")),
-        Value::DynamicArray { storage, .. } => Ok(storage.get(index)?),
-        _ => Err(Fault::invalid("expected array")),
-    }
-}
-fn set_path(v: &mut Value, path: &[usize], replacement: Value) -> Result<()> {
-    let Some((&index, rest)) = path.split_first() else {
-        *v = replacement;
-        return Ok(());
-    };
-    match v {
-        Value::Array { values, .. } => set_path(
-            values
-                .get_mut(index)
-                .ok_or_else(|| Fault::invalid("invalid checked index"))?,
-            rest,
-            replacement,
-        ),
-        Value::DynamicArray { storage, .. } => {
-            let mut item = storage.get(index)?;
-            set_path(&mut item, rest, replacement)?;
-            storage.set(index, item)?;
-            Ok(())
-        }
-        _ => Err(Fault::invalid("invalid array path")),
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -584,18 +335,18 @@ mod tests {
             let p = crate::mir::lower(&crate::compile_to_ir(src).unwrap()).unwrap();
             let mut executor = Executor::new(&p);
             if array {
-                executor.arrays.fail_next_allocation();
+                executor.state.arrays.fail_next_allocation();
             } else {
-                executor.strings.fail_next_allocation();
+                executor.state.strings.fail_next_allocation();
             }
             let e = executor.entry().unwrap_err();
             assert_eq!(e.kind, ErrorKind::Runtime(FailureCode::AllocationFailed));
-            assert_eq!(executor.output, "before\n");
+            assert_eq!(executor.state.output, "before\n");
             let o = e.origin.unwrap();
             assert_eq!(&src[o.span.start()..o.span.end()], expected);
             assert!(e.location.is_some());
-            assert!(executor.arrays.is_empty());
-            assert!(executor.strings.is_empty());
+            assert!(executor.state.arrays.is_empty());
+            assert!(executor.state.strings.is_empty());
             assert!(run(&p).is_ok());
         }
     }

@@ -13,7 +13,7 @@
 | `run-vm` | Bytecode | VM instruction execution |
 | `emit-mir` | None | Observe MIR operations, edges, and origins |
 
-MIR execution does not reconstruct HIR or bytecode for execution. It does not introduce another build/release artifact. [Native consumes the same MIR](native-mir.en.md). SSA, optimization, and external MIR loading remain unimplemented.
+MIR execution does not reconstruct HIR or bytecode for execution. It does not introduce another build/release artifact. [Native consumes the same MIR](native-mir.en.md). [SSA construction and direct execution](mir-ssa.en.md) are available through separate Rust APIs. Optimization and external MIR loading remain unimplemented.
 
 ## Implementation and sharing
 
@@ -22,7 +22,8 @@ Control flow is separate from atomic value operations.
 | Implementation | Responsibility |
 | --- | --- |
 | [mir_executor.rs](../../src/mir_executor.rs) | Local frames, instructions, branch/jump/return, calls, and MIR failure locations |
-| [runtime/value.rs](../../src/runtime/value.rs) | Value representation, arithmetic/comparisons/bit operations, and display shared by HIR/MIR; no control flow |
+| [mir_executor/semantics.rs](../../src/mir_executor/semantics.rs) | Individual instructions, operations, and ownership shared by MIR/SSA; each executor owns its CFG and value references |
+| [runtime/value.rs](../../src/runtime/value.rs) | Value representation, arithmetic/comparisons/bit operations, and display shared by HIR/MIR/SSA; no control flow |
 | [runtime/numeric.rs](../../src/runtime/numeric.rs) | Numeric conversion and rounding rules |
 | [runtime/string_heap.rs](../../src/runtime/string_heap.rs), [array_heap.rs](../../src/runtime/array_heap.rs) | Logical ownership counts, allocation budgets, reclamation |
 | [mir/validate.rs](../../src/mir/validate.rs) | Structure, types, initialization, and preceding index checks before execution |

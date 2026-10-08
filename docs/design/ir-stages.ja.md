@@ -4,7 +4,7 @@
 
 ## 現状と今回の方針
 
-調査基点はNative動的配列対応を統合した`f39f55e`です。**共通MIRの型・検証器・HIRからの変換と`emit-mir`を実装しました。[MIR実行器](mir-executor.ja.md)・`run-mir`も実装済みです。[NativeのMIR入力への移行](native-mir.ja.md)も実装済みです。SSAの表現・構造検証・観測テキスト・自動変換も実装済みですが、SSA実行・最適化passは未実装です。**
+調査基点はNative動的配列対応を統合した`f39f55e`です。**共通MIRの型・検証器・HIRからの変換と`emit-mir`を実装しました。[MIR実行器](mir-executor.ja.md)・`run-mir`も実装済みです。[NativeのMIR入力への移行](native-mir.ja.md)も実装済みです。SSAの表現・構造検証・観測テキスト・自動変換・Rust APIでの直接実行も実装済みです。公開CLI・bundleのSSA対応と最適化passは後続です。**
 
 | 段階 | 現在の実装 | 方針 |
 | --- | --- | --- |
@@ -167,6 +167,6 @@ callの結果: true → 加算 / false → update
 | 2（実装済み） | [独立したMIR Interpreter](mir-executor.ja.md)・`run-mir` | HIR・VMを内部実行せず、現在の言語機能・停止・出自・寿命を比較。動的配列はWindows/Linuxの9経路で照合 |
 | 3（実装済み） | [NativeをMIR入力へ移行](native-mir.ja.md) | 現行ASM・COFF/ELFとの既知出力・失敗・出自・ABI比較をWindows/Linuxで通す |
 | 4（一部実装済み） | 観測bundle・Lean対応、必要な他backendの移行 | sources/HIR/MIR/ASMのbundleは実装済み。u8の直列・if・短絡・while／for・break／continue・入れ子・更新停止出自と明示上限内の完了を証明。一般のloop・heapは後続。その他の成果物と証明範囲は個別に拡張 |
-| 5（一部実装済み） | [SSA変換](mir-ssa.ja.md)、個別の最適化pass | scalar SSAと残存slotの表現・構造検証・観測テキスト・MIR→SSA変換を実装。次はSSA直接実行。最適化は後続 |
+| 5（一部実装済み） | [SSA変換](mir-ssa.ja.md)、個別の最適化pass | scalar SSAと残存slotの表現・構造検証・観測テキスト・MIR→SSA変換・直接実行を実装。次は公開CLI・bundle連携。最適化は後続 |
 
-最初のMIR PRでSSA、最適化、全backendの付替え、Image loaderを一括導入しません。MIR実行は型・関数・module・generic・配列・文字列・所有・停止診断に対応しています。NativeのMIR移行も実装しました。観測bundleの初期範囲も実装済みです。HIR→MIRのLean検証はu8関数の直列・分岐・短絡・whileの明示上限内の完了まで進みました。while内の分岐・break／continueと入れ子の行き先も検証しました。forの初期化と、本文末尾・continueが更新を通りbreakが飛ばす対応、更新時overflowの出自も検証しました。この非最適化MIRを基準とする[SSA設計](mir-ssa.ja.md)をまとめました。SSAの専用表現・構造検証器・決定的な観測テキストを実装しました。元MIRを保持する自動変換も実装しました。SSA直接実行は未実装です。次はSSAを直接評価し、基準経路と出力・停止・所有の意味を比較します。
+最初のMIR PRでSSA、最適化、全backendの付替え、Image loaderを一括導入しません。MIR実行は型・関数・module・generic・配列・文字列・所有・停止診断に対応しています。NativeのMIR移行も実装しました。観測bundleの初期範囲も実装済みです。HIR→MIRのLean検証はu8関数の直列・分岐・短絡・whileの明示上限内の完了まで進みました。while内の分岐・break／continueと入れ子の行き先も検証しました。forの初期化と、本文末尾・continueが更新を通りbreakが飛ばす対応、更新時overflowの出自も検証しました。この非最適化MIRを基準とする[SSA設計](mir-ssa.ja.md)をまとめました。SSAの専用表現・構造検証器・決定的な観測テキストを実装しました。元MIRを保持する自動変換も実装しました。SSA直接実行も実装し、実行用example・停止例・heap予算で基準経路と出力・停止・所有の意味を比較します。次は公開CLI・bundleにSSAを明示的な選択肢として追加します。

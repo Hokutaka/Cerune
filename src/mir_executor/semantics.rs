@@ -1,0 +1,333 @@
+//! MIRとSSAで共有する個々の演算・所有操作です。CFGの実行や値の参照方式は含みません。
+use super::{Fault, Result};
+use crate::{
+    ir,
+    mir::{self, InstructionKind as I, Operation as O},
+    runtime::{
+        FailureCode,
+        array_heap::{ArrayHeap, ArrayValue},
+        numeric::{self, Number},
+        string_heap::StringHeap,
+        value::{self, Value},
+    },
+    types::IntegerType,
+};
+
+pub(crate) struct State {
+    pub output: String,
+    pub strings: StringHeap,
+    pub arrays: ArrayHeap<Value>,
+}
+impl State {
+    pub fn new(string_limit: u64, array_limit: u64) -> Self {
+        Self {
+            output: String::new(),
+            strings: StringHeap::new(string_limit),
+            arrays: ArrayHeap::new(array_limit),
+        }
+    }
+    pub fn check_released(&self) -> Result<()> {
+        if !self.strings.is_empty() || !self.arrays.is_empty() {
+            Err(Fault::invalid(
+                "live owned storage after successful MIR execution",
+            ))
+        } else {
+            Ok(())
+        }
+    }
+}
+pub(crate) trait Frame<R: Copy> {
+    fn get(&self, id: R) -> Result<Value>;
+    fn set(&mut self, id: R, value: Value) -> Result<()>;
+    fn ty(&self, id: R) -> Result<&ir::Type>;
+    fn arguments(&self, args: &[R]) -> Result<Vec<Value>> {
+        args.iter().map(|id| self.get(*id)).collect()
+    }
+}
+pub(crate) trait Calls {
+    fn state(&mut self) -> &mut State;
+    fn types(&self) -> &[mir::TypeDefinition];
+    fn call(&mut self, id: ir::FunctionId, args: Vec<Value>) -> Result<Option<Value>>;
+}
+pub(crate) fn instruction<R: Copy>(
+    executor: &mut impl Calls,
+    i: &I<R>,
+    frame: &mut impl Frame<R>,
+) -> Result<()> {
+    match i {
+        I::Assign { destination, value } => {
+            let ty = frame.ty(*destination)?.clone();
+            let v = operation(executor, value, &ty, frame)?;
+            v.check(&ty)?;
+            frame.set(*destination, v)?;
+        }
+        I::Call {
+            function,
+            arguments,
+            ..
+        } => {
+            executor.call(*function, frame.arguments(arguments)?)?;
+        }
+        I::CheckIndex { root, path } => {
+            // 最後の要素を読まず、長さで検査します。未初期化要素の読取りとは区別します。
+            let mut v = frame.get(*root)?;
+            for (n, id) in path.iter().enumerate() {
+                let index = checked_index(
+                    frame.get(*id)?.integer(IntegerType::I64)?,
+                    array_length(&v)?,
+                )?;
+                if n + 1 < path.len() {
+                    v = array_get(v, index)?;
+                }
+            }
+        }
+        I::Store { root, path, value } => {
+            let indices = path
+                .iter()
+                .map(|id| {
+                    usize::try_from(frame.get(*id)?.integer(IntegerType::I64)?)
+                        .map_err(|_| Fault::invalid("invalid checked index"))
+                })
+                .collect::<Result<Vec<_>>>()?;
+            let mut destination = frame.get(*root)?;
+            set_path(&mut destination, &indices, frame.get(*value)?)?;
+            frame.set(*root, destination)?;
+        }
+        I::Output {
+            value: v,
+            newline,
+            quoted,
+        } => {
+            let text = frame.get(*v)?.text()?;
+            if *quoted {
+                value::write_quoted(&mut executor.state().output, &text);
+            } else {
+                executor.state().output.push_str(&text);
+            }
+            if *newline {
+                executor.state().output.push('\n');
+            }
+        }
+        I::ArrayInitialize { array, value } => {
+            let array = dynamic(frame.get(*array)?)?;
+            executor
+                .state()
+                .arrays
+                .initialize(&array, frame.get(*value)?)?;
+        }
+        I::ArrayRetain { value } => executor
+            .state()
+            .arrays
+            .retain(&dynamic(frame.get(*value)?)?)?,
+        I::ArrayFree { value } => executor
+            .state()
+            .arrays
+            .free(&dynamic(frame.get(*value)?)?)?,
+        I::ArrayRangeCheck { length, start, end } => {
+            let length = frame.get(*length)?.integer(IntegerType::I64)?;
+            let start = frame.get(*start)?.integer(IntegerType::I64)?;
+            let end = frame.get(*end)?.integer(IntegerType::I64)?;
+            if start < 0 || start > end || end > length {
+                return Err(Fault::failure(FailureCode::ArrayRangeOutOfBounds));
+            }
+        }
+        I::StringManage { value, retain } => executor
+            .state()
+            .strings
+            .manage(&frame.get(*value)?.string()?, *retain)?,
+    }
+    Ok(())
+}
+fn operation<R: Copy>(
+    executor: &mut impl Calls,
+    op: &O<R>,
+    ty: &ir::Type,
+    frame: &impl Frame<R>,
+) -> Result<Value> {
+    Ok(match op {
+        O::Literal(v) => match v {
+            mir::Literal::Boolean(v) => Value::Bool(*v),
+            mir::Literal::String(v) => Value::String(v.clone().into()),
+            mir::Literal::Integer(v) => {
+                let ir::Type::Integer(t) = ty else {
+                    return Err(Fault::invalid("integer literal type"));
+                };
+                Value::Number(Number::Integer(*v, *t))
+            }
+            mir::Literal::Float(v) => Value::Number(match ty {
+                ir::Type::F32 => Number::F32(v.parse().map_err(|_| Fault::invalid("f32 literal"))?),
+                ir::Type::F64 => Number::F64(v.parse().map_err(|_| Fault::invalid("f64 literal"))?),
+                _ => return Err(Fault::invalid("float literal type")),
+            }),
+        },
+        O::Copy(v) => frame.get(*v)?,
+        O::Unary { op, value: v } => value::unary(*op, frame.get(*v)?)?,
+        O::Binary { op, left, right } => value::binary(*op, frame.get(*left)?, frame.get(*right)?)?,
+        O::ConvertInteger {
+            value, from, to, ..
+        } => {
+            let n = frame.get(*value)?.integer(*from)?;
+            if !to.contains(n) {
+                return Err(Fault::failure(FailureCode::IntegerConversionOutOfRange));
+            }
+            Value::Number(Number::Integer(n, *to))
+        }
+        O::ConvertNumeric {
+            value: v,
+            from,
+            to,
+            mode,
+            ..
+        } => Value::Number(
+            numeric::convert_with_mode(frame.get(*v)?.number()?, *from, *to, *mode)
+                .map_err(value::numeric_error)?,
+        ),
+        O::Array(values) => {
+            let ir::Type::Array { element, .. } = ty else {
+                return Err(Fault::invalid("array result type"));
+            };
+            Value::Array {
+                element: *element.clone(),
+                values: frame.arguments(values)?,
+            }
+        }
+        O::Construct { ty, base, fields } => {
+            let count = executor
+                .types()
+                .get(ty.0)
+                .ok_or_else(|| Fault::invalid("unknown product"))?
+                .fields
+                .len();
+            let mut result = if let Some(base) = base {
+                let Value::Aggregate { fields, .. } = frame.get(*base)? else {
+                    return Err(Fault::invalid("product base"));
+                };
+                fields.into_iter().map(Some).collect::<Vec<_>>()
+            } else {
+                vec![None; count]
+            };
+            for (id, v) in fields {
+                *result
+                    .get_mut(id.0)
+                    .ok_or_else(|| Fault::invalid("unknown field"))? = Some(frame.get(*v)?);
+            }
+            Value::Aggregate {
+                type_id: *ty,
+                fields: result
+                    .into_iter()
+                    .map(|v| v.ok_or_else(|| Fault::invalid("missing field")))
+                    .collect::<Result<_>>()?,
+            }
+        }
+        O::Field { base, field, .. } => {
+            let Value::Aggregate { fields, .. } = frame.get(*base)? else {
+                return Err(Fault::invalid("field of non-product"));
+            };
+            fields
+                .get(field.0)
+                .cloned()
+                .ok_or_else(|| Fault::invalid("unknown field"))?
+        }
+        O::Index { base, index } => {
+            let base = frame.get(*base)?;
+            let index = checked_index(
+                frame.get(*index)?.integer(IntegerType::I64)?,
+                array_length(&base)?,
+            )?;
+            array_get(base, index)?
+        }
+        O::Call {
+            function,
+            arguments,
+            ..
+        } => executor
+            .call(*function, frame.arguments(arguments)?)?
+            .ok_or_else(|| Fault::invalid("void call used as value"))?,
+        O::ArrayLength(v) => Value::Number(Number::Integer(
+            array_length(&frame.get(*v)?)? as i128,
+            IntegerType::I64,
+        )),
+        O::StringByteLength(v) => Value::Number(Number::Integer(
+            frame.get(*v)?.string()?.len() as i128,
+            IntegerType::I64,
+        )),
+        O::StringConcat { left, right } => Value::String(
+            executor
+                .state()
+                .strings
+                .concat(&frame.get(*left)?.string()?, &frame.get(*right)?.string()?)?,
+        ),
+        O::ArrayAllocate {
+            length,
+            element_width,
+        } => {
+            let ir::Type::DynamicArray { element } = ty else {
+                return Err(Fault::invalid("array allocate type"));
+            };
+            let length = u64::try_from(frame.get(*length)?.integer(IntegerType::I64)?)
+                .map_err(|_| Fault::failure(FailureCode::AllocationSizeOverflow))?;
+            Value::DynamicArray {
+                element: *element.clone(),
+                storage: executor.state().arrays.allocate(length, *element_width)?,
+            }
+        }
+        O::ArrayReleaseOwner(v) => Value::Bool(
+            executor
+                .state()
+                .arrays
+                .release_owner(&dynamic(frame.get(*v)?)?)?,
+        ),
+    })
+}
+fn dynamic(v: Value) -> Result<ArrayValue<Value>> {
+    if let Value::DynamicArray { storage, .. } = v {
+        Ok(storage)
+    } else {
+        Err(Fault::invalid("expected dynamic array"))
+    }
+}
+fn array_length(v: &Value) -> Result<usize> {
+    match v {
+        Value::Array { values, .. } => Ok(values.len()),
+        Value::DynamicArray { storage, .. } => Ok(storage.len()),
+        _ => Err(Fault::invalid("expected array")),
+    }
+}
+fn checked_index(index: i128, length: usize) -> Result<usize> {
+    usize::try_from(index)
+        .ok()
+        .filter(|i| *i < length)
+        .ok_or_else(|| Fault::failure(FailureCode::ArrayIndexOutOfBounds))
+}
+fn array_get(v: Value, index: usize) -> Result<Value> {
+    match v {
+        Value::Array { values, .. } => values
+            .get(index)
+            .cloned()
+            .ok_or_else(|| Fault::invalid("invalid checked index")),
+        Value::DynamicArray { storage, .. } => Ok(storage.get(index)?),
+        _ => Err(Fault::invalid("expected array")),
+    }
+}
+fn set_path(v: &mut Value, path: &[usize], replacement: Value) -> Result<()> {
+    let Some((&index, rest)) = path.split_first() else {
+        *v = replacement;
+        return Ok(());
+    };
+    match v {
+        Value::Array { values, .. } => set_path(
+            values
+                .get_mut(index)
+                .ok_or_else(|| Fault::invalid("invalid checked index"))?,
+            rest,
+            replacement,
+        ),
+        Value::DynamicArray { storage, .. } => {
+            let mut item = storage.get(index)?;
+            set_path(&mut item, rest, replacement)?;
+            storage.set(index, item)?;
+            Ok(())
+        }
+        _ => Err(Fault::invalid("invalid array path")),
+    }
+}

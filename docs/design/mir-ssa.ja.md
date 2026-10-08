@@ -4,7 +4,7 @@
 
 ## 状態と判断
 
-**SSAの表現・構造検証器・観測テキストと、MIR→SSAの自動変換を実装しました。SSA実行・公開CLIは未実装です。** この文書は実装済みの範囲と後続の方針を区別します。基準は非SSAのMIRと、その独立実行器です。追加した[ssa_values.ceru](../../examples/ir_stages/ssa_values.ceru)は現行経路で実行できる比較用のソースであり、SSA実行済みの例ではありません。
+**SSAの表現・構造検証器・観測テキストと、MIR→SSAの自動変換を実装しました。SSAの直接実行もRust APIで利用でき、公開CLI・bundle連携は未実装です。** この文書は実装済みの範囲と後続の方針を区別します。基準は非SSAのMIRと、その独立実行器です。[ssa_values.ceru](../../examples/ir_stages/ssa_values.ceru)を含む実行用exampleで、IR・非最適化MIR・SSA・VMの結果を比較します。
 
 SSAは「各値の定義を一つにする」表現です。ソースの`mut`を禁止せず、再代入ごとに別の値番号を付けます。合流点では、通った辺からブロック引数へ値を渡します。変換を明示的に選び、元MIRを上書きしません。
 
@@ -50,7 +50,7 @@ SSA値番号は静的な定義の識別子です。loopで同じ命令を再訪�
 | `mir::ssa::construct(&mir)`（実装済み） | 入力MIRを検証し、独立した元MIR snapshot・SSA・対応を返す。`scalar-ssa-v1`、オプションなしの変換として記録 |
 | `mir::ssa::validate(&ssa)`（実装済み） | 定義・使用・型・辺・残存slot・出自を検査 |
 | `mir::ssa::text::emit(&ssa)`（実装済み） | 検証後に`Result<String, mir::Error>`を返す。`Cerune scalar SSA v0.1`の観測テキストでありload形式ではない |
-| SSA評価処理 | SSAのblock・値・slotを直接評価。既存の停止・出力契約を使う |
+| `ssa_executor::run(&ssa)`（実装済み） | SSAのblock・値・slotを直接評価し、`Result<String, ExecutionError>`を返す。既存の停止・出力契約を使う |
 | `mir::ssa::lower(&ssa)` | 辺の引数を並列copyへ展開した非SSA MIRと対応を返す |
 
 実装済みの`ssa::Program`は、独立した元MIR snapshotと、SSAの関数・値・blockを保持します。`Operand::Value`と`Operand::Slot`を区別し、演算定義は`mir::Operation<R>`／`InstructionKind<R>`を共有します。既存MIRでは既定の`R = LocalId`を使うため、演算の意味や既存の観測テキストは変えません。
@@ -65,9 +65,26 @@ SSA値番号は静的な定義の識別子です。loopで同じ命令を再訪�
 2. 昇格対象と残存slotを決める。各書込みの定義点、各読取りと辺で必要な値を調べる。
 3. 支配関係（入口から使用点へのすべての経路が定義点を通ること）と支配境界を計算する。各局所値の反復支配境界のうち入口で生きているblockに引数を置く。loopの戻り辺も含めて不動点まで求める。
 4. 支配木に沿って定義を改名し、各辺に実引数を付ける。block内は元の順序で処理する。引数・局所値・blockの走査順を固定し、hashの列挙順に番号を依存させない。
-5. 変換後の構造検証を行う。テストでは元MIR・操作・辺・出自・各読取りの最新定義を独立に照合する。SSA直接実行での比較は次段階で追加する。
+5. 変換後の構造検証を行う。テストでは元MIR・操作・辺・出自・各読取りの最新定義を独立に照合する。SSA直接実行とHIR・非SSA MIR・VMの出力・停止出自・先行出力も比較する。
 
 入口で使わない局所値に引数を作らないことは、未定義の値を捏造しないための表現上の選択です。元の計算やcopyは削除しません。合流する実引数がすべて同じでも、最初の変換では作った引数を簡約しません。
+
+### SSA直接実行
+
+[ssa_executor.rs](../../src/ssa_executor.rs)は、SSAのblock・辺・ValueId・残存slotを直接評価します。元MIRの本体やVMへ実行を委譲しません。元snapshotは型定義・signature・slot型・heap予算と出自の照合に使い、実行前後で変更しません。
+
+個々の数値・文字列・配列・所有操作は[共通の意味処理](../../src/mir_executor/semantics.rs)をMIR実行器と共有します。CFGの進行、値の参照、関数呼出し先の選択はそれぞれの実行器が担当します。辺の全入力を読んでから同時に束縛し、所有copyや確保を追加しません。
+
+診断APIは次の情報を返します。
+
+| 情報 | 意味 |
+| --- | --- |
+| `ErrorKind` | MIRと共通の構造検証失敗・言語のruntime failure・内部不整合（`InvalidMir`） |
+| `origin()` / `runtime_failure()` | 実際に停止した操作のNodeId・SourceId・Span・停止コード。呼出し元で上書きしない |
+| `location()` | SSA側のFunctionId・BlockIdと、元MIRのBlockId・InstructionId |
+| `output()` | 停止する前までの出力 |
+
+実行前にSSA全体を検証し、検証失敗では出力しません。実行ごとに新しいframeとheapを作り、正常終了時は未解放の所有領域も検査します。CLI・bundle連携、SSA→MIR lowering、Native連携、SSAのLean証明は後続です。実行比較は変換一般の形式証明ではありません。
 
 ### 未到達block
 
@@ -85,7 +102,7 @@ loopの`jump head(right, left)`を逐次代入すると、入替え前の値を�
 
 ## 比較用の表現
 
-[ssa_values.ceru](../../examples/ir_stages/ssa_values.ceru)は、ifで選んだ値にloopで0と2を加え、別のloopで二つの値を3回入れ替えます。現行のIR・MIR・VMでの期待出力は`14\n16\n20\n10\n`です。
+[ssa_values.ceru](../../examples/ir_stages/ssa_values.ceru)は、ifで選んだ値にloopで0と2を加え、別のloopで二つの値を3回入れ替えます。IR・非SSA MIR・SSA・VMでの期待出力は`14\n16\n20\n10\n`です。
 
 次は合流の**説明用の略記であり、現在の生成物や確定したテキスト文法ではありません**。literalやcopy等の命令と出自注釈を省略しています。実際のSSA生成時は元の操作を残します。
 
@@ -106,11 +123,12 @@ loopの戻り辺:
     jump head(v_right, v_left, v_next_index)
 ```
 
-[Rust API例](../../experiments/ssa/README.md)は、引数なしなら手作りSSAを表示し、ソースを指定すると実際のMIRから自動変換します。どちらも`original-mir`と`ssa`を別区分で表示し、プログラムは実行しません。
+[Rust API例](../../experiments/ssa/README.md)は、引数なしなら手作りSSAを表示し、ソースを指定すると実際のMIRから自動変換します。どちらも`original-mir`と`ssa`を別区分で表示します。`--run source.ceru`を明示するとSSAを直接実行します。
 
 ```sh
 cargo run --quiet --example ssa_model -- examples/ir_stages/ssa_values.ceru
 cargo run --quiet --example ssa_model -- examples/ir_stages/owned_values.ceru
+cargo run --quiet --example ssa_model -- --run examples/ir_stages/ssa_values.ceru
 ```
 
 現在の`ssa_values`では、ifの両辺が`bb3(v13)`へ値を渡し、loop条件`bb4(v16, v17)`にtotalとindex、更新`bb7(v25)`にその回のtotalを渡します。`mir-iN`と`original-local`で元MIRへ戻れます。番号はこのソースと変換版での観測例であり、将来の版で同じ番号を保証しません。
@@ -157,7 +175,7 @@ bundleは元MIR・SSA・変換対応を別ファイルにし、Native連携後�
 | --- | --- | --- |
 | 1（実装済み） | 表現・構造検証・決定的なテキスト | 手作りの分岐・loop・並列引数・残存slotを検証。壊れた定義・辺・初期化を拒否 |
 | 2（実装済み） | MIR→SSA・変換対応 | 直列・分岐／短絡・loop、残存slotを扱う。実行用example全件で元snapshot不変、操作・辺・出自・最新定義、未到達記録、決定性を検査 |
-| 3 | SSA直接評価・CLI・bundle | 基準例と既存MIR/runtime testsでHIR・MIR・SSA・VMを比較。heap予算・先行出力・停止出自も比較 |
+| 3（直接評価は実装済み） | SSA直接評価・後続のCLI・bundle | 基準例と既存MIR/runtime testsでHIR・MIR・SSA・VMを比較。heap予算・先行出力・停止出自も比較 |
 | 4 | SSA→MIR・Native | 並列copy・辺の補助blockを観測し、Windows/LinuxでASM・Objectの結果を照合 |
 | 5 | Lean対応と個別の最適化pass | 具体例のMIR→SSA対応を独立モデルで検査。各passの保存条件を別に定義してから実装 |
 

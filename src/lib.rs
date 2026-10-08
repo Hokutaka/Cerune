@@ -16,6 +16,7 @@ pub mod parser;
 pub mod runtime;
 pub mod semantic;
 pub mod source;
+pub mod ssa_executor;
 mod sums;
 pub mod types;
 pub mod vm;

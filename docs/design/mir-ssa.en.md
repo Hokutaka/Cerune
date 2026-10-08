@@ -4,7 +4,7 @@
 
 ## Status and decisions
 
-**The SSA representation, structural validator, observation text, and automatic MIR→SSA construction are implemented. SSA execution and public CLI support remain unimplemented.** This document distinguishes the implemented scope from subsequent plans. Non-SSA MIR and its independent interpreter remain the baseline. The new [ssa_values.ceru](../../examples/ir_stages/ssa_values.ceru) runs on existing routes; it is not evidence of implemented SSA execution.
+**The SSA representation, structural validator, observation text, and automatic MIR→SSA construction are implemented. Direct SSA execution is also available through the Rust API; public CLI and bundle integration remain unimplemented.** This document distinguishes the implemented scope from subsequent plans. Non-SSA MIR and its independent interpreter remain the baseline. Runnable examples, including [ssa_values.ceru](../../examples/ir_stages/ssa_values.ceru), compare IR, non-optimized MIR, SSA, and VM results.
 
 SSA gives each value a single definition. Source `mut` remains valid: each reassignment gets a different value ID. At a merge, the selected edge supplies values to block arguments. Select construction explicitly and preserve the input MIR.
 
@@ -50,7 +50,7 @@ Entry points and status follow. Unimplemented Rust API names will be finalized d
 | `mir::ssa::construct(&mir)` (implemented) | Validate input MIR; return an independent original-MIR snapshot, SSA, and mappings. Record `scalar-ssa-v1` with no options |
 | `mir::ssa::validate(&ssa)` (implemented) | Check definitions, uses, types, edges, residual slots, and origins |
 | `mir::ssa::text::emit(&ssa)` (implemented) | Validate, then return `Result<String, mir::Error>` with `Cerune scalar SSA v0.1` observation text, not a loading format |
-| SSA evaluation | Directly evaluate SSA blocks, values, and slots under existing output/failure contracts |
+| `ssa_executor::run(&ssa)` (implemented) | Directly evaluate SSA blocks, values, and slots; return `Result<String, ExecutionError>` under existing output/failure contracts |
 | `mir::ssa::lower(&ssa)` | Return non-SSA MIR with edge arguments expanded to parallel copies, plus mappings |
 
 The implemented `ssa::Program` holds an independent original-MIR snapshot and SSA functions, values, and blocks. It distinguishes `Operand::Value` from `Operand::Slot` while sharing `mir::Operation<R>` / `InstructionKind<R>`. Existing MIR uses the default `R = LocalId`; operation semantics and existing observation text stay unchanged.
@@ -65,9 +65,26 @@ Implemented automatic construction proceeds in the following order.
 2. Classify promoted locals and residual slots. Collect definitions, reads, and values required along edges.
 3. Compute dominance (every entry-to-use path passes through the definition) and dominance frontiers. Place arguments in the iterated dominance frontier of each local's definitions where that local is live on entry. Include backedges and iterate to a fixed point.
 4. Rename definitions along the dominator tree and supply arguments on each edge. Process instructions in their original order. Fix argument/local/block traversal order; numbering must not depend on hash iteration.
-5. Structurally validate the result. Tests independently compare original MIR, operations, edges, origins, and the latest definition at each read. Direct SSA execution comparisons are the next stage.
+5. Structurally validate the result. Tests independently compare original MIR, operations, edges, origins, and the latest definition at each read. Direct SSA execution is also compared with HIR, non-SSA MIR, and VM output, failure origins, and prior output.
 
 Avoiding arguments for locals not live on entry prevents invented undefined values; it does not delete source computations or copies. Initially, do not simplify created arguments even when all incoming values are identical.
+
+### Direct SSA execution
+
+[ssa_executor.rs](../../src/ssa_executor.rs) directly evaluates SSA blocks, edges, ValueIds, and residual slots. It does not execute the original MIR body or delegate to the VM. The original snapshot supplies type definitions, signatures, slot types, heap budgets, and origin mappings; execution leaves it unchanged.
+
+Individual numeric, string, array, and ownership operations share [operation semantics](../../src/mir_executor/semantics.rs) with the MIR interpreter. Each executor controls its own CFG, value references, and function dispatch. Read all incoming edge values before binding destination arguments simultaneously, without adding ownership copies or allocations.
+
+The diagnostic API exposes the following information.
+
+| Information | Meaning |
+| --- | --- |
+| `ErrorKind` | Shared MIR categories: validation failure, language runtime failure, or internal inconsistency (`InvalidMir`) |
+| `origin()` / `runtime_failure()` | Failing operation's NodeId, SourceId, Span, and failure code; callers do not overwrite callee origins |
+| `location()` | SSA FunctionId/BlockId and original MIR BlockId/InstructionId |
+| `output()` | Output preceding failure |
+
+Validate the entire SSA program before producing output. Each run uses fresh frames and heaps, and successful completion checks for unreleased owned storage. CLI/bundle integration, SSA→MIR lowering, Native integration, and SSA Lean proofs follow later. Execution comparisons are not a general proof of the transformation.
 
 ### Unreachable blocks
 
@@ -85,7 +102,7 @@ Sequential assignments for a loop's `jump head(right, left)` can destroy the old
 
 ## Example representation
 
-[ssa_values.ceru](../../examples/ir_stages/ssa_values.ceru) chooses a value with if, adds 0 and 2 in a loop, and swaps two values three times in a separate loop. Existing IR/MIR/VM routes should print `14\n16\n20\n10\n`.
+[ssa_values.ceru](../../examples/ir_stages/ssa_values.ceru) chooses a value with if, adds 0 and 2 in a loop, and swaps two values three times in a separate loop. IR/non-SSA MIR/SSA/VM routes should print `14\n16\n20\n10\n`.
 
 The following is **explanatory shorthand, not current generated output or a finalized text grammar**. It omits literal/copy operations and origin annotations. Actual SSA construction will retain the original operations.
 
@@ -106,11 +123,12 @@ Loop backedge:
     jump head(v_right, v_left, v_next_index)
 ```
 
-The [Rust API example](../../experiments/ssa/README.en.md) prints hand-authored SSA without arguments, or automatically constructs SSA from actual MIR when given a source file. Both modes display separate `original-mir` and `ssa` sections without executing the program.
+The [Rust API example](../../experiments/ssa/README.en.md) prints hand-authored SSA without arguments, or automatically constructs SSA from actual MIR when given a source file. Both modes display separate `original-mir` and `ssa` sections. Explicit `--run source.ceru` directly executes SSA.
 
 ```sh
 cargo run --quiet --example ssa_model -- examples/ir_stages/ssa_values.ceru
 cargo run --quiet --example ssa_model -- examples/ir_stages/owned_values.ceru
+cargo run --quiet --example ssa_model -- --run examples/ir_stages/ssa_values.ceru
 ```
 
 For the current `ssa_values`, both if edges supply `bb3(v13)`; the loop condition `bb4(v16, v17)` receives total and index, and update block `bb7(v25)` receives the iteration's total. Follow `mir-iN` and `original-local` back to original MIR. These IDs describe this source and construction version, not a promise of stable IDs across future versions.
@@ -157,7 +175,7 @@ Implement in these units.
 | --- | --- | --- |
 | 1 (implemented) | Representation, structural validator, deterministic text | Validate hand-built branches, loops, parallel arguments, and residual slots; reject broken definitions/edges/initialization |
 | 2 (implemented) | MIR→SSA and mappings | Straight-line, branch/short-circuit, loop, and residual-slot conversion. Check baseline preservation, operations/edges/origins/latest definitions, unreachable records, and determinism for all runnable examples |
-| 3 | Direct SSA evaluation, CLI, bundle | Compare HIR/MIR/SSA/VM using baseline examples and existing MIR/runtime tests, including heap budgets, prior output, and failure origins |
+| 3 (direct evaluation implemented) | Direct SSA evaluation, followed by CLI and bundle integration | Compare HIR/MIR/SSA/VM using baseline examples and existing MIR/runtime tests, including heap budgets, prior output, and failure origins |
 | 4 | SSA→MIR and Native | Observe parallel copies/helper edge blocks; compare ASM/Object execution on Windows/Linux |
 | 5 | Lean correspondence and individual optimization passes | Check concrete MIR→SSA fixtures with an independent model; specify each optimization pass's preservation conditions before implementing it |
 
