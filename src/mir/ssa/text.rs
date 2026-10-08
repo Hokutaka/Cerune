@@ -21,8 +21,18 @@ fn edge(e: &Edge) -> String {
 pub fn emit(p: &Program) -> Result<String, mir::Error> {
     validate(p)?;
     let mut out = String::from(
-        "; Cerune scalar SSA v0.1\n; residual slots; parallel edge arguments; no optimization\n; observation only: no SSA construction, execution, or loader\n\noriginal-mir {\n",
+        "; Cerune scalar SSA v0.1\n; residual slots; parallel edge arguments; no optimization\n; observation only: no SSA execution or loader\n",
     );
+    writeln!(
+        out,
+        "; construction={} options=none",
+        match p.construction {
+            Some(Construction::ScalarSsaV1) => "scalar-ssa-v1",
+            None => "manual",
+        }
+    )
+    .unwrap();
+    out.push_str("\noriginal-mir {\n");
     out.push_str(&mir::text::emit(&p.original));
     out.push_str("}\n\nssa {\n");
     for (index, f) in p.functions.iter().chain([&p.main]).enumerate() {

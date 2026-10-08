@@ -1,15 +1,16 @@
-# SSA表現のAPI例
+# SSA変換と表現のAPI例
 
 [English](README.en.md) · [設計](../../docs/design/mir-ssa.ja.md)
 
-手作りのSSAを構造検証し、元MIRと並べて表示するRust API例です。CeruneソースからのSSA自動変換・SSA実行はまだありません。
+Ceruneソースから非最適化MIRを作り、そのsnapshotを残してSSAへ変換するRust API例です。プログラムは実行しません。SSA直接実行と公開CLIは後続です。
 
 ```sh
-cargo run --quiet --example ssa_model
-cargo test --test mir_ssa
+cargo run --quiet --example ssa_model -- examples/ir_stages/ssa_values.ceru
+cargo run --quiet --example ssa_model -- examples/ir_stages/owned_values.ceru
+cargo test --test ssa_construction --test mir_ssa
 ```
 
-表示する例は次のとおりです。
+引数なしの`cargo run --quiet --example ssa_model`では、次の手作りSSAを検証・表示します。
 
 | 例 | 確認すること |
 | --- | --- |
@@ -17,8 +18,8 @@ cargo test --test mir_ssa
 | parallel-loop | 戻り辺で二つの値を入れ替えて渡す。未到達MIRも保持する |
 | residual-slots | 配列更新の前の添字検査、文字列slot、日本語・NUL・CR/LF・非正規化の文字列 |
 
-`parallel-loop`は構造検証用の無限loopであり、実行しません。表示だけで並列受渡しの実行が検証済みとはしません。実行可能なCeruneソースの基準例は[ssa_values.ceru](../../examples/ir_stages/ssa_values.ceru)にあります。
+`parallel-loop`は構造検証用の無限loopであり、実行しません。実行可能なCeruneソースの基準例は[ssa_values.ceru](../../examples/ir_stages/ssa_values.ceru)です。IR・MIR・VMの出力は`14 / 16 / 20 / 10`です。
 
-`vN`はSSA値、`slotN`は元MIRに残る局所領域です。`original-local`・`original-block`・`mir-iN`から元の定義を辿れます。観測テキストは`original-mir`と`ssa`を分け、未到達blockは元MIRの記録を指します。検証はsnapshotを変更せず、壊れた入力では表示も失敗します。
+表示は`original-mir`と`ssa`に分かれます。前者は元MIRをそのまま含み、後者の`vN`はSSA値、`slotN`は元MIRに残る局所領域です。`original-local`・`original-block`・`mir-iN`から元の定義へ戻れます。未到達blockも元MIRの記録を指して残します。`construction=scalar-ssa-v1`は自動変換、`manual`は手作り入力で、最適化は行いません。
 
-検査対象は定義・支配・辺の型・slotの初期化と先行する添字検査・出自対応です。演算や辺の選択が元MIRと同じ意味か、heapの寿命が安全かの証明ではありません。
+構造検証は定義・支配・辺の型・slot初期化・先行する添字検査・出自対応を確認します。変換テストでは、全実行用exampleの元snapshot・操作・辺・出自・決定性を確認し、変換処理とは別のデータフロー検査で各読取りと辺が最新の定義を使うことを照合します。型が合う古い値への置換も拒否します。これらはSSA実行結果やheap寿命の形式証明ではありません。
